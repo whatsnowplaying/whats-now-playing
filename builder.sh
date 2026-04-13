@@ -22,8 +22,8 @@ check_python_version() {
     echo "Python 3.11 or later is required (got ${pyver})."
     exit 1
   fi
-  if [[ ${PY_VER[1]} -ge 14 ]]; then
-    echo "Python 3.14+ is not yet supported (got ${pyver}). Use Python 3.11–3.13."
+  if [[ ${PY_VER[1]} -ge 15 ]]; then
+    echo "Python 3.15+ is not yet supported (got ${pyver}). Use Python 3.11–3.14."
     exit 1
   fi
 }
@@ -56,8 +56,9 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   PYTHONBINDIR=$(dirname "${ACTIVATE}")
   PYTHONBIN="${PYTHONBINDIR}/${PYTHON}"
   "${PYTHONBIN}" -m pip install --upgrade pip
-  "${PYTHONBIN}" -m pip install -e ".[dev,docs,osspecials,test]"
+  "${PYTHONBIN}" -m pip install --upgrade --upgrade-strategy eager -e ".[dev,docs,osspecials,test]"
   "${PYTHONBIN}" -m vendoring sync
+  touch nowplaying/vendor/.gitkeep
   versioningit --write
   "${PYTHONBIN}" tools/setupnltk.py
   "${PYTHONBIN}" tools/build_templates.py

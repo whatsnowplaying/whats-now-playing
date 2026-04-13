@@ -6,7 +6,7 @@
 
 ## Requirements
 
-* Python 3.11+ for your operating system
+* Python 3.11–3.14 for your operating system (3.15+ is not yet supported)
 * A terminal / development shell
 * `git` installed and working
 
@@ -20,12 +20,12 @@ cd whats-now-playing
 ./builder.sh dev
 ```
 
-If your system default Python is unsupported (e.g. 3.14+) or you have multiple
+If your system default Python is unsupported (e.g. 3.15+) or you have multiple
 versions installed and need to target a specific supported one, set `PYTHONBIN`
 before running the script:
 
 ```bash
-PYTHONBIN=/usr/local/bin/python3.11 ./builder.sh dev
+PYTHONBIN=/usr/local/bin/python3.12 ./builder.sh dev
 ```
 
 `builder.sh` defaults to `python3` (or `python` on Windows) found on `PATH`.

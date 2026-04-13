@@ -4,12 +4,10 @@
 import asyncio
 import contextlib
 import logging
-import os
 import pathlib
 import socket
 import tempfile
 import time
-import unittest.mock
 
 import pytest
 import pytest_asyncio
@@ -71,63 +69,58 @@ def shared_webserver_config(pytestconfig):
     """module-scoped webserver configuration shared across all webserver tests"""
     with contextlib.suppress(PermissionError):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
-            dbinit_patch = unittest.mock.patch("nowplaying.db.MetadataDB.init_db_var")
-            dbinit_mock = dbinit_patch.start()
             dbdir = pathlib.Path(newpath).joinpath("mdb")
             dbdir.mkdir()
             dbfile = dbdir.joinpath("test.db")
-            dbinit_mock.return_value = dbfile
 
-            with unittest.mock.patch.dict(
-                os.environ,
-                {"WNP_CONFIG_TEST_DIR": str(newpath), "WNP_METADB_TEST_FILE": str(dbfile)},
-            ):
-                bundledir = pathlib.Path(pytestconfig.rootpath).joinpath("nowplaying")
-                nowplaying.bootstrap.set_qt_names(
-                    domain="com.github.whatsnowplaying.testsuite", appname="testsuite"
-                )
-                config = nowplaying.config.ConfigFile(
-                    bundledir=bundledir, logpath=newpath, testmode=True
-                )
-                config.cparser.setValue("acoustidmb/enabled", False)
-                config.cparser.setValue("musicbrainz/enabled", False)
-                config.cparser.setValue("weboutput/httpenabled", "true")
-                config.cparser.sync()
+            bundledir = pathlib.Path(pytestconfig.rootpath).joinpath("nowplaying")
+            nowplaying.bootstrap.set_qt_names(
+                domain="com.github.whatsnowplaying.testsuite", appname="testsuite"
+            )
+            config = nowplaying.config.ConfigFile(
+                bundledir=bundledir, logpath=newpath, testmode=True
+            )
+            config.cparser.setValue("acoustidmb/enabled", False)
+            config.cparser.setValue("musicbrainz/enabled", False)
+            config.cparser.setValue("weboutput/httpenabled", "true")
+            config.cparser.setValue("testmode/metadbpath", str(dbfile))
+            config.cparser.sync()
 
-                metadb = nowplaying.db.MetadataDB(initialize=True)
-                logging.debug("shared webserver databasefile = %s", metadb.databasefile)
+            metadb = nowplaying.db.MetadataDB(databasefile=dbfile, initialize=True)
+            logging.debug("shared webserver databasefile = %s", metadb.databasefile)
 
-                port = config.cparser.value("weboutput/httpport", type=int)
-                logging.debug("checking %s for use", port)
-                while is_port_in_use(port):
-                    logging.debug("%s is in use; waiting", port)
-                    time.sleep(2)
-
-                manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
-                manager.start_webserver()
-
-                # Wait for webserver to start
-                timeout = 10.0
-                start_time = time.time()
-                while time.time() - start_time < timeout:
-                    with contextlib.suppress(
-                        requests.exceptions.RequestException, requests.exceptions.ConnectionError
-                    ):
-                        req = requests.get(f"http://localhost:{port}/internals", timeout=2)
-                        if req.status_code == 200:
-                            logging.debug("internals = %s", req.json())
-                            break
-                    time.sleep(0.1)
-                else:
-                    raise RuntimeError(
-                        f"Webserver on port {port} failed to start within {timeout} seconds"
-                    )
-
-                yield config, metadb, manager, port
-
-                manager.stop_all_processes()
+            port = config.cparser.value("weboutput/httpport", type=int)
+            logging.debug("checking %s for use", port)
+            while is_port_in_use(port):
+                logging.debug("%s is in use; waiting", port)
                 time.sleep(2)
-                dbinit_mock.stop()
+
+            manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
+            manager.start_webserver()
+
+            # Wait for webserver to start
+            timeout = 10.0
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                with contextlib.suppress(
+                    requests.exceptions.RequestException, requests.exceptions.ConnectionError
+                ):
+                    req = requests.get(f"http://localhost:{port}/internals", timeout=2)
+                    if req.status_code == 200:
+                        logging.debug("internals = %s", req.json())
+                        break
+                time.sleep(0.1)
+            else:
+                raise RuntimeError(
+                    f"Webserver on port {port} failed to start within {timeout} seconds"
+                )
+
+            yield config, metadb, manager, port
+
+            manager.stop_all_processes()
+            config.cparser.remove("testmode/metadbpath")
+            config.cparser.sync()
+            time.sleep(2)
 
 
 @pytest_asyncio.fixture
@@ -144,6 +137,7 @@ async def getwebserver(shared_webserver_config):
     config.cparser.setValue("weboutput/httpport", port)
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
+    config.cparser.setValue("testmode/metadbpath", str(metadb.databasefile))
     config.cparser.sync()
 
     # Recreate the database for clean test isolation
@@ -160,6 +154,8 @@ async def getwebserver(shared_webserver_config):
     yield config, metadb
 
     manager.stop_all_processes()
+    config.cparser.remove("testmode/metadbpath")
+    config.cparser.sync()
     await asyncio.sleep(1)
 
 
@@ -178,6 +174,7 @@ async def webserver_with_imagecache(shared_webserver_config):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("artistextras/enabled", True)
+    config.cparser.setValue("testmode/metadbpath", str(metadb.databasefile))
     config.cparser.sync()
 
     # Recreate the database for clean test isolation
@@ -203,6 +200,8 @@ async def webserver_with_imagecache(shared_webserver_config):
     yield config, metadb, manager, port
 
     manager.stop_all_processes()
+    config.cparser.remove("testmode/metadbpath")
+    config.cparser.sync()
     await asyncio.sleep(1)
 
 

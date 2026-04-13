@@ -9,6 +9,7 @@ Refactored version using parameterization to reduce duplication.
 
 import asyncio
 import gc
+import inspect
 import tempfile
 import time
 import unittest.mock
@@ -652,7 +653,7 @@ async def test_all_plugins_implement_has_tracks_by_artist(bootstrap):
         assert hasattr(plugin, "has_tracks_by_artist"), (
             f"{plugin_class.__name__} missing has_tracks_by_artist method"
         )
-        assert asyncio.iscoroutinefunction(plugin.has_tracks_by_artist), (
+        assert inspect.iscoroutinefunction(plugin.has_tracks_by_artist), (
             f"{plugin_class.__name__}.has_tracks_by_artist must be async"
         )
 

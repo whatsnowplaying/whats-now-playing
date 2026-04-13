@@ -323,6 +323,7 @@ async def test_get_next_dlset_empty_database(bootstrap):
         result = imagecache.get_next_dlset()
         assert result is None or result == []
     finally:
+        imagecache.close()
         # Clean up SQLite WAL files to prevent flaky test failures
         if imagecache.databasefile.exists():
             with contextlib.suppress(Exception):
@@ -342,20 +343,23 @@ async def test_database_operations(bootstrap):
 
     imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
 
-    # Test put_db_srclocation
-    imagecache.put_db_srclocation("testartist", "testurl", "fanart")
+    try:
+        # Test put_db_srclocation
+        imagecache.put_db_srclocation("testartist", "testurl", "fanart")
 
-    # Test find_srclocation
-    data = imagecache.find_srclocation("testurl")
-    assert data is not None
-    assert data["identifier"] == "testartist"
-    assert data["imagetype"] == "fanart"
-    assert data["srclocation"] == "testurl"
+        # Test find_srclocation
+        data = imagecache.find_srclocation("testurl")
+        assert data is not None
+        assert data["identifier"] == "testartist"
+        assert data["imagetype"] == "fanart"
+        assert data["srclocation"] == "testurl"
 
-    # Test erase_srclocation
-    imagecache.erase_srclocation("testurl")
-    data = imagecache.find_srclocation("testurl")
-    assert data is None
+        # Test erase_srclocation
+        imagecache.erase_srclocation("testurl")
+        data = imagecache.find_srclocation("testurl")
+        assert data is None
+    finally:
+        imagecache.close()
 
 
 @pytest.mark.asyncio
@@ -445,22 +449,25 @@ async def test_stopwnp_only_in_batch(bootstrap):
     imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
     recently_processed = {}
 
-    # Simulate shutdown scenario where only STOPWNP is in the queue
-    mock_dataset = [
-        {"srclocation": "STOPWNP", "identifier": "STOPWNP", "imagetype": "STOPWNP"},
-    ]
+    try:
+        # Simulate shutdown scenario where only STOPWNP is in the queue
+        mock_dataset = [
+            {"srclocation": "STOPWNP", "identifier": "STOPWNP", "imagetype": "STOPWNP"},
+        ]
 
-    with patch.object(imagecache, "get_next_dlset", return_value=mock_dataset):
-        batch = imagecache._get_next_queue_batch(recently_processed)  # pylint: disable=protected-access
-        assert len(batch) == 1
-        assert batch[0]["srclocation"] == "STOPWNP"
+        with patch.object(imagecache, "get_next_dlset", return_value=mock_dataset):
+            batch = imagecache._get_next_queue_batch(recently_processed)  # pylint: disable=protected-access
+            assert len(batch) == 1
+            assert batch[0]["srclocation"] == "STOPWNP"
 
-    # Verify filtering out STOPWNP leaves empty batch (clean shutdown)
-    items_to_process = [item for item in batch if item["srclocation"] != "STOPWNP"]
-    should_stop = len(items_to_process) != len(batch)
+        # Verify filtering out STOPWNP leaves empty batch (clean shutdown)
+        items_to_process = [item for item in batch if item["srclocation"] != "STOPWNP"]
+        should_stop = len(items_to_process) != len(batch)
 
-    assert not items_to_process
-    assert should_stop
+        assert not items_to_process
+        assert should_stop
+    finally:
+        imagecache.close()
 
 
 @pytest.mark.asyncio

@@ -169,8 +169,6 @@ class MetadataDB:
     @staticmethod
     def init_db_var(databasefile: str | pathlib.Path | None) -> pathlib.Path:
         """split this out to make testing easier"""
-        if os.environ.get("WNP_METADB_TEST_FILE"):
-            return pathlib.Path(os.environ["WNP_METADB_TEST_FILE"])
         if databasefile:
             return pathlib.Path(databasefile)
         return pathlib.Path(
