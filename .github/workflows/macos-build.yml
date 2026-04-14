@@ -39,9 +39,16 @@ jobs:
           brew install pkg-config
           if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
             brew reinstall --build-from-source icu4c
+            echo "=== ICU deployment target after reinstall ==="
+            vtool -show-build "$(brew --prefix)/opt/icu4c/lib/libicuuc.dylib"
           else
             brew install icu4c
           fi
+          echo "=== All ICU dylibs on system ==="
+          find /tmp/build-venv /opt/homebrew /usr/local -name "libicuuc*.dylib" 2>/dev/null | while read -r lib; do
+            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
+            echo "${minos}  ${lib}"
+          done
       - name: checkout
         uses: actions/checkout@v6
         with:
