@@ -120,7 +120,7 @@ def osxcopyright():
 def osxminimumversion():
     ''' Prevent running binaries on incompatible
         versions '''
-    return platform.mac_ver()[0]
+    return os.environ.get('MACOSX_DEPLOYMENT_TARGET') or platform.mac_ver()[0]
 
 
 def windows_version_file():
