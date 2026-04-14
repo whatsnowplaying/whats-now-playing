@@ -62,8 +62,26 @@ jobs:
               --with-library-bits=64
             make -j"$(sysctl -n hw.ncpu)"
             make install
+            echo "=== Fixing ICU dylib install names to absolute paths ==="
+            for lib in libicudata libicuuc libicui18n libicuio; do
+              dylib="${ICU_PREFIX}/lib/${lib}.78.3.dylib"
+              [[ -f "$dylib" ]] || continue
+              install_name_tool -id "${ICU_PREFIX}/lib/${lib}.78.dylib" "$dylib"
+              for dep in libicudata libicuuc libicui18n; do
+                install_name_tool \
+                  -change "${dep}.78.dylib" "${ICU_PREFIX}/lib/${dep}.78.dylib" \
+                  "$dylib" 2>/dev/null || true
+              done
+            done
             echo "=== ICU deployment target after custom build ==="
             vtool -show-build "${ICU_PREFIX}/lib/libicuuc.dylib"
+            echo "=== ICU install names after fix ==="
+            for lib in libicudata libicuuc libicui18n libicuio; do
+              dylib="${ICU_PREFIX}/lib/${lib}.78.3.dylib"
+              [[ -f "$dylib" ]] || continue
+              echo "--- $lib ---"
+              otool -L "$dylib" | head -6
+            done
           else
             brew install icu4c
           fi
@@ -93,6 +111,12 @@ jobs:
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
+      - name: icu link diagnostics
+        run: |
+          echo "=== ICU dylib install name ==="
+          otool -D /opt/homebrew/opt/icu4c@78/lib/libicuuc.78.dylib || true
+          echo "=== _icu_.so dependencies ==="
+          otool -L /tmp/build-venv/lib/python3.12/site-packages/icu/_icu_.cpython-312-darwin.so || true
       - name: check binary deployment target
         run: |
           APPDIR=$(find WhatsNowPlaying-* -name "WhatsNowPlaying.app" -type d | head -1)
