@@ -38,20 +38,32 @@ jobs:
           brew update --preinstall || true
           brew install pkg-config
           if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
-            export CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-            export CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-            export LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-            brew reinstall --build-from-source icu4c
-            echo "=== ICU deployment target after reinstall ==="
-            vtool -show-build "$(brew --prefix)/opt/icu4c/lib/libicuuc.dylib"
+            # Homebrew overrides MACOSX_DEPLOYMENT_TARGET in its own build subprocess,
+            # so we replicate the formula's build directly where our flags are respected.
+            ICU_VERSION=$(brew list --versions icu4c@78 | awk '{print $2}')
+            ICU_PREFIX=/tmp/icu-deploy
+            echo "Building ICU ${ICU_VERSION} targeting macOS ${MACOSX_DEPLOYMENT_TARGET}"
+            curl -fL \
+              "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION}/icu4c-${ICU_VERSION}-sources.tgz" \
+              -o /tmp/icu4c-src.tgz
+            tar xzf /tmp/icu4c-src.tgz -C /tmp
+            cd /tmp/icu/source
+            CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+            CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+            LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+            ./configure \
+              --prefix="${ICU_PREFIX}" \
+              --disable-samples \
+              --disable-tests \
+              --enable-static \
+              --with-library-bits=64
+            make -j"$(sysctl -n hw.ncpu)"
+            make install
+            echo "=== ICU deployment target after custom build ==="
+            vtool -show-build "${ICU_PREFIX}/lib/libicuuc.dylib"
           else
             brew install icu4c
           fi
-          echo "=== All ICU dylibs on system ==="
-          find /tmp/build-venv /opt/homebrew /usr/local -name "libicuuc*.dylib" 2>/dev/null | while read -r lib; do
-            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
-            echo "${minos}  ${lib}"
-          done
       - name: checkout
         uses: actions/checkout@v6
         with:
@@ -62,6 +74,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ inputs.python-version }}
+      - name: xcode sdk diagnostics
+        run: xcodebuild -showsdks
       - name: python diagnostics
         run: |
           python3 --version
@@ -73,8 +87,13 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
           [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]] && unset MACOSX_DEPLOYMENT_TARGET
-          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
-          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
+          if [[ -d /tmp/icu-deploy ]]; then
+            export PATH="/tmp/icu-deploy/bin:$PATH"
+            export PKG_CONFIG_PATH="/tmp/icu-deploy/lib/pkgconfig:${PKG_CONFIG_PATH}"
+          else
+            export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
+          fi
           ./builder.sh
       - name: check binary deployment target
         run: |
