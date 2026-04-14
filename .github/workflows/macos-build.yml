@@ -38,6 +38,9 @@ jobs:
           brew update --preinstall || true
           brew install pkg-config
           if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
+            export CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+            export CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+            export LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
             brew reinstall --build-from-source icu4c
             echo "=== ICU deployment target after reinstall ==="
             vtool -show-build "$(brew --prefix)/opt/icu4c/lib/libicuuc.dylib"
