@@ -42,6 +42,10 @@
       selected template back to the settings field that launched the preview
     * Template preview is available from Twitch Bot, Kick Bot, and Text Output
       settings in addition to the main webserver output setting
+    * WebGL templates display an amber warning banner in the preview window
+      when WebGL is unavailable (e.g. virtual machines); the text overlay
+      still renders correctly for end viewers whose GPU supports WebGL
+    * Fanart slideshow preview now cycles through six sample images
 
 * Removed
   * Tenor GIF support has been removed; use Klipy instead
@@ -57,6 +61,12 @@
   * Remote Output + Charts: when both the sending and receiving WNP instances
     have Charts enabled, tracks were submitted to the charts server twice.
     The sender now signals to the receiver to skip charts submission.
+  * WebGL overlay templates now degrade gracefully when WebGL is unavailable
+    instead of throwing a JavaScript error
+
+* UI
+  * Major overhaul of all settings screens for improved layout consistency
+    and readability across platforms
 
 * VirtualDJ
   * Track metadata (genre, BPM, key, label, year, etc.) is now pulled from
@@ -70,9 +80,10 @@
 * Developer Stuff
   * Dependency updates
   * **Python 3.10 is no longer supported**; minimum version is now Python 3.11
+  * **Python 3.14 is now supported**
   * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
     lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
-    client with improved release selection accuracy
+    client with improved release selection accuracy and HTTP/2 support
   * Extracted common Guess Game WebGL background shader to
     `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
     overlays
