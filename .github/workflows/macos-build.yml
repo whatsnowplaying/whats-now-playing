@@ -53,7 +53,7 @@ jobs:
             cd /tmp/icu/source
             CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
             CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
-            LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+            LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} -Wl,-headerpad_max_install_names" \
             ./configure \
               --prefix="${ICU_PREFIX}" \
               --disable-samples \
