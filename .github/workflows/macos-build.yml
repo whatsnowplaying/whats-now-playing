@@ -40,8 +40,11 @@ jobs:
           if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
             # Homebrew overrides MACOSX_DEPLOYMENT_TARGET in its own build subprocess,
             # so we replicate the formula's build directly where our flags are respected.
+            # We install into the existing Homebrew Cellar path so PyICU and PyInstaller
+            # find ICU at the expected locations without any path changes.
+            brew install icu4c
             ICU_VERSION=$(brew list --versions icu4c@78 | awk '{print $2}')
-            ICU_PREFIX=/tmp/icu-deploy
+            ICU_PREFIX=$(brew --cellar icu4c@78)/${ICU_VERSION}
             echo "Building ICU ${ICU_VERSION} targeting macOS ${MACOSX_DEPLOYMENT_TARGET}"
             curl -fL \
               "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION}/icu4c-${ICU_VERSION}-sources.tgz" \
@@ -87,13 +90,8 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
           [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]] && unset MACOSX_DEPLOYMENT_TARGET
-          if [[ -d /tmp/icu-deploy ]]; then
-            export PATH="/tmp/icu-deploy/bin:$PATH"
-            export PKG_CONFIG_PATH="/tmp/icu-deploy/lib/pkgconfig:${PKG_CONFIG_PATH}"
-          else
-            export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
-            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
-          fi
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
       - name: check binary deployment target
         run: |
