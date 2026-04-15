@@ -2798,12 +2798,15 @@ instructions on adding a Browser Source by hand.</p>
 <hr />
 <h2 id="platform-notes">Platform Notes<a class="headerlink" href="#platform-notes" title="Permanent link">&para;</a></h2>
 <h3 id="macos">macOS<a class="headerlink" href="#macos" title="Permanent link">&para;</a></h3>
-<p>Due to security measures in macOS, unsigned apps may require extra steps to open.</p>
+<p>Due to security measures in macOS, unsigned apps require extra steps to open.</p>
 <ul>
 <li>Do not unzip the downloaded package directly to the folder you will run it from.
   Unzip in <code>Downloads</code> first, then move <code>WhatsNowPlaying.app</code> to <code>Applications</code>.</li>
-<li>If the app fails to open, hold <strong>Control</strong> and double-click to open.</li>
-<li>If that does not work, open Terminal and run:
+<li>On first launch, macOS will show a warning that it cannot verify the app is free of malware.
+  This is expected for unsigned apps.</li>
+<li>Open <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the <strong>Security</strong> section,
+  and click <strong>Open Anyway</strong> next to the WhatsNowPlaying entry.</li>
+<li>If no <strong>Open Anyway</strong> button appears, open Terminal and run:
   <code>sudo xattr -r -d com.apple.quarantine /path/to/WhatsNowPlaying.app</code></li>
 </ul>
 <h3 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">&para;</a></h3>
