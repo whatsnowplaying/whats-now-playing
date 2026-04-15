@@ -1,0 +1,22 @@
+# Manually-triggered workflow to build macOS 15-compatible binaries
+# on macOS 26 runners. Run this periodically to verify the cross-build
+# still works as GitHub updates their runner images, so we are ready
+# when macos-15 runners are retired.
+
+# yamllint disable rule:line-length
+---
+
+name: macos26-pyinstaller
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:  # yamllint disable-line rule:truthy
+
+jobs:
+  pyinstaller-macos26-arm:
+    uses: ./.github/workflows/macos26-build.yml
+    permissions:
+      contents: read
+    with:
+      runs-on: macos-26
+      artifact-name: macos15-arm-dist-from-macos26
+      macos-deployment-target: '15.0'

@@ -16,14 +16,6 @@ on:  # yamllint disable-line rule:truthy
       artifact-name:
         required: true
         type: string
-      python-version:
-        required: false
-        type: string
-        default: '3.12'
-      macos-deployment-target:
-        required: false
-        type: string
-        default: ''
 
 jobs:
   build:
@@ -32,59 +24,9 @@ jobs:
       contents: read
     steps:
       - name: icu
-        env:
-          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
           brew update --preinstall || true
-          brew install pkg-config
-          if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
-            # Homebrew overrides MACOSX_DEPLOYMENT_TARGET in its own build subprocess,
-            # so we replicate the formula's build directly where our flags are respected.
-            # We install into the existing Homebrew Cellar path so PyICU and PyInstaller
-            # find ICU at the expected locations without any path changes.
-            brew install icu4c
-            ICU_VERSION=$(brew list --versions icu4c@78 | awk '{print $2}')
-            ICU_PREFIX=$(brew --cellar icu4c@78)/${ICU_VERSION}
-            echo "Building ICU ${ICU_VERSION} targeting macOS ${MACOSX_DEPLOYMENT_TARGET}"
-            curl -fL \
-              "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION}/icu4c-${ICU_VERSION}-sources.tgz" \
-              -o /tmp/icu4c-src.tgz
-            tar xzf /tmp/icu4c-src.tgz -C /tmp
-            cd /tmp/icu/source
-            CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
-            CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
-            LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} -Wl,-headerpad_max_install_names" \
-            ./configure \
-              --prefix="${ICU_PREFIX}" \
-              --disable-samples \
-              --disable-tests \
-              --enable-static \
-              --with-library-bits=64
-            make -j"$(sysctl -n hw.ncpu)"
-            make install
-            echo "=== Fixing ICU dylib install names to absolute paths ==="
-            for lib in libicudata libicuuc libicui18n libicuio; do
-              dylib="${ICU_PREFIX}/lib/${lib}.78.3.dylib"
-              [[ -f "$dylib" ]] || continue
-              install_name_tool -id "${ICU_PREFIX}/lib/${lib}.78.dylib" "$dylib"
-              for dep in libicudata libicuuc libicui18n; do
-                install_name_tool \
-                  -change "${dep}.78.dylib" "${ICU_PREFIX}/lib/${dep}.78.dylib" \
-                  "$dylib" 2>/dev/null || true
-              done
-            done
-            echo "=== ICU deployment target after custom build ==="
-            vtool -show-build "${ICU_PREFIX}/lib/libicuuc.dylib"
-            echo "=== ICU install names after fix ==="
-            for lib in libicudata libicuuc libicui18n libicuio; do
-              dylib="${ICU_PREFIX}/lib/${lib}.78.3.dylib"
-              [[ -f "$dylib" ]] || continue
-              echo "--- $lib ---"
-              otool -L "$dylib" | head -6
-            done
-          else
-            brew install icu4c
-          fi
+          brew install pkg-config icu4c
       - name: checkout
         uses: actions/checkout@v6
         with:
@@ -94,46 +36,12 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ inputs.python-version }}
-      - name: xcode sdk diagnostics
-        run: xcodebuild -showsdks
-      - name: python diagnostics
-        run: |
-          python3 --version
-          python3 -c "import sysconfig; print('Python deployment target:', sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET'))"
-          python3 -c "import platform; print('Platform:', platform.platform())"
-          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-<not set>}"
+          python-version: '3.12'
       - name: run builder
-        env:
-          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
-          [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]] && unset MACOSX_DEPLOYMENT_TARGET
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
-      - name: icu link diagnostics
-        run: |
-          echo "=== ICU dylib install name ==="
-          otool -D /opt/homebrew/opt/icu4c@78/lib/libicuuc.78.dylib || true
-          echo "=== _icu_.so dependencies ==="
-          otool -L /tmp/build-venv/lib/python3.12/site-packages/icu/_icu_.cpython-312-darwin.so || true
-      - name: check binary deployment target
-        run: |
-          APPDIR=$(find WhatsNowPlaying-* -name "WhatsNowPlaying.app" -type d | head -1)
-          echo "=== Main binary ==="
-          vtool -show-build "${APPDIR}/Contents/MacOS/WhatsNowPlaying"
-          echo ""
-          echo "=== Bundled app dylibs ==="
-          find "${APPDIR}" -name "*.dylib" | sort | while read -r lib; do
-            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
-            echo "${minos}  $(basename "$lib")"
-          done | sort
-          echo ""
-          echo "=== Venv dylibs ==="
-          find /tmp/build-venv -name "*.dylib" -o -name "*.so" | sort | while read -r lib; do
-            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
-            echo "${minos}  ${lib#/tmp/build-venv/}"
-          done | sort
       - name: smoke test binary
         run: |
           BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
