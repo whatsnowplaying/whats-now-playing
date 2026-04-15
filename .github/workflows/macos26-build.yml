@@ -37,7 +37,7 @@ jobs:
           # so we replicate the formula's build directly where our flags are respected.
           # We install into the existing Homebrew Cellar path so PyICU and PyInstaller
           # find ICU at the expected locations without any path changes.
-          brew install icu4c
+          brew install icu4c@78
           ICU_VERSION=$(brew list --versions icu4c@78 | awk '{print $2}')
           ICU_PREFIX=$(brew --cellar icu4c@78)/${ICU_VERSION}
           echo "Building ICU ${ICU_VERSION} targeting macOS ${MACOSX_DEPLOYMENT_TARGET}"
@@ -57,14 +57,19 @@ jobs:
             --with-library-bits=64
           make -j"$(sysctl -n hw.ncpu)"
           make install
+          ICU_VERSION_FULL=$(ls "${ICU_PREFIX}/lib/libicuuc."*.dylib 2>/dev/null \
+            | sed -E 's/.*libicuuc\.([0-9.]+)\.dylib/\1/' \
+            | head -n 1)
+          ICU_SOVERSION="${ICU_VERSION_FULL%%.*}"
           echo "=== Fixing ICU dylib install names to absolute paths ==="
+          echo "ICU_VERSION_FULL=${ICU_VERSION_FULL}, ICU_SOVERSION=${ICU_SOVERSION}"
           for lib in libicudata libicuuc libicui18n libicuio; do
-            dylib="${ICU_PREFIX}/lib/${lib}.78.3.dylib"
-            [[ -f "$dylib" ]] || continue
-            install_name_tool -id "${ICU_PREFIX}/lib/${lib}.78.dylib" "$dylib"
+            dylib="${ICU_PREFIX}/lib/${lib}.${ICU_VERSION_FULL}.dylib"
+            [[ -n "${ICU_VERSION_FULL}" && -n "${ICU_SOVERSION}" && -f "$dylib" ]] || continue
+            install_name_tool -id "${ICU_PREFIX}/lib/${lib}.${ICU_SOVERSION}.dylib" "$dylib"
             for dep in libicudata libicuuc libicui18n; do
               install_name_tool \
-                -change "${dep}.78.dylib" "${ICU_PREFIX}/lib/${dep}.78.dylib" \
+                -change "${dep}.${ICU_SOVERSION}.dylib" "${ICU_PREFIX}/lib/${dep}.${ICU_SOVERSION}.dylib" \
                 "$dylib" 2>/dev/null || true
             done
           done
