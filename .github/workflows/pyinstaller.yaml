@@ -17,9 +17,8 @@ jobs:
     permissions:
       contents: read
     with:
-      runs-on: macos-26
+      runs-on: macos-15
       artifact-name: macos15-arm-dist
-      macos-deployment-target: '15.0'
 
   pyinstaller-macos-intel:
     uses: ./.github/workflows/macos-build.yml
