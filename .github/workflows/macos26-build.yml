@@ -1,0 +1,103 @@
+# Reusable workflow for building macOS 15-compatible PyInstaller binaries
+# on macOS 26 runners. Builds ICU from source with explicit deployment
+# target flags since Homebrew overrides MACOSX_DEPLOYMENT_TARGET in its
+# own build subprocess.
+
+# yamllint disable rule:line-length
+---
+
+name: macos26-build
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:  # yamllint disable-line rule:truthy
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      artifact-name:
+        required: true
+        type: string
+      macos-deployment-target:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - name: icu
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
+        run: |
+          brew update --preinstall || true
+          brew install pkg-config
+          # Homebrew overrides MACOSX_DEPLOYMENT_TARGET in its own build subprocess,
+          # so we replicate the formula's build directly where our flags are respected.
+          # We install into the existing Homebrew Cellar path so PyICU and PyInstaller
+          # find ICU at the expected locations without any path changes.
+          brew install icu4c@78
+          ICU_VERSION=$(brew list --versions icu4c@78 | awk '{print $2}')
+          ICU_PREFIX=$(brew --cellar icu4c@78)/${ICU_VERSION}
+          echo "Building ICU ${ICU_VERSION} targeting macOS ${MACOSX_DEPLOYMENT_TARGET}"
+          curl -fL \
+            "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION}/icu4c-${ICU_VERSION}-sources.tgz" \
+            -o /tmp/icu4c-src.tgz
+          tar xzf /tmp/icu4c-src.tgz -C /tmp
+          cd /tmp/icu/source
+          CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+          CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+          LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} -Wl,-headerpad_max_install_names" \
+          ./configure \
+            --prefix="${ICU_PREFIX}" \
+            --disable-samples \
+            --disable-tests \
+            --enable-static \
+            --with-library-bits=64
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+          ICU_VERSION_FULL=$(ls "${ICU_PREFIX}/lib/libicuuc."*.dylib 2>/dev/null \
+            | sed -E 's/.*libicuuc\.([0-9.]+)\.dylib/\1/' \
+            | head -n 1)
+          ICU_SOVERSION="${ICU_VERSION_FULL%%.*}"
+          echo "=== Fixing ICU dylib install names to absolute paths ==="
+          echo "ICU_VERSION_FULL=${ICU_VERSION_FULL}, ICU_SOVERSION=${ICU_SOVERSION}"
+          for lib in libicudata libicuuc libicui18n libicuio; do
+            dylib="${ICU_PREFIX}/lib/${lib}.${ICU_VERSION_FULL}.dylib"
+            [[ -n "${ICU_VERSION_FULL}" && -n "${ICU_SOVERSION}" && -f "$dylib" ]] || continue
+            install_name_tool -id "${ICU_PREFIX}/lib/${lib}.${ICU_SOVERSION}.dylib" "$dylib"
+            for dep in libicudata libicuuc libicui18n; do
+              install_name_tool \
+                -change "${dep}.${ICU_SOVERSION}.dylib" "${ICU_PREFIX}/lib/${dep}.${ICU_SOVERSION}.dylib" \
+                "$dylib" 2>/dev/null || true
+            done
+          done
+          echo "=== ICU deployment target after custom build ==="
+          vtool -show-build "${ICU_PREFIX}/lib/libicuuc.dylib"
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: update tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: run builder
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
+        run: |
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
+          ./builder.sh
+      - name: smoke test binary
+        run: |
+          BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
+          "${BINARY}" --smoke-test
+      - name: artifact dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: "*.zip"
