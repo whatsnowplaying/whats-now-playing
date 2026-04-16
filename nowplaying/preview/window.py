@@ -50,6 +50,12 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         super().__init__(parent)
         self.config = config
         self._enable_select_button = enable_select_button
+        self.template_combo = QComboBox()
+        self.url_label = QLabel()
+        self.bg_combo = QComboBox()
+        self.sample_checkbox = QCheckBox("Sample data")
+        self.webgl_notice = QFrame()
+        self.webview = QWebEngineView()
         self.setWindowTitle("Template Preview")
         self.resize(900, 600)
         self._setup_ui()
@@ -66,25 +72,21 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
 
         toolbar.addWidget(QLabel("Template:"))
 
-        self.template_combo = QComboBox()
         self.template_combo.setEditable(False)
         self.template_combo.setMinimumWidth(220)
         self.template_combo.currentIndexChanged.connect(self._on_template_selected)
         toolbar.addWidget(self.template_combo)
 
-        self.url_label = QLabel()
         self.url_label.setWordWrap(False)
         toolbar.addWidget(self.url_label, stretch=1)
 
         toolbar.addWidget(QLabel("BG:"))
 
-        self.bg_combo = QComboBox()
         for name, _ in _BG_PRESETS:
             self.bg_combo.addItem(name)
         self.bg_combo.currentIndexChanged.connect(self._on_bg_selected)
         toolbar.addWidget(self.bg_combo)
 
-        self.sample_checkbox = QCheckBox("Sample data")
         self.sample_checkbox.setChecked(False)
         self.sample_checkbox.toggled.connect(self._load_current)
         toolbar.addWidget(self.sample_checkbox)
@@ -109,7 +111,6 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         layout.addLayout(self._create_toolbar())
 
         # ---- WebGL notice (hidden until needed) ----
-        self.webgl_notice = QFrame()
         self.webgl_notice.setStyleSheet(
             "QFrame { background: #7a4f00; border-radius: 4px; padding: 2px; }"
         )
@@ -127,7 +128,6 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         layout.addWidget(self.webgl_notice)
 
         # ---- browser ----
-        self.webview = QWebEngineView()
         settings = self.webview.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
