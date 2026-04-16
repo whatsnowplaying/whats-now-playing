@@ -398,7 +398,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             if not websocket.closed:
                 await websocket.send_json(self._base64ifier(metadata))
 
-    async def _wss_do_update(
+    async def _wss_do_update(  # pylint: disable=too-many-arguments
         self,
         websocket: web.WebSocketResponse,
         database: nowplaying.db.MetadataDB,
@@ -463,6 +463,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                         session_id,
                     )
                     loop_start_time = time.time()  # Reset timer to avoid repeated warnings
+                if sample:
+                    # Sample data never changes — just keep the connection alive.
+                    await asyncio.sleep(1)
+                    continue
+
                 while mytime > request.app[
                     WATCHER_KEY
                 ].updatetime and not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(

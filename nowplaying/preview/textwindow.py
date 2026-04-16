@@ -159,8 +159,16 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         else:
             handler = nowplaying.utils.TemplateHandler(rawtemplate="{{ artist }} - {{ title }}")
 
+        if not handler.template:
+            self.text_edit.setPlainText("No template found; check Now Playing settings.")
+            return
+
         metadata = self._get_metadata()
-        rendered = handler.generate(metadata)
+        try:
+            rendered = handler.template.render(**metadata)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            rendered = f"Template error:\n\n{exc}"
+            logging.debug("TextPreviewWindow render error for %s: %s", tmpl_path, exc)
 
         logging.debug("TextPreviewWindow rendered %d chars from %s", len(rendered), tmpl_path)
         self.text_edit.setPlainText(rendered)

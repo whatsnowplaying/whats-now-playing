@@ -29,7 +29,7 @@ _BG_PRESETS: list[tuple[str, str]] = [
 ]
 
 
-class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
+class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """Standalone non-modal window showing a live preview of a webserver template.
 
     The preview loads the template via the local webserver with ``?preview=1``
@@ -60,16 +60,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
     # Setup
     # ------------------------------------------------------------------
 
-    def _setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-
-        # ---- toolbar row ----
+    def _create_toolbar(self) -> QHBoxLayout:
+        """Build and return the toolbar layout."""
         toolbar = QHBoxLayout()
 
-        template_label = QLabel("Template:")
-        toolbar.addWidget(template_label)
+        toolbar.addWidget(QLabel("Template:"))
 
         self.template_combo = QComboBox()
         self.template_combo.setEditable(False)
@@ -77,14 +72,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         self.template_combo.currentIndexChanged.connect(self._on_template_selected)
         toolbar.addWidget(self.template_combo)
 
-        # URL display (clean, no ?preview=1 — safe to copy into OBS)
         self.url_label = QLabel()
         self.url_label.setWordWrap(False)
         toolbar.addWidget(self.url_label, stretch=1)
 
-        # Background color selector
-        bg_label = QLabel("BG:")
-        toolbar.addWidget(bg_label)
+        toolbar.addWidget(QLabel("BG:"))
 
         self.bg_combo = QComboBox()
         for name, _ in _BG_PRESETS:
@@ -107,7 +99,14 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
             use_button.clicked.connect(self._on_use_template)
             toolbar.addWidget(use_button)
 
-        layout.addLayout(toolbar)
+        return toolbar
+
+    def _setup_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+
+        layout.addLayout(self._create_toolbar())
 
         # ---- WebGL notice (hidden until needed) ----
         self.webgl_notice = QFrame()
