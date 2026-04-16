@@ -185,6 +185,16 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="channel_template_preview_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Preview ...</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item row="5" column="0">
@@ -213,6 +223,16 @@
          <widget class="QLineEdit" name="template_lineedit">
           <property name="enabled">
            <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="template_preview_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Preview ...</string>
           </property>
          </widget>
         </item>

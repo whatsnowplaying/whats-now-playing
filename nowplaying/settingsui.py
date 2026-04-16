@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 import nowplaying.config
 import nowplaying.firstinstall
 import nowplaying.guessgamesettings
+import nowplaying.preview.textwindow
 import nowplaying.preview.window
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
@@ -78,6 +79,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.errormessage = None
         self.widgets = {}
         self._webpreview_window: nowplaying.preview.window.WebPreviewWindow | None = None
+        self._discord_template_preview: nowplaying.preview.textwindow.TextPreviewWindow | None = (
+            None
+        )
+        self._discord_channel_template_preview: (
+            nowplaying.preview.textwindow.TextPreviewWindow | None
+        ) = None
         self.settingsclasses = {
             "twitch": nowplaying.twitch.settings.TwitchSettings(),
             "twitchchat": nowplaying.twitch.chat.TwitchChatSettings(),
@@ -380,7 +387,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _connect_discordbot_widget(self, qobject):
         """connect discord widget signals"""
         qobject.template_button.clicked.connect(self.on_discordbot_template_button)
+        qobject.template_preview_button.clicked.connect(self.on_discordbot_template_preview_button)
         qobject.channel_template_button.clicked.connect(self.on_discordbot_channel_template_button)
+        qobject.channel_template_preview_button.clicked.connect(
+            self.on_discordbot_channel_template_preview_button
+        )
         qobject.richpresence_enable_checkbox.toggled.connect(
             lambda checked: self._update_discordbot_fields(qobject)
         )
@@ -408,10 +419,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.channel_template_label.setEnabled(bot_enabled)
         qobject.channel_template_lineedit.setEnabled(bot_enabled)
         qobject.channel_template_button.setEnabled(bot_enabled)
+        qobject.channel_template_preview_button.setEnabled(bot_enabled)
 
         qobject.template_label.setEnabled(either_enabled)
         qobject.template_lineedit.setEnabled(either_enabled)
         qobject.template_button.setEnabled(either_enabled)
+        qobject.template_preview_button.setEnabled(either_enabled)
 
     def _connect_artistextras_widget(self, qobject):
         """connect the artistextras buttons to non-built-ins"""
@@ -1021,6 +1034,50 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.uihelp.template_picker_lineedit(
                 self.widgets["discordbot"].channel_template_lineedit
             )
+
+    @Slot()
+    def on_discordbot_template_preview_button(self):
+        """open or raise the discord presence template preview window"""
+        if self._discord_template_preview is None:
+            self._discord_template_preview = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.config,
+                config_key="discord/template",
+                enable_select_button=True,
+            )
+            self._discord_template_preview.template_selected.connect(
+                self._on_discordbot_template_selected
+            )
+        self._discord_template_preview.show()
+        self._discord_template_preview.raise_()
+
+    @Slot(str)
+    def _on_discordbot_template_selected(self, template_name: str) -> None:
+        self.widgets["discordbot"].template_lineedit.setText(
+            str(pathlib.Path(self.config.templatedir) / template_name)
+        )
+
+    @Slot()
+    def on_discordbot_channel_template_preview_button(self):
+        """open or raise the discord channel template preview window"""
+        if self._discord_channel_template_preview is None:
+            self._discord_channel_template_preview = (
+                nowplaying.preview.textwindow.TextPreviewWindow(
+                    config=self.config,
+                    config_key="discord/channel_template",
+                    enable_select_button=True,
+                )
+            )
+            self._discord_channel_template_preview.template_selected.connect(
+                self._on_discordbot_channel_template_selected
+            )
+        self._discord_channel_template_preview.show()
+        self._discord_channel_template_preview.raise_()
+
+    @Slot(str)
+    def _on_discordbot_channel_template_selected(self, template_name: str) -> None:
+        self.widgets["discordbot"].channel_template_lineedit.setText(
+            str(pathlib.Path(self.config.templatedir) / template_name)
+        )
 
     @Slot()
     def on_obsws_template_button(self):

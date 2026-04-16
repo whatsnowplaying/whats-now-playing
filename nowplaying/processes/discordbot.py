@@ -256,6 +256,10 @@ class DiscordSupport:
         if not metadata:
             return update_time
 
+        metadata.setdefault("cmdname", "")  # type: ignore[typeddict-unknown-key]
+        metadata.setdefault("cmdtarget", None)  # type: ignore[typeddict-unknown-key]
+        metadata.setdefault("startnewmessage", False)  # type: ignore[typeddict-unknown-key]
+
         templateout = self._generate_template_output(template, metadata)
         await self._update_all_clients(templateout, metadata)
 
