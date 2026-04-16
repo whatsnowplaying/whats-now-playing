@@ -167,15 +167,25 @@ class MusicBrainzHelper:
         if metadata.get("musicbrainzrecordingid"):
             logger.debug("Preprocessing with musicbrainz recordingid")
             addmeta = await self.recordingid(metadata["musicbrainzrecordingid"])
-        elif metadata.get("isrc"):
+            if addmeta:
+                return addmeta
+
+        if metadata.get("isrc"):
             logger.debug("Preprocessing with musicbrainz isrc")
             addmeta = await self.isrc(metadata["isrc"])
-        elif metadata.get("musicbrainzartistid"):
+            if addmeta:
+                return addmeta
+
+        if metadata.get("musicbrainzartistid"):
             logger.debug("Preprocessing with musicbrainz artistid")
             addmeta = await self.artistids(metadata["musicbrainzartistid"])
-        elif metadata.get("artist") and metadata.get("title"):
+            if addmeta:
+                return addmeta
+
+        if metadata.get("artist") and metadata.get("title"):
             logger.debug("Attempting lastditcheffort lookup")
             addmeta = await self.lastditcheffort(metadata)
+
         return addmeta
 
     async def isrc(self, isrclist):

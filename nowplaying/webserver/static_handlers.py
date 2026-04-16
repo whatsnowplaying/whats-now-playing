@@ -9,13 +9,22 @@ import secrets
 import uuid
 from typing import TYPE_CHECKING
 
+import aiohttp
 from aiohttp import web
 
 import nowplaying.db
 import nowplaying.hostmeta
 import nowplaying.preview.sampledata
+import nowplaying.upgrades
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
+
+# Minimum required versions for known remote agents.
+# Set to "0" to allow all versions; bump when breaking changes require a client upgrade.
+REMOTE_AGENT_MIN_VERSIONS: dict[str, str] = {
+    "wnptrackhunter": "0",
+    "wnpearshot": "0",
+}
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -413,6 +422,19 @@ class StaticContentHandler:
                 logging.exception("api_v1_last_handler: %s", err)
         return web.json_response(data)
 
+    @staticmethod
+    async def _fetch_cover_url(url: str) -> bytes | None:
+        """Fetch a cover image from a URL using aiohttp (non-blocking)."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200:
+                        return await resp.read()
+                    logging.warning("cover URL returned HTTP %s: %s", resp.status, url)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.warning("Failed to fetch cover URL: %s", url, exc_info=True)
+        return None
+
     async def _process_remote_metadata(  # pylint: disable=too-many-locals
         self, request: web.Request, metadata: dict, source: str = "remote"
     ):
@@ -436,6 +458,33 @@ class StaticContentHandler:
                 )
                 return web.json_response({"error": "Invalid secret"}, status=403)
 
+        # Check minimum version for known remote agents (case-insensitive prefix match)
+        agent_lower = (metadata.get("source_agent_name") or "").lower()
+        agent_version = metadata.get("source_agent_version") or "0"
+        for prefix, min_version in REMOTE_AGENT_MIN_VERSIONS.items():
+            if agent_lower.startswith(prefix):
+                try:
+                    if nowplaying.upgrades.Version(agent_version) < nowplaying.upgrades.Version(
+                        min_version
+                    ):
+                        logging.warning(
+                            "Agent %s version %s is below minimum %s",
+                            metadata.get("source_agent_name"),
+                            agent_version,
+                            min_version,
+                        )
+                        return web.json_response(
+                            {"error": f"Client upgrade required: {prefix} >= {min_version}"},
+                            status=426,
+                        )
+                except ValueError:
+                    logging.warning(
+                        "Unparseable agent version %s from %s",
+                        agent_version,
+                        metadata.get("source_agent_name"),
+                    )
+                break
+
         logging.info("Got %s raw metadata from %s: %s ", source, request.host, metadata)
 
         # Start with a copy of the metadata
@@ -448,6 +497,14 @@ class StaticContentHandler:
 
         # Field whitelist - based on what remote.py actually sends
         clean_metadata = self._filter_excluded_fields(clean_metadata)
+
+        # If coverurl is an HTTP URL, fetch the image (coverurl in METADATALIST passes filtering)
+        # processors.py will overwrite coverurl with "cover.png" once coverimageraw is set
+        cover_url = clean_metadata.get("coverurl", "")
+        if isinstance(cover_url, str) and cover_url.startswith("http"):
+            cover_bytes = await self._fetch_cover_url(cover_url)
+            if cover_bytes:
+                clean_metadata["coverimageraw"] = cover_bytes
 
         # Strip null bytes from all string fields (radiologik and other sources may send them)
         for key, value in clean_metadata.items():
