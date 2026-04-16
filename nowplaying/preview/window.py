@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineCore import QWebEngineSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -91,6 +92,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         self.bg_combo.currentIndexChanged.connect(self._on_bg_selected)
         toolbar.addWidget(self.bg_combo)
 
+        self.sample_checkbox = QCheckBox("Sample data")
+        self.sample_checkbox.setChecked(False)
+        self.sample_checkbox.toggled.connect(self._load_current)
+        toolbar.addWidget(self.sample_checkbox)
+
         refresh_button = QPushButton("Refresh")
         refresh_button.setFixedWidth(80)
         refresh_button.clicked.connect(self._reload)
@@ -166,8 +172,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         return f"http://localhost:{port}{path}"
 
     def _preview_url(self, template_name: str) -> QUrl:
-        """URL actually loaded in the webview — includes ?preview=1."""
-        return QUrl(self._clean_url(template_name) + "?preview=1")
+        """URL actually loaded in the webview — includes ?preview=1 and optionally &sample=1."""
+        url = self._clean_url(template_name) + "?preview=1"
+        if self.sample_checkbox.isChecked():
+            url += "&sample=1"
+        return QUrl(url)
 
     def _current_template_name(self) -> str:
         return self.template_combo.currentData() or ""

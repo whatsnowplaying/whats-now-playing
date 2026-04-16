@@ -420,6 +420,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.channel_template_lineedit.setEnabled(bot_enabled)
         qobject.channel_template_button.setEnabled(bot_enabled)
         qobject.channel_template_preview_button.setEnabled(bot_enabled)
+        qobject.channel_strip_extra_lines_checkbox.setEnabled(bot_enabled)
 
         qobject.template_label.setEnabled(either_enabled)
         qobject.template_lineedit.setEnabled(either_enabled)
@@ -635,6 +636,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         )
         widget.channel_template_lineedit.setText(
             self.config.cparser.value("discord/channel_template") or ""
+        )
+        widget.channel_strip_extra_lines_checkbox.setChecked(
+            self.config.cparser.value("discord/channel_strip_extra_lines", type=bool)
         )
         widget.template_lineedit.setText(self.config.cparser.value("discord/template") or "")
         self._update_discordbot_fields(widget)
@@ -897,6 +901,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             "discord/channel_template", widget.channel_template_lineedit.text()
         )
+        self.config.cparser.setValue(
+            "discord/channel_strip_extra_lines",
+            widget.channel_strip_extra_lines_checkbox.isChecked(),
+        )
         self.config.cparser.setValue("discord/template", widget.template_lineedit.text())
 
         if old_bot != new_bot or old_rp != new_rp:
@@ -1035,20 +1043,33 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 self.widgets["discordbot"].channel_template_lineedit
             )
 
+    def _show_discordbot_preview(
+        self,
+        attr: str,
+        config_key: str,
+        on_selected,
+    ) -> None:
+        """Create (if needed) and raise a discord text template preview window."""
+        window: nowplaying.preview.textwindow.TextPreviewWindow | None = getattr(self, attr)
+        if window is None:
+            window = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.config,
+                config_key=config_key,
+                enable_select_button=True,
+            )
+            window.template_selected.connect(on_selected)
+            setattr(self, attr, window)
+        window.show()
+        window.raise_()
+
     @Slot()
     def on_discordbot_template_preview_button(self):
         """open or raise the discord presence template preview window"""
-        if self._discord_template_preview is None:
-            self._discord_template_preview = nowplaying.preview.textwindow.TextPreviewWindow(
-                config=self.config,
-                config_key="discord/template",
-                enable_select_button=True,
-            )
-            self._discord_template_preview.template_selected.connect(
-                self._on_discordbot_template_selected
-            )
-        self._discord_template_preview.show()
-        self._discord_template_preview.raise_()
+        self._show_discordbot_preview(
+            "_discord_template_preview",
+            "discord/template",
+            self._on_discordbot_template_selected,
+        )
 
     @Slot(str)
     def _on_discordbot_template_selected(self, template_name: str) -> None:
@@ -1059,19 +1080,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_discordbot_channel_template_preview_button(self):
         """open or raise the discord channel template preview window"""
-        if self._discord_channel_template_preview is None:
-            self._discord_channel_template_preview = (
-                nowplaying.preview.textwindow.TextPreviewWindow(
-                    config=self.config,
-                    config_key="discord/channel_template",
-                    enable_select_button=True,
-                )
-            )
-            self._discord_channel_template_preview.template_selected.connect(
-                self._on_discordbot_channel_template_selected
-            )
-        self._discord_channel_template_preview.show()
-        self._discord_channel_template_preview.raise_()
+        self._show_discordbot_preview(
+            "_discord_channel_template_preview",
+            "discord/channel_template",
+            self._on_discordbot_channel_template_selected,
+        )
 
     @Slot(str)
     def _on_discordbot_channel_template_selected(self, template_name: str) -> None:

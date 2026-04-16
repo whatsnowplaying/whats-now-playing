@@ -403,12 +403,15 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         websocket: web.WebSocketResponse,
         database: nowplaying.db.MetadataDB,
         preview: bool = False,
+        sample: bool = False,
         bundledir: pathlib.Path | None = None,
     ):
         # early launch can be a bit weird so
         # pause a bit
         await asyncio.sleep(1)
         metadata = None
+        if sample:
+            metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
         while not metadata and not websocket.closed:
             if nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent):
                 return time.time()
@@ -430,9 +433,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
 
-        # Get session ID and preview flag from query parameters
+        # Get session ID and preview/sample flags from query parameters
         session_id = request.query.get("session_id", "unknown")
         preview = "preview" in request.query
+        sample = "sample" in request.query
         logging.info(
             "Session %s: WebSocket streamer connected from %s", session_id, request.remote
         )
@@ -440,7 +444,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         try:
             bundledir = request.app[CONFIG_KEY].getbundledir()
             mytime = await self._wss_do_update(
-                websocket, request.app[METADB_KEY], preview=preview, bundledir=bundledir
+                websocket,
+                request.app[METADB_KEY],
+                preview=preview,
+                sample=sample,
+                bundledir=bundledir,
             )
             # Track loop start time for shutdown delay monitoring
             loop_start_time = time.time()
