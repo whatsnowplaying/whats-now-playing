@@ -10,7 +10,6 @@ import re
 import ssl
 import sys
 import time
-import traceback
 from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
@@ -159,8 +158,7 @@ class TemplateHandler:  # pylint: disable=too-few-public-methods
             else:
                 rendertext = self.template.render()
         except Exception:  # pylint: disable=broad-exception-caught
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            logging.exception("Template render failed for %s", self.filename)
         return rendertext
 
 

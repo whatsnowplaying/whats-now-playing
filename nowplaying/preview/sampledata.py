@@ -28,6 +28,13 @@ _BASE_METADATA: TrackMetadata = {
     "disc": "1",
     "disc_total": "1",
     "bitrate": "320000",
+    "cmdname": "command",
+    "cmdtarget": ["SampleUser"],
+    "previoustrack": [
+        {"artist": "Sample Artist", "title": "Sample Track Title"},
+        {"artist": "Previous Artist", "title": "Previous Track Title"},
+        {"artist": "Earlier Artist", "title": "Earlier Track Title"},
+    ],
     "comments": "Sample comment for preview",
     "composer": "Sample Composer",
     "isrc": ["USRC12345678"],

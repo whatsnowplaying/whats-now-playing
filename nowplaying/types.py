@@ -99,6 +99,11 @@ class TrackMetadata(TypedDict, total=False):
     fpcalcfingerprint: str
     genres: list[str]
 
+    # Chat command metadata
+    cmdname: str
+    cmdtarget: list[str] | None
+    startnewmessage: bool
+
     # Control metadata
     cache_warmed: bool
     remote_charts_submitted: bool

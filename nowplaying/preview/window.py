@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineCore import QWebEngineSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -28,7 +29,7 @@ _BG_PRESETS: list[tuple[str, str]] = [
 ]
 
 
-class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
+class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """Standalone non-modal window showing a live preview of a webserver template.
 
     The preview loads the template via the local webserver with ``?preview=1``
@@ -49,6 +50,12 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         super().__init__(parent)
         self.config = config
         self._enable_select_button = enable_select_button
+        self.template_combo = QComboBox()
+        self.url_label = QLabel()
+        self.bg_combo = QComboBox()
+        self.sample_checkbox = QCheckBox("Sample data")
+        self.webgl_notice = QFrame()
+        self.webview = QWebEngineView()
         self.setWindowTitle("Template Preview")
         self.resize(900, 600)
         self._setup_ui()
@@ -59,37 +66,30 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
     # Setup
     # ------------------------------------------------------------------
 
-    def _setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-
-        # ---- toolbar row ----
+    def _create_toolbar(self) -> QHBoxLayout:
+        """Build and return the toolbar layout."""
         toolbar = QHBoxLayout()
 
-        template_label = QLabel("Template:")
-        toolbar.addWidget(template_label)
+        toolbar.addWidget(QLabel("Template:"))
 
-        self.template_combo = QComboBox()
         self.template_combo.setEditable(False)
         self.template_combo.setMinimumWidth(220)
         self.template_combo.currentIndexChanged.connect(self._on_template_selected)
         toolbar.addWidget(self.template_combo)
 
-        # URL display (clean, no ?preview=1 — safe to copy into OBS)
-        self.url_label = QLabel()
         self.url_label.setWordWrap(False)
         toolbar.addWidget(self.url_label, stretch=1)
 
-        # Background color selector
-        bg_label = QLabel("BG:")
-        toolbar.addWidget(bg_label)
+        toolbar.addWidget(QLabel("BG:"))
 
-        self.bg_combo = QComboBox()
         for name, _ in _BG_PRESETS:
             self.bg_combo.addItem(name)
         self.bg_combo.currentIndexChanged.connect(self._on_bg_selected)
         toolbar.addWidget(self.bg_combo)
+
+        self.sample_checkbox.setChecked(False)
+        self.sample_checkbox.toggled.connect(self._load_current)
+        toolbar.addWidget(self.sample_checkbox)
 
         refresh_button = QPushButton("Refresh")
         refresh_button.setFixedWidth(80)
@@ -101,10 +101,16 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
             use_button.clicked.connect(self._on_use_template)
             toolbar.addWidget(use_button)
 
-        layout.addLayout(toolbar)
+        return toolbar
+
+    def _setup_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+
+        layout.addLayout(self._create_toolbar())
 
         # ---- WebGL notice (hidden until needed) ----
-        self.webgl_notice = QFrame()
         self.webgl_notice.setStyleSheet(
             "QFrame { background: #7a4f00; border-radius: 4px; padding: 2px; }"
         )
@@ -122,7 +128,6 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         layout.addWidget(self.webgl_notice)
 
         # ---- browser ----
-        self.webview = QWebEngineView()
         settings = self.webview.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
@@ -166,8 +171,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         return f"http://localhost:{port}{path}"
 
     def _preview_url(self, template_name: str) -> QUrl:
-        """URL actually loaded in the webview — includes ?preview=1."""
-        return QUrl(self._clean_url(template_name) + "?preview=1")
+        """URL actually loaded in the webview — includes ?preview=1 and optionally &sample=1."""
+        url = self._clean_url(template_name) + "?preview=1"
+        if self.sample_checkbox.isChecked():
+            url += "&sample=1"
+        return QUrl(url)
 
     def _current_template_name(self) -> str:
         return self.template_combo.currentData() or ""

@@ -11,6 +11,7 @@ import io
 import logging
 import os
 import pathlib
+import re
 import signal
 import sys
 import threading
@@ -27,6 +28,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
+import nowplaying.types
 import nowplaying.utils
 
 
@@ -256,16 +258,32 @@ class DiscordSupport:
         if not metadata:
             return update_time
 
+        self._apply_chat_defaults(metadata)
         templateout = self._generate_template_output(template, metadata)
         await self._update_all_clients(templateout, metadata)
 
         return update_time
 
     @staticmethod
+    def _apply_chat_defaults(metadata: nowplaying.types.TrackMetadata) -> None:
+        """Populate chat-command fields absent from the metadata DB with safe defaults."""
+        if "cmdname" not in metadata:
+            metadata["cmdname"] = ""
+        if "cmdtarget" not in metadata:
+            metadata["cmdtarget"] = None
+        if "startnewmessage" not in metadata:
+            metadata["startnewmessage"] = False
+
+    @staticmethod
     def _generate_template_output(template: str, metadata: dict[str, Any]) -> str:
         """generate template output from metadata"""
         templatehandler = nowplaying.utils.TemplateHandler(filename=template)
         return templatehandler.generate(metadata)
+
+    @staticmethod
+    def _strip_extra_blank_lines(text: str) -> str:
+        """collapse runs of blank lines down to a single blank line"""
+        return re.sub(r"\n{3,}", "\n\n", text).strip()
 
     # Hard ceiling and byte size for channel image attachments
     CHANNEL_IMAGE_MAX_DIM = 500
@@ -352,6 +370,8 @@ class DiscordSupport:
             except Exception:  # pylint: disable=broad-except
                 logging.exception("Failed to render Discord channel template")
                 channel_out = templateout
+            if self.config.cparser.value("discord/channel_strip_extra_lines", type=bool):
+                channel_out = self._strip_extra_blank_lines(channel_out)
             await self._post_to_channel(channel_out, metadata)
 
     async def _safe_update_client(self, client_type: str, update_func, *args) -> None:
