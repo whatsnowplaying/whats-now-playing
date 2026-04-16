@@ -3,9 +3,12 @@
 
 import asyncio
 import base64
+import ipaddress
 import logging
 import os
 import secrets
+import socket
+import urllib.parse
 import uuid
 from typing import TYPE_CHECKING
 
@@ -84,12 +87,14 @@ class StaticContentHandler:
         metadb_key: web.AppKey[nowplaying.db.MetadataDB],
         remotedb_key: web.AppKey[nowplaying.db.MetadataDB],
         metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
+        http_session_key: web.AppKey[aiohttp.ClientSession],
     ):
         self.config_key = config_key
         self.ic_key = ic_key
         self.metadb_key = metadb_key
         self.remotedb_key = remotedb_key
         self.metadata_key = metadata_key
+        self.http_session_key = http_session_key
 
     async def index_htm_handler(self, request: web.Request):
         """handle web output"""
@@ -422,15 +427,53 @@ class StaticContentHandler:
                 logging.exception("api_v1_last_handler: %s", err)
         return web.json_response(data)
 
+    MAX_COVER_BYTES = 10 * 1024 * 1024  # 10 MB
+
     @staticmethod
-    async def _fetch_cover_url(url: str) -> bytes | None:
-        """Fetch a cover image from a URL using aiohttp (non-blocking)."""
+    def _is_safe_cover_url(url: str) -> bool:
+        """Return True only if the URL is http/https and resolves to a public IP (SSRF guard)."""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    if resp.status == 200:
-                        return await resp.read()
+            parsed = urllib.parse.urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                return False
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+            for _family, _type, _proto, _canonname, sockaddr in socket.getaddrinfo(
+                hostname, None, proto=socket.IPPROTO_TCP
+            ):
+                ip = ipaddress.ip_address(sockaddr[0])
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    logging.warning("Rejected non-public IP %s for cover URL %s", ip, url)
+                    return False
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.warning("Could not validate cover URL: %s", url, exc_info=True)
+            return False
+        return True
+
+    async def _fetch_cover_url(self, request: web.Request, url: str) -> bytes | None:
+        """Fetch a cover image from a URL using the shared aiohttp session (non-blocking)."""
+        if not self._is_safe_cover_url(url):
+            logging.warning("Blocked unsafe cover URL: %s", url)
+            return None
+        try:
+            session: aiohttp.ClientSession = request.app[self.http_session_key]
+            async with session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=10),
+                allow_redirects=True,
+                max_line_size=8190,
+            ) as resp:
+                if resp.status != 200:
                     logging.warning("cover URL returned HTTP %s: %s", resp.status, url)
+                    return None
+                content_length = resp.content_length
+                if content_length is not None and content_length > self.MAX_COVER_BYTES:
+                    logging.warning(
+                        "cover URL Content-Length %d exceeds limit: %s", content_length, url
+                    )
+                    return None
+                return await resp.content.read(self.MAX_COVER_BYTES)
         except Exception:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to fetch cover URL: %s", url, exc_info=True)
         return None
@@ -502,7 +545,7 @@ class StaticContentHandler:
         # processors.py will overwrite coverurl with "cover.png" once coverimageraw is set
         cover_url = clean_metadata.get("coverurl", "")
         if isinstance(cover_url, str) and cover_url.startswith("http"):
-            cover_bytes = await self._fetch_cover_url(cover_url)
+            cover_bytes = await self._fetch_cover_url(request, cover_url)
             if cover_bytes:
                 clean_metadata["coverimageraw"] = cover_bytes
 
