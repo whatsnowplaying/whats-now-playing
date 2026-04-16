@@ -81,20 +81,23 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if "artistfanarturls" not in self.metadata:
             self.metadata["artistfanarturls"] = []
 
-        if (
-            self.metadata.get("coverimageraw")
-            and self.imagecache
-            and self.metadata.get("album")
-            and self.metadata.get("artist")
-        ):
+        if self.imagecache and self.metadata.get("artist") and self.metadata.get("album"):
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
-            logging.debug("Placing provided front cover")
-            _ = self.imagecache.put_db_cachekey(
-                identifier=identifier,
-                srclocation=f"{identifier}_provided_0",
-                imagetype="front_cover",
-                content=self.metadata["coverimageraw"],
-            )
+            if self.metadata.get("coverimageraw"):
+                logging.debug("Placing provided front cover")
+                _ = self.imagecache.put_db_cachekey(
+                    identifier=identifier,
+                    srclocation=f"{identifier}_provided_0",
+                    imagetype="front_cover",
+                    content=self.metadata["coverimageraw"],
+                )
+            else:
+                cached = self.imagecache.random_image_fetch(
+                    identifier=identifier, imagetype="front_cover"
+                )
+                if cached:
+                    logging.debug("Restoring coverimageraw from imagecache for %s", identifier)
+                    self.metadata["coverimageraw"] = cached
 
         try:
             for processor in "hostmeta", "tinytag", "image2png":

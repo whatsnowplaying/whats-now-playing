@@ -73,6 +73,7 @@ IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
 JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
+HTTP_SESSION_KEY = web.AppKey("http_session", aiohttp.ClientSession)
 
 
 _MDNS_LABEL_ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
@@ -134,6 +135,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             metadb_key=METADB_KEY,
             remotedb_key=REMOTEDB_KEY,
             metadata_key=METADATA_KEY,
+            http_session_key=HTTP_SESSION_KEY,
         )
 
         while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -685,6 +687,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             ).joinpath("remotedb", "remote.db")
         app[REMOTEDB_KEY] = nowplaying.db.MetadataDB(databasefile=remotedb)
         app[METADATA_KEY] = nowplaying.metadata.MetadataProcessors(config=app[CONFIG_KEY])
+        app[HTTP_SESSION_KEY] = aiohttp.ClientSession()
         app["statedb"] = await aiosqlite.connect(self.databasefile)
         app["statedb"].row_factory = aiosqlite.Row
         cursor = await app["statedb"].cursor()
@@ -714,6 +717,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await self._unregister_mdns_service()
 
         await app["statedb"].close()
+        await app[HTTP_SESSION_KEY].close()
         app[WATCHER_KEY].stop()
         app[IC_KEY].close()
 
