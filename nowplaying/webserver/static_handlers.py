@@ -478,6 +478,36 @@ class StaticContentHandler:
             logging.warning("Failed to fetch cover URL: %s", url, exc_info=True)
         return None
 
+    @staticmethod
+    def _check_agent_version(metadata: dict) -> "web.Response | None":
+        """Return a 426 response if a known agent is below its minimum version, else None."""
+        agent_lower = (metadata.get("source_agent_name") or "").lower()
+        agent_version = metadata.get("source_agent_version") or "0"
+        for prefix, min_version in REMOTE_AGENT_MIN_VERSIONS.items():
+            if agent_lower.startswith(prefix):
+                try:
+                    if nowplaying.upgrades.Version(agent_version) < nowplaying.upgrades.Version(
+                        min_version
+                    ):
+                        logging.warning(
+                            "Agent %s version %s is below minimum %s",
+                            metadata.get("source_agent_name"),
+                            agent_version,
+                            min_version,
+                        )
+                        return web.json_response(
+                            {"error": f"Client upgrade required: {prefix} >= {min_version}"},
+                            status=426,
+                        )
+                except ValueError:
+                    logging.warning(
+                        "Unparsable agent version %s from %s",
+                        agent_version,
+                        metadata.get("source_agent_name"),
+                    )
+                break
+        return None
+
     async def _process_remote_metadata(  # pylint: disable=too-many-locals
         self, request: web.Request, metadata: dict, source: str = "remote"
     ):
@@ -501,32 +531,8 @@ class StaticContentHandler:
                 )
                 return web.json_response({"error": "Invalid secret"}, status=403)
 
-        # Check minimum version for known remote agents (case-insensitive prefix match)
-        agent_lower = (metadata.get("source_agent_name") or "").lower()
-        agent_version = metadata.get("source_agent_version") or "0"
-        for prefix, min_version in REMOTE_AGENT_MIN_VERSIONS.items():
-            if agent_lower.startswith(prefix):
-                try:
-                    if nowplaying.upgrades.Version(agent_version) < nowplaying.upgrades.Version(
-                        min_version
-                    ):
-                        logging.warning(
-                            "Agent %s version %s is below minimum %s",
-                            metadata.get("source_agent_name"),
-                            agent_version,
-                            min_version,
-                        )
-                        return web.json_response(
-                            {"error": f"Client upgrade required: {prefix} >= {min_version}"},
-                            status=426,
-                        )
-                except ValueError:
-                    logging.warning(
-                        "Unparseable agent version %s from %s",
-                        agent_version,
-                        metadata.get("source_agent_name"),
-                    )
-                break
+        if upgrade_response := self._check_agent_version(metadata):
+            return upgrade_response
 
         logging.info("Got %s raw metadata from %s: %s ", source, request.host, metadata)
 
