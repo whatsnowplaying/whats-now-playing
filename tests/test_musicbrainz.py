@@ -367,14 +367,13 @@ async def test_fallback_davidbowie(getmusicbrainz):  # pylint: disable=redefined
 
 @pytest.mark.asyncio
 async def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: disable=redefined-outer-name
-    """a very complex one. get the wrong recording id which is correctly rejected though"""
+    """MB returns a mismatched title (reference track), so recording id is rejected"""
     mbhelper = getmusicbrainz
-    metadata = {"artist": "Troye Sivan & Kacey Musgraves feat Mark Ronson", "title": "Easy"}
+    metadata = {"artist": "Kendrick Lamar feat SZA", "title": "All the Stars"}
     newdata = await mbhelper.lastditcheffort(metadata)
     assert newdata.get("musicbrainzartistid") == [
-        "e5712ceb-c37a-4c49-a11c-ccf4e21852d4",
-        "d1393ecb-431b-4fde-a6ea-d769f2f040cb",
-        "c3c82bdc-d9e7-4836-9746-c24ead47ca19",
+        "381086ea-f511-4aba-bdf9-71c753dc5077",
+        "272989c8-5535-492d-a25c-9f58803e027f",
     ]
     assert not newdata.get("musicbrainzrecordingid")
 

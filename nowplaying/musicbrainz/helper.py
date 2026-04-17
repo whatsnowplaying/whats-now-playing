@@ -9,15 +9,15 @@ import os
 import sys
 from typing import Any
 
-from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module,import-error
+from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
     RateLimitError,
     WNPCacheAdapter,
     extract_artist_urls,
 )
-from nowplaying.vendor.wnpmb.client._base import RetrySettings  # pylint: disable=no-name-in-module,import-error
-from nowplaying.vendor.wnpmb.normalization import normalize  # pylint: disable=no-name-in-module,import-error
+from wnpmb.client._base import RetrySettings
+from wnpmb.normalization import normalize
 
 import nowplaying.apicache
 import nowplaying.bootstrap
@@ -39,7 +39,8 @@ class MusicBrainzHelper:
         self.test_mode = test_mode
         self.emailaddressset = False
         self.mb_client = MusicBrainzClient(
-            retry_settings=RetrySettings(max_retries=2, wait=0.5),
+            timeout=5.0,
+            retry_settings=RetrySettings(max_retries=2, wait=0.5, timeout_retries=1),
         )
 
     async def _mb_op_with_retry(self, operation, error_msg: str, default: Any) -> Any:
@@ -79,7 +80,7 @@ class MusicBrainzHelper:
                 self.config.cparser.value("musicbrainz/emailaddress")
                 or "aw+wnp@effectivemachines.com"
             )
-            self.mb_client.set_useragent("whats-now-playing", self.config.version, emailaddress)
+            self.mb_client.set_useragent(emailaddress)
             self.mb_client.cache_service = WNPCacheAdapter(nowplaying.apicache.get_cache())
             self.emailaddressset = True
 

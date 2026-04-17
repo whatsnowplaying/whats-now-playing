@@ -479,20 +479,29 @@ class StaticContentHandler:
         return None
 
     @staticmethod
+    def _normalize_version(version: str) -> str:
+        """Pad a short version string to major.minor.micro so Version() can parse it."""
+        parts = version.split(".")
+        while len(parts) < 3:
+            parts.append("0")
+        return ".".join(parts[:3])
+
+    @staticmethod
     def _check_agent_version(metadata: dict) -> "web.Response | None":
         """Return a 426 response if a known agent is below its minimum version, else None."""
         agent_lower = (metadata.get("source_agent_name") or "").lower()
-        agent_version = metadata.get("source_agent_version") or "0"
+        raw_version = metadata.get("source_agent_version") or "0"
+        agent_version = StaticContentHandler._normalize_version(raw_version)
         for prefix, min_version in REMOTE_AGENT_MIN_VERSIONS.items():
             if agent_lower.startswith(prefix):
                 try:
                     if nowplaying.upgrades.Version(agent_version) < nowplaying.upgrades.Version(
-                        min_version
+                        StaticContentHandler._normalize_version(min_version)
                     ):
                         logging.warning(
                             "Agent %s version %s is below minimum %s",
                             metadata.get("source_agent_name"),
-                            agent_version,
+                            raw_version,
                             min_version,
                         )
                         return web.json_response(
@@ -502,7 +511,7 @@ class StaticContentHandler:
                 except ValueError:
                     logging.warning(
                         "Unparsable agent version %s from %s",
-                        agent_version,
+                        raw_version,
                         metadata.get("source_agent_name"),
                     )
                 break
@@ -564,12 +573,20 @@ class StaticContentHandler:
         # Store metadata in remote database
         try:
             # Processing timeout to prevent hanging on network calls
-            processed_metadata = await asyncio.wait_for(
-                request.app[self.metadata_key].getmoremetadata(
-                    metadata=clean_metadata, imagecache=request.app[self.ic_key]
-                ),
-                timeout=30.0,
-            )
+            try:
+                processed_metadata = await asyncio.wait_for(
+                    request.app[self.metadata_key].getmoremetadata(
+                        metadata=clean_metadata, imagecache=request.app[self.ic_key]
+                    ),
+                    timeout=30.0,
+                )
+            except asyncio.TimeoutError:
+                logging.warning(
+                    "Metadata enrichment timed out for request from %s; storing basic metadata",
+                    request.remote,
+                )
+                processed_metadata = clean_metadata
+
             await request.app[self.remotedb_key].write_to_metadb(metadata=processed_metadata)
             # Re-read to get the dbid
             last_meta = await request.app[self.remotedb_key].read_last_meta_async()
@@ -578,17 +595,12 @@ class StaticContentHandler:
             # Filter out excluded fields from response to ensure JSON serialization works
             response_metadata = self._filter_excluded_fields(processed_metadata)
 
-            # Let aiohttp handle JSON serialization automatically
-
             # Build response with optional warnings
             response = {"dbid": dbid, "processed_metadata": response_metadata}
             if validation_warnings:
                 response["warnings"] = validation_warnings
 
             return web.json_response(response)
-        except TimeoutError:
-            logging.error("Metadata processing timeout for request from %s", request.remote)
-            return web.json_response({"error": "Processing timeout"}, status=408)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.error("Failed to store metadata in remote database: %s", exc)
             return web.json_response({"error": "Failed to store metadata"}, status=500)

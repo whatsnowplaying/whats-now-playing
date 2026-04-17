@@ -7,7 +7,6 @@ charset-normalizer==3.4.7
 defusedxml==0.7.1
 discord.py==2.7.1
 diskcache==5.6.3
-httpx[http2]==0.28.1
 jinja2==3.1.6
 lxml==6.0.4
 netifaces-plus==0.12.5
@@ -29,6 +28,7 @@ truststore==0.10.4
 twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
+wnpmb @ https://github.com/whatsnowplaying/wnpmb/releases/download/0.1.10/wnpmb-0.1.10-py3-none-any.whl
 zeroconf==0.148.0
 
 #

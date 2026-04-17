@@ -41,13 +41,23 @@ If you need to change the port or other settings, go to **Output & Display → W
 
 ## Step 4: Set Up OBS
 
-The easiest way to get your overlays into OBS is to use the built-in export:
+**What's Now Playing** can generate a ready-to-import OBS scene collection with all your
+browser sources pre-configured — no manual URL copying or source sizing required.
+
+> NOTE: This requires OBS Studio 28 or later.
 
 1. **Quit OBS Studio** if it is running
 2. In **What's Now Playing**, click the system tray icon and choose **Export for OBS...**
-3. Review the sources and templates, then click **Export**
-4. Relaunch OBS Studio — the new **WhatsNowPlaying** scene collection will appear
+3. Review the list of sources. For each one you can choose the template, set the
+   width/height, and pick a canvas position. Click **Preview** on any row to see
+   how a template looks before committing.
+4. Click **Export**
+5. Relaunch OBS Studio — the new **WhatsNowPlaying** scene collection will appear
    under **Scene Collection** in the menu bar
+
+The exported collection contains pre-built scenes for your overlays and the Guess Game
+(including WebGL-enhanced versions). Copy the individual browser sources into your
+own scenes as needed.
 
 See [Export for OBS](output/obs-export.md) for full details.
 
