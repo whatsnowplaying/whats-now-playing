@@ -509,10 +509,20 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:
-        """Upgrade to 5.2.0 - Remove Tenor API key (Tenor support removed)"""
+        """Upgrade to 5.2.0 - Remove Tenor API key; fix missing basic-web.htm template"""
         if config.value("gifwords/tenorkey") is not None:
             logging.info("Upgrade to 5.2.0: removing gifwords/tenorkey (Tenor support removed)")
             config.remove("gifwords/tenorkey")
+
+        htmltemplate = config.value("weboutput/htmltemplate")
+        if htmltemplate and isinstance(htmltemplate, str):
+            tmpl_path = pathlib.Path(htmltemplate)
+            if tmpl_path.name == "basic-web.htm" and not tmpl_path.exists():
+                new_path = tmpl_path.parent / "ws-frosted-glass.htm"
+                logging.info(
+                    "Upgrade to 5.2.0: replacing missing basic-web.htm with ws-frosted-glass.htm"
+                )
+                config.setValue("weboutput/htmltemplate", str(new_path))
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""

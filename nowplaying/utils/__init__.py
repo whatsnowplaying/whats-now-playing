@@ -6,7 +6,6 @@ import base64
 import io
 import logging
 import os
-import re
 import ssl
 import sys
 import time
@@ -16,9 +15,17 @@ from typing import TYPE_CHECKING, Any
 import aiohttp
 import jinja2
 import nltk
-import normality
 import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
+
+from wnpmb import (
+    ARTIST_VARIATIONS_RE,
+    CUSTOM_TRANSLATE,
+    generate_artist_variations,
+    normalize,
+    normalize_text,
+    unsmartquotes,
+)
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -31,18 +38,6 @@ TRANSPARENT_PNG = (
 )
 
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
-
-ARTIST_VARIATIONS_RE = [
-    re.compile("(?i)^the (.*)"),
-    re.compile(r"(?i)^(.*?)( feat.* .*)$"),
-]
-
-MISSED_TRANSLITERAL = "ΛΔӨЯ†"
-REPLACED_CHARACTERS = "AAORT"
-CUSTOM_TRANSLATE = str.maketrans(
-    MISSED_TRANSLITERAL + MISSED_TRANSLITERAL.lower(),
-    REPLACED_CHARACTERS + REPLACED_CHARACTERS.lower(),
-)
 
 
 def safe_stopevent_check(stopevent: asyncio.Event | None) -> bool:
@@ -250,40 +245,11 @@ def songpathsubst(config: "nowplaying.config.ConfigFile", filename: str) -> str:
     return newname
 
 
-def normalize_text(text: str | None) -> str | None:
-    """take a string and genercize it"""
-    if not text:
-        return None
-    transtext = unsmartquotes(text.translate(CUSTOM_TRANSLATE))
-    if normal := normality.normalize(transtext):
-        return normal
-    return transtext
+# normalize, normalize_text, unsmartquotes, generate_artist_variations,
+# ARTIST_VARIATIONS_RE, CUSTOM_TRANSLATE imported from wnpmb above.
 
-
-def unsmartquotes(text: str) -> str:
-    """swap smart quotes"""
-    return (
-        text.replace("\u2018", "'")
-        .replace("\u2019", "'")
-        .replace("\u201c", '"')
-        .replace("\u201d", '"')
-    )
-
-
-def normalize(text: str | None, sizecheck: int = 0, nospaces: bool = False) -> str | None:
-    """genericize string, optionally strip spaces, do a size check"""
-    if not text:
-        return None
-    if len(text) < sizecheck:
-        return "TEXT IS TOO SMALL IGNORE"
-    normaltext = normalize_text(text) or text
-    if nospaces:
-        return normaltext.replace(" ", "")
-    return normaltext
-
-
-# Title stripping functions moved to nowplaying.utils.filters.titlestripper()
-# Use that function instead of these deprecated ones
+# Backward-compatible alias — callers that use artist_name_variations() keep working.
+artist_name_variations = generate_artist_variations
 
 
 def humanize_time(seconds: float | int | str | None) -> str:
@@ -300,24 +266,6 @@ def humanize_time(seconds: float | int | str | None) -> str:
     if convseconds > 60:
         return time.strftime("%M:%S", time.gmtime(convseconds))
     return time.strftime("%S", time.gmtime(convseconds))
-
-
-def artist_name_variations(artistname: str) -> list[str]:
-    """turn an artistname into various computed variations"""
-    lowername = unsmartquotes(artistname.lower())
-    names = [lowername, lowername.translate(CUSTOM_TRANSLATE)]
-    if normalized := normality.normalize(lowername):
-        names.append(normalized)
-        names.append(normalized.translate(CUSTOM_TRANSLATE))
-    for recheck in ARTIST_VARIATIONS_RE:
-        if matched := recheck.match(lowername):
-            matchstr = matched.group(1)
-            names.append(matchstr)
-            names.append(matchstr.translate(CUSTOM_TRANSLATE))
-            if normalized := normality.normalize(matchstr):
-                names.append(normalized)
-                names.append(normalized.translate(CUSTOM_TRANSLATE))
-    return list(dict.fromkeys(names))
 
 
 def create_http_connector(

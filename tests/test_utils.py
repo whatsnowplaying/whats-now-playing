@@ -132,7 +132,7 @@ def test_image_conversion_parameterized(getroot, conversion_func, expected_heade
             "Grimes feat Janelle Monáe",
             ["grimes feat janelle monáe", "grimes feat janelle monae", "grimes"],
         ),
-        ("G feat J and featuring U", ["g feat j and featuring u", "g"]),
+        ("G feat J and featuring U", ["g feat j and featuring u", "g feat j", "g"]),
         (
             "MӨЯIS BLΛK feat. grabyourface",
             [

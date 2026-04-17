@@ -224,7 +224,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def _defaults_output(self, settings: QSettings) -> None:
         """default values for output settings"""
-        settings.setValue("textoutput/file", None)
+        settings.setValue("textoutput/file", str(self.basedir.joinpath("now-playing.txt")))
         settings.setValue("textoutput/txttemplate", self.txttemplate)
         settings.setValue("textoutput/clearonstartup", True)
         settings.setValue("textoutput/fileappend", False)
@@ -237,7 +237,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("obsws/template", str(self.templatedir.joinpath("basic-plain.txt")))
 
         settings.setValue(
-            "weboutput/htmltemplate", str(self.templatedir.joinpath("basic-web.htm"))
+            "weboutput/htmltemplate", str(self.templatedir.joinpath("ws-frosted-glass.htm"))
         )
         settings.setValue(
             "weboutput/artistbannertemplate",
