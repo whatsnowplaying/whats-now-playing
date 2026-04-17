@@ -2768,14 +2768,24 @@ launch also includes building a file index, which may take a few minutes for lar
 is working by opening <code>http://localhost:8899/</code> in a browser while a track is playing.</p>
 <p>If you need to change the port or other settings, go to <strong>Output &amp; Display → Web Server</strong>.</p>
 <h2 id="step-4-set-up-obs">Step 4: Set Up OBS<a class="headerlink" href="#step-4-set-up-obs" title="Permanent link">&para;</a></h2>
-<p>The easiest way to get your overlays into OBS is to use the built-in export:</p>
+<p><strong>What's Now Playing</strong> can generate a ready-to-import OBS scene collection with all your
+browser sources pre-configured — no manual URL copying or source sizing required.</p>
+<blockquote>
+<p>NOTE: This requires OBS Studio 28 or later.</p>
+</blockquote>
 <ol>
 <li><strong>Quit OBS Studio</strong> if it is running</li>
 <li>In <strong>What's Now Playing</strong>, click the system tray icon and choose <strong>Export for OBS...</strong></li>
-<li>Review the sources and templates, then click <strong>Export</strong></li>
+<li>Review the list of sources. For each one you can choose the template, set the
+   width/height, and pick a canvas position. Click <strong>Preview</strong> on any row to see
+   how a template looks before committing.</li>
+<li>Click <strong>Export</strong></li>
 <li>Relaunch OBS Studio — the new <strong>WhatsNowPlaying</strong> scene collection will appear
    under <strong>Scene Collection</strong> in the menu bar</li>
 </ol>
+<p>The exported collection contains pre-built scenes for your overlays and the Guess Game
+(including WebGL-enhanced versions). Copy the individual browser sources into your
+own scenes as needed.</p>
 <p>See <a href="../output/obs-export/">Export for OBS</a> for full details.</p>
 <p>If you prefer to set up OBS manually, see <a href="../output/webserver/">Web Server</a> for
 instructions on adding a Browser Source by hand.</p>
