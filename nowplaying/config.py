@@ -221,6 +221,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("settings/loglevel", self.loglevel)
         settings.setValue("settings/notif", self.notif)
         settings.setValue("settings/stripextras", False)
+        settings.setValue("tray/icontheme", "auto")
 
     def _defaults_output(self, settings: QSettings) -> None:
         """default values for output settings"""

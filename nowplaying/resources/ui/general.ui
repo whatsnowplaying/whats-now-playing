@@ -180,6 +180,59 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="tray_icon_label">
+     <property name="text">
+      <string>**Tray Icon**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="tray_icon_layout">
+     <item>
+      <widget class="QLabel" name="tray_icon_combo_label">
+       <property name="text">
+        <string>Appearance</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="tray_icon_combobox">
+       <item>
+        <property name="text">
+         <string>Auto</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Light</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Dark</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QLabel" name="config_backup_label">
      <property name="text">
       <string>**Configuration Backup**</string>

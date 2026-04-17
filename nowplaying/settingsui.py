@@ -58,6 +58,7 @@ if TYPE_CHECKING:
 
 LOGGING_COMBOBOX = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "CRITICAL"]
 NOCOVER_COMBOBOX = ["None", "Fanart", "Logo", "Thumbnail"]
+TRAY_ICON_THEMES = ["auto", "light", "dark"]
 
 
 # settings UI
@@ -468,6 +469,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         )
         self.widgets["general"].notify_checkbox.setChecked(self.config.notif)
 
+        tray_theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
+        tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
+        self.widgets["general"].tray_icon_combobox.setCurrentIndex(tray_idx)
+
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
@@ -718,6 +723,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         self._upd_conf_input()
 
+        tray_theme = TRAY_ICON_THEMES[self.widgets["general"].tray_icon_combobox.currentIndex()]
+        self.config.cparser.setValue("tray/icontheme", tray_theme)
+
         self.config.put(
             initialized=True,
             notif=self.widgets["general"].notify_checkbox.isChecked(),
@@ -725,6 +733,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         )
 
         logging.getLogger().setLevel(loglevel)
+        if self.tray:
+            self.tray.update_tray_icon()
 
         self._upd_conf_external_services()
         self._upd_conf_artistextras()
