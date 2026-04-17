@@ -58,7 +58,7 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   "${PYTHONBIN}" -m pip install --upgrade pip
   "${PYTHONBIN}" -m pip install --upgrade --upgrade-strategy eager -e ".[dev,docs,osspecials,test]"
   "${PYTHONBIN}" -m vendoring sync
-  touch nowplaying/vendor/.gitkeep
+  git checkout nowplaying/vendor/.gitkeep
   versioningit --write
   "${PYTHONBIN}" tools/setupnltk.py
   "${PYTHONBIN}" tools/build_templates.py
