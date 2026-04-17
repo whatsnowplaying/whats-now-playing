@@ -580,7 +580,7 @@ class StaticContentHandler:
                     ),
                     timeout=30.0,
                 )
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logging.warning(
                     "Metadata enrichment timed out for request from %s; storing basic metadata",
                     request.remote,
