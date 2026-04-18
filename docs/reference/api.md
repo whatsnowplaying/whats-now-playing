@@ -112,7 +112,8 @@ The API includes automatic validation and processing:
 1. **Field Length Limits**: String fields are truncated to 1000 characters
 2. **Null Byte Stripping**: Removes null bytes (`\x00`) from string values
 3. **Security Filtering**: Blocks system fields and binary data
-4. **Full Metadata Processing**: Runs complete enrichment including MusicBrainz lookups, artist extras, and recognition services
+4. **Full Metadata Processing**: Runs complete enrichment including MusicBrainz lookups, artist extras,
+   and recognition services
 
 ### GET /v1/status
 
