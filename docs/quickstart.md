@@ -22,6 +22,9 @@ On first launch, **What's Now Playing** attempts to auto-detect your DJ software
 * Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network
 * The first detected source wins. If multiple are found, you can change it afterwards.
+* For **vinyl decks, standalone CDJs, Rekordbox, and analog mixers**, use
+  [EarShot](https://whatsnowplaying.com/earshot) — a companion app that identifies
+  tracks via Shazam and sends them to WNP automatically
 
 Before launching, make sure your DJ software has been run at least once. For Traktor, first
 launch also includes building a file index, which may take a few minutes for large libraries.

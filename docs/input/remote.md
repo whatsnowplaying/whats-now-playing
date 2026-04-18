@@ -85,4 +85,5 @@ http://localhost:8899/v1/remoteinput?title=<t>&artist=<a>&album=<l>&isrc=<i>&com
 
 ## Advanced API Usage
 
-For detailed API documentation including request/response formats, authentication, and validation details, see the [API Reference](../reference/api.md#getpost-v1remoteinput).
+For detailed API documentation including request/response formats, authentication, and validation details,
+see the [API Reference](../reference/api.md#getpost-v1remoteinput).

@@ -34,3 +34,12 @@ Network streaming and file-based sources:
 - **[Icecast](icecast.md)** - Icecast streaming server metadata
 - **[M3U](m3u.md)** - M3U playlist file monitoring
 - **[Remote](remote.md)** - Remote input via REST API from other applications
+
+## Vinyl, CDJs & Analog Mixers
+
+For hardware not directly supported by WNP:
+
+- **[EarShot](https://whatsnowplaying.com/earshot)** - companion app for macOS, iOS, and
+  watchOS that uses Shazam-based audio identification to detect tracks from vinyl decks,
+  standalone CDJs, Rekordbox, and analog mixers, then sends them to WNP over the local
+  network. Requires WNP 5.2.0 or later.

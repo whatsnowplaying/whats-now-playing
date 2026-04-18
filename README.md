@@ -20,6 +20,9 @@ MPRIS2-compatible players (Linux)
 
 **File-based:** M3U playlists
 
+**Via EarShot:** Vinyl decks, standalone CDJs, Rekordbox, and analog mixers —
+using Shazam-based audio identification on macOS, iOS, and watchOS
+
 ## Download
 
 [Get the latest release](https://github.com/whatsnowplaying/whats-now-playing/releases)
