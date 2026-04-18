@@ -576,6 +576,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#why-you-might-need-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why You Might Need Filters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#filter-types" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -604,6 +615,17 @@
     <span class="md-ellipsis">
       
         Default Phrases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-phrases-off-by-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Phrases (Off by Default)
       
     </span>
   </a>
@@ -2784,9 +2806,25 @@
 
 
 <h1 id="filter">Filter<a class="headerlink" href="#filter" title="Permanent link">&para;</a></h1>
-<p>Some DJ Pools add extra identifiers to track titles. <strong>What's Now Playing</strong> has
-the ability to remove extra text from the title of a track using two types of
-filters: <strong>Simple</strong> phrase-based filters and <strong>Complex</strong> regex patterns.</p>
+<p>Track titles often contain extra text that clutters stream overlays and chat
+announcements — DJ Pool tags, YouTube-style suffixes, remix labels, video quality
+flags, and more. <strong>What's Now Playing</strong> can automatically strip this extra text
+from track titles before sending it anywhere.</p>
+<blockquote>
+<p><strong>Note:</strong> Filters apply to the <strong>track title only</strong>. Artist, album, and other
+metadata fields are not affected.</p>
+</blockquote>
+<h2 id="why-you-might-need-filters">Why You Might Need Filters<a class="headerlink" href="#why-you-might-need-filters" title="Permanent link">&para;</a></h2>
+<p>Here are common examples of title clutter that filters can remove:</p>
+<ul>
+<li>DJ Pool tags: <code>Song Title - HD</code>, <code>Song Title (Clean)</code>, <code>Song Title [Explicit]</code></li>
+<li>Video suffixes: <code>Song Title (Official Music Video)</code>, <code>Song Title [Lyric Video]</code></li>
+<li>Version labels: <code>Song Title (Radio Edit)</code>, <code>Song Title - Extended Mix</code></li>
+<li>Remaster notes: <code>Song Title (Remastered)</code>, <code>Song Title - 2024 Remaster</code></li>
+<li>BPM/key annotations added by some tools: <code>Song Title (128 BPM)</code>, <code>Song Title [Am]</code></li>
+</ul>
+<p>Without filtering, these tags appear in your overlays, chat announcements,
+Guess Game, and set lists exactly as stored in the file.</p>
 <h2 id="filter-types">Filter Types<a class="headerlink" href="#filter-types" title="Permanent link">&para;</a></h2>
 <p><strong>What's Now Playing</strong> provides two filtering approaches:</p>
 <h3 id="simple-filters">Simple Filters<a class="headerlink" href="#simple-filters" title="Permanent link">&para;</a></h3>
@@ -2795,10 +2833,11 @@ filters: <strong>Simple</strong> phrase-based filters and <strong>Complex</stron
 unwanted phrases from track titles. These filters work by matching
 specific phrases in different formats (all case-insensitive):</p>
 <ul>
-<li><strong>- phrase</strong>: Matches " - phrase" at the end of titles</li>
-<li><strong>(phrase)</strong>: Matches " (phrase)" anywhere in titles</li>
-<li><strong>[phrase]</strong>: Matches " [phrase]" anywhere in titles</li>
-<li><strong>plain</strong>: Matches "phrase" anywhere in titles</li>
+<li><strong>- phrase</strong>: Matches <code>"- phrase"</code> at the end of titles (with a leading space)</li>
+<li><strong>(phrase)</strong>: Matches <code>"(phrase)"</code> anywhere in titles (with a leading space)</li>
+<li><strong>[phrase]</strong>: Matches <code>"[phrase]"</code> anywhere in titles (with a leading space)</li>
+<li><strong>plain</strong>: Matches <code>phrase</code> anywhere in titles (use with care — plain
+  matching strips the phrase wherever it appears in the title)</li>
 </ul>
 <h4 id="default-phrases">Default Phrases<a class="headerlink" href="#default-phrases" title="Permanent link">&para;</a></h4>
 <p>By default, these phrases are enabled for dash/paren/bracket filtering:</p>
@@ -2809,17 +2848,32 @@ specific phrases in different formats (all case-insensitive):</p>
   official music video, official trailer, official video</li>
 <li>Audio processing: remaster, remastered</li>
 </ul>
+<h4 id="additional-phrases-off-by-default">Additional Phrases (Off by Default)<a class="headerlink" href="#additional-phrases-off-by-default" title="Permanent link">&para;</a></h4>
+<p>These phrases are available but not enabled by default — turn them on if
+they appear in your library:</p>
+<ul>
+<li>Version types: acoustic, acoustic version, club mix, demo, demo version,
+  extended mix, extended version, instrumental, live, live version,
+  radio edit, radio version, remix, studio version, unreleased</li>
+<li>Release types: anniversary edition, bonus track, deluxe edition, special edition</li>
+</ul>
 <h4 id="managing-custom-phrases">Managing Custom Phrases<a class="headerlink" href="#managing-custom-phrases" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>Add custom phrases</strong>: Enter text in the input field and click "Add"</li>
 <li><strong>Remove custom phrases</strong>: Select a custom phrase row and click "Remove"</li>
-<li><strong>Configure formats</strong>: Use checkboxes to enable/disable different matching formats for each phrase</li>
+<li><strong>Configure formats</strong>: Use checkboxes to enable/disable different matching
+  formats for each phrase</li>
 </ul>
 <h3 id="complex-filters">Complex Filters<a class="headerlink" href="#complex-filters" title="Permanent link">&para;</a></h3>
 <p><a href="../images/filter_complex.png"><img alt="Filter Settings / Complex" src="../images/filter_complex.png" /></a></p>
 <p>The Complex tab allows advanced users to create custom
 <a href="https://docs.python.org/3/howto/regex.html">Python-style regular expressions</a>
-for more sophisticated pattern matching.</p>
+for more sophisticated pattern matching. This is useful for:</p>
+<ul>
+<li>Stripping BPM or key annotations like <code>(128 BPM)</code> or <code>[Am]</code></li>
+<li>Removing <code>feat.</code> / <code>ft.</code> artist credits from titles</li>
+<li>Handling source-specific tagging conventions not covered by simple phrases</li>
+</ul>
 <h4 id="adding-complex-rules">Adding Complex Rules<a class="headerlink" href="#adding-complex-rules" title="Permanent link">&para;</a></h4>
 <ol>
 <li>Click "Add Entry" button</li>
@@ -2831,7 +2885,7 @@ for more sophisticated pattern matching.</p>
 <li><strong>Delete entry</strong>: Select entry and click "Delete Entry"</li>
 <li><strong>Reorder rules</strong>: Drag entries to change application order</li>
 <li><strong>Add number patterns</strong>: Click "Add Numbers" to add patterns that
-  match numbers in parentheses/brackets like " (123)" and " [456]"</li>
+  match numbers in parentheses/brackets like <code>"(123)"</code> and <code>"[456]"</code></li>
 </ul>
 <h2 id="reset-to-defaults">Reset to Defaults<a class="headerlink" href="#reset-to-defaults" title="Permanent link">&para;</a></h2>
 <p>Click the "Reset to Defaults" button (located at the top right) to:</p>
@@ -2843,20 +2897,25 @@ for more sophisticated pattern matching.</p>
 <p>This provides a clean starting point if filters become misconfigured.</p>
 <h2 id="testing-your-filters">Testing Your Filters<a class="headerlink" href="#testing-your-filters" title="Permanent link">&para;</a></h2>
 <p>The test section at the bottom works with <strong>both</strong> simple and
-complex filters together, showing exactly what will happen to track titles in real usage:</p>
+complex filters together, showing exactly what will happen to track titles
+in real usage:</p>
 <ol>
 <li>Enter test text in the input field</li>
 <li>Click "Test" button</li>
-<li>The result shows what the title becomes after applying <strong>all active filters</strong> (both simple and complex)</li>
+<li>The result shows what the title becomes after applying <strong>all active filters</strong>
+   (both simple and complex)</li>
 </ol>
-<p>This unified testing ensures you see the complete filtering behavior that will be applied to your tracks.</p>
+<p>Paste a few real titles from your library to verify the output looks right
+before going live.</p>
 <h2 id="how-filters-are-applied">How Filters Are Applied<a class="headerlink" href="#how-filters-are-applied" title="Permanent link">&para;</a></h2>
 <p>During playback, <strong>What's Now Playing</strong> applies filters in this order:</p>
 <ol>
 <li><strong>Simple phrase filters</strong> (plain text matching first, then regex patterns)</li>
 <li><strong>Complex regex patterns</strong> (in the order shown in the Complex tab)</li>
 </ol>
-<p>Both types of filters work together to provide comprehensive title cleaning.</p>
+<p>Both types of filters work together to provide comprehensive title cleaning.
+The cleaned title is used everywhere — overlays, chat announcements, text
+output, the Guess Game, and set lists.</p>
 
 
 
