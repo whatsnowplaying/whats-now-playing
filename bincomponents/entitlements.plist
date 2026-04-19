@@ -2,13 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <!--
-    These are required for binaries built by PyInstaller.
-    For more info, see:
+    Required for binaries built by PyInstaller with hardened runtime.
+    See:
       https://developer.apple.com/documentation/security/hardened_runtime
       https://github.com/pyinstaller/pyinstaller/issues/4629
   -->
   <dict>
+    <!-- Python requires writable+executable memory pages -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- PyInstaller bundles third-party dylibs that may not carry a matching team ID -->
+    <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
   </dict>
 </plist>

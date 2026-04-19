@@ -198,7 +198,9 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             #console=False,
-            icon=geticon())
+            icon=geticon(),
+            codesign_identity=os.environ.get('MACOS_SIGN_IDENTITY'),
+            entitlements_file='bincomponents/entitlements.plist')
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
             a.binaries,
@@ -212,7 +214,7 @@ for execname, execpy in executables.items():
             coll,
             name=f'{execname}.app',
             icon=geticon(),
-            bundle_identifier=None,
+            bundle_identifier='com.whatsnowplaying.app',
             info_plist={
                 'CFBundleDisplayName': "What's Now Playing",
                 'CFBundleName': 'WhatsNowPlaying',
