@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # Notarize and staple a macOS app bundle.
 # Signing is handled by PyInstaller via codesign_identity on EXE.
 #
@@ -30,7 +31,11 @@ if [[ -n "${APPLE_ID:-}" && -n "${APPLE_ID_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-
     --apple-id "${APPLE_ID}" \
     --password "${APPLE_ID_PASSWORD}" \
     --team-id "${APPLE_TEAM_ID}" \
-    --wait --output-format json)
+    --wait --output-format json) || {
+    echo "ERROR: notarytool submit failed (exit $?)"
+    echo "${NOTARIZE_RESULT}"
+    exit 1
+  }
   NOTARIZE_ID=$(echo "${NOTARIZE_RESULT}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
   NOTARIZE_STATUS=$(echo "${NOTARIZE_RESULT}" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
   echo "Notarization status: ${NOTARIZE_STATUS} (id: ${NOTARIZE_ID})"
