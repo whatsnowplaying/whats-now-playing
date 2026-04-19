@@ -11,7 +11,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QUrl,
     Signal,
 )
-from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QGuiApplication, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QErrorMessage,
@@ -66,6 +66,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.startup_window = startup_window
 
         # Initialize attributes that will be set later
+        self.icon = QIcon()
         self.watcher = None
         self.requestswindow = None
         self.link_thread = None  # QThread for Twitch account linking
@@ -106,11 +107,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Clean up any stray temporary OAuth2 credentials from previous sessions
         self._update_startup_progress("Cleaning OAuth2 credentials...")
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
-        self.icon = QIcon(str(self.config.iconfile))
+        self.icon = self._get_tray_icon()
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(self.icon)
         self.tray.setToolTip("Now Playing ▶")
         self.tray.setVisible(True)
+        QGuiApplication.styleHints().colorSchemeChanged.connect(self.update_tray_icon)
         self.menu = QMenu()
 
     def _setup_about_window(self) -> None:
@@ -127,6 +129,33 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu.addAction(self.about_action)
         self.about_action.setEnabled(True)
         self.about_action.triggered.connect(self.aboutwindow.show)
+
+    def _get_tray_icon(self) -> QIcon:
+        """Return the tray icon appropriate for the current color scheme."""
+        if not self.config.iconfile:
+            return QIcon()
+        theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
+        if theme == "light":
+            dark_mode = False
+        elif theme == "dark":
+            dark_mode = True
+        else:
+            scheme = QGuiApplication.styleHints().colorScheme()
+            logging.debug("tray icon color scheme: %s", scheme)
+            # Treat Dark and Unknown as dark (white icon visible on any background);
+            # only explicitly Light gets the black icon.
+            dark_mode = scheme in (Qt.ColorScheme.Dark, Qt.ColorScheme.Unknown)
+        mono_name = "wnp_logo_mono_light.svg" if dark_mode else "wnp_logo_mono.svg"
+        mono_path = self.config.iconfile.parent / mono_name
+        logging.debug("tray icon path: %s (exists=%s)", mono_path, mono_path.exists())
+        if mono_path.exists():
+            return QIcon(str(mono_path))
+        return QIcon(str(self.config.iconfile))
+
+    def update_tray_icon(self) -> None:
+        """Swap the tray icon when the system color scheme changes."""
+        self.icon = self._get_tray_icon()
+        self.tray.setIcon(self.icon)
 
     def _setup_database_and_processes(self) -> None:
         """Setup database optimization and process manager."""

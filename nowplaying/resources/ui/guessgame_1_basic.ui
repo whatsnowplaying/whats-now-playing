@@ -29,7 +29,7 @@
       <string></string>
      </property>
      <property name="styleSheet">
-      <string>color: #666;</string>
+      <string/>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

@@ -137,7 +137,7 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         title_font.setBold(True)
         title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("color: rgba(0, 0, 0, 0.7);")  # Semi-transparent black text
+        title_label.setStyleSheet("")
         title_label.setFixedHeight(20)  # Constrain the label height to just what's needed
         layout.addWidget(title_label)
 

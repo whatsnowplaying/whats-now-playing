@@ -67,6 +67,14 @@
 * UI
   * Major overhaul of all settings screens for improved layout consistency
     and readability across platforms
+  * Improved dark mode support across all platforms
+    * Tray icon now automatically switches between black and white variants
+      to remain visible in both light and dark system themes
+    * New Tray Icon Appearance setting (Auto/Light/Dark) in General settings
+      to override auto-detection when OS theme reporting is unreliable
+      (e.g. macOS with wallpaper tinting enabled)
+    * Hardcoded light-mode colors removed from several UI panels so they
+      render correctly under dark themes on Linux and Windows
 
 * VirtualDJ
   * Track metadata (genre, BPM, key, label, year, etc.) is now pulled from
