@@ -90,16 +90,12 @@ instructions on adding a Browser Source by hand.
 
 ### macOS
 
-Due to security measures in macOS, unsigned apps require extra steps to open.
+The app is signed and notarized. macOS should open it without any security warnings.
 
 * Do not unzip the downloaded package directly to the folder you will run it from.
   Unzip in `Downloads` first, then move `WhatsNowPlaying.app` to `Applications`.
-* On first launch, macOS will show a warning that it cannot verify the app is free of malware.
-  This is expected for unsigned apps.
-* Open **System Settings → Privacy & Security**, scroll down to the **Security** section,
-  and click **Open Anyway** next to the WhatsNowPlaying entry.
-* If no **Open Anyway** button appears, open Terminal and run:
-  `sudo xattr -r -d com.apple.quarantine /path/to/WhatsNowPlaying.app`
+* If macOS still shows a security warning, open **System Settings → Privacy & Security**,
+  scroll down to the **Security** section, and click **Open Anyway**.
 
 ### Windows
 

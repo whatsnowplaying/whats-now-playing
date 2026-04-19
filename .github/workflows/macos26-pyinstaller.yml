@@ -14,9 +14,11 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   pyinstaller-macos26-arm:
     uses: ./.github/workflows/macos26-build.yml
+    secrets: inherit  # pragma: allowlist secret
     permissions:
       contents: read
     with:
       runs-on: macos-26
       artifact-name: macos15-arm-dist-from-macos26
       macos-deployment-target: '15.0'
+      environment: macos-signing

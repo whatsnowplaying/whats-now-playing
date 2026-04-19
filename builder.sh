@@ -223,6 +223,14 @@ else
   pyinstaller WhatsNowPlaying.spec
 fi
 
+if [[ "${SYSTEM}" == "macosx" && -n "${MACOS_SIGN_IDENTITY:-}" ]]; then
+  echo "*****"
+  echo "* Signing and notarizing"
+  echo "****"
+  chmod +x bincomponents/osxcodesign.sh
+  bincomponents/osxcodesign.sh dist/WhatsNowPlaying.app
+fi
+
 echo "*****"
 echo "* Cleanup "
 echo "****"
