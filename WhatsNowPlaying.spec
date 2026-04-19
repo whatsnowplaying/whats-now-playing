@@ -212,7 +212,7 @@ for execname, execpy in executables.items():
             coll,
             name=f'{execname}.app',
             icon=geticon(),
-            bundle_identifier=None,
+            bundle_identifier='com.whatsnowplaying.app',
             info_plist={
                 'CFBundleDisplayName': "What's Now Playing",
                 'CFBundleName': 'WhatsNowPlaying',
