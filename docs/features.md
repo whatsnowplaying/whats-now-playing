@@ -5,6 +5,15 @@ macOS, and Linux that reads live track data from DJ software and sends it
 anywhere your audience can see it — overlays, chat bots, Discord, text files,
 and more.
 
+## Setup
+
+On first launch, WNP **automatically detects** which DJ software you are using —
+no manual source selection required for most setups. Software-based sources
+(Serato, Traktor, Virtual DJ, etc.) are detected from files they write to disk.
+Hardware-based sources (Denon StageLinQ) are detected from the network. The
+detected source is shown in **Core Settings → Source** and can be changed at
+any time.
+
 ## Input Sources
 
 WNP reads track data directly from DJ software and media players. No manual
