@@ -63,7 +63,7 @@ After exporting and relaunching OBS:
 2. The new **WhatsNowPlaying** collection will appear in the list — click it
    to switch to it
 
-[![Scene Collection menu showing WhatsNowPlaying collection](images/obsscenecollection.png)](images/obsscenecollection.png)
+[![Scene Collection menu showing WhatsNowPlaying collection](images/obs-scene-collection.png)](images/obs-scene-collection.png)
 
 The collection contains three scenes:
 
