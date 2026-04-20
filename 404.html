@@ -10,10 +10,19 @@
         var match = window.location.pathname.match(
           /^(.*?)\/([0-9]+\.[0-9]+\.[0-9]+)-preview\d+(\/.*)?$/
         );
+
+        // Derive the site root for the fallback link: use base from the
+        // preview match if available, otherwise take the first path segment
+        // (handles GitHub Pages project-site prefix like /whats-now-playing)
+        var base = match
+          ? match[1]
+          : (window.location.pathname.match(/^(\/[^/]+)/) || ['', ''])[1];
+        document.getElementById('latest-link').href = base + '/latest/';
+
         if (!match) { return; }
-        var base = match[1];          // e.g. '/whats-now-playing' or ''
-        var stableVersion = match[2]; // e.g. '5.0.0'
+        var stableVersion = match[2];
         var subpath = match[3] || '/';
+        var suffix = subpath + window.location.search + window.location.hash;
         fetch(base + '/versions.json')
           .then(function (r) { return r.json(); })
           .then(function (versions) {
@@ -21,14 +30,11 @@
               return v.version === stableVersion;
             });
             window.location.replace(
-              base + '/' + (exists ? stableVersion : 'latest') +
-              subpath +
-              window.location.search +
-              window.location.hash
+              base + '/' + (exists ? stableVersion : 'latest') + suffix
             );
           })
           .catch(function () {
-            window.location.replace(base + '/latest/');
+            window.location.replace(base + '/latest/' + suffix);
           });
       })();
     </script>
@@ -53,6 +59,6 @@
   <body>
     <h1>404 – Page Not Found</h1>
     <p>The page you requested could not be found.</p>
-    <p><a href="latest/">Go to the latest documentation</a></p>
+    <p><a id="latest-link" href="#">Go to the latest documentation</a></p>
   </body>
 </html>
