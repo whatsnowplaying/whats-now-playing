@@ -147,10 +147,13 @@ jobs:
           timestamp-digest: SHA256
       - name: verify windows signing
         if: ${{ env.AZURE_CLIENT_ID != '' }}
-        shell: bash
+        shell: powershell
         run: |
-          BINARY=$(find WhatsNowPlaying-*-Windows -name "WhatsNowPlaying.exe" | head -1)
-          signtool.exe verify /pa /v "${BINARY}"
+          $binary = Get-ChildItem -Recurse -Filter "WhatsNowPlaying.exe" | Select-Object -First 1
+          $sig = Get-AuthenticodeSignature -FilePath $binary.FullName
+          Write-Output "Status: $($sig.Status)"
+          Write-Output "Subject: $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { exit 1 }
       - name: smoke test binary
         shell: bash
         run: |
