@@ -136,7 +136,7 @@ jobs:
         if: ${{ env.AZURE_CLIENT_ID != '' }}
         uses: azure/artifact-signing-action@v1
         with:
-          endpoint: https://cus.codesigning.azure.net/
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
           signing-account-name: com-whatsnowplaying-app
           certificate-profile-name: whatsnowplaying-cert-profile
           files-folder: ${{ github.workspace }}
