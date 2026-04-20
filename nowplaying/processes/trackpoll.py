@@ -488,7 +488,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
             return
 
-        nextmeta, earshot_overrode = await self._check_earshot_override(nextmeta)
+        nextmeta, _ = await self._check_earshot_override(nextmeta)
 
         if self._ismetaempty(nextmeta) or self._isignored(nextmeta):
             return

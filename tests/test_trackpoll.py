@@ -590,7 +590,7 @@ def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_tes
         ({"artist": None, "title": None}, ("", "")),
     ],
 )
-def test_earshot_track_key(meta, expected, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+def test_earshot_track_key(meta, expected):
     """_earshot_track_key returns stable (artist, title) tuple"""
     result = nowplaying.processes.trackpoll.TrackPoll._earshot_track_key(meta)  # pylint: disable=protected-access
     assert result == expected
