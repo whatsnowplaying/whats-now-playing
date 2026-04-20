@@ -62,3 +62,14 @@ jobs:
           else
             mike deploy --push -F properdocs.yml dev
           fi
+
+      - name: Update root 404 redirect page
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          cp docs/404.html 404.html
+          git add 404.html
+          git diff --cached --quiet || \
+            git commit -m "ci: update root 404 redirect"
+          git push origin gh-pages
+          git checkout -
