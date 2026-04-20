@@ -25,5 +25,5 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-docs.txt
 
-      - name: Test MkDocs build
-        run: mkdocs build --strict
+      - name: Test docs build
+        run: properdocs build -f properdocs.yml --strict
