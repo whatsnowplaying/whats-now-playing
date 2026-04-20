@@ -20,7 +20,9 @@ jobs:
     with:
       runs-on: macos-15
       artifact-name: macos15-arm-dist
-      environment: macos-signing
+      environment: >-
+        ${{ (github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/tags/')) && 'macos-signing' || '' }}
 
   pyinstaller-macos-intel:
     uses: ./.github/workflows/macos-build.yml
@@ -30,7 +32,9 @@ jobs:
     with:
       runs-on: macos-15-intel
       artifact-name: macos15-intel-dist
-      environment: macos-signing
+      environment: >-
+        ${{ (github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/tags/')) && 'macos-signing' || '' }}
 
 
   pyinstaller-linux:
@@ -94,12 +98,18 @@ jobs:
 
   pyinstaller-win:
     runs-on: windows-2022
+    environment: >-
+      ${{ (github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/windows_signing' ||
+      startsWith(github.ref, 'refs/tags/')) && 'windows-signing' || '' }}
     permissions:
       contents: read
+      id-token: write
     env:
       PYTHONIOENCODING: utf-8
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -115,6 +125,35 @@ jobs:
         shell: bash
         run: |
           ./builder.sh
+      - name: azure login
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: sign windows binary
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          signing-account-name: com-whatsnowplaying-app
+          certificate-profile-name: whatsnowplaying-cert-profile
+          files-folder: ${{ github.workspace }}
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+      - name: verify windows signing
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
+        shell: powershell
+        run: |
+          $binary = Get-ChildItem -Recurse -Filter "WhatsNowPlaying.exe" | Select-Object -First 1
+          $sig = Get-AuthenticodeSignature -FilePath $binary.FullName
+          Write-Output "Status: $($sig.Status)"
+          Write-Output "Subject: $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { exit 1 }
       - name: smoke test binary
         shell: bash
         run: |

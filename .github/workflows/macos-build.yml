@@ -27,6 +27,8 @@ jobs:
     environment: ${{ inputs.environment }}
     permissions:
       contents: read
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
     steps:
       - name: icu
         run: |
@@ -43,7 +45,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: import signing certificate
-        if: ${{ secrets.MACOS_CERTIFICATE != '' }}
+        if: ${{ env.MACOS_CERTIFICATE != '' }}
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
