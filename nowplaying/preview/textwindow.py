@@ -173,6 +173,12 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         logging.debug("TextPreviewWindow rendered %d chars from %s", len(rendered), tmpl_path)
         self.text_edit.setPlainText(rendered)
 
+    def select_template(self, name: str) -> None:
+        """Select a template by filename in the combo box."""
+        idx = self.template_combo.findData(name)
+        if idx >= 0:
+            self.template_combo.setCurrentIndex(idx)
+
     def _on_template_selected(self) -> None:
         self._render()
 

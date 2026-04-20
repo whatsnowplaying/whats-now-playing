@@ -22,6 +22,7 @@ CHAT_BOT_AUTH_SCOPES: list[AuthScope] = [
 # Broadcaster scopes (chat scopes + additional broadcaster permissions)
 BROADCASTER_AUTH_SCOPES: list[AuthScope] = CHAT_BOT_AUTH_SCOPES + [
     AuthScope.CHANNEL_READ_REDEMPTIONS,
+    AuthScope.CHANNEL_MANAGE_BROADCAST,
 ]
 
 # Build scope strings from enums using TwitchAPI helper
