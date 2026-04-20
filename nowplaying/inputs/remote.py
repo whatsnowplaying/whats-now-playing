@@ -85,7 +85,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         await self.setup_watcher()
         self.remotedb = nowplaying.db.MetadataDB(databasefile=str(self.remotedbfile))
 
-    async def getplayingtrack(self):
+    async def getplayingtrack(self) -> TrackMetadata | None:
         """wrapper to call getplayingtrack"""
         return self.metadata
 

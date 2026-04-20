@@ -39,7 +39,6 @@ Network streaming and file-based sources:
 
 For hardware not directly supported by WNP:
 
-- **[EarShot](https://whatsnowplaying.com/earshot)** - companion app for macOS, iOS, and
-  watchOS that uses Shazam-based audio identification to detect tracks from vinyl decks,
-  standalone CDJs, Rekordbox, and analog mixers, then sends them to WNP over the local
-  network. Requires WNP 5.2.0 or later.
+- **[EarShot](earshot.md)** - companion app for macOS, iOS, and watchOS that uses
+  Shazam-based audio identification to detect tracks from vinyl decks, standalone CDJs,
+  Rekordbox, and analog mixers, then sends them to WNP over the local network.

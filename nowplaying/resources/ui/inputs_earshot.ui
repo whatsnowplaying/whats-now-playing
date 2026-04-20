@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>inputs_earshot_ui</class>
+ <widget class="QWidget" name="inputs_earshot_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>EarShot</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>EarShot</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
+   </property>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <widget class="QCheckBox" name="earshot_always_checkbox">
+     <property name="text">
+      <string>Always use EarShot when it identifies a new track</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="description_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;EarShot is a companion app for macOS, iOS, and watchOS that uses Shazam-based audio identification to detect tracks playing on vinyl decks, standalone CDJs, Rekordbox, and analog mixers.&lt;/p&gt;
+&lt;p&gt;When &lt;span style=&quot;font-weight:600;&quot;&gt;Always use EarShot when it identifies a new track&lt;/span&gt; is enabled, EarShot track identifications will override the currently active source whenever EarShot reports a new track. This is useful when switching between DJ software and vinyl during a set.&lt;/p&gt;
+&lt;p&gt;See &lt;a href=&quot;https://whatsnowplaying.com/earshot&quot;&gt;whatsnowplaying.com/earshot&lt;/a&gt; for setup instructions.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

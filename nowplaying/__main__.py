@@ -9,9 +9,9 @@ import platform
 import socket
 import sys
 
+import PySide6.QtSvg  # noqa: F401  # pylint: disable=import-error, no-name-in-module, unused-import
 from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=import-error, no-name-in-module
-import PySide6.QtSvg  # noqa: F401  # pylint: disable=import-error, no-name-in-module, unused-import
 from PySide6.QtWidgets import QApplication  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap

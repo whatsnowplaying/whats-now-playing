@@ -573,3 +573,171 @@ def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_tes
 
     assert tptest.currentmeta.get("coverimageraw") == original
     mock_ic.random_image_fetch.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# EarShot override tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "meta,expected",
+    [
+        ({}, ("", "")),
+        ({"artist": "Artist"}, ("Artist", "")),
+        ({"title": "Title"}, ("", "Title")),
+        ({"artist": "Artist", "title": "Title"}, ("Artist", "Title")),
+        ({"artist": None, "title": None}, ("", "")),
+    ],
+)
+def test_earshot_track_key(meta, expected):
+    """_earshot_track_key returns stable (artist, title) tuple"""
+    result = nowplaying.processes.trackpoll.TrackPoll._earshot_track_key(meta)  # pylint: disable=protected-access
+    assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_no_plugin(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """when no earshot plugin is running meta passes through unchanged"""
+    tptest = trackpoll_testmode
+    main_meta = {"artist": "Serato Artist", "title": "Serato Track"}
+    result, overrode = await tptest._check_earshot_override(main_meta)  # pylint: disable=protected-access
+    assert result == main_meta
+    assert overrode is False
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_new_track(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """new EarShot track overrides main source and updates state"""
+    tptest = trackpoll_testmode
+    main_meta = {"artist": "Serato Artist", "title": "Serato Track"}
+    earshot_meta = {
+        "artist": "Vinyl Artist",
+        "title": "Vinyl Track",
+        "source_agent_name": "wnpearshot-1.0",
+    }
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.return_value = earshot_meta
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    result, overrode = await tptest._check_earshot_override(main_meta)  # pylint: disable=protected-access
+
+    assert result == earshot_meta
+    assert overrode is True
+    assert tptest.earshot_last_meta == earshot_meta  # pylint: disable=protected-access
+    assert tptest.main_source_suppressed_meta == main_meta  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_same_track_no_suppression(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """EarShot unchanged and no suppression active — main source passes through"""
+    tptest = trackpoll_testmode
+    earshot_meta = {
+        "artist": "Vinyl Artist",
+        "title": "Vinyl Track",
+        "source_agent_name": "wnpearshot-1.0",
+    }
+    tptest.earshot_last_meta = earshot_meta  # pylint: disable=protected-access
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.return_value = earshot_meta
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    main_meta = {"artist": "Serato Artist", "title": "Serato Track"}
+    result, overrode = await tptest._check_earshot_override(main_meta)  # pylint: disable=protected-access
+
+    assert result == main_meta
+    assert overrode is False
+    assert tptest.main_source_suppressed_meta == {}  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_suppresses_stale_main_source(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """main source reporting same stale track is suppressed after EarShot override"""
+    tptest = trackpoll_testmode
+    earshot_meta = {
+        "artist": "Vinyl Artist",
+        "title": "Vinyl Track",
+        "source_agent_name": "wnpearshot-1.0",
+    }
+    stale_main = {"artist": "Serato Artist", "title": "Serato Track"}
+
+    tptest.earshot_last_meta = earshot_meta  # pylint: disable=protected-access
+    tptest.main_source_suppressed_meta = stale_main  # pylint: disable=protected-access
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.return_value = earshot_meta
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    result, overrode = await tptest._check_earshot_override(stale_main)  # pylint: disable=protected-access
+
+    assert result == {}
+    assert overrode is False
+    # suppression still active — suppressed_meta not cleared
+    assert tptest.main_source_suppressed_meta == stale_main  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_clears_suppression_on_new_main_track(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """genuinely new main source track clears EarShot suppression"""
+    tptest = trackpoll_testmode
+    earshot_meta = {
+        "artist": "Vinyl Artist",
+        "title": "Vinyl Track",
+        "source_agent_name": "wnpearshot-1.0",
+    }
+    stale_main = {"artist": "Serato Artist", "title": "Serato Track"}
+    new_main = {"artist": "Serato Artist", "title": "New Serato Track"}
+
+    tptest.earshot_last_meta = earshot_meta  # pylint: disable=protected-access
+    tptest.main_source_suppressed_meta = stale_main  # pylint: disable=protected-access
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.return_value = earshot_meta
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    result, overrode = await tptest._check_earshot_override(new_main)  # pylint: disable=protected-access
+
+    assert result == new_main
+    assert overrode is False
+    assert tptest.main_source_suppressed_meta == {}  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_poll_failure(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """EarShot poll exception is caught and main source passes through"""
+    tptest = trackpoll_testmode
+    main_meta = {"artist": "Serato Artist", "title": "Serato Track"}
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.side_effect = RuntimeError("connection lost")
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    result, overrode = await tptest._check_earshot_override(main_meta)  # pylint: disable=protected-access
+
+    assert result == main_meta
+    assert overrode is False
+
+
+@pytest.mark.asyncio
+async def test_check_earshot_override_ignores_same_as_main(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """EarShot hearing the same track as main source does not trigger an override"""
+    tptest = trackpoll_testmode
+    main_meta = {"artist": "Vinyl Artist", "title": "Vinyl Track", "source_agent_name": "serato"}
+    earshot_meta = {
+        "artist": "Vinyl Artist",
+        "title": "Vinyl Track",
+        "source_agent_name": "wnpearshot",
+    }
+
+    mock_plugin = unittest.mock.AsyncMock()
+    mock_plugin.getplayingtrack.return_value = earshot_meta
+    tptest.earshot_plugin = mock_plugin  # pylint: disable=protected-access
+
+    result, overrode = await tptest._check_earshot_override(main_meta)  # pylint: disable=protected-access
+
+    assert overrode is False
+    assert result == main_meta
+    # earshot_last_meta updated so next poll does not recheck
+    assert tptest.earshot_last_meta == earshot_meta  # pylint: disable=protected-access

@@ -87,6 +87,13 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.guessgame: nowplaying.guessgame.GuessGame | None = None
         self._pending_meta: TrackMetadata | None = None
 
+        # EarShot secondary monitor (runs alongside any non-EarShot source)
+        self.earshot_plugin: nowplaying.inputs.InputPlugin | None = None
+        self.earshot_last_meta: TrackMetadata = {}
+        # When EarShot overrides, remember what the main source was reporting
+        # so its stale data does not immediately win back.
+        self.main_source_suppressed_meta: TrackMetadata = {}
+
     @classmethod
     def create_with_plugins(
         cls,
@@ -174,7 +181,34 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 logging.error("cannot start %s: %s", self.previousinput, error)
                 return False
 
+        await self._manage_earshot_plugin()
         return True
+
+    async def _manage_earshot_plugin(self):
+        """Start or stop the secondary EarShot monitor based on config and active source."""
+        active = self.config.cparser.value("settings/input")
+        always_accept = self.config.cparser.value(
+            "earshot/always_accept", type=bool, defaultValue=True
+        )
+        earshot_key = "nowplaying.inputs.earshot"
+        should_run = (
+            always_accept and active not in ("earshot", "remote") and earshot_key in self.plugins
+        )
+
+        if should_run and self.earshot_plugin is None:
+            logging.info("Starting secondary EarShot monitor")
+            self.earshot_plugin = self.plugins[earshot_key].Plugin(config=self.config)
+            try:
+                await self.earshot_plugin.start()
+            except Exception as err:  # pylint: disable=broad-except
+                logging.error("Cannot start EarShot secondary monitor: %s", err)
+                self.earshot_plugin = None
+        elif not should_run and self.earshot_plugin is not None:
+            logging.info("Stopping secondary EarShot monitor")
+            await self.earshot_plugin.stop()
+            self.earshot_plugin = None
+            self.earshot_last_meta = {}
+            self.main_source_suppressed_meta = {}
 
     async def run(self):
         """track polling process"""
@@ -237,6 +271,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 logging.warning("imagecache did not stop cleanly, terminating")
                 self.icprocess.terminate()
                 self.icprocess.join(timeout=5)
+        if self.earshot_plugin:
+            await self.earshot_plugin.stop()
+            self.earshot_plugin = None
         if self.input:
             await self.input.stop()
         self.plugins = None
@@ -281,6 +318,60 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             title = None
 
         return title, filename
+
+    @staticmethod
+    def _earshot_track_key(meta: TrackMetadata) -> tuple[str, str]:
+        """Stable (artist, title) key for EarShot change detection."""
+        return (meta.get("artist") or "", meta.get("title") or "")
+
+    async def _check_earshot_override(
+        self, main_nextmeta: TrackMetadata
+    ) -> tuple[TrackMetadata, bool]:
+        """Check whether a new EarShot identification should override the main source.
+
+        Returns (metadata_to_use, earshot_overrode) where earshot_overrode is True
+        when EarShot fired.  Also handles suppression of the main source's stale
+        last-seen track so it does not immediately win back after an EarShot override.
+        """
+        if not self.earshot_plugin:
+            return main_nextmeta, False
+
+        try:
+            earshot_meta = await self.earshot_plugin.getplayingtrack() or {}
+        except Exception as err:  # pylint: disable=broad-except
+            logging.error("EarShot secondary poll failed: %s", err)
+            return main_nextmeta, False
+
+        if earshot_meta and self._earshot_track_key(earshot_meta) != self._earshot_track_key(
+            self.earshot_last_meta
+        ):
+            if self._earshot_track_key(earshot_meta) == self._earshot_track_key(main_nextmeta):
+                logging.debug("EarShot heard the same track as main source; not overriding")
+                self.earshot_last_meta = earshot_meta
+            else:
+                logging.info(
+                    "EarShot identified new track: %s / %s",
+                    earshot_meta.get("artist"),
+                    earshot_meta.get("title"),
+                )
+                self.earshot_last_meta = earshot_meta
+                self.main_source_suppressed_meta = main_nextmeta
+                return earshot_meta, True
+
+        # EarShot has not changed — suppress main source if it is still reporting
+        # the same stale track it was showing when EarShot last overrode.
+        # Return empty so _ismetaempty() at the call site skips the publish.
+        if self.main_source_suppressed_meta and self._earshot_track_key(
+            main_nextmeta
+        ) == self._earshot_track_key(self.main_source_suppressed_meta):
+            return {}, False
+
+        # Main source has a genuinely new track — clear suppression.
+        if self.main_source_suppressed_meta:
+            logging.debug("Main source reports new track; clearing EarShot suppression")
+            self.main_source_suppressed_meta = {}
+
+        return main_nextmeta, False
 
     @staticmethod
     def _ismetaempty(metadata: TrackMetadata) -> bool:
@@ -397,6 +488,8 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
             return
 
+        nextmeta, _ = await self._check_earshot_override(nextmeta)
+
         if self._ismetaempty(nextmeta) or self._isignored(nextmeta):
             return
 
@@ -436,9 +529,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         logging.debug("_fill_inmetadata took %.3f seconds", fill_duration)
 
         # Set timestamp and version when track is accepted as current
-        self.currentmeta["track_received"] = datetime.datetime.now(
-            datetime.timezone.utc
-        ).isoformat()
+        self.currentmeta["track_received"] = datetime.datetime.now(datetime.UTC).isoformat()
         self.currentmeta["version"] = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
         logging.info(

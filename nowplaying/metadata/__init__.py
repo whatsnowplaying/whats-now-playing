@@ -10,8 +10,8 @@ from nowplaying.metadata.processors import MetadataProcessors, main, recognition
 from nowplaying.metadata.tinytag_runner import (
     AUDIO_CONTAINER_EXCLUSIONS,
     AUDIO_EXTENSIONS,
-    TinyTagRunner,
     VIDEO_EXTENSIONS,
+    TinyTagRunner,
 )
 
 __all__ = [
