@@ -360,10 +360,11 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         # EarShot has not changed — suppress main source if it is still reporting
         # the same stale track it was showing when EarShot last overrode.
+        # Return empty so _ismetaempty() at the call site skips the publish.
         if self.main_source_suppressed_meta and self._earshot_track_key(
             main_nextmeta
         ) == self._earshot_track_key(self.main_source_suppressed_meta):
-            return main_nextmeta, False  # caller will treat as empty / same
+            return {}, False
 
         # Main source has a genuinely new track — clear suppression.
         if self.main_source_suppressed_meta:
@@ -489,12 +490,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         nextmeta, earshot_overrode = await self._check_earshot_override(nextmeta)
 
-        # Suppress the main source if EarShot overrode it and it hasn't changed yet.
-        if (
-            self._ismetaempty(nextmeta)
-            or self._isignored(nextmeta)
-            or (not earshot_overrode and bool(self.main_source_suppressed_meta))
-        ):
+        if self._ismetaempty(nextmeta) or self._isignored(nextmeta):
             return
 
         if self._ismetasame(nextmeta):

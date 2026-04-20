@@ -672,6 +672,7 @@ async def test_check_earshot_override_suppresses_stale_main_source(trackpoll_tes
 
     result, overrode = await tptest._check_earshot_override(stale_main)  # pylint: disable=protected-access
 
+    assert result == {}
     assert overrode is False
     # suppression still active — suppressed_meta not cleared
     assert tptest.main_source_suppressed_meta == stale_main  # pylint: disable=protected-access
