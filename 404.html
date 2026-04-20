@@ -6,17 +6,30 @@
     <title>Page Not Found – What's Now Playing</title>
     <script>
       (function () {
-        // Redirect X.X.X-previewN/path to X.X.X/path
+        // Redirect X.X.X-previewN/path to X.X.X/path if X.X.X exists,
+        // otherwise fall back to /latest/
         var match = window.location.pathname.match(
           /^\/([0-9]+\.[0-9]+\.[0-9]+)-preview\d+(\/.*)?$/
         );
-        if (match) {
-          window.location.replace(
-            '/' + match[1] + (match[2] || '/') +
-            window.location.search +
-            window.location.hash
-          );
-        }
+        if (!match) { return; }
+        var stableVersion = match[1];
+        var subpath = match[2] || '/';
+        fetch('/versions.json')
+          .then(function (r) { return r.json(); })
+          .then(function (versions) {
+            var exists = versions.some(function (v) {
+              return v.version === stableVersion;
+            });
+            window.location.replace(
+              (exists ? '/' + stableVersion : '/latest') +
+              subpath +
+              window.location.search +
+              window.location.hash
+            );
+          })
+          .catch(function () {
+            window.location.replace('/latest/');
+          });
       })();
     </script>
     <style>
