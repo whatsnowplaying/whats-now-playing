@@ -50,11 +50,11 @@ updates required.
 
 ### [Vinyl, CDJs & Analog Mixers](https://whatsnowplaying.com/earshot)
 
-* **[EarShot](https://whatsnowplaying.com/earshot)** — companion app for macOS, iOS, and
+* **[WNP EarShot](https://whatsnowplaying.com/earshot)** — companion app for macOS, iOS, and
   watchOS that uses Shazam-based audio identification to detect tracks playing on
   vinyl decks, standalone CDJs, Rekordbox, and analog mixers, then sends them to
   WNP automatically over the local network. No software integration with the
-  hardware required. Requires WNP 5.2.0 or later.
+  hardware required.
 
 ### [Remote WNP Instance](input/remote.md)
 

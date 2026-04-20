@@ -6,7 +6,7 @@ repo_url: https://github.com/whatsnowplaying/whats-now-playing
 repo_name: whatsnowplaying/whats-now-playing
 
 theme:
-  name: material
+  name: materialx
   custom_dir: overrides
   palette:
     # Palette toggle for light mode
@@ -95,6 +95,7 @@ nav:
       - M3U: input/m3u.md
       - MIXXX: input/mixxx.md
       - MPRIS2: input/mpris2.md
+      - EarShot: input/earshot.md
       - Remote: input/remote.md
       - Serato: input/serato.md
       - Serato (Legacy): input/serato3.md
