@@ -145,6 +145,12 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
+      - name: verify windows signing
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
+        shell: bash
+        run: |
+          BINARY=$(find WhatsNowPlaying-*-Windows -name "WhatsNowPlaying.exe" | head -1)
+          signtool.exe verify /pa /v "${BINARY}"
       - name: smoke test binary
         shell: bash
         run: |
