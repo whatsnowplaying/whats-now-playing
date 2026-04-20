@@ -67,7 +67,7 @@ jobs:
         run: |
           cp docs/404.html /tmp/404.html
           git fetch origin gh-pages
-          git checkout -b gh-pages origin/gh-pages
+          git checkout -B gh-pages origin/gh-pages
           cp /tmp/404.html 404.html
           git add 404.html
           git diff --cached --quiet || \
