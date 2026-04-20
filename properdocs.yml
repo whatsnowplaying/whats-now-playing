@@ -8,6 +8,7 @@ repo_name: whatsnowplaying/whats-now-playing
 theme:
   name: materialx
   custom_dir: overrides
+  topbar_style: primary
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"

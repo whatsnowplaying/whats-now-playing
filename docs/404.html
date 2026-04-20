@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Page Not Found – What's Now Playing</title>
+    <script>
+      (function () {
+        // Match base/X.X.X-previewN/subpath — base handles any site prefix
+        var match = window.location.pathname.match(
+          /^(.*?)\/([0-9]+\.[0-9]+\.[0-9]+)-preview\d+(\/.*)?$/
+        );
+
+        // Derive the site root for the fallback link: use base from the
+        // preview match if available, otherwise take the first path segment
+        // (handles GitHub Pages project-site prefix like /whats-now-playing)
+        var base = match
+          ? match[1]
+          : (window.location.pathname.match(/^(\/[^/]+)/) || ['', ''])[1];
+        document.getElementById('latest-link').href = base + '/latest/';
+
+        if (!match) { return; }
+        var stableVersion = match[2];
+        var subpath = match[3] || '/';
+        var suffix = subpath + window.location.search + window.location.hash;
+        fetch(base + '/versions.json')
+          .then(function (r) { return r.json(); })
+          .then(function (versions) {
+            var exists = versions.some(function (v) {
+              return v.version === stableVersion;
+            });
+            window.location.replace(
+              base + '/' + (exists ? stableVersion : 'latest') + suffix
+            );
+          })
+          .catch(function () {
+            window.location.replace(base + '/latest/' + suffix);
+          });
+      })();
+    </script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #fff;
+        color: #333;
+      }
+      h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+      p { color: #666; }
+      a { color: #2094f3; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <h1>404 – Page Not Found</h1>
+    <p>The page you requested could not be found.</p>
+    <p><a id="latest-link" href="#">Go to the latest documentation</a></p>
+  </body>
+</html>
