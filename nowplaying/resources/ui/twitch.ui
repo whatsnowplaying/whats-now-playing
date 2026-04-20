@@ -164,6 +164,47 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="streamtitle_checkbox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Update stream title on track change</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout">
+     <item>
+      <widget class="QLineEdit" name="streamtitle_lineedit">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="streamtitle_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Template</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="streamtitle_preview_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Preview ...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QTextBrowser" name="help_text">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -249,6 +290,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>copy_chat_auth_button</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>streamtitle_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
  </connections>

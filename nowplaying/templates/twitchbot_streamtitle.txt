@@ -1,0 +1,1 @@
+Currently playing: {% if artist %}{{ artist }} - {% endif %}{{ title }}

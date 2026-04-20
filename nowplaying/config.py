@@ -269,6 +269,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def _defaults_chat_services(self, settings: QSettings) -> None:
         """default values for chat services"""
         settings.setValue("twitchbot/enabled", False)
+        settings.setValue(
+            "twitchbot/streamtitle", str(self.templatedir.joinpath("twitchbot_streamtitle.txt"))
+        )
         settings.setValue("kick/enabled", False)
         settings.setValue("kick/chat", False)
         settings.setValue("kick/announce", str(self.templatedir.joinpath("kickbot_track.txt")))

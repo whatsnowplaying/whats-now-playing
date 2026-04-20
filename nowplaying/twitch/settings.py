@@ -2,11 +2,13 @@
 """twitch settings"""
 
 import logging
+import pathlib
 import time
 
-from PySide6.QtCore import QTimer  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QTimer, Slot  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.preview.textwindow
 import nowplaying.twitch.oauth2
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
@@ -27,6 +29,9 @@ class TwitchSettings:
         self.uihelp = None
         self.oauth = None
         self.status_timer = None
+        self._streamtitle_preview_window: (
+            nowplaying.preview.textwindow.TextPreviewWindow | None
+        ) = None
 
     def connect(self, uihelp, widget):
         """connect twitch"""
@@ -39,6 +44,11 @@ class TwitchSettings:
         widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
         widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
 
+        # Stream title
+        widget.streamtitle_checkbox.toggled.connect(self._on_streamtitle_toggled)
+        widget.streamtitle_button.clicked.connect(self.on_streamtitle_button)
+        widget.streamtitle_preview_button.clicked.connect(self.on_streamtitle_preview_button)
+
     def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """load the settings window"""
         self.widget = widget
@@ -46,6 +56,15 @@ class TwitchSettings:
         widget.clientid_lineedit.setText(config.cparser.value("twitchbot/clientid"))
         widget.channel_lineedit.setText(config.cparser.value("twitchbot/channel"))
         widget.secret_lineedit.setText(config.cparser.value("twitchbot/secret"))
+
+        streamtitle_enabled = config.cparser.value("twitchbot/streamtitle_enabled", type=bool)
+        widget.streamtitle_checkbox.setChecked(streamtitle_enabled)
+        widget.streamtitle_lineedit.setText(
+            config.cparser.value("twitchbot/streamtitle", defaultValue="")
+        )
+        widget.streamtitle_lineedit.setEnabled(streamtitle_enabled)
+        widget.streamtitle_button.setEnabled(streamtitle_enabled)
+        widget.streamtitle_preview_button.setEnabled(streamtitle_enabled)
 
         # Redirect URI info is displayed as static text in UI instructions
 
@@ -72,6 +91,12 @@ class TwitchSettings:
         config.cparser.setValue("twitchbot/channel", newchannel)
         config.cparser.setValue("twitchbot/clientid", newclientid)
         config.cparser.setValue("twitchbot/secret", newsecret)
+        config.cparser.setValue(
+            "twitchbot/streamtitle_enabled", widget.streamtitle_checkbox.isChecked()
+        )
+        config.cparser.setValue(
+            "twitchbot/streamtitle", widget.streamtitle_lineedit.text().strip()
+        )
 
         # Redirect URI is dynamically generated, not stored in config
 
@@ -210,6 +235,44 @@ class TwitchSettings:
     def cleanup(self):
         """Clean up resources when settings UI is closed"""
         self.stop_status_timer()
+
+    def _on_streamtitle_toggled(self, enabled: bool) -> None:
+        """Enable/disable stream title template widgets based on checkbox state"""
+        self.widget.streamtitle_lineedit.setEnabled(enabled)
+        self.widget.streamtitle_button.setEnabled(enabled)
+        self.widget.streamtitle_preview_button.setEnabled(enabled)
+
+    @Slot()
+    def on_streamtitle_button(self) -> None:
+        """Open template file picker for stream title"""
+        self.uihelp.template_picker_lineedit(
+            self.widget.streamtitle_lineedit, limit="twitchbot_*.txt"
+        )
+
+    @Slot()
+    def on_streamtitle_preview_button(self) -> None:
+        """Open or raise the stream title template preview window"""
+        if self._streamtitle_preview_window is None:
+            self._streamtitle_preview_window = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.oauth.config,
+                glob_pattern="twitchbot_*.txt",
+                config_key="twitchbot/streamtitle",
+                enable_select_button=True,
+            )
+            self._streamtitle_preview_window.template_selected.connect(
+                self._on_streamtitle_template_selected
+            )
+        current = pathlib.Path(self.widget.streamtitle_lineedit.text()).name
+        if current:
+            self._streamtitle_preview_window.select_template(current)
+        self._streamtitle_preview_window.show()
+        self._streamtitle_preview_window.raise_()
+
+    @Slot(str)
+    def _on_streamtitle_template_selected(self, template_name: str) -> None:
+        self.widget.streamtitle_lineedit.setText(
+            str(pathlib.Path(self.oauth.config.templatedir) / template_name)
+        )
 
     def clear_authentication(self):
         """clear stored authentication tokens (OAuth2 and chat)"""
