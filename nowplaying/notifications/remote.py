@@ -75,30 +75,30 @@ class Plugin(NotificationPlugin):
             debug_data["secret"] = "***REDACTED***"
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
                     f"http://{self.server}:{self.port}/v1/remoteinput", json=remote_data
-                ) as response:
-                    logging.debug("Sending to %s:%s", self.server, self.port)
-                    if response.status == 200:
-                        try:
-                            result = await response.json()
-                            dbid = result.get("dbid")
-                            logging.debug("Remote server accepted track update, dbid: %s", dbid)
-                        except Exception as exc:  # pylint: disable=broad-except
-                            logging.warning("Failed to parse remote server response: %s", exc)
-                    elif response.status == 403:
-                        logging.error("Remote server authentication failed - check remote secret")
-                    elif response.status == 405:
-                        logging.error("Remote server method not allowed - check endpoint")
-                    else:
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Remote server error %d: %s", response.status, error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Remote server returned status %d", response.status)
+                ) as response,
+            ):
+                logging.debug("Sending to %s:%s", self.server, self.port)
+                if response.status == 200:
+                    try:
+                        result = await response.json()
+                        dbid = result.get("dbid")
+                        logging.debug("Remote server accepted track update, dbid: %s", dbid)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logging.warning("Failed to parse remote server response: %s", exc)
+                elif response.status == 403:
+                    logging.error("Remote server authentication failed - check remote secret")
+                elif response.status == 405:
+                    logging.error("Remote server method not allowed - check endpoint")
+                else:
+                    try:
+                        error_text = await response.text()
+                        logging.error("Remote server error %d: %s", response.status, error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Remote server returned status %d", response.status)
         except aiohttp.ClientError as exc:
             logging.error(
                 "Failed to connect to remote server %s:%s - %s", self.server, self.port, exc

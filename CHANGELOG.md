@@ -4,6 +4,13 @@
 ## Version 5.2.0 - In Progress
 
 * New Features
+  * EarShot input source
+    * New dedicated EarShot source for vinyl, CDJs, and analog mixers using
+      Shazam-based identification via the EarShot companion app
+    * Always-Accept mode runs EarShot as a secondary monitor alongside any
+      DJ software source; EarShot identifications automatically override the
+      active source when a new track is detected, then yield back when the DJ
+      software moves on
   * OBS Scene Collection exporter
     * New "Export for OBS..." system tray menu item generates a ready-to-import
       OBS 28+ scene collection JSON file with pre-configured browser sources
