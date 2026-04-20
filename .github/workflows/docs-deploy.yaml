@@ -38,6 +38,22 @@ jobs:
               # Stable release (e.g., 5.0.0) - deploy as latest
               mike deploy --push --update-aliases -f properdocs.yml $VERSION latest
               mike set-default --push latest
+
+              # Delete any preview versions for this release (e.g., 5.0.0-preview1)
+              git fetch origin gh-pages
+              PREVIEWS=$(mike list --json | python3 -c "
+          import json, sys
+          base = '${VERSION}-'
+          for v in json.load(sys.stdin):
+              if v['version'].startswith(base):
+                  print(v['version'])
+          ")
+              if [[ -n "$PREVIEWS" ]]; then
+                for PREVIEW in $PREVIEWS; do
+                  mike delete -f properdocs.yml "$PREVIEW"
+                done
+                git push origin gh-pages
+              fi
             else
               # Preview/pre-release (e.g., 5.0.0-preview1) - deploy version only
               mike deploy --push -f properdocs.yml $VERSION
