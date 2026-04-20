@@ -6,29 +6,29 @@
     <title>Page Not Found – What's Now Playing</title>
     <script>
       (function () {
-        // Redirect X.X.X-previewN/path to X.X.X/path if X.X.X exists,
-        // otherwise fall back to /latest/
+        // Match base/X.X.X-previewN/subpath — base handles any site prefix
         var match = window.location.pathname.match(
-          /^\/([0-9]+\.[0-9]+\.[0-9]+)-preview\d+(\/.*)?$/
+          /^(.*?)\/([0-9]+\.[0-9]+\.[0-9]+)-preview\d+(\/.*)?$/
         );
         if (!match) { return; }
-        var stableVersion = match[1];
-        var subpath = match[2] || '/';
-        fetch('/versions.json')
+        var base = match[1];          // e.g. '/whats-now-playing' or ''
+        var stableVersion = match[2]; // e.g. '5.0.0'
+        var subpath = match[3] || '/';
+        fetch(base + '/versions.json')
           .then(function (r) { return r.json(); })
           .then(function (versions) {
             var exists = versions.some(function (v) {
               return v.version === stableVersion;
             });
             window.location.replace(
-              (exists ? '/' + stableVersion : '/latest') +
+              base + '/' + (exists ? stableVersion : 'latest') +
               subpath +
               window.location.search +
               window.location.hash
             );
           })
           .catch(function () {
-            window.location.replace('/latest/');
+            window.location.replace(base + '/latest/');
           });
       })();
     </script>
@@ -53,6 +53,6 @@
   <body>
     <h1>404 – Page Not Found</h1>
     <p>The page you requested could not be found.</p>
-    <p><a href="/latest/">Go to the latest documentation</a></p>
+    <p><a href="latest/">Go to the latest documentation</a></p>
   </body>
 </html>
