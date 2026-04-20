@@ -20,7 +20,9 @@ jobs:
     with:
       runs-on: macos-15
       artifact-name: macos15-arm-dist
-      environment: macos-signing
+      environment: >-
+        ${{ (github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/tags/')) && 'macos-signing' || '' }}
 
   pyinstaller-macos-intel:
     uses: ./.github/workflows/macos-build.yml
@@ -30,7 +32,9 @@ jobs:
     with:
       runs-on: macos-15-intel
       artifact-name: macos15-intel-dist
-      environment: macos-signing
+      environment: >-
+        ${{ (github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/tags/')) && 'macos-signing' || '' }}
 
 
   pyinstaller-linux:
@@ -94,7 +98,10 @@ jobs:
 
   pyinstaller-win:
     runs-on: windows-2022
-    environment: windows-signing
+    environment: >-
+      ${{ (github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/windows_signing' ||
+      startsWith(github.ref, 'refs/tags/')) && 'windows-signing' || '' }}
     permissions:
       contents: read
       id-token: write
