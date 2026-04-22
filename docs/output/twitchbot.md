@@ -139,6 +139,22 @@ preview of the rendered output using sample metadata. Use the template dropdown
 to browse available `twitchbot_*.txt` templates, then click **Use This Template**
 to apply your selection back to the announcement template setting.
 
+### Stream Title Updates
+
+**What's Now Playing** can automatically update your Twitch stream title on
+every track change using a Jinja2 template file.
+
+1. Check **Update Stream Title** in the Twitch settings
+2. Click **Template** to select a `twitchbot_*.txt` template file, or use
+   the default `twitchbot_streamtitle.txt` which renders as
+   `Artist - Title` (artist omitted when not available)
+3. Click **Preview** to open the template preview window and verify the
+   output before going live
+4. Click **Save**
+
+The stream title is only sent when it changes, so repeated plays of the
+same track will not trigger unnecessary API calls.
+
 ### Adding New Commands
 
 Create a new file in **What's Now Playing**'s `templates` directory

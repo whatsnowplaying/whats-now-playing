@@ -73,7 +73,6 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
     ):
         self.config = config
         self.stopevent = stopevent
-        self.watcher = None
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
         self.guessgame = nowplaying.guessgame.GuessGame(config=config, stopevent=stopevent)
         self.metadb = nowplaying.db.MetadataDB()
@@ -399,13 +398,12 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
 
-    async def _cleanup_on_exit(self, twitchlogin: nowplaying.twitch.utils.TwitchLogin) -> None:
+    async def _cleanup_on_exit(self, twitchlogin: nowplaying.twitch.utils.TwitchLogin) -> None:  # pylint: disable=unused-argument
         """Clean up resources when exiting"""
+        # Never revoke tokens on exit — preserve them for restart.
+        # launch.py.stop() handles clearing the in-memory OAUTH_CLIENT.
         if self.twitch:
-            if self.twitchcustom:
-                await self.twitch.close()
-            else:
-                await twitchlogin.api_logout()
+            await self.twitch.close()
 
     async def on_twitchchat_incoming_message(self, msg: ChatMessage):
         """handle incoming chat messages for special responses"""
@@ -723,25 +721,11 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         )
 
     async def _setup_timer(self):
-        """need to watch the metadata db to know to send announcement"""
-        # Prevent multiple watcher instances
-        if self.watcher is not None:
-            logging.debug("Twitch chat watcher already exists, stopping previous instance")
-            self.watcher.stop()
-            self.watcher = None
-
-        self.watcher = self.metadb.watcher()
-        self.watcher.start(customhandler=self._announce_track)
-        await self._async_announce_track()
+        """Run the guess game polling loop"""
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
-            # Check for new guess games to announce
             await self._check_and_announce_new_game()
-
-        logging.debug("watcher stop event received")
-        if self.watcher:
-            self.watcher.stop()
-            self.watcher = None
+        logging.debug("guess game polling stop event received")
 
     async def _delay_write(self):
         """handle the twitch chat delay"""
@@ -759,21 +743,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         """intelligently split long messages at sentence or word boundaries"""
         return nowplaying.utils.smart_split_message(message, max_length)
 
-    def _announce_track(self, event):  # pylint: disable=unused-argument
-        logging.debug("watcher event called")
-        try:
-            try:
-                loop = asyncio.get_running_loop()
-                task = loop.create_task(self._async_announce_track())
-                self.tasks.add(task)
-                task.add_done_callback(self.tasks.discard)
-            except Exception:  # pylint: disable=broad-except
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(self._async_announce_track())
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error("watcher failed")
+    async def on_track_change(self) -> None:
+        """Called by TwitchLaunch when a track change is detected"""
+        await self._async_announce_track()
 
     async def _async_announce_track(self):
         """announce new tracks"""
@@ -949,9 +921,6 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
 
     async def stop(self):
         """stop the twitch chat support"""
-        if self.watcher:
-            self.watcher.stop()
-            self.watcher = None
         if self.chat:
             self.chat.stop()
         self.chat = None

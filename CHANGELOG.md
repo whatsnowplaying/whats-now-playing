@@ -57,6 +57,14 @@
 * Removed
   * Tenor GIF support has been removed; use Klipy instead
 
+* Twitch
+  * Stream title now updates automatically on every track change using a
+    Jinja2 template file, with the same template picker and preview workflow
+    used by chat announcements
+  * Broadcaster token scope warnings are now logged at startup when
+    `channel:manage:broadcast` is missing, with clearer HTTP 401/403
+    error messages on title update failures
+
 * Bug Fixes
   * BPM and key are now read correctly from M4A files that store the same
     field more than once
