@@ -30,8 +30,7 @@ class TwitchBroadcaster:
         self._last_title: str | None = None
         self._broadcaster_id: str | None = None
         self._session: aiohttp.ClientSession | None = None
-        self._jinja_env: jinja2.Environment | None = None
-        self._jinja_template_dir: str | None = None
+        self._jinja_envs: dict[str, jinja2.Environment] = {}
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Return the shared aiohttp session, creating it if needed."""
@@ -41,14 +40,13 @@ class TwitchBroadcaster:
 
     def _get_jinja_env(self, template_dir: str) -> jinja2.Environment:
         """Return a cached Jinja2 environment for the given template directory."""
-        if self._jinja_env is None or self._jinja_template_dir != template_dir:
-            self._jinja_env = jinja2.Environment(
+        if template_dir not in self._jinja_envs:
+            self._jinja_envs[template_dir] = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(template_dir),
                 finalize=self._finalize,
                 trim_blocks=True,
             )
-            self._jinja_template_dir = template_dir
-        return self._jinja_env
+        return self._jinja_envs[template_dir]
 
     async def on_track_change(self) -> None:
         """Called by TwitchLaunch when a track change is detected"""
