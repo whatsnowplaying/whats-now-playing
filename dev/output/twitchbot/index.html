@@ -1544,6 +1544,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#stream-title-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream Title Updates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#adding-new-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2999,6 +3010,20 @@ be preserved on every restart.</p>
 preview of the rendered output using sample metadata. Use the template dropdown
 to browse available <code>twitchbot_*.txt</code> templates, then click <strong>Use This Template</strong>
 to apply your selection back to the announcement template setting.</p>
+<h3 id="stream-title-updates">Stream Title Updates<a class="headerlink" href="#stream-title-updates" title="Permanent link">&para;</a></h3>
+<p><strong>What's Now Playing</strong> can automatically update your Twitch stream title on
+every track change using a Jinja2 template file.</p>
+<ol>
+<li>Check <strong>Update Stream Title</strong> in the Twitch settings</li>
+<li>Click <strong>Template</strong> to select a <code>twitchbot_*.txt</code> template file, or use
+   the default <code>twitchbot_streamtitle.txt</code> which renders as
+   <code>Artist - Title</code> (artist omitted when not available)</li>
+<li>Click <strong>Preview</strong> to open the template preview window and verify the
+   output before going live</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The stream title is only sent when it changes, so repeated plays of the
+same track will not trigger unnecessary API calls.</p>
 <h3 id="adding-new-commands">Adding New Commands<a class="headerlink" href="#adding-new-commands" title="Permanent link">&para;</a></h3>
 <p>Create a new file in <strong>What's Now Playing</strong>'s <code>templates</code> directory
 (<code>Documents/WhatsNowPlaying/templates</code>) called <code>twitchbot_yourcommand.txt</code>
