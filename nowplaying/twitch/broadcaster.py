@@ -28,6 +28,7 @@ class TwitchBroadcaster:
         self.stopevent = stopevent
         self.metadb = nowplaying.db.MetadataDB()
         self._last_title: str | None = None
+        self._broadcaster_id: str | None = None
         self._session: aiohttp.ClientSession | None = None
         self._jinja_env: jinja2.Environment | None = None
         self._jinja_template_dir: str | None = None
@@ -79,7 +80,11 @@ class TwitchBroadcaster:
         try:
             env = self._get_jinja_env(str(template_path.parent))
             title = env.get_template(template_path.name).render(metadata).strip()
-            title = title[:TWITCH_TITLE_MAX_LEN]
+            if len(title) > TWITCH_TITLE_MAX_LEN:
+                logging.debug(
+                    "Stream title truncated from %d to %d chars", len(title), TWITCH_TITLE_MAX_LEN
+                )
+                title = title[:TWITCH_TITLE_MAX_LEN]
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Stream title template error: %s", error)
             return
@@ -96,13 +101,18 @@ class TwitchBroadcaster:
             return
         oauth.access_token = access_token
         session = await self._get_session()
-        await nowplaying.twitch.utils.update_stream_title(oauth, title, session=session)
+        broadcaster_id = await nowplaying.twitch.utils.update_stream_title(
+            oauth, title, session=session, broadcaster_id=self._broadcaster_id
+        )
+        if broadcaster_id:
+            self._broadcaster_id = broadcaster_id
 
     async def stop(self) -> None:
         """Release shared resources"""
         if self._session and not self._session.closed:
             await self._session.close()
         self._session = None
+        self._broadcaster_id = None
 
     @staticmethod
     def _finalize(variable: Any) -> Any | str:

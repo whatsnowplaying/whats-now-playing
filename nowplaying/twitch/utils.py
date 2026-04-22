@@ -72,12 +72,17 @@ async def update_stream_title(
     oauth: "nowplaying.twitch.oauth2.TwitchOAuth2",
     title: str,
     session: aiohttp.ClientSession | None = None,
-) -> bool:
-    """Update the broadcaster's Twitch stream title via the Helix API"""
+    broadcaster_id: str | None = None,
+) -> str | None:
+    """Update the broadcaster's Twitch stream title via the Helix API.
+
+    Returns the broadcaster_id on success (for the caller to cache),
+    or None on failure.
+    """
     try:
         if not oauth or not oauth.access_token or not oauth.client_id:
             logging.error("OAuth2 client or access token not available for title update")
-            return False
+            return None
 
         headers = {
             "Authorization": f"Bearer {oauth.access_token}",
@@ -86,31 +91,33 @@ async def update_stream_title(
         }
         timeout = aiohttp.ClientTimeout(total=10)
 
-        async def _do_requests(session: aiohttp.ClientSession) -> bool:
-            async with session.get(
-                f"{oauth.api_host}/users",
-                headers=headers,
-                timeout=timeout,
-            ) as resp:
-                if resp.status != 200:
-                    logging.error("Failed to get broadcaster user info: %s", resp.status)
-                    return False
-                user_data = await resp.json()
-                if not (users := user_data.get("data", [])):
-                    logging.error("No user data returned for broadcaster")
-                    return False
-                broadcaster_id = users[0]["id"]
+        async def _do_requests(session: aiohttp.ClientSession) -> str | None:
+            cached_id = broadcaster_id
+            if not cached_id:
+                async with session.get(
+                    f"{oauth.api_host}/users",
+                    headers=headers,
+                    timeout=timeout,
+                ) as resp:
+                    if resp.status != 200:
+                        logging.error("Failed to get broadcaster user info: %s", resp.status)
+                        return None
+                    user_data = await resp.json()
+                    if not (users := user_data.get("data", [])):
+                        logging.error("No user data returned for broadcaster")
+                        return None
+                    cached_id = users[0]["id"]
 
             async with session.patch(
                 f"{oauth.api_host}/channels",
                 headers=headers,
-                params={"broadcaster_id": broadcaster_id},
+                params={"broadcaster_id": cached_id},
                 json={"title": title},
                 timeout=timeout,
             ) as resp:
                 if resp.status == 204:
                     logging.info("Stream title updated: %s", title)
-                    return True
+                    return cached_id
                 if resp.status == 401:
                     logging.error(
                         "Stream title update denied (HTTP 401) — broadcaster token is missing"
@@ -123,7 +130,7 @@ async def update_stream_title(
                     )
                 else:
                     logging.error("Failed to update stream title: HTTP %s", resp.status)
-                return False
+                return None
 
         if session is not None:
             return await _do_requests(session)
@@ -132,7 +139,7 @@ async def update_stream_title(
 
     except Exception as error:  # pylint: disable=broad-except
         logging.error("Error updating stream title: %s", error)
-        return False
+        return None
 
 
 async def async_validate_token(
