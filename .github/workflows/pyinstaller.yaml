@@ -127,7 +127,7 @@ jobs:
           ./builder.sh
       - name: azure login
         if: ${{ env.AZURE_CLIENT_ID != '' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
