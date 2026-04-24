@@ -15,7 +15,7 @@ pillow==12.2.0
 pillow_avif_plugin==1.5.5
 psutil==7.2.2
 puremagic<2; python_version < "3.12"
-puremagic==2.1.1; python_version >= "3.12"
+puremagic==2.2.0; python_version >= "3.12"
 pyacoustid==1.3.1
 pypresence==4.6.1
 # 6.5.0-6.5.3's rcc is broken on macOS; 6.5+ required for Qt.ColorScheme / colorSchemeChanged
