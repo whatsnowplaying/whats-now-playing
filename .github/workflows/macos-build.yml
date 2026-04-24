@@ -30,6 +30,14 @@ jobs:
     env:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
     steps:
+      - name: cpu diagnostics
+        run: |
+          echo "=== CPU info ==="
+          sysctl -n machdep.cpu.brand_string
+          echo "=== Load average ==="
+          uptime
+          echo "=== Top CPU consumers ==="
+          ps aux --sort=-%cpu 2>/dev/null | head -20 || ps aux | sort -rk3 | head -20
       - name: icu
         run: |
           brew update --preinstall || true
@@ -52,13 +60,15 @@ jobs:
         run: |
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           KEYCHAIN_PWD=$(openssl rand -base64 32)
-          security create-keychain -p "$KEYCHAIN_PWD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PWD" build.keychain
-          security list-keychains -d user -s build.keychain $(security list-keychains -d user | tr -d '"')
-          security import /tmp/certificate.p12 -k build.keychain \
+          KEYCHAIN_PATH="$HOME/Library/Keychains/build.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          # No -l (lock on sleep) and no -t (timeout) = never lock
+          security set-keychain-settings "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security import /tmp/certificate.p12 -k "$KEYCHAIN_PATH" \
             -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PWD" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
           rm -f /tmp/certificate.p12
       - name: run builder
         env:
