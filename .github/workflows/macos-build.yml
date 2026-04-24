@@ -61,7 +61,8 @@ jobs:
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           KEYCHAIN_PWD=$(openssl rand -base64 32)
           KEYCHAIN_PATH="$HOME/Library/Keychains/build.keychain-db"
-          security create-keychain -p "$KEYCHAIN_PWD" build.keychain
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          # No -l (lock on sleep) and no -t (timeout) = never lock
           security set-keychain-settings "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
