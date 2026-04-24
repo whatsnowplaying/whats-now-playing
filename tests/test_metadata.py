@@ -11,6 +11,7 @@ import pytest_asyncio
 
 import nowplaying.imagecache  # pylint: disable=import-error,no-member
 import nowplaying.metadata  # pylint: disable=import-error
+import nowplaying.metadata.processors
 import nowplaying.upgrades.config  # pylint: disable=import-error
 import nowplaying.utils.sqlite
 
@@ -549,6 +550,51 @@ async def test_youtube(bootstrap):
         "2c0bb21b-805b-4e13-b2da-6a52d398f4f6",
     ]
     assert metadataout["title"] == "Can You Forgive Her?"
+
+
+@pytest.mark.parametrize(
+    "title,expected_artist,expected_title",
+    [
+        ("HALIENE_-_Underneath_My_Skin", "HALIENE", "Underneath My Skin"),
+        ("Deal_-_Shine", "Deal", "Shine"),
+        ("Christina_Novelli_-_Itll_End_In_Tears", "Christina Novelli", "Itll End In Tears"),
+        (
+            "ALTARTICA_Feat_Evelina_-_Never_Feel_The_Same",
+            "ALTARTICA Feat Evelina",
+            "Never Feel The Same",
+        ),
+        (
+            "Zack_Martino_REGGIO_Ft_Jonny_Rose_-_Against_The_Night",
+            "Zack Martino REGGIO Ft Jonny Rose",
+            "Against The Night",
+        ),
+        (
+            "Roman_Messer_Christina_Novell_-_Fireflies",
+            "Roman Messer Christina Novell",
+            "Fireflies",
+        ),
+    ],
+)
+def test_youtube_title_split(title, expected_artist, expected_title):
+    """verify underscore-format youtube download titles are split correctly"""
+    assert nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
+    artist, track = title.split("_-_", 1)
+    assert artist.replace("_", " ") == expected_artist
+    assert track.replace("_", " ") == expected_title
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Man_On_The_Run",
+        "Pet Shop Boys - Can You Forgive Her?",
+        "Normal Title",
+        "Artist - Title With Spaces",
+    ],
+)
+def test_youtube_title_no_match(title):
+    """verify normal titles do not match the youtube underscore pattern"""
+    assert not nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
 
 
 @pytest.mark.asyncio

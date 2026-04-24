@@ -30,7 +30,8 @@ if TYPE_CHECKING:
     import nowplaying.imagecache
 
 NOTE_RE = re.compile("N(?i:ote):")
-YOUTUBE_MATCH_RE = re.compile("^https?://[www.]*youtube.com/watch.v=")
+YOUTUBE_COMMENT_MATCH_RE = re.compile("^https?://[www.]*youtube.com/watch.v=")
+YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -367,10 +368,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         )
 
         # handle the youtube download case special
-        if (not addmeta or not addmeta.get("album")) and " - " in self.metadata["title"]:
+        if not addmeta or not addmeta.get("album"):
+            title = self.metadata.get("title", "")
             if comments := self.metadata.get("comments"):
-                if YOUTUBE_MATCH_RE.match(comments):
+                if YOUTUBE_COMMENT_MATCH_RE.match(comments) and " - " in title:
                     await self._mb_youtube_fallback(musicbrainz)
+            elif YOUTUBE_TITLE_MATCH_RE.match(title):
+                await self._mb_youtube_fallback(musicbrainz)
 
     async def _mb_youtube_fallback(
         self, musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper"
@@ -383,7 +387,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return None
 
         addmeta2 = copy.deepcopy(self.metadata)
-        artist, title = self.metadata["title"].split(" - ")
+        raw_title = self.metadata.get("title", "")
+        if "_-_" in raw_title:
+            artist, title = raw_title.split("_-_", 1)
+            artist = artist.replace("_", " ")
+            title = title.replace("_", " ")
+        else:
+            artist, title = raw_title.split(" - ", 1)
         addmeta2["artist"] = artist.strip()
 
         # Strip common video suffixes from title before MusicBrainz lookup
