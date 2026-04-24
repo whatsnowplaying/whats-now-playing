@@ -11,6 +11,7 @@ import pytest_asyncio
 
 import nowplaying.imagecache  # pylint: disable=import-error,no-member
 import nowplaying.metadata  # pylint: disable=import-error
+import nowplaying.metadata.processors
 import nowplaying.upgrades.config  # pylint: disable=import-error
 import nowplaying.utils.sqlite
 
@@ -40,21 +41,27 @@ async def get_imagecache(bootstrap):
     icprocess.join()
 
 
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "15_Ghosts_II_64kb_orig.mp3",
+        "15_Ghosts_II_64kb_orig.flac",
+        "15_Ghosts_II_64kb_orig.m4a",
+        "15_Ghosts_II_64kb_orig.aiff",
+    ],
+)
 @pytest.mark.asyncio
-async def test_15ghosts2_mp3_orig(bootstrap, getroot):
+async def test_15ghosts2_orig(bootstrap, getroot, filename):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.mp3")
-    }
+    metadatain = {"filename": os.path.join(getroot, "tests", "audio", filename)}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
     assert metadataout["album"] == "Ghosts I - IV"
     assert metadataout["artist"] == "Nine Inch Nails"
-    # assert metadataout['bitrate'] == 64000
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["track"] == "15"
     assert metadataout["title"] == "15 Ghosts II"
@@ -87,67 +94,6 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout["musicbrainzalbumid"] == "3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a"
     assert metadataout["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
     assert metadataout["musicbrainzrecordingid"] == "2d7f08e1-be1c-4b86-b725-6e675b7b6de0"
-    assert metadataout["title"] == "15 Ghosts II"
-    assert metadataout["duration"] == 113
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_flac_orig(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.flac")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["album"] == "Ghosts I - IV"
-    assert metadataout["artist"] == "Nine Inch Nails"
-    assert metadataout["imagecacheartist"] == "nine inch nails"
-    assert metadataout["track"] == "15"
-    assert metadataout["title"] == "15 Ghosts II"
-    assert metadataout["duration"] == 113
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_m4a_orig(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.m4a")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["album"] == "Ghosts I - IV"
-    assert metadataout["artist"] == "Nine Inch Nails"
-    # assert metadataout['bitrate'] == 705600
-    assert metadataout["imagecacheartist"] == "nine inch nails"
-    assert metadataout["track"] == "15"
-    assert metadataout["title"] == "15 Ghosts II"
-    assert metadataout["duration"] == 113
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_aiff_orig(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.aiff")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["album"] == "Ghosts I - IV"
-    assert metadataout["artist"] == "Nine Inch Nails"
-    assert metadataout["imagecacheartist"] == "nine inch nails"
-    assert metadataout["track"] == "15"
     assert metadataout["title"] == "15 Ghosts II"
     assert metadataout["duration"] == 113
 
@@ -284,60 +230,27 @@ and Trent Reznor alike have refused to identify NIN as an industrial band.
     assert metadataout["title"] == "15 Ghosts II"
 
 
+@pytest.mark.parametrize(
+    "stripextras,title_in,title_out",
+    [
+        (True, "Test - Clean", "Test"),
+        (False, "Test - Clean", "Test - Clean"),
+        (True, "Test (Clean)", "Test"),
+        (True, "Test (Clean) (Single Mix)", "Test (Single Mix)"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_stripre_cleandash(bootstrap):
+async def test_stripre(bootstrap, stripextras, title_in, title_out):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", True)
-    metadatain = {"title": "Test - Clean"}
+    config.cparser.setValue("settings/stripextras", stripextras)
+    metadatain = {"title": title_in}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert metadataout["title"] == "Test"
-
-
-@pytest.mark.asyncio
-async def test_stripre_nocleandash(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", False)
-    metadatain = {"title": "Test - Clean"}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["title"] == "Test - Clean"
-
-
-@pytest.mark.asyncio
-async def test_stripre_cleanparens(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", True)
-    metadatain = {"title": "Test (Clean)"}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["title"] == "Test"
-
-
-@pytest.mark.asyncio
-async def test_stripre_cleanextraparens(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", True)
-    metadatain = {"title": "Test (Clean) (Single Mix)"}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["title"] == "Test (Single Mix)"
+    assert metadataout["title"] == title_out
 
 
 @pytest.mark.asyncio
@@ -408,69 +321,30 @@ async def test_streaming_channel_metadata_missing(bootstrap):
     assert "discordguild" not in metadataout
 
 
+@pytest.mark.parametrize(
+    "urls_in,urls_out",
+    [
+        (["http://example.com", "http://example.com/"], {"http://example.com/"}),
+        (["http://example.com", "https://example.com/"], {"https://example.com/"}),
+        (["https://example.com", "http://example.com/"], {"https://example.com/"}),
+        (
+            ["https://example.com", "http://whatsnowplaying.github.io", "http://example.com/"],
+            {"https://example.com/", "http://whatsnowplaying.github.io/"},
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_url_dedupe1(bootstrap):
+async def test_url_dedupe(bootstrap, urls_in, urls_out):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", False)
-    metadatain = {"artistwebsites": ["http://example.com", "http://example.com/"]}
+    metadatain = {"artistwebsites": urls_in}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert metadataout["artistwebsites"] == ["http://example.com/"]
-
-
-@pytest.mark.asyncio
-async def test_url_dedupe2(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", False)
-    metadatain = {"artistwebsites": ["http://example.com", "https://example.com/"]}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["artistwebsites"] == ["https://example.com/"]
-
-
-@pytest.mark.asyncio
-async def test_url_dedupe3(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", False)
-    metadatain = {"artistwebsites": ["https://example.com", "http://example.com/"]}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["artistwebsites"] == ["https://example.com/"]
-
-
-@pytest.mark.asyncio
-async def test_url_dedupe4(bootstrap):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("settings/stripextras", False)
-    metadatain = {
-        "artistwebsites": [
-            "https://example.com",
-            "http://whatsnowplaying.github.io",
-            "http://example.com/",
-        ]
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert set(metadataout["artistwebsites"]) == {
-        "https://example.com/",
-        "http://whatsnowplaying.github.io/",
-    }
+    assert set(metadataout["artistwebsites"]) == urls_out
 
 
 @pytest.mark.asyncio
@@ -552,6 +426,69 @@ async def test_youtube(bootstrap):
 
 
 @pytest.mark.asyncio
+async def test_youtube_title_processor(bootstrap):
+    """test full processor pipeline for underscore-format youtube download titles"""
+    config = bootstrap
+    metadatain = {
+        "artist": "SomeDJChannel",
+        "title": "HALIENE_-_Underneath_My_Skin",
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+    assert metadataout["artist"] == "HALIENE"
+    assert metadataout["title"] == "Underneath My Skin"
+    assert metadataout["album"] == "Heavenly"
+    assert metadataout["musicbrainzartistid"] == ["70f7d517-00d3-4102-8edd-39861d1a1ef2"]
+    assert metadataout["musicbrainzrecordingid"] == "2f6c5b4b-5397-4281-909d-32db5715fceb"
+
+
+@pytest.mark.parametrize(
+    "title,expected_artist,expected_title",
+    [
+        ("HALIENE_-_Underneath_My_Skin", "HALIENE", "Underneath My Skin"),
+        ("Deal_-_Shine", "Deal", "Shine"),
+        ("Christina_Novelli_-_Itll_End_In_Tears", "Christina Novelli", "Itll End In Tears"),
+        (
+            "ALTARTICA_Feat_Evelina_-_Never_Feel_The_Same",
+            "ALTARTICA Feat Evelina",
+            "Never Feel The Same",
+        ),
+        (
+            "Zack_Martino_REGGIO_Ft_Jonny_Rose_-_Against_The_Night",
+            "Zack Martino REGGIO Ft Jonny Rose",
+            "Against The Night",
+        ),
+        (
+            "Roman_Messer_Christina_Novell_-_Fireflies",
+            "Roman Messer Christina Novell",
+            "Fireflies",
+        ),
+    ],
+)
+def test_youtube_title_split(title, expected_artist, expected_title):
+    """verify underscore-format youtube download titles are split correctly"""
+    assert nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
+    artist, track = nowplaying.metadata.processors.split_youtube_title(title)
+    assert artist == expected_artist
+    assert track == expected_title
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Man_On_The_Run",
+        "Pet Shop Boys - Can You Forgive Her?",
+        "Normal Title",
+        "Artist - Title With Spaces",
+    ],
+)
+def test_youtube_title_no_match(title):
+    """verify normal titles do not match the youtube underscore pattern"""
+    assert not nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
+
+
+@pytest.mark.asyncio
 async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-name
     """noimagecache"""
 
@@ -612,94 +549,28 @@ async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-out
     assert metadataout["title"] == "Don't You (Forget About Me) (DJ Paulharwood Remix)"
 
 
+@pytest.mark.parametrize(
+    "filename,expected_date",
+    [
+        ("15_Ghosts_II_64kb_fake_origdate.m4a", "1982-01-01"),
+        ("15_Ghosts_II_64kb_fake_origyear.m4a", "1983"),
+        ("15_Ghosts_II_64kb_fake_ody.m4a", "1982-01-01"),
+        ("15_Ghosts_II_64kb_fake_origdate.mp3", "1982"),
+        ("15_Ghosts_II_64kb_fake_origyear.mp3", "1983"),
+        ("15_Ghosts_II_64kb_fake_ody.mp3", "1982"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_15ghosts2_m4a_fake_origdate(bootstrap, getroot):
+async def test_15ghosts2_fake_date(bootstrap, getroot, filename, expected_date):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_origdate.m4a")
-    }
+    metadatain = {"filename": os.path.join(getroot, "tests", "audio", filename)}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert metadataout["date"] == "1982-01-01"
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_m4a_fake_origyear(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_origyear.m4a")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["date"] == "1983"
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_m4a_fake_both(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_ody.m4a")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["date"] == "1982-01-01"
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_mp3_fake_origdate(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_origdate.mp3")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["date"] == "1982"
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_mp3_fake_origyear(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_origyear.mp3")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["date"] == "1983"
-
-
-@pytest.mark.asyncio
-async def test_15ghosts2_mp3_fake_origboth(bootstrap, getroot):
-    """automated integration test"""
-    config = bootstrap
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {
-        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_fake_ody.mp3")
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["date"] == "1982"
+    assert metadataout["date"] == expected_date
 
 
 @pytest.mark.parametrize("multifilename", ["multi.flac", "multi.m4a", "multi.mp3"])
