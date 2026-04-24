@@ -34,6 +34,7 @@ jobs:
       artifact-name: macos15-intel-dist
       environment: >-
         ${{ (github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/macos-signing' ||
         startsWith(github.ref, 'refs/tags/')) && 'macos-signing' || '' }}
 
 
