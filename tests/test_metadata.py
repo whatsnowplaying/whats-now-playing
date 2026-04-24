@@ -552,6 +552,24 @@ async def test_youtube(bootstrap):
     assert metadataout["title"] == "Can You Forgive Her?"
 
 
+@pytest.mark.asyncio
+async def test_youtube_title_processor(bootstrap):
+    """test full processor pipeline for underscore-format youtube download titles"""
+    config = bootstrap
+    metadatain = {
+        "artist": "SomeDJChannel",
+        "title": "HALIENE_-_Underneath_My_Skin",
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+    assert metadataout["artist"] == "HALIENE"
+    assert metadataout["title"] == "Underneath My Skin"
+    assert metadataout["album"] == "Heavenly"
+    assert metadataout["musicbrainzartistid"] == ["70f7d517-00d3-4102-8edd-39861d1a1ef2"]
+    assert metadataout["musicbrainzrecordingid"] == "2f6c5b4b-5397-4281-909d-32db5715fceb"
+
+
 @pytest.mark.parametrize(
     "title,expected_artist,expected_title",
     [
