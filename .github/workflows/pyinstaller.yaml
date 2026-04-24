@@ -97,7 +97,7 @@ jobs:
           "${BINARY}" --smoke-test
 
   pyinstaller-win:
-    runs-on: windows-2022
+    runs-on: windows-2025
     environment: >-
       ${{ (github.ref == 'refs/heads/main' ||
       github.ref == 'refs/heads/windows_signing' ||
