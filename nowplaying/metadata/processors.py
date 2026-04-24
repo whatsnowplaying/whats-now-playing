@@ -30,8 +30,14 @@ if TYPE_CHECKING:
     import nowplaying.imagecache
 
 NOTE_RE = re.compile("N(?i:ote):")
-YOUTUBE_COMMENT_MATCH_RE = re.compile("^https?://[www.]*youtube.com/watch.v=")
+YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
+
+
+def split_youtube_title(title: str) -> tuple[str, str]:
+    """Split an underscore-format YouTube download title into (artist, title)."""
+    artist, track = title.split("_-_", 1)
+    return artist.replace("_", " ").strip(), track.replace("_", " ").strip()
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -372,12 +378,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             title = self.metadata.get("title", "")
             if comments := self.metadata.get("comments"):
                 if YOUTUBE_COMMENT_MATCH_RE.match(comments) and " - " in title:
-                    await self._mb_youtube_fallback(musicbrainz)
+                    await self._mb_youtube_fallback(musicbrainz, title)
             elif YOUTUBE_TITLE_MATCH_RE.match(title):
-                await self._mb_youtube_fallback(musicbrainz)
+                await self._mb_youtube_fallback(musicbrainz, title)
 
     async def _mb_youtube_fallback(
-        self, musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper"
+        self,
+        musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper",
+        raw_title: str,
     ) -> None:
         if not self.metadata:
             return
@@ -387,11 +395,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return None
 
         addmeta2 = copy.deepcopy(self.metadata)
-        raw_title = self.metadata.get("title", "")
         if "_-_" in raw_title:
-            artist, title = raw_title.split("_-_", 1)
-            artist = artist.replace("_", " ")
-            title = title.replace("_", " ")
+            artist, title = split_youtube_title(raw_title)
         else:
             artist, title = raw_title.split(" - ", 1)
         addmeta2["artist"] = artist.strip()

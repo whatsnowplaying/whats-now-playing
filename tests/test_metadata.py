@@ -596,9 +596,9 @@ async def test_youtube_title_processor(bootstrap):
 def test_youtube_title_split(title, expected_artist, expected_title):
     """verify underscore-format youtube download titles are split correctly"""
     assert nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
-    artist, track = title.split("_-_", 1)
-    assert artist.replace("_", " ") == expected_artist
-    assert track.replace("_", " ") == expected_title
+    artist, track = nowplaying.metadata.processors.split_youtube_title(title)
+    assert artist == expected_artist
+    assert track == expected_title
 
 
 @pytest.mark.parametrize(
