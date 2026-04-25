@@ -34,6 +34,10 @@ code in this repository.
   `gh pr create --repo whatsnowplaying/whats-now-playing`
 - All development and PRs should stay within the `whatsnowplaying` organization
 
+**Do NOT enable Git LFS**: This repo is a public fork of `e1miran/Now-Playing-Serato`.
+GitHub does not allow public forks to upload LFS objects to their own storage —
+pushes fail with "can not upload new objects to public fork".
+
 ## Architecture Overview
 
 This is a Python 3.10/Qt6 desktop application for streaming DJs to display "now

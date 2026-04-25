@@ -16,6 +16,8 @@ rate limits imposed for typical usage.
 
 ## Setup
 
+[![Last.fm Settings](images/lastfm.png)](images/lastfm.png)
+
 > **Note**: Last.fm settings are under **Artist Data** in the Settings menu.
 
 ### Getting an API Key
