@@ -93,6 +93,7 @@ testpaths = ["tests-qt", "tests"]
 markers = [
   "serato3settings: custom settings for older serato",
   "templatesettings: custom settings for templates",
+  "live: tests that hit real external network hosts (may be slow or flaky in CI)",
 ]
 qt_api = "pyside6"
 #log_cli = true

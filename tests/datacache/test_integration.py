@@ -460,6 +460,7 @@ async def test_random_image_bytes_returns_none_when_nothing_cached(temp_datacach
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.live
 @pytest.mark.asyncio
 async def test_live_immediate_fetch(temp_datacache):  # pylint: disable=redefined-outer-name
     """Immediate fetch of a real image URL returns bytes and caches them"""
@@ -489,6 +490,7 @@ async def test_live_immediate_fetch(temp_datacache):  # pylint: disable=redefine
     assert data2 == data
 
 
+@pytest.mark.live
 @pytest.mark.asyncio
 async def test_live_fill_queue_and_random_image_bytes(temp_datacache):  # pylint: disable=redefined-outer-name
     """fill_queue + process_queue with real URLs → random_image_bytes returns bytes"""

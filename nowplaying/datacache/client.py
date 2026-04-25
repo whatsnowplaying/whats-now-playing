@@ -36,10 +36,15 @@ class DataCacheClient:
         self.rate_limiters = RateLimiterManager()
         self._initialized = False
         self._session: httpx.AsyncClient | None = None
+        self._init_lock = asyncio.Lock()
 
     async def initialize(self) -> None:
-        """Initialize the client and underlying storage"""
-        if not self._initialized:
+        """Initialize the client and underlying storage (concurrency-safe)."""
+        if self._initialized:
+            return
+        async with self._init_lock:
+            if self._initialized:
+                return
             await self.storage.initialize()
             ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             self._session = httpx.AsyncClient(http2=True, verify=ssl_ctx)
