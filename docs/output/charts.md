@@ -55,6 +55,8 @@ To access advanced features and view your data online:
 
 ## Configuration
 
+[![Charts Settings](images/charts.png)](images/charts.png)
+
 * **Enable** - Turn Charts output on or off (enabled by default)
 * **Secret** - Your auto-generated anonymous API key (automatically created)
 

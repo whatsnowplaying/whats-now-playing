@@ -13,6 +13,7 @@ import nowplaying.frozen
 import nowplaying.kick.chat
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
+import nowplaying.utils
 from nowplaying.kick.constants import (
     OAUTH_STATUS_AUTHENTICATED,
     OAUTH_STATUS_EXPIRED,
@@ -44,9 +45,20 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
     async def bootstrap(self) -> None:
         """Authenticate kick and launch related tasks"""
 
-        # Authenticate with Kick
-        if not await self.authenticate():
-            logging.error("Failed to authenticate with Kick")
+        # Authenticate with Kick — retry loop so kickbot picks up new tokens
+        # after the user completes browser OAuth without restarting the app
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
+            if await self.authenticate():
+                break
+            logging.info("Kick authentication failed; will retry when new tokens are available")
+            for _ in range(12):  # check stopevent every 5 s, retry after ~60 s
+                if nowplaying.utils.safe_stopevent_check(self.stopevent):
+                    return
+                await asyncio.sleep(5)
+            # Re-sync config to pick up tokens saved by webserver after browser OAuth
+            self.config.cparser.sync()
+
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
         # Now launch the actual tasks...

@@ -1,6 +1,6 @@
 # Source
 
-[![Source Selection](images/serato4-source-selection.png)](images/serato4-source-selection.png)
+[![Source Selection](images/sourceselection.png)](images/sourceselection.png)
 
 For **What's Now Playing** to work, it needs to know what software is playing music.
 In the UI, this setting is called the Source. There are many sources available. Some

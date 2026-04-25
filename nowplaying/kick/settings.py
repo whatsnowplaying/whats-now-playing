@@ -58,8 +58,7 @@ class KickSettings:
 
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        # Timer disabled to prevent blocking main thread
-        # self.start_status_timer()
+        self.start_status_timer()
 
     @staticmethod
     def save(config: nowplaying.config.ConfigFile, widget: Any, subprocesses: Any) -> None:

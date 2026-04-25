@@ -9,6 +9,7 @@
 - **[Guess Game](guessgame.md)** - Interactive hangman-style game for Twitch chat
 - **[Kick Bot](kickbot.md)** - Kick streaming platform bot
 - **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
+- **[Remote Output](../input/remote.md#client-side)** - Send track data to another What's Now Playing instance
 - **[Text Output](textoutput.md)** - Simple text file output
 - **[Twitch Bot](twitchbot.md)** - Twitch chat bot integration
 - **[Web Server](webserver.md)** - Built-in web server for browser sources
