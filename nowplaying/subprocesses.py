@@ -27,7 +27,15 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes: dict[str, dict[str, t.Any]] = {}
-        processlist = ["trackpoll", "obsws", "twitchbot", "discordbot", "webserver", "kickbot"]
+        processlist = [
+            "trackpoll",
+            "datacache",
+            "obsws",
+            "twitchbot",
+            "discordbot",
+            "webserver",
+            "kickbot",
+        ]
 
         for name in processlist:
             self.processes[name] = {

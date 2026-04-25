@@ -143,7 +143,11 @@ class DataCacheClient:
         """
         # Apply rate limiting
         rate_limiter = self.rate_limiters.get_limiter(provider)
-        await rate_limiter.acquire()
+        if not await rate_limiter.acquire():
+            logging.warning(
+                "Rate limit acquire timed out for provider %s, dropping request", provider
+            )
+            return None
 
         if not self._session:
             raise RuntimeError("DataCacheClient not initialized - call initialize() first")
