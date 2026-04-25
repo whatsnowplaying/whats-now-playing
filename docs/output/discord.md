@@ -15,7 +15,9 @@
 2. Select **Discord** from the **Streaming & Chat** section
 3. Check **Enable Bot Mode** and/or **Enable Rich Presence** depending on which modes you want
 4. Fill in the fields for each enabled mode (see setup sections below)
-5. Set the **Presence Template** for the status text shown in Bot Mode presence and Rich Presence
+5. Set the **Presence Template** for the status text shown in Bot Mode presence and Rich Presence.
+   Click **Preview** next to the field to see rendered output using sample metadata, and
+   **Use This Template** to apply a template from the dropdown
 6. Click **Save**
 
 ## Bot Mode Setup
@@ -111,7 +113,8 @@ Bot Mode can post a track announcement to a Discord text channel each time a new
    enabled in Discord's Advanced settings)
 2. Paste the ID into the **Channel ID** field in **What's Now Playing**'s Discord settings
 3. Optionally set a **Channel Template** for the message format. If left empty, the
-   Presence Template is used
+   Presence Template is used. Click **Preview** to open a preview of the rendered output
+   using sample metadata, and **Use This Template** to apply a template from the dropdown
 4. To include cover art with each post, check **Attach cover image to channel posts** and
    set the **Max size (px)** for the image. The default is 200 px, which keeps file sizes
    small. The maximum is 500 px.

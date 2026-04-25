@@ -21,6 +21,8 @@ completely fresh.
 
 * **Program exits**: The application will close after destroying the configuration
 
+[![Destroy Configuration Settings](images/destroy.png)](images/destroy.png)
+
 ## How to Use
 
 1. Check the "Are you sure?" checkbox

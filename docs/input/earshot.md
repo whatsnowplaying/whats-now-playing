@@ -25,6 +25,8 @@ mixer — WNP EarShot is the only source feeding track data.
 If you mix vinyl or CDJs alongside DJ software (Serato, Traktor, etc.), use
 **Always-Accept** mode instead of switching sources:
 
+[![EarShot Always-Accept setting](images/earshot-input.png)](images/earshot-input.png)
+
 1. Open Settings from the **What's Now Playing** icon
 2. Select Input Sources->EarShot from the left-hand column
 3. Check **Always use EarShot when it identifies a new track**

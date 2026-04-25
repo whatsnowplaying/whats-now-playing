@@ -11,6 +11,10 @@
       DJ software source; WNP EarShot identifications automatically override the
       active source when a new track is detected, then yield back when the DJ
       software moves on
+    * Cover art can now be fetched from remote HTTP URLs supplied by the
+      EarShot companion app and embedded in track metadata
+    * WNP enforces a minimum version requirement for the EarShot app and
+      returns an explicit upgrade-required response for outdated clients
   * OBS Scene Collection exporter
     * New "Export for OBS..." system tray menu item generates a ready-to-import
       OBS 28+ scene collection JSON file with pre-configured browser sources
@@ -47,8 +51,8 @@
   * Template preview
     * Web preview window has a "Use This Template" button that applies the
       selected template back to the settings field that launched the preview
-    * Template preview is available from Twitch Bot, Kick Bot, and Text Output
-      settings in addition to the main webserver output setting
+    * Template preview is available from Twitch Bot, Kick Bot, Text Output,
+      Discord presence, and Discord channel settings
     * WebGL templates display an amber warning banner in the preview window
       when WebGL is unavailable (e.g. virtual machines); the text overlay
       still renders correctly for end viewers whose GPU supports WebGL
@@ -58,9 +62,9 @@
   * Tenor GIF support has been removed; use Klipy instead
 
 * Twitch
-  * Stream title now updates automatically on every track change using a
-    Jinja2 template file, with the same template picker and preview workflow
-    used by chat announcements
+  * Stream title can now be updated automatically on every track change using
+    a Jinja2 template; works independently of Twitch chat being enabled, with
+    the same template picker and preview workflow used by chat announcements
   * Broadcaster token scope warnings are now logged at startup when
     `channel:manage:broadcast` is missing, with clearer HTTP 401/403
     error messages on title update failures
@@ -73,11 +77,18 @@
   * Filenames using an en dash separator (e.g. `Artist – Title.mp4`) are now
     correctly split into artist and title when track tags are absent
   * Kick and Twitch authentication failed if the webserver port wasn't 8899
+  * Twitch broadcaster OAuth tokens are no longer cleared on shutdown, so
+    re-authentication is not required every time WNP restarts
   * Remote Output + Charts: when both the sending and receiving WNP instances
     have Charts enabled, tracks were submitted to the charts server twice.
     The sender now signals to the receiver to skip charts submission.
   * WebGL overlay templates now degrade gracefully when WebGL is unavailable
     instead of throwing a JavaScript error
+  * Tracks downloaded from YouTube with `Artist_-_Title` filenames are now
+    correctly split into artist and title even when no YouTube URL is present
+    in the file tags
+  * Windows font scaling is now correct across all settings screens; previously
+    hardcoded macOS font sizes caused oversized text on Windows and Linux
 
 * UI
   * Major overhaul of all settings screens for improved layout consistency
@@ -100,13 +111,21 @@
   * BPM is now correctly converted from VirtualDJ's internal seconds-per-beat
     format to beats-per-minute
 
+* Platform
+  * macOS binaries are now code-signed and notarized, eliminating Gatekeeper
+    warnings on first launch
+  * Windows binaries are now signed with Azure Trusted Signing, eliminating
+    SmartScreen warnings on first launch
+
 * Developer Stuff
   * Dependency updates
   * **Python 3.10 is no longer supported**; minimum version is now Python 3.11
   * **Python 3.14 is now supported**
   * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
     lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
-    client with improved release selection accuracy and HTTP/2 support
+    client with improved release selection accuracy and HTTP/2 support;
+    wnpmb is installed as a wheel rather than vendored, and artist name
+    normalization utilities are now provided by wnpmb
   * Extracted common Guess Game WebGL background shader to
     `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
     overlays

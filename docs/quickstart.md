@@ -15,23 +15,25 @@ See [Platform Notes](#platform-notes) below if you have trouble launching the ap
 
 ## Step 2: Connect Your DJ Software
 
-On first launch, **What's Now Playing** attempts to auto-detect your DJ software:
+**Start your DJ software first**, then launch **What's Now Playing**. WNP auto-detects
+your software on startup, so it needs to already be running or have been run at least once.
+
+1. Launch your DJ software and let it fully start up.
+2. Launch **What's Now Playing**. The Settings window will open automatically. For some DJ
+   software, WNP builds a file index on first run — allow a few minutes for large libraries.
+3. Verify or change the auto-detected source under **Core Settings → Source**
+4. Follow the setup instructions for your source if needed
+
+A few things to know about auto-detection:
 
 * Software-based sources (Serato, Traktor, Virtual DJ, etc.) are detected from files they
-  leave on disk, so the software must have been run at least once before auto-detection will work
+  leave on disk — the software must have been run at least once
 * Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network
 * The first detected source wins. If multiple are found, you can change it afterwards.
 * For **vinyl decks, standalone CDJs, Rekordbox, and analog mixers**, use
   [WNP EarShot](https://whatsnowplaying.com/earshot) — a companion app that identifies
   tracks via Shazam and sends them to WNP automatically
-
-Before launching, make sure your DJ software has been run at least once. For Traktor, first
-launch also includes building a file index, which may take a few minutes for large libraries.
-
-1. Launch **What's Now Playing**. The Settings window will open automatically.
-2. Verify or change the auto-detected source under **Core Settings → Source**
-3. Follow the setup instructions for your source if needed
 
 See [Input Sources](input/index.md) for per-source setup details.
 
@@ -96,11 +98,6 @@ The app is signed and notarized. macOS should open it without any security warni
   Unzip in `Downloads` first, then move `WhatsNowPlaying.app` to `Applications`.
 * If macOS still shows a security warning, open **System Settings → Privacy & Security**,
   scroll down to the **Security** section, and click **Open Anyway**.
-
-### Windows
-
-* Windows security may prompt you about an unsigned binary.
-  Click **More Info** then **Run Anyway**.
 
 ### Linux
 
