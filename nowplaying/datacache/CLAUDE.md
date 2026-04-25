@@ -44,7 +44,7 @@ nowplaying/datacache/
 
 - **Generic storage**: Single system handles all data types (images, JSON, binary blobs)
 - **TTL management**: Configurable time-to-live per data type and provider
-- **Size management**: Automatic cleanup and size limits like current imagecache
+- **Size management**: Automatic cleanup and size limits like the current imagecache
 - **Database vacuum**: Periodic maintenance operations
 
 ## Migration Strategy
@@ -171,7 +171,7 @@ The datacache module is designed to work with minimal configuration, using sensi
 `tests/datacache/test_storage.py`
 
 - URL-based storage and retrieval operations
-- Randomimage functionality with multiple images per artist
+- randomimage functionality with multiple images per artist
 - TTL expiration and automatic cleanup
 - Data serialization (JSON, binary, strings)
 - Concurrent access and multiprocess coordination

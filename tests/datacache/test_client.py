@@ -7,12 +7,15 @@ rate limiting, and integration with storage.
 
 import tempfile
 from pathlib import Path
+
+import aiosqlite
 import httpx
 import pytest
 import pytest_asyncio
 import respx
 
 import nowplaying.datacache.client
+import nowplaying.utils.sqlite
 
 
 @pytest_asyncio.fixture
@@ -344,6 +347,51 @@ async def test_process_queue_empty_queue(temp_client):  # pylint: disable=redefi
     assert stats["processed"] == 0
     assert stats["succeeded"] == 0
     assert stats["failed"] == 0
+
+
+@pytest.mark.asyncio
+async def test_process_queue_fetch_and_store_exception(  # pylint: disable=redefined-outer-name
+    temp_client, monkeypatch
+):
+    """_fetch_and_store raising counts as failed and marks the DB row failed"""
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("simulated fetch failure")
+
+    monkeypatch.setattr(temp_client, "_fetch_and_store", _boom)
+
+    await temp_client.storage.queue_request(
+        provider="test",
+        request_key="fetch_url",
+        params={
+            "url": "https://example.com/boom.jpg",
+            "identifier": "boom_artist",
+            "data_type": "thumbnail",
+            "timeout": 30.0,
+            "retries": 0,
+            "ttl_seconds": 3600,
+            "metadata": None,
+        },
+        priority=2,
+    )
+
+    stats = await temp_client.process_queue()
+
+    assert stats["processed"] == 1
+    assert stats["succeeded"] == 0
+    assert stats["failed"] == 1
+
+    async def _check_status() -> aiosqlite.Row | None:
+        async with aiosqlite.connect(str(temp_client.storage.database_path), timeout=30.0) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute(
+                "SELECT status FROM pending_requests WHERE provider = 'test'"
+            ) as cursor:
+                return await cursor.fetchone()
+
+    row = await nowplaying.utils.sqlite.retry_sqlite_operation_async(_check_status)
+    assert row is not None
+    assert row["status"] == "failed"
 
 
 @pytest.mark.asyncio

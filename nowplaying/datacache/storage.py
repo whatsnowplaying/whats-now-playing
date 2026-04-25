@@ -130,7 +130,7 @@ class DataStorage:
                 async with aiofiles.open(blob_path, "wb") as fh:
                     await fh.write(data_value)
                 file_path_str = str(blob_path.relative_to(self.database_path.parent))
-            elif isinstance(data_value, dict | list):
+            elif isinstance(data_value, (dict, list)):
                 # orjson returns bytes; handles nested bytes as base64 automatically
                 serialized_data = orjson.dumps(data_value)
                 data_size = len(serialized_data)  # type: ignore[arg-type]

@@ -51,7 +51,6 @@ Example usage:
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 # Core components
@@ -136,71 +135,6 @@ def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
         Dictionary with maintenance statistics
     """
     return run_datacache_maintenance(cache_dir)
-
-
-# Migration helpers for transitioning from old systems
-class LegacyImageCacheShim:
-    """
-    Compatibility shim for legacy imagecache.py usage.
-
-    Provides a bridge to help migrate from old imagecache patterns
-    to the new datacache system.
-    """
-
-    def __init__(self) -> None:
-        self._providers: DataCacheProviders | None = None
-
-    async def _ensure_providers(self) -> None:
-        """Ensure providers are initialized"""
-        if self._providers is None:
-            self._providers = get_providers()
-            await self._providers.initialize()
-
-    async def randomimage(self, artist_identifier: str, image_type: str) -> bytes | None:
-        """
-        Legacy randomimage() compatibility method.
-
-        Args:
-            artist_identifier: Artist identifier
-            image_type: Image type ("thumbnail", "logo", etc.)
-
-        Returns:
-            Random image data or None
-        """
-        await self._ensure_providers()
-        assert self._providers is not None
-        result = await self._providers.images.get_random_image(
-            artist_identifier=artist_identifier, image_type=image_type
-        )
-        if result:
-            image_data, _metadata, _url = result
-            return image_data
-        return None
-
-    @staticmethod
-    def fill_queue(
-        config: object, identifier: str, imagetype: str, srclocationlist: list[str] | None
-    ) -> None:
-        """
-        Legacy fill_queue() compatibility method.
-
-        Queues image URLs for background fetching.
-        """
-        # This would need to be called from an async context
-        # For now, log the call - full implementation would require
-        # running in an async context or using asyncio.create_task()
-        del config  # Unused parameter
-
-        logging.debug(
-            "Legacy fill_queue called: identifier=%s, type=%s, urls=%d",
-            identifier,
-            imagetype,
-            len(srclocationlist) if srclocationlist else 0,
-        )
-
-
-# Create legacy shim instance for backward compatibility
-legacy_imagecache = LegacyImageCacheShim()
 
 
 # Example integration patterns for artist extras plugins:

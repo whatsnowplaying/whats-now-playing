@@ -123,16 +123,16 @@ class DataCacheWorkerManager:
         self.num_workers = num_workers
         self.max_concurrent_per_worker = max_concurrent_per_worker
         self.workers: list[DataCacheWorker] = []
+        self._tasks: list[asyncio.Task] = []
         self.running = False
 
     async def start(self) -> None:
-        """Start all workers"""
+        """Start all workers as background tasks and return immediately."""
         if self.running:
             return
 
         logging.info("Starting %d datacache workers", self.num_workers)
 
-        # Create and start workers
         for i in range(self.num_workers):
             worker = DataCacheWorker(
                 cache_dir=self.cache_dir,
@@ -140,26 +140,27 @@ class DataCacheWorkerManager:
                 worker_id=f"worker_{i}",
             )
             self.workers.append(worker)
-
-        # Start all workers concurrently
-        start_tasks = [worker.start() for worker in self.workers]
-        await asyncio.gather(*start_tasks)
+            self._tasks.append(asyncio.create_task(worker.start()))
 
         self.running = True
         logging.info("All datacache workers started")
 
     async def shutdown(self) -> None:
-        """Shutdown all workers"""
+        """Shutdown all workers and cancel their background tasks."""
         if not self.running:
             return
 
         logging.info("Shutting down datacache workers")
 
-        # Shutdown all workers concurrently
         shutdown_tasks = [worker.shutdown() for worker in self.workers]
         await asyncio.gather(*shutdown_tasks, return_exceptions=True)
 
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+
         self.workers.clear()
+        self._tasks.clear()
         self.running = False
         logging.info("All datacache workers shut down")
 
