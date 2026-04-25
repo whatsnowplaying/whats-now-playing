@@ -63,11 +63,6 @@ from .providers import (
 )
 from .queue import RateLimiter, RateLimiterManager
 from .storage import DataStorage, get_datacache_path, run_datacache_maintenance
-from .workers import (
-    DataCacheWorker,
-    DataCacheWorkerManager,
-    run_datacache_worker,
-)
 
 # Public API - these are the main interfaces artist extras plugins should use
 __all__ = [
@@ -78,10 +73,6 @@ __all__ = [
     "DataCacheProviders",  # Unified provider interface
     "ImageProvider",  # Image caching with randomimage support
     "APIProvider",  # Generic API response caching
-    # Worker classes (for background processing)
-    "DataCacheWorkerManager",  # Multi-worker manager
-    "DataCacheWorker",  # Single worker
-    "run_datacache_worker",  # Standalone worker function
     # Low-level components (for advanced use cases)
     "DataCacheClient",  # Core client with get_or_fetch
     "DataStorage",  # Direct storage layer access
