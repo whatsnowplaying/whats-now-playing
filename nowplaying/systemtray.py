@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.apicache
+import nowplaying.upgrades
 import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
@@ -457,7 +458,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.vacuum_thread.start()
 
     def _setup_charts_key(self) -> None:
-        """Generate anonymous charts key if none exists"""
+        """Generate anonymous charts key if none exists, or ping version if key already present"""
         self._update_startup_progress("Setting up Charts service...")
         existing_key = self.config.cparser.value("charts/charts_key", defaultValue="")
         if not existing_key:
@@ -469,6 +470,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 logging.info("Generated and saved anonymous charts key during startup")
             else:
                 logging.warning("Failed to generate anonymous key during startup")
+        else:
+            nowplaying.upgrades.ping_version(self.config)
 
     def _requestswindow(self) -> None:
         if self.config.cparser.value("settings/requests", type=bool) and self.requestswindow:

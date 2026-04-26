@@ -10,6 +10,9 @@ import requests
 
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
+if t.TYPE_CHECKING:
+    import nowplaying.config
+
 UPDATE_CHECK_URL = "https://whatsnowplaying.com/api/v1/check-version"
 
 _PRERELEASE_MARKERS = ("-rc", "-preview", "+")
@@ -189,6 +192,27 @@ class Version:
 def _is_prerelease(version: str) -> bool:
     """Return True if the version string indicates a pre-release"""
     return any(marker in version for marker in _PRERELEASE_MARKERS)
+
+
+def ping_version(config: "nowplaying.config.ConfigFile") -> None:
+    """Ping the version-check endpoint with the charts key.
+
+    Fire-and-forget: called at startup when a charts key already exists so the
+    server can correlate the running version with a known user account.
+    Only called when a key is present; callers should check first.
+    """
+    current_version: str = nowplaying.version.__VERSION__  # pylint: disable=no-member
+    charts_key: str = config.cparser.value("charts/charts_key", defaultValue="", type=str)
+
+    try:
+        requests.get(
+            UPDATE_CHECK_URL,
+            params={"version": current_version},
+            headers={"X-API-Key": charts_key},
+            timeout=10,
+        )
+    except Exception:  # pylint: disable=broad-except
+        logging.debug("Version ping failed", exc_info=True)
 
 
 def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None:

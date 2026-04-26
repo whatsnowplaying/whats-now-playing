@@ -149,6 +149,30 @@ def test_check_for_update_sends_correct_params(
         assert "macos_version" not in sent_params
 
 
+def test_ping_version_sends_key(bootstrap, monkeypatch):
+    """ping_version sends version and charts_key to the update check URL"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
+    bootstrap.cparser.setValue("charts/charts_key", "testkey1234")
+
+    with patch("requests.get") as mock_get:
+        nowplaying.upgrades.ping_version(bootstrap)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+        sent_headers = kwargs.get("headers", {})
+
+    assert sent_params.get("version") == "5.2.0"
+    assert sent_headers.get("X-API-Key") == "testkey1234"
+
+
+def test_ping_version_network_failure(bootstrap, monkeypatch):
+    """ping_version silently ignores network failures"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
+    bootstrap.cparser.setValue("charts/charts_key", "testkey1234")
+
+    with patch("requests.get", side_effect=ConnectionError("network down")):
+        nowplaying.upgrades.ping_version(bootstrap)  # should not raise
+
+
 def test_check_for_update_prerelease_sends_track_param(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
     """prerelease builds send track=prerelease and the correct version"""
     monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.1.0-rc1", raising=False)  # pylint: disable=no-member
