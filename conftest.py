@@ -131,6 +131,13 @@ def clear_old_testsuite():
             temp_api_cache = cachedir.parent / f"api_cache_temp_{os.getpid()}"
             shutil.move(str(api_cache_dir), str(temp_api_cache))
 
+        # Move datacache out first to avoid ENOTEMPTY from open SQLite WAL handles
+        datacache_dir = cachedir / "datacache"
+        temp_datacache = None
+        if datacache_dir.exists():
+            temp_datacache = cachedir.parent / f"datacache_temp_{os.getpid()}"
+            shutil.move(str(datacache_dir), str(temp_datacache))
+
         logging.info("Removing %s", cachedir)
         shutil.rmtree(cachedir)
 
@@ -138,6 +145,10 @@ def clear_old_testsuite():
         if temp_api_cache and temp_api_cache.exists():
             cachedir.mkdir(parents=True, exist_ok=True)
             shutil.move(str(temp_api_cache), str(api_cache_dir))
+
+        # Discard datacache (not preserved between tests)
+        if temp_datacache and temp_datacache.exists():
+            shutil.rmtree(temp_datacache, ignore_errors=True)
 
     config = QSettings(
         qsettingsformat,
