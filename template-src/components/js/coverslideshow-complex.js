@@ -18,7 +18,8 @@ class CoverSlideshow {
         if (this.debugMode) {
             const debugInfo = document.getElementById('debug-info');
             debugInfo.style.display = 'block';
-            debugInfo.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            debugInfo.appendChild(document.createTextNode(new Date().toLocaleTimeString() + ': ' + message));
+            debugInfo.appendChild(document.createElement('br'));
             debugInfo.scrollTop = debugInfo.scrollHeight;
         }
     }

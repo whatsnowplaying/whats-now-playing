@@ -266,7 +266,7 @@ class StaticContentHandler:
     async def getlastid(request: web.Request, source: str):
         """get the lastid sent by http/html"""
         cursor = await request.app["statedb"].execute(
-            f'SELECT lastid FROM lastprocessed WHERE source="{source}"'
+            "SELECT lastid FROM lastprocessed WHERE source=?", [source]
         )
         row = await cursor.fetchone()
         if not row:

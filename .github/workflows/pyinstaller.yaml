@@ -43,7 +43,7 @@ jobs:
       contents: read
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
       - name: update tags
@@ -51,7 +51,7 @@ jobs:
       - name: run builder
         run: ./builder.sh linuxbin
       - name: artifact dist
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: linux-dist
           path: "*.zip"
@@ -84,7 +84,7 @@ jobs:
             libxkbcommon-x11-0 \
             libqt6webenginecore6
       - name: download artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
         with:
           name: linux-dist
       - name: smoke test binary
@@ -112,13 +112,13 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: '3.12'
       - name: run builder
@@ -127,14 +127,14 @@ jobs:
           ./builder.sh
       - name: azure login
         if: ${{ env.AZURE_CLIENT_ID != '' }}
-        uses: azure/login@v3
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: sign windows binary
         if: ${{ env.AZURE_CLIENT_ID != '' }}
-        uses: azure/artifact-signing-action@v1
+        uses: azure/artifact-signing-action@db7a3a6bd3912025c705162fb7475389f5b69ec6  # v1
         with:
           endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
           signing-account-name: com-whatsnowplaying-app
@@ -160,7 +160,7 @@ jobs:
           BINARY=$(find WhatsNowPlaying-*-Windows -name "WhatsNowPlaying.exe" | head -1)
           "${BINARY}" --smoke-test
       - name: artifact dist
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: windows-dist
           # Windows builds create a directory, not a zip (see builder.sh line 146)
