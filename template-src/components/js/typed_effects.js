@@ -211,7 +211,9 @@ class TypingEffects {
         }
 
         const timestamp = new Date().toLocaleTimeString();
-        debugDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        const entry = document.createElement('div');
+        entry.textContent = `[${timestamp}] ${message}`;
+        debugDiv.appendChild(entry);
 
         // Keep only last 10 debug messages
         const messages = debugDiv.children;
