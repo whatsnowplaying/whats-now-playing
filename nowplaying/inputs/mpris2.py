@@ -37,7 +37,7 @@ MPRIS2_BASE = "org.mpris.MediaPlayer2"
 MIXXX_IDLE_ARTISTS = frozenset({"AutoDJ is ready!", "No track playing"})
 
 
-class MPRIS2Handler:
+class MPRIS2Handler:  # pylint: disable=too-many-instance-attributes
     """Read metadata from MPRIS2"""
 
     def __init__(self, service=None):
@@ -46,6 +46,8 @@ class MPRIS2Handler:
         self.introspection = None
         self.meta = None
         self.metadata = {}
+        self._service_unavailable_logged = False
+        self._idle_state_logged = False
 
         if not DBUS_STATUS:
             self.dbus_status = False
@@ -61,7 +63,11 @@ class MPRIS2Handler:
         self.service = service
 
         if "." not in service and not await self.find_service():
-            logging.error("%s is not a known MPRIS2 service.", service)
+            if not self._service_unavailable_logged:
+                logging.warning(
+                    "%s is not a known MPRIS2 service; will retry when it appears.", service
+                )
+                self._service_unavailable_logged = True
             return
 
         try:
@@ -71,8 +77,13 @@ class MPRIS2Handler:
             self.introspection = await self.bus.introspect(
                 f"{MPRIS2_BASE}.{self.service}", "/org/mpris/MediaPlayer2"
             )
+            self._service_unavailable_logged = False
         except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("D-Bus connection error: %s", error)
+            if not self._service_unavailable_logged:
+                logging.warning("D-Bus connection error for %s: %s", self.service, error)
+                self._service_unavailable_logged = True
+            else:
+                logging.debug("D-Bus connection error for %s: %s", self.service, error)
             self.introspection = None
 
         self.meta = None
@@ -93,7 +104,6 @@ class MPRIS2Handler:
         if not self.introspection:
             await self.resetservice(self.service)
         if not self.introspection:
-            logging.error("Unknown service: %s", self.service)
             return builddata
 
         try:
@@ -110,7 +120,15 @@ class MPRIS2Handler:
             self.meta = CIMultiDict(unpacked_result.get("Metadata", {}))
         except Exception as error:  # pylint: disable=broad-exception-caught
             # likely had a service and but now it is gone
-            logging.error("D-Bus error: %s", error)
+            if not self._service_unavailable_logged:
+                logging.warning(
+                    "D-Bus error for %s: %s; will retry when service reappears.",
+                    self.service,
+                    error,
+                )
+                self._service_unavailable_logged = True
+            else:
+                logging.debug("D-Bus error for %s: %s", self.service, error)
             self.metadata = {}
             self.introspection = None
             if self.bus:
@@ -156,9 +174,17 @@ class MPRIS2Handler:
         # no real track is loaded (e.g. AutoDJ idle, empty deck). Discard these.
         artist = builddata.get("artist")
         if title == "Mixxx" and artist in MIXXX_IDLE_ARTISTS:
-            logging.debug("Ignoring Mixxx idle state: artist=%s", artist)
+            if not self._idle_state_logged:
+                logging.debug(
+                    "Mixxx is idle (artist=%s); suppressing further idle messages.", artist
+                )
+                self._idle_state_logged = True
             builddata["title"] = None
             builddata["artist"] = None
+        else:
+            # Real track data — reset both suppression flags
+            self._service_unavailable_logged = False
+            self._idle_state_logged = False
 
         # it looks like there is a race condition in mixxx
         # probably should make this an option in the MPRIS2
