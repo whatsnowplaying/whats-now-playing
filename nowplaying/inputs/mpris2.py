@@ -68,8 +68,6 @@ class MPRIS2Handler:  # pylint: disable=too-many-instance-attributes
                     "%s is not a known MPRIS2 service; will retry when it appears.", service
                 )
                 self._service_unavailable_logged = True
-            else:
-                logging.debug("%s still not available.", service)
             return
 
         try:
@@ -106,7 +104,6 @@ class MPRIS2Handler:  # pylint: disable=too-many-instance-attributes
         if not self.introspection:
             await self.resetservice(self.service)
         if not self.introspection:
-            logging.debug("Service not available: %s", self.service)
             return builddata
 
         try:
