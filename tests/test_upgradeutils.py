@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import requests
+
 import nowplaying.upgrades
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
@@ -165,12 +167,24 @@ def test_ping_version_sends_key(bootstrap, monkeypatch):
 
 
 def test_ping_version_network_failure(bootstrap, monkeypatch):
-    """ping_version silently ignores network failures"""
+    """ping_version silently ignores network failures but still attempts the call"""
     monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
     bootstrap.cparser.setValue("charts/charts_key", "testkey1234")
 
-    with patch("requests.get", side_effect=ConnectionError("network down")):
+    with patch("requests.get", side_effect=requests.RequestException("network down")) as mock_get:
         nowplaying.upgrades.ping_version(bootstrap)  # should not raise
+
+    mock_get.assert_called_once()
+
+
+def test_ping_version_no_key_skips_request(bootstrap, monkeypatch):
+    """ping_version makes no request when charts key is absent"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
+
+    with patch("requests.get") as mock_get:
+        nowplaying.upgrades.ping_version(bootstrap)
+
+    mock_get.assert_not_called()
 
 
 def test_check_for_update_prerelease_sends_track_param(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
