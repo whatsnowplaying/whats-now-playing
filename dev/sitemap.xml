@@ -116,6 +116,11 @@
         <changefreq>daily</changefreq>
     </url>
     <url>
+        <loc>http://whatsnowplaying.github.io/dev/help/linux/</loc>
+        <lastmod>2026-04-27</lastmod>
+        <changefreq>daily</changefreq>
+    </url>
+    <url>
         <loc>http://whatsnowplaying.github.io/dev/help/opensource/</loc>
         <lastmod>2026-04-27</lastmod>
         <changefreq>daily</changefreq>

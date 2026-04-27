@@ -466,56 +466,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#platform-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Platform Notes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Platform Notes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#macos" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#linux" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Linux
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#other-platforms" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Other Platforms
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2214,6 +2164,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../help/linux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linux Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../help/accuracy/" class="md-nav__link">
         
   
@@ -2771,7 +2749,7 @@
 <h2 id="step-1-download-and-install">Step 1: Download and Install<a class="headerlink" href="#step-1-download-and-install" title="Permanent link">&para;</a></h2>
 <p><strong><a href="https://whatsnowplaying.com/download">Download the latest release</a></strong>
 for your platform.</p>
-<p>See <a href="#platform-notes">Platform Notes</a> below if you have trouble launching the app.</p>
+<p>Linux users: see <a href="../help/linux/">Linux Setup</a> if the app fails to start.</p>
 <h2 id="step-2-connect-your-dj-software">Step 2: Connect Your DJ Software<a class="headerlink" href="#step-2-connect-your-dj-software" title="Permanent link">&para;</a></h2>
 <p><strong>Start your DJ software first</strong>, then launch <strong>What's Now Playing</strong>. WNP auto-detects
 your software on startup, so it needs to already be running or have been run at least once.</p>
@@ -2789,9 +2767,10 @@ your software on startup, so it needs to already be running or have been run at 
 <li>Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network</li>
 <li>The first detected source wins. If multiple are found, you can change it afterwards.</li>
-<li>For <strong>vinyl decks, standalone CDJs, Rekordbox, and analog mixers</strong>, use
-  <a href="https://whatsnowplaying.com/earshot">WNP EarShot</a> — a companion app that identifies
-  tracks via Shazam and sends them to WNP automatically</li>
+<li>For <strong>vinyl decks, standalone CDJs, Rekordbox, and analog mixers</strong> (optional):
+  <a href="https://whatsnowplaying.com/earshot">WNP EarShot</a> is a separate companion app that
+  identifies tracks via Shazam and sends them to WNP automatically. Only needed if
+  your setup does not use DJ software.</li>
 </ul>
 <p>See <a href="../input/">Input Sources</a> for per-source setup details.</p>
 <h2 id="step-3-verify-the-web-server">Step 3: Verify the Web Server<a class="headerlink" href="#step-3-verify-the-web-server" title="Permanent link">&para;</a></h2>
@@ -2814,12 +2793,18 @@ browser sources pre-configured — no manual URL copying or source sizing requir
 <li>Relaunch OBS Studio — the new <strong>WhatsNowPlaying</strong> scene collection will appear
    under <strong>Scene Collection</strong> in the menu bar</li>
 </ol>
-<p>The exported collection contains pre-built scenes for your overlays and the Guess Game
-(including WebGL-enhanced versions). Copy the individual browser sources into your
-own scenes as needed.</p>
+<p>WNP ships with 15 browser overlay templates (including 6 WebGL animated effects) and
+36 text templates for Twitch, Kick, and plain text output, all ready to use without
+any editing. The exported collection contains pre-built scenes for your overlays and
+the Guess Game (including WebGL-enhanced versions). Copy the individual browser sources
+into your own scenes as needed.</p>
 <p>See <a href="../output/obs-export/">Export for OBS</a> for full details.</p>
 <p>If you prefer to set up OBS manually, see <a href="../output/webserver/">Web Server</a> for
 instructions on adding a Browser Source by hand.</p>
+<blockquote>
+<p><strong>That's it for basic setup.</strong> If you just want a track overlay in OBS, you're done.
+Everything below is optional. See the <a href="../gallery/">Gallery</a> to browse all included templates.</p>
+</blockquote>
 <h2 id="step-5-announce-tracks-in-chat-optional">Step 5: Announce Tracks in Chat (Optional)<a class="headerlink" href="#step-5-announce-tracks-in-chat-optional" title="Permanent link">&para;</a></h2>
 <p><strong>What's Now Playing</strong> can automatically post track announcements to chat when a new song plays.</p>
 <ul>
@@ -2836,45 +2821,6 @@ instructions on adding a Browser Source by hand.</p>
 <li><strong><a href="../output/charts/">Charts</a></strong>: track your play history, view listening stats, and unlock the
   online Guess Game board — sign up at <a href="https://whatsnowplaying.com/signup">https://whatsnowplaying.com/signup</a></li>
 </ul>
-<hr />
-<h2 id="platform-notes">Platform Notes<a class="headerlink" href="#platform-notes" title="Permanent link">&para;</a></h2>
-<h3 id="macos">macOS<a class="headerlink" href="#macos" title="Permanent link">&para;</a></h3>
-<p>The app is signed and notarized. macOS should open it without any security warnings.</p>
-<ul>
-<li>Do not unzip the downloaded package directly to the folder you will run it from.
-  Unzip in <code>Downloads</code> first, then move <code>WhatsNowPlaying.app</code> to <code>Applications</code>.</li>
-<li>If macOS still shows a security warning, open <strong>System Settings → Privacy &amp; Security</strong>,
-  scroll down to the <strong>Security</strong> section, and click <strong>Open Anyway</strong>.</li>
-</ul>
-<h3 id="linux">Linux<a class="headerlink" href="#linux" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Download the zip for your architecture, extract it, and run the <code>WhatsNowPlaying</code> binary.</li>
-<li>A desktop environment is required. This software does not run headless.</li>
-<li>If the binary fails to start, install the following packages (Debian/Ubuntu):</li>
-</ul>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libegl1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libgl1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libdbus-1-3<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libfontconfig1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libglib2.0-0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libx11-xcb1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-cursor0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-icccm4<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-image0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-keysyms1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-randr0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-render-util0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-shape0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-xinerama0<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxcb-xkb1<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>libxkbcommon-x11-0
-</code></pre></div>
-<ul>
-<li>If you need to build from source, follow the <a href="../help/developers/">developer guide</a>.</li>
-</ul>
-<h3 id="other-platforms">Other Platforms<a class="headerlink" href="#other-platforms" title="Permanent link">&para;</a></h3>
-<p>Please follow the <a href="../help/developers/">developer guide</a> to install and run.</p>
 
 
 
