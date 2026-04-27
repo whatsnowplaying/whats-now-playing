@@ -29,7 +29,7 @@ If you mix vinyl or CDJs alongside DJ software (Serato, Traktor, etc.), use
 
 1. Open Settings from the **What's Now Playing** icon
 2. Select Input Sources->EarShot from the left-hand column
-3. Check **Always use EarShot when it identifies a new track**
+3. Confirm **Always use EarShot when it identifies a new track** is checked (enabled by default)
 4. Select your DJ software as the active source under Core Settings->Source
 5. Click Save
 

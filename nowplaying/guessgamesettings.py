@@ -25,6 +25,29 @@ class GuessGameSettings:
         self.widget = None
         self.uihelp = None
 
+    @staticmethod
+    def defaults(qsettings) -> None:
+        """Set default configuration values for the Guess Game."""
+        qsettings.setValue("guessgame/enabled", False)
+        qsettings.setValue("guessgame/command", "guess")
+        qsettings.setValue("guessgame/statscommand", "mypoints")
+        qsettings.setValue("guessgame/maxduration", 120)
+        qsettings.setValue("guessgame/leaderboard_size", 10)
+        qsettings.setValue("guessgame/difficulty_threshold", 0.70)
+        qsettings.setValue("guessgame/solve_mode", "separate_solves")
+        qsettings.setValue("guessgame/points_common_letter", 1)
+        qsettings.setValue("guessgame/points_uncommon_letter", 2)
+        qsettings.setValue("guessgame/points_rare_letter", 3)
+        qsettings.setValue("guessgame/points_correct_word", 10)
+        qsettings.setValue("guessgame/points_wrong_word", -1)
+        qsettings.setValue("guessgame/points_complete_solve", 100)
+        qsettings.setValue("guessgame/points_first_solver", 50)
+        qsettings.setValue("guessgame/auto_reveal_common_words", False)
+        qsettings.setValue("guessgame/time_bonus_enabled", False)
+        qsettings.setValue("guessgame/send_to_server", True)
+        qsettings.setValue("guessgame/grace_period", 5)
+        qsettings.setValue("guessgame/excluded_users", "")
+
     def connect(self, uihelp, widget):
         """Connect guess game settings UI"""
         self.widget = widget
