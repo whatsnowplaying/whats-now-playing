@@ -6,63 +6,23 @@ import asyncio
 import json
 import logging
 import pathlib
-import re
 import sqlite3
-import string
 import time
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
 import aiosqlite
-import normality
-from PySide6.QtCore import (  # pylint: disable=import-error,no-name-in-module
-    QStandardPaths,
-)
 
-import nowplaying.utils.charts_api
+import nowplaying.guessgame.db
+import nowplaying.guessgame.scoring
 import nowplaying.utils.sqlite
+from nowplaying.guessgame.scoring import COMMON_LETTERS, RARE_LETTERS
+from nowplaying.guessgame.server import GuessGameServerMixin
 
 if TYPE_CHECKING:
     import nowplaying.config
 
-# Letter frequency groups for scoring
-COMMON_LETTERS = set("eaiotusnr")
-UNCOMMON_LETTERS = set(string.ascii_lowercase) - COMMON_LETTERS - set("qxzj")
-RARE_LETTERS = set("qxzj")
 
-# Characters to always reveal (don't blank out)
-AUTO_REVEAL_CHARS = set(" -'&()[]{}.,!?;:0123456789")
-
-# Common words that might be auto-revealed (if configured)
-COMMON_WORDS = {
-    "the",
-    "a",
-    "an",
-    "and",
-    "or",
-    "but",
-    "in",
-    "on",
-    "at",
-    "to",
-    "for",
-    "of",
-    "with",
-    "by",
-    "from",
-    "feat",
-    "ft",
-    "featuring",
-    "remix",
-    "mix",
-    "edit",
-    "version",
-    "remaster",
-    "remastered",
-}
-
-
-class GuessGame:  # pylint: disable=too-many-instance-attributes
+class GuessGame(GuessGameServerMixin):  # pylint: disable=too-many-instance-attributes
     """
     Manage guess game state, scoring, and leaderboards.
 
@@ -73,9 +33,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _get_database_path() -> pathlib.Path:
         """Return the path to the guessgame database file."""
-        return pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.AppDataLocation)[0]
-        ).joinpath("guessgame", "guessgame.db")
+        return nowplaying.guessgame.db.get_database_path()
 
     @classmethod
     def initialize_database(cls, databasefile: pathlib.Path | None = None) -> None:
@@ -84,146 +42,33 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Call once from the main process before subprocesses start.
         Accepts an optional databasefile path for testing.
         """
-        if databasefile is None:
-            databasefile = cls._get_database_path()
-
-        logging.debug("Initializing guess game database: %s", databasefile)
-        try:
-            databasefile.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as error:
-            logging.error("Failed to create guess game database directory: %s", error)
-            return
-
-        try:
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(databasefile), timeout=30
-            ) as connection:
-                cursor = connection.cursor()
-
-                # Persistent tables: schema_version tracks migrations
-                _ = cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS schema_version (
-                        version INTEGER PRIMARY KEY
-                    )
-                """)
-
-                # Get/set schema version and run any pending migrations
-                cursor.execute("SELECT version FROM schema_version")
-                row = cursor.fetchone()
-                current_version = row[0] if row else 0
-                target_version = 1
-
-                if current_version < target_version:
-                    logging.info(
-                        "Migrating guess game database from v%d to v%d",
-                        current_version,
-                        target_version,
-                    )
-                    # Add future migration steps here as needed
-                    if current_version == 0:
-                        _ = cursor.execute(
-                            "INSERT INTO schema_version (version) VALUES (?)", (target_version,)
-                        )
-                    else:
-                        _ = cursor.execute(
-                            "UPDATE schema_version SET version = ?", (target_version,)
-                        )
-                    connection.commit()
-
-                # Persistent tables: survive app restarts
-                _ = cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS user_scores (
-                        username TEXT COLLATE NOCASE PRIMARY KEY,
-                        session_score INTEGER DEFAULT 0,
-                        all_time_score INTEGER DEFAULT 0,
-                        session_solves INTEGER DEFAULT 0,
-                        all_time_solves INTEGER DEFAULT 0,
-                        session_guesses INTEGER DEFAULT 0,
-                        all_time_guesses INTEGER DEFAULT 0,
-                        last_updated INTEGER NOT NULL
-                    )
-                """)
-
-                _ = cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS game_history (
-                        game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        track TEXT NOT NULL,
-                        artist TEXT NOT NULL,
-                        start_time INTEGER NOT NULL,
-                        end_time INTEGER,
-                        end_reason TEXT,
-                        solver_username TEXT COLLATE NOCASE,
-                        total_guesses INTEGER DEFAULT 0
-                    )
-                """)
-
-                # Ephemeral tables: always recreate on startup to clear previous session state
-                _ = cursor.execute("DROP TABLE IF EXISTS current_game")
-                _ = cursor.execute("DROP TABLE IF EXISTS guesses")
-                _ = cursor.execute("DROP TABLE IF EXISTS sessions")
-
-                _ = cursor.execute("""
-                    CREATE TABLE current_game (
-                        id INTEGER PRIMARY KEY DEFAULT 1,
-                        track TEXT NOT NULL,
-                        artist TEXT NOT NULL,
-                        masked_track TEXT NOT NULL,
-                        masked_artist TEXT NOT NULL,
-                        revealed_letters TEXT NOT NULL,
-                        start_time INTEGER NOT NULL,
-                        end_time INTEGER,
-                        status TEXT DEFAULT 'active',
-                        max_duration INTEGER DEFAULT 180,
-                        game_id INTEGER,
-                        difficulty_bonus INTEGER DEFAULT 0,
-                        track_solved INTEGER DEFAULT 0,
-                        artist_solved INTEGER DEFAULT 0,
-                        CHECK (id = 1)
-                    )
-                """)
-
-                _ = cursor.execute("""
-                    CREATE TABLE guesses (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        game_id INTEGER NOT NULL,
-                        username TEXT COLLATE NOCASE NOT NULL,
-                        guess TEXT NOT NULL,
-                        guess_type TEXT NOT NULL,
-                        correct INTEGER NOT NULL,
-                        points_awarded INTEGER NOT NULL,
-                        timestamp INTEGER NOT NULL
-                    )
-                """)
-
-                _ = cursor.execute("""
-                    CREATE TABLE sessions (
-                        session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        start_time INTEGER NOT NULL,
-                        end_time INTEGER
-                    )
-                """)
-
-                connection.commit()
-                logging.debug("Guess game database initialization complete")
-        except (OSError, sqlite3.Error) as error:
-            logging.error("Failed to initialize guess game database: %s", error)
+        nowplaying.guessgame.db.initialize_database(databasefile)
 
     @classmethod
     def vacuum_database(cls) -> None:
         """Vacuum the database to reclaim space."""
-        databasefile = cls._get_database_path()
-        if not databasefile.exists():
-            return
-        try:
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(databasefile), timeout=30
-            ) as connection:
-                logging.debug("Vacuuming guess game database...")
-                _ = connection.execute("VACUUM")
-                connection.commit()
-                logging.info("Guess game database vacuumed successfully")
-        except sqlite3.Error as error:
-            logging.error("Database error during vacuum: %s", error)
+        nowplaying.guessgame.db.vacuum_database()
+
+    @classmethod
+    def clear_leaderboards(cls) -> bool:
+        """
+        Clear all user scores from the leaderboards.
+        This deletes all entries from the user_scores table.
+
+        Returns:
+            True if cleared successfully, False on error
+        """
+        return nowplaying.guessgame.db.clear_leaderboards()
+
+    @classmethod
+    def remove_user_from_alltime(cls, username: str) -> bool:
+        """
+        Remove a single user from the all-time leaderboard.
+
+        Returns:
+            True if removed successfully (including when user did not exist), False on error
+        """
+        return nowplaying.guessgame.db.remove_user_from_alltime(username)
 
     def __init__(
         self,
@@ -233,7 +78,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         self.config = config
         self.stopevent = stopevent
         self.last_game_end_time: float | None = None
-        self._http_session: aiohttp.ClientSession | None = None
+        self._http_session = None
 
         self.databasefile = self._get_database_path()
 
@@ -254,253 +99,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
     def is_enabled(self) -> bool:
         """Check if guess game is enabled"""
         return self._get_config("enabled", False, bool)
-
-    @staticmethod
-    def _normalize_for_matching(text: str) -> str:
-        """
-        Normalize text for guess matching.
-        Treats &, 'n', 'n, and 'and' as equivalent.
-        Uses normality module for proper Unicode normalization.
-
-        Args:
-            text: Text to normalize
-
-        Returns:
-            Normalized text for matching
-        """
-        # Replace & with 'and' for consistent matching (before normality processing)
-        normalized = text.replace("&", "and")
-
-        # Handle 'n' and 'n as abbreviations for 'and' (rock 'n' roll, rock 'n roll, rock n roll)
-        normalized = normalized.replace(" 'n' ", " and ")
-        normalized = normalized.replace(" 'n ", " and ")
-        normalized = normalized.replace(" n ", " and ")
-
-        # Remove apostrophes and hyphens before normality processing
-        # Apostrophes: "I'm" becomes "Im" not "I m"
-        # Hyphens: "Alt-J" becomes "AltJ" not "Alt J"
-        normalized = normalized.replace("\u0027", "")  # Apostrophe (U+0027)
-        normalized = normalized.replace("\u2018", "")  # Left single quotation mark (U+2018)
-        normalized = normalized.replace("\u2019", "")  # Right single quotation mark (U+2019)
-        normalized = normalized.replace("ʼ", "")  # Modifier letter apostrophe (U+02BC)
-        normalized = normalized.replace("`", "")  # Grave accent (U+0060)
-        normalized = normalized.replace("´", "")  # Acute accent (U+00B4)
-        normalized = normalized.replace("-", "")  # Regular hyphen
-        normalized = normalized.replace("‐", "")  # Hyphen (U+2010)
-        normalized = normalized.replace("‑", "")  # Non-breaking hyphen (U+2011)
-        normalized = normalized.replace("–", "")  # En dash (U+2013)
-        normalized = normalized.replace("—", "")  # Em dash (U+2014)
-        normalized = normalized.replace("−", "")  # Minus sign (U+2212)
-
-        # Use normality to handle Unicode normalization, case folding, and punctuation removal
-        # This handles various other punctuation, quotes, brackets, etc.
-        normalized = normality.normalize(normalized, lowercase=True, collapse=True)
-
-        # normality may return None for empty/invalid strings
-        if normalized is None:
-            return ""
-
-        # After normality, fix any remaining cases like "o connor" -> "oconnor"
-        # This handles cases where normality inserted spaces for unhandled punctuation.
-        # Pattern: known Irish/Scottish name prefixes ("o", "d", "mc", "mac") + space + word.
-        # Restricts to these common prefixes to avoid over-merging unrelated words.
-        normalized = re.sub(r"\b(o|d|mc|mac)\s+([a-z]{2,})", r"\1\2", normalized)
-
-        # Strip remaining censoring characters that normality might preserve
-        normalized = normalized.replace("*", "")
-        normalized = normalized.replace("_", "")
-
-        # Remove spaces between digits to handle cases like "10,000" -> "10000"
-        normalized = re.sub(r"(\d)\s+(\d)", r"\1\2", normalized)
-
-        return normalized.strip()
-
-    @staticmethod
-    def _find_concatenated_sequence(guess: str, words: list[str]) -> tuple[int, int] | None:
-        """
-        Find a consecutive window of words that concatenate to equal guess.
-
-        Used to match initialisms like "rundmc" against ["rund", "m", "c"],
-        which arises when "Run‐D.M.C." normalizes differently from "run-dmc"
-        (hyphens removed directly vs dots-as-spaces via normality).
-
-        Args:
-            guess: Single normalized guess word (no spaces)
-            words: List of normalized words to search through
-
-        Returns:
-            (start_index, window_size) tuple if found, None otherwise
-        """
-        max_window = min(len(guess), len(words))
-        for window_size in range(2, max_window + 1):
-            for i in range(len(words) - window_size + 1):
-                if "".join(words[i : i + window_size]) == guess:
-                    return (i, window_size)
-        return None
-
-    @staticmethod
-    def _phrase_in_guess(phrase: str, guess: str) -> bool:
-        """Check if phrase appears as complete tokens (word boundaries) in guess.
-
-        Prevents false positives where a short phrase is a substring of a
-        longer word (e.g. track 'rift' matching inside 'drifter').
-        """
-        return bool(re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", guess))
-
-    @staticmethod
-    def _is_word_match(guess: str, text: str) -> bool:
-        """
-        Check if guess matches as a complete word in text (not just substring).
-
-        Also handles the case where consecutive words in text concatenate to
-        form the guess (e.g. "rundmc" matching "rund m c" from "Run‐D.M.C.").
-
-        Args:
-            guess: The normalized guess text
-            text: The normalized text to search in
-
-        Returns:
-            True if guess is found as a complete word with word boundaries
-        """
-        if not guess or not text:
-            return False
-
-        if GuessGame._phrase_in_guess(guess, text):
-            return True
-
-        # Also match if consecutive words in text concatenate to form the guess.
-        # This handles initialisms: "run-dmc" → "rundmc", "Run‐D.M.C." → "rund m c"
-        return GuessGame._find_concatenated_sequence(guess, text.split()) is not None
-
-    @staticmethod
-    def _build_word_alignment(original_words: list[str], normalized_words: list[str]) -> list[int]:
-        """
-        Build a mapping from normalized-word index → original-word index.
-
-        When one original word (e.g. "Run‐D.M.C.,") normalizes to multiple words
-        ("rund", "m", "c"), each resulting normalized word maps back to that same
-        original index.  This corrects the index drift that would otherwise cause
-        reveals to uncover the wrong letters.
-
-        Falls back to 1:1 index mapping when per-word normalization is inconsistent
-        with the full-string normalization (e.g. " n " → "and" only fires on the
-        full string).
-
-        Args:
-            original_words: Words from the original un-normalized text
-            normalized_words: Words from the fully normalized text
-
-        Returns:
-            alignment list where alignment[i] is the original-word index for
-            normalized_words[i]
-        """
-        alignment: list[int] = []
-        for orig_idx, orig_word in enumerate(original_words):
-            norm = GuessGame._normalize_for_matching(orig_word)
-            parts = norm.split() if norm else []
-            for _ in parts:
-                alignment.append(orig_idx)
-
-        # If per-word normalization produces a different count than the full-string
-        # normalization (e.g. " n "→"and" or Irish-prefix merges), fall back to a
-        # simple 1:1 index mapping to avoid invalid lookups.
-        if len(alignment) != len(normalized_words):
-            alignment = [min(i, len(original_words) - 1) for i in range(len(normalized_words))]
-
-        return alignment
-
-    def _reveal_matching_word_letters(
-        self,
-        guess_normalized: str,
-        original_text: str,
-        normalized_text: str,
-        revealed_letters: set[str],
-    ) -> None:
-        """
-        Reveal letters from the word(s) in original_text that match guess_normalized.
-
-        This handles accented characters - when a user guesses "sinead", it reveals
-        all letters from "Sinéad" including the "é". Also handles multi-word guesses
-        like "road to" matching in "the road to mandalay".
-
-        Args:
-            guess_normalized: The normalized guess text (may be multiple words)
-            original_text: The original text (may contain accents, special chars)
-            normalized_text: The normalized version of original_text
-            revealed_letters: Set to add revealed letters to (modified in place)
-        """
-        # Split both texts into words
-        original_words = original_text.split()
-        normalized_words = normalized_text.split()
-        guess_words = guess_normalized.split()
-
-        # Build alignment so normalized-word indices map to correct original words
-        # even when one original word normalizes to multiple normalized words.
-        alignment = self._build_word_alignment(original_words, normalized_words)
-
-        # Handle single-word guesses (original behavior)
-        if len(guess_words) == 1:
-            self._reveal_single_word_match(
-                guess_normalized, original_words, normalized_words, alignment, revealed_letters
-            )
-            return
-
-        # Handle multi-word guesses by finding the sequence
-        self._reveal_multi_word_match(
-            guess_words, original_words, normalized_words, alignment, revealed_letters
-        )
-
-    def _reveal_single_word_match(  # pylint: disable=too-many-arguments
-        self,
-        guess_normalized: str,
-        original_words: list[str],
-        normalized_words: list[str],
-        alignment: list[int],
-        revealed_letters: set[str],
-    ) -> None:
-        """Helper to reveal letters for single-word guesses."""
-        for i, norm_word in enumerate(normalized_words):
-            if not self._is_word_match(guess_normalized, norm_word):
-                continue
-            orig_idx = alignment[i]
-            for char in original_words[orig_idx]:
-                if char.isalpha():
-                    revealed_letters.add(char.lower())
-
-        # Also reveal letters from a concatenated-word sequence match.
-        # e.g. guess "rundmc" matches normalized_words ["rund", "m", "c"]
-        seq = self._find_concatenated_sequence(guess_normalized, normalized_words)
-        if seq is not None:
-            start, count = seq
-            orig_indices = {alignment[j] for j in range(start, min(start + count, len(alignment)))}
-            for orig_idx in orig_indices:
-                for char in original_words[orig_idx]:
-                    if char.isalpha():
-                        revealed_letters.add(char.lower())
-
-    @staticmethod
-    def _reveal_multi_word_match(
-        guess_words: list[str],
-        original_words: list[str],
-        normalized_words: list[str],
-        alignment: list[int],
-        revealed_letters: set[str],
-    ) -> None:
-        """Helper to reveal letters for multi-word guesses."""
-        for i in range(len(normalized_words) - len(guess_words) + 1):
-            sequence = normalized_words[i : i + len(guess_words)]
-            if sequence != guess_words:
-                continue
-            # Reveal all original words that contributed to this normalized sequence.
-            # Using a set of orig_indices handles the case where multiple normalized
-            # words came from the same original word (e.g. "Run‐D.M.C." → 3 words).
-            orig_indices = {
-                alignment[j] for j in range(i, min(i + len(guess_words), len(alignment)))
-            }
-            for orig_idx in orig_indices:
-                for char in original_words[orig_idx]:
-                    if char.isalpha():
-                        revealed_letters.add(char.lower())
 
     def _process_word_guess(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
@@ -530,8 +128,12 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             result: Result dict (modified in place)
         """
         # Cache the word match results to avoid repeated regex operations
-        track_has_word = self._is_word_match(guess_normalized, track_normalized)
-        artist_has_word = self._is_word_match(guess_normalized, artist_normalized)
+        track_has_word = nowplaying.guessgame.scoring.is_word_match(
+            guess_normalized, track_normalized
+        )
+        artist_has_word = nowplaying.guessgame.scoring.is_word_match(
+            guess_normalized, artist_normalized
+        )
 
         if not track_has_word and not artist_has_word:
             return  # Not a word match
@@ -541,11 +143,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         # Reveal letters from matched words
         if track_has_word:
-            self._reveal_matching_word_letters(
+            nowplaying.guessgame.scoring.reveal_matching_word_letters(
                 guess_normalized, track, track_normalized, revealed_letters
             )
         if artist_has_word:
-            self._reveal_matching_word_letters(
+            nowplaying.guessgame.scoring.reveal_matching_word_letters(
                 guess_normalized, artist, artist_normalized, revealed_letters
             )
 
@@ -560,72 +162,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             result["guess_type"] = "already_guessed"
             result["already_guessed"] = True
             result["points"] = 0
-
-    @staticmethod
-    def _mask_text(text: str, revealed_letters: set[str], auto_reveal_words: bool = False) -> str:
-        """
-        Mask text with blanks for unrevealed letters.
-
-        Args:
-            text: Original text to mask
-            revealed_letters: Set of letters that have been guessed
-            auto_reveal_words: If True, auto-reveal common words
-
-        Returns:
-            Masked text with _ for unrevealed letters
-        """
-        if not text:
-            return ""
-
-        masked = []
-        words = text.split()
-
-        for word in words:
-            if auto_reveal_words and word.lower() in COMMON_WORDS:
-                # Reveal entire common word
-                masked.append(word)
-            else:
-                # Mask individual characters
-                masked_word = ""
-                for char in word:
-                    char_lower = char.lower()
-                    if char in AUTO_REVEAL_CHARS:
-                        # Always reveal spaces, punctuation, numbers
-                        masked_word += char
-                    elif char_lower in revealed_letters:
-                        # Revealed letter - show it with original case
-                        masked_word += char
-                    elif char.isalpha():
-                        # Unrevealed letter - blank it out
-                        masked_word += "_"
-                    else:
-                        # Other characters (should be covered by AUTO_REVEAL_CHARS)
-                        masked_word += char
-                masked.append(masked_word)
-
-        return " ".join(masked)
-
-    @staticmethod
-    def _calculate_difficulty(track: str, artist: str, revealed_letters: set[str]) -> float:
-        """
-        Calculate the difficulty of the current game as percentage of letters still hidden.
-
-        Returns:
-            Float between 0.0 and 1.0 representing percentage of unrevealed letters
-        """
-        combined = track + artist
-
-        # Count letters only (not spaces, punctuation, etc)
-        total_letters = sum(1 for char in combined if char.isalpha())
-        if total_letters == 0:
-            return 0.0
-
-        # Count unrevealed letters
-        unrevealed_count = sum(
-            1 for char in combined if char.isalpha() and char.lower() not in revealed_letters
-        )
-
-        return unrevealed_count / total_letters
 
     def _calculate_points(self, guess: str, guess_type: str, is_first_solver: bool = False) -> int:
         """
@@ -704,11 +240,17 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         revealed_letters: set[str] = set()
 
         # Calculate initial masks
-        masked_track = self._mask_text(track, revealed_letters, auto_reveal_words)
-        masked_artist = self._mask_text(artist, revealed_letters, auto_reveal_words)
+        masked_track = nowplaying.guessgame.scoring.mask_text(
+            track, revealed_letters, auto_reveal_words
+        )
+        masked_artist = nowplaying.guessgame.scoring.mask_text(
+            artist, revealed_letters, auto_reveal_words
+        )
 
         # Calculate difficulty for first solver bonus eligibility
-        difficulty = self._calculate_difficulty(track, artist, revealed_letters)
+        difficulty = nowplaying.guessgame.scoring.calculate_difficulty(
+            track, artist, revealed_letters
+        )
         difficulty_bonus = 1 if difficulty >= difficulty_threshold else 0
 
         start_time = int(time.time())
@@ -891,9 +433,15 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     track_lower = track.lower()
                     artist_lower = artist.lower()
                     # Normalize for matching (& and 'and' are equivalent)
-                    guess_normalized = self._normalize_for_matching(guess_text)
-                    track_normalized = self._normalize_for_matching(track_lower)
-                    artist_normalized = self._normalize_for_matching(artist_lower)
+                    guess_normalized = nowplaying.guessgame.scoring.normalize_for_matching(
+                        guess_text
+                    )
+                    track_normalized = nowplaying.guessgame.scoring.normalize_for_matching(
+                        track_lower
+                    )
+                    artist_normalized = nowplaying.guessgame.scoring.normalize_for_matching(
+                        artist_lower
+                    )
                     logging.debug(
                         "Guess normalization: guess=%s->%s, artist=%s->%s",
                         repr(guess_text),
@@ -908,11 +456,15 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     # e.g. "rundmc" solves artist "Run‐D.M.C." (normalized "rund m c")
                     if not artist_match:
                         artist_words = artist_normalized.split()
-                        seq = self._find_concatenated_sequence(guess_normalized, artist_words)
+                        seq = nowplaying.guessgame.scoring.find_concatenated_sequence(
+                            guess_normalized, artist_words
+                        )
                         artist_match = seq == (0, len(artist_words))
                     if not track_match:
                         track_words = track_normalized.split()
-                        seq = self._find_concatenated_sequence(guess_normalized, track_words)
+                        seq = nowplaying.guessgame.scoring.find_concatenated_sequence(
+                            guess_normalized, track_words
+                        )
                         track_match = seq == (0, len(track_words))
 
                     # Handle different solve modes
@@ -945,9 +497,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                     elif solve_mode == "both_required":
                         # Must have both track and artist in the guess to win
-                        has_both = self._phrase_in_guess(
+                        has_both = nowplaying.guessgame.scoring.phrase_in_guess(
                             track_normalized, guess_normalized
-                        ) and self._phrase_in_guess(artist_normalized, guess_normalized)
+                        ) and nowplaying.guessgame.scoring.phrase_in_guess(
+                            artist_normalized, guess_normalized
+                        )
                         if has_both:
                             result["correct"] = True
                             result["guess_type"] = "solve"
@@ -977,8 +531,12 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     elif (
                         not track_solved
                         and not artist_solved
-                        and self._phrase_in_guess(track_normalized, guess_normalized)
-                        and self._phrase_in_guess(artist_normalized, guess_normalized)
+                        and nowplaying.guessgame.scoring.phrase_in_guess(
+                            track_normalized, guess_normalized
+                        )
+                        and nowplaying.guessgame.scoring.phrase_in_guess(
+                            artist_normalized, guess_normalized
+                        )
                     ):
                         result["correct"] = True
                         result["guess_type"] = "solve"
@@ -1056,10 +614,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         self._mark_guess_as_wrong(result, guess_text)
 
                 # Update masked strings
-                result["masked_track"] = self._mask_text(
+                result["masked_track"] = nowplaying.guessgame.scoring.mask_text(
                     track, revealed_letters, auto_reveal_words
                 )
-                result["masked_artist"] = self._mask_text(
+                result["masked_artist"] = nowplaying.guessgame.scoring.mask_text(
                     artist, revealed_letters, auto_reveal_words
                 )
 
@@ -1564,254 +1122,3 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         except sqlite3.Error as error:
             logging.error("Failed to check game timeout: %s", error)
             return False
-
-    @classmethod
-    def clear_leaderboards(cls) -> bool:
-        """
-        Clear all user scores from the leaderboards.
-        This deletes all entries from the user_scores table.
-
-        Returns:
-            True if cleared successfully, False on error
-        """
-        try:
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(cls._get_database_path()), timeout=30
-            ) as connection:
-                cursor = connection.cursor()
-                cursor.execute("DELETE FROM user_scores")
-                connection.commit()
-                logging.info("All leaderboards cleared")
-                return True
-
-        except sqlite3.Error as error:
-            logging.error("Failed to clear leaderboards: %s", error)
-            return False
-
-    @classmethod
-    def remove_user_from_alltime(cls, username: str) -> bool:
-        """
-        Remove a single user from the all-time leaderboard.
-
-        Returns:
-            True if removed successfully (including when user did not exist), False on error
-        """
-        if not username:
-            return False
-        try:
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(cls._get_database_path()), timeout=30
-            ) as connection:
-                cursor = connection.cursor()
-                cursor.execute(
-                    "DELETE FROM user_scores WHERE username = ? COLLATE NOCASE",
-                    (username,),
-                )
-                connection.commit()
-                if cursor.rowcount > 0:
-                    logging.info("Removed user %s from all-time leaderboard", username)
-                else:
-                    logging.info("User %s not found in all-time leaderboard", username)
-                return True
-        except sqlite3.Error as error:
-            logging.error("Failed to remove user %s from leaderboard: %s", username, error)
-            return False
-
-    async def _serialize_leaderboards(self) -> dict[str, list[dict[str, int | str]]]:
-        """
-        Fetch and serialize leaderboards for server transmission.
-
-        Returns:
-            Dictionary with session_leaderboard and all_time_leaderboard keys
-        """
-        result: dict[str, list[dict[str, int | str]]] = {}
-
-        session_leaderboard = await self.get_leaderboard("session", limit=10)
-        all_time_leaderboard = await self.get_leaderboard("all_time", limit=10)
-
-        if session_leaderboard:
-            result["session_leaderboard"] = [
-                {
-                    "username": entry["username"],
-                    "score": entry["score"],
-                    "solves": entry["solves"],
-                }
-                for entry in session_leaderboard
-            ]
-
-        if all_time_leaderboard:
-            result["all_time_leaderboard"] = [
-                {
-                    "username": entry["username"],
-                    "score": entry["score"],
-                    "solves": entry["solves"],
-                }
-                for entry in all_time_leaderboard
-            ]
-
-        return result
-
-    async def _build_server_payload(self, state: dict, charts_key: str) -> dict[str, str | dict]:
-        """
-        Build payload for server transmission based on game state.
-
-        Args:
-            state: Current game state from get_current_state()
-            charts_key: Charts API key
-
-        Returns:
-            Payload dictionary ready for JSON transmission
-        """
-        payload: dict[str, str | dict] = {
-            "secret": charts_key,
-            "game_status": state["status"],
-        }
-
-        if state["status"] == "active":
-            # For active games, include masked info
-            game_state = {
-                "masked_track": state.get("masked_track", ""),
-                "masked_artist": state.get("masked_artist", ""),
-                "time_remaining": state.get("time_remaining", 0),
-                "time_elapsed": state.get("time_elapsed", 0),
-            }
-
-            # Add leaderboards
-            leaderboards = await self._serialize_leaderboards()
-            game_state.update(leaderboards)
-
-            payload["game_state"] = game_state
-
-        elif state["status"] in ("solved", "timeout"):
-            # For ended games, include revealed answers and final leaderboards
-            payload["current_track"] = state.get("revealed_track", "")
-            payload["current_artist"] = state.get("revealed_artist", "")
-
-            # Add final leaderboards
-            game_state = await self._serialize_leaderboards()
-            payload["game_state"] = game_state
-
-        return payload
-
-    async def _send_single_update(  # pylint: disable=too-many-return-statements
-        self,
-    ) -> tuple[bool, int]:
-        """
-        Send a single game state update to the server.
-
-        Returns:
-            Tuple of (success, sleep_duration):
-            - success: True if update was sent, False if skipped
-            - sleep_duration: Recommended sleep time in seconds before next update
-        """
-        # Check if game is enabled
-        if not self.is_enabled():
-            return (False, 5)
-
-        # Check if sending to server is enabled
-        if not self.config:
-            logging.debug("Game state sender: no config, sleeping")
-            return (False, 5)
-
-        send_to_server = self.config.cparser.value(
-            "guessgame/send_to_server", defaultValue=True, type=bool
-        )
-        if not send_to_server:
-            logging.debug("Game state sender: send_to_server disabled, sleeping")
-            return (False, 5)
-
-        # Check if charts is configured (need valid API key)
-        charts_key = self.config.cparser.value("charts/charts_key", defaultValue="")
-        if not nowplaying.utils.charts_api.is_valid_api_key(charts_key):
-            # No valid API key configured, skip sending
-            logging.debug(
-                "Game state sender: no valid charts API key (length=%d), sleeping",
-                len(charts_key) if charts_key else 0,
-            )
-            return (False, 10)
-
-        # Get current game state
-        state = await self.get_current_state()
-        if not state:
-            return (False, 5)
-
-        # Nothing to report while waiting for a game to start
-        if state["status"] == "waiting":
-            return (False, 10)
-
-        # Build payload using helper
-        payload = await self._build_server_payload(state, charts_key)
-
-        base_url = nowplaying.utils.charts_api.get_charts_base_url(self.config)
-        url = f"{base_url}/api/guessgame/update"
-
-        # Reuse HTTP session for efficiency
-        if self._http_session is None or self._http_session.closed:
-            self._http_session = aiohttp.ClientSession()
-
-        # Send to server
-        # pylint: disable=not-async-context-manager
-        async with self._http_session.post(
-            url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
-        ) as response:
-            # Use shared HTTP response handler
-            try:
-                response_text = await response.text()
-            except Exception:  # pylint: disable=broad-exception-caught
-                response_text = ""
-            action = nowplaying.utils.charts_api.handle_http_response(
-                response.status, response_text
-            )
-
-            # Use action to determine sleep duration
-            # For auth errors (401/403), pause longer since user needs to fix API key
-            if response.status in (401, 403):
-                logging.warning(
-                    "Authentication failed (status %d). Pausing for 60s. "
-                    "Check your Charts API key configuration.",
-                    response.status,
-                )
-                return (False, 60)
-
-            # Log action for other cases
-            if action == "drop":
-                logging.warning(
-                    "Server indicated to drop game state update (status %d)",
-                    response.status,
-                )
-            elif action == "retry":
-                logging.debug("Server indicated retry for game state update")
-
-        # Return success and sleep duration based on game state
-        # Send more frequently during active games
-        sleep_duration = 2 if state["status"] == "active" else 10
-        return (True, sleep_duration)
-
-    async def send_game_state_to_server(self):
-        """
-        Periodically send game state to charts server for live display.
-
-        This task runs continuously while the guess game is enabled and sends:
-        - Game status (active/waiting)
-        - Current track and artist info
-        - Masked strings and revealed letters
-        - Time remaining/elapsed
-        - Leaderboards (session and all-time)
-
-        Respects the guessgame/send_to_server config option.
-        """
-        while not self.stopevent.is_set():
-            try:
-                _success, sleep_duration = await self._send_single_update()
-                await asyncio.sleep(sleep_duration)
-            except asyncio.CancelledError:
-                logging.debug("Game state sender task cancelled")
-                break
-            except Exception as error:  # pylint: disable=broad-exception-caught
-                logging.error("Failed to send game state to server: %s", error)
-                await asyncio.sleep(5)
-
-        # Clean up HTTP session when loop exits
-        if self._http_session is not None and not self._http_session.closed:
-            await self._http_session.close()
-            self._http_session = None
