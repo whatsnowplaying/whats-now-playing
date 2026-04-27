@@ -110,9 +110,7 @@ def test_initialize_database_handles_os_error(tmp_path):
 def test_vacuum_database_missing_file(tmp_path):
     """Test that vacuum_database is a no-op when the DB file does not exist."""
     missing_db = tmp_path / "nonexistent.db"
-    with patch.object(
-        nowplaying.guessgame.GuessGame, "_get_database_path", return_value=missing_db
-    ):
+    with patch.object(nowplaying.guessgame.db, "get_database_path", return_value=missing_db):
         nowplaying.guessgame.GuessGame.vacuum_database()
     assert not missing_db.exists()
 
@@ -121,7 +119,7 @@ def test_vacuum_database_existing(tmp_path):
     """Test that vacuum_database succeeds when the DB file exists."""
     db_path = tmp_path / "test.db"
     nowplaying.guessgame.GuessGame.initialize_database(db_path)
-    with patch.object(nowplaying.guessgame.GuessGame, "_get_database_path", return_value=db_path):
+    with patch.object(nowplaying.guessgame.db, "get_database_path", return_value=db_path):
         nowplaying.guessgame.GuessGame.vacuum_database()
     assert db_path.exists()
 
@@ -137,7 +135,7 @@ def test_clear_leaderboards(tmp_path):
             ("testuser", 1234567890),
         )
 
-    with patch.object(nowplaying.guessgame.GuessGame, "_get_database_path", return_value=db_path):
+    with patch.object(nowplaying.guessgame.db, "get_database_path", return_value=db_path):
         result = nowplaying.guessgame.GuessGame.clear_leaderboards()
 
     assert result is True
