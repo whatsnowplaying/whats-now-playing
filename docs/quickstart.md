@@ -11,7 +11,7 @@ This guide walks you through getting **What's Now Playing** up and running for t
 **[Download the latest release](https://whatsnowplaying.com/download)**
 for your platform.
 
-See [Platform Notes](#platform-notes) below if you have trouble launching the app.
+Linux users: see [Linux Setup](help/linux.md) if the app fails to start.
 
 ## Step 2: Connect Your DJ Software
 
@@ -31,9 +31,10 @@ A few things to know about auto-detection:
 * Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network
 * The first detected source wins. If multiple are found, you can change it afterwards.
-* For **vinyl decks, standalone CDJs, Rekordbox, and analog mixers**, use
-  [WNP EarShot](https://whatsnowplaying.com/earshot) — a companion app that identifies
-  tracks via Shazam and sends them to WNP automatically
+* For **vinyl decks, standalone CDJs, Rekordbox, and analog mixers** (optional):
+  [WNP EarShot](https://whatsnowplaying.com/earshot) is a separate companion app that
+  identifies tracks via Shazam and sends them to WNP automatically. Only needed if
+  your setup does not use DJ software.
 
 See [Input Sources](input/index.md) for per-source setup details.
 
@@ -60,14 +61,19 @@ browser sources pre-configured — no manual URL copying or source sizing requir
 5. Relaunch OBS Studio — the new **WhatsNowPlaying** scene collection will appear
    under **Scene Collection** in the menu bar
 
-The exported collection contains pre-built scenes for your overlays and the Guess Game
-(including WebGL-enhanced versions). Copy the individual browser sources into your
-own scenes as needed.
+WNP ships with 15 browser overlay templates (including 6 WebGL animated effects) and
+36 text templates for Twitch, Kick, and plain text output, all ready to use without
+any editing. The exported collection contains pre-built scenes for your overlays and
+the Guess Game (including WebGL-enhanced versions). Copy the individual browser sources
+into your own scenes as needed.
 
 See [Export for OBS](output/obs-export.md) for full details.
 
 If you prefer to set up OBS manually, see [Web Server](output/webserver.md) for
 instructions on adding a Browser Source by hand.
+
+> **That's it for basic setup.** If you just want a track overlay in OBS, you're done.
+> Everything below is optional. See the [Gallery](gallery/index.md) to browse all included templates.
 
 ## Step 5: Announce Tracks in Chat (Optional)
 
@@ -85,48 +91,3 @@ instructions on adding a Browser Source by hand.
 * **[Templates](reference/templatevariables.md)**: customize every aspect of what gets displayed
 * **[Charts](output/charts.md)**: track your play history, view listening stats, and unlock the
   online Guess Game board — sign up at <https://whatsnowplaying.com/signup>
-
----
-
-## Platform Notes
-
-### macOS
-
-The app is signed and notarized. macOS should open it without any security warnings.
-
-* Do not unzip the downloaded package directly to the folder you will run it from.
-  Unzip in `Downloads` first, then move `WhatsNowPlaying.app` to `Applications`.
-* If macOS still shows a security warning, open **System Settings → Privacy & Security**,
-  scroll down to the **Security** section, and click **Open Anyway**.
-
-### Linux
-
-* Download the zip for your architecture, extract it, and run the `WhatsNowPlaying` binary.
-* A desktop environment is required. This software does not run headless.
-* If the binary fails to start, install the following packages (Debian/Ubuntu):
-
-```bash
-sudo apt-get install \
-  libegl1 \
-  libgl1 \
-  libdbus-1-3 \
-  libfontconfig1 \
-  libglib2.0-0 \
-  libx11-xcb1 \
-  libxcb-cursor0 \
-  libxcb-icccm4 \
-  libxcb-image0 \
-  libxcb-keysyms1 \
-  libxcb-randr0 \
-  libxcb-render-util0 \
-  libxcb-shape0 \
-  libxcb-xinerama0 \
-  libxcb-xkb1 \
-  libxkbcommon-x11-0
-```
-
-* If you need to build from source, follow the [developer guide](help/developers.md).
-
-### Other Platforms
-
-Please follow the [developer guide](help/developers.md) to install and run.

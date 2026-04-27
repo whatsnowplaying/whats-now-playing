@@ -21,6 +21,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
 
 import nowplaying.artistextras
+import nowplaying.guessgamesettings
 import nowplaying.inputs
 import nowplaying.notifications
 import nowplaying.pluginimporter
@@ -165,6 +166,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self._defaults_general_settings(settings)
         self._defaults_output(settings)
         self._defaults_chat_services(settings)
+        nowplaying.guessgamesettings.GuessGameSettings.defaults(settings)
         self._defaults_quirks(settings)
         self._defaults_requests(settings)
         self._defaults_plugins(settings)

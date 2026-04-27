@@ -55,6 +55,10 @@ updates required.
   vinyl decks, standalone CDJs, Rekordbox, and analog mixers, then sends them to
   WNP automatically over the local network. No software integration with the
   hardware required.
+* **Always-Accept mode** — enabled by default. When EarShot identifies a track it
+  overrides the active DJ software source automatically, with no manual source switching
+  required mid-set. Can be disabled for setups where EarShot should only be used as the
+  primary source.
 
 ### [Remote WNP Instance](input/remote.md)
 
@@ -108,7 +112,7 @@ overlays using the Jinja2 template engine. Supports:
 
 * Real-time updates via WebSockets
 * Full HTML, CSS, and JavaScript customization
-* Bundled template library with multiple styles
+* 15 bundled OBS browser overlay templates, including 6 WebGL animated effects
 * Access to all track metadata as template variables
 * Remote control APIs
 
@@ -127,6 +131,7 @@ variable and exportable.
 ### Twitch Bot
 
 * Automatic track announcements when tracks change
+* 36 bundled announcement and response templates for Twitch, Kick, and text output
 * Configurable announcement templates with full Jinja2 support
 * Chat commands for viewers: `!track`, `!artist`, `!album`, and more
 * Contextual help via `!track help`

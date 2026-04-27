@@ -133,6 +133,7 @@ nav:
   - Help:
       - Overview: help/index.md
       - How Do I?: help/howdoi.md
+      - Linux Setup: help/linux.md
       - Accuracy: help/accuracy.md
       - Troubleshooting: help/troubleshooting.md
       - Bug Reports: help/bugreports.md

@@ -9,6 +9,7 @@ import nowplaying.inputs.remote
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
     import nowplaying.config
 
 
@@ -36,6 +37,10 @@ class Plugin(nowplaying.inputs.remote.Plugin):
         if not agent.startswith("wnpearshot"):
             return None
         return meta
+
+    def defaults(self, qsettings: "QSettings") -> None:
+        """Set default configuration values for EarShot."""
+        qsettings.setValue("earshot/always_accept", True)
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into the UI."""
