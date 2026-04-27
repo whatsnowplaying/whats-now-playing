@@ -9,6 +9,7 @@ import typing as t
 import requests
 
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
+from nowplaying.upgrades.platform import PlatformDetector
 
 if t.TYPE_CHECKING:
     import nowplaying.config
@@ -194,38 +195,8 @@ def _is_prerelease(version: str) -> bool:
     return any(marker in version for marker in _PRERELEASE_MARKERS)
 
 
-def ping_version(config: "nowplaying.config.ConfigFile") -> None:
-    """Ping the version-check endpoint with the charts key.
-
-    Fire-and-forget: called at startup when a charts key already exists so the
-    server can correlate the running version with a known user account.
-
-    If the charts key is missing or empty, this function returns without
-    making a request.
-    """
-    current_version: str = nowplaying.version.__VERSION__  # pylint: disable=no-member
-    charts_key: str = config.cparser.value("charts/charts_key", defaultValue="", type=str)
-
-    if not charts_key:
-        return
-
-    try:
-        requests.get(
-            UPDATE_CHECK_URL,
-            params={"version": current_version},
-            headers={"X-API-Key": charts_key},
-            timeout=1,
-        )
-    except requests.RequestException:
-        logging.debug("Version ping failed", exc_info=True)
-
-
-def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None:
-    """Check for updates via whatsnowplaying.com API.
-
-    Sends current version and platform info to the API.
-    Returns the response dict if an update is available, None otherwise.
-    """
+def _build_version_params(platform_info: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Build query params for the version-check API from platform info."""
     current_version = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
     params: dict[str, t.Any] = {
@@ -239,6 +210,45 @@ def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None
         params["macos_version"] = macos_version
     if _is_prerelease(current_version):
         params["track"] = "prerelease"
+
+    return params
+
+
+def ping_version(config: "nowplaying.config.ConfigFile") -> None:
+    """Ping the version-check endpoint with the charts key.
+
+    Fire-and-forget: called at startup when a charts key already exists so the
+    server can correlate the running version with a known user account.
+
+    If the charts key is missing or empty, this function returns without
+    making a request.
+    """
+    charts_key: str = config.cparser.value("charts/charts_key", defaultValue="", type=str)
+
+    if not charts_key:
+        return
+
+    params = _build_version_params(PlatformDetector.get_platform_info())
+
+    try:
+        response = requests.get(
+            UPDATE_CHECK_URL,
+            params=params,
+            headers={"X-API-Key": charts_key},
+            timeout=1,
+        )
+        logging.debug("Version ping succeeded: HTTP %s", response.status_code)
+    except requests.RequestException:
+        logging.debug("Version ping failed", exc_info=True)
+
+
+def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None:
+    """Check for updates via whatsnowplaying.com API.
+
+    Sends current version and platform info to the API.
+    Returns the response dict if an update is available, None otherwise.
+    """
+    params = _build_version_params(platform_info)
 
     try:
         response = requests.get(UPDATE_CHECK_URL, params=params, timeout=10)
