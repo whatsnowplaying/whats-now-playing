@@ -1,16 +1,13 @@
 /* Matrix digital rain effect for What's Now Playing */
 
-* {
+body {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-}
-
-body {
     background: #000;
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    box-sizing: border-box;
 }
 
 #matrix-canvas {

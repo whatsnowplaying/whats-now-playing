@@ -24,8 +24,13 @@
     // Canvas rain background
     // ---------------------------------------------------------------
     const canvas = document.getElementById('matrix-canvas');
-    const ctx = canvas.getContext('2d');
+    if (!canvas) {
+        console.error('Matrix canvas element not found');
+        window.updateDisplay = function () {};
+        return;
+    }
 
+    const ctx = canvas.getContext('2d');
     if (!ctx) {
         console.error('Canvas 2D not available');
         window.updateDisplay = function () {};
@@ -42,8 +47,8 @@
     let drops = [];
 
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = document.documentElement.clientWidth;
+        canvas.height = document.documentElement.clientHeight;
         const columns = Math.floor(canvas.width / FONT_SIZE);
         const prev = drops.slice();
         drops = Array.from({ length: columns }, (_, i) =>
@@ -86,6 +91,11 @@
     const RESOLVE_DELAY = 80;       // ms between each character resolving
 
     function decodeText(element, targetText) {
+        if (element._decodeTimer) {
+            clearInterval(element._decodeTimer);
+            element._decodeTimer = null;
+        }
+
         if (!targetText) {
             element.textContent = '';
             return;
@@ -94,11 +104,6 @@
         const len = targetText.length;
         let resolved = 0;
         let frame = 0;
-
-        // Clear any existing timer
-        if (element._decodeTimer) {
-            clearInterval(element._decodeTimer);
-        }
 
         element._decodeTimer = setInterval(() => {
             // How many chars have resolved so far (one new char every RESOLVE_DELAY ms)
