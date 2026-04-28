@@ -2,6 +2,7 @@
 
 body {
     background-color: #000;
+    color: #00ff00;
     font-family: 'Courier New', monospace;
     margin: 0;
     padding: 20px;
@@ -16,7 +17,6 @@ body {
 .typing-container {
     text-align: center;
     max-width: 90%;
-    color: #00ff00;
     font-size: 2em;
     line-height: 1.4;
 }
@@ -24,7 +24,7 @@ body {
 .typed-cursor {
     opacity: 1;
     animation: blink 1s infinite;
-    color: #00ff00;
+    color: inherit;
 }
 
 @keyframes blink {
@@ -87,14 +87,6 @@ body {
     color: #333;
     font-family: 'Courier New', monospace;
     font-weight: bold;
-}
-
-/* Matrix-style green on black */
-.matrix-style {
-    background-color: #000;
-    color: #00ff41;
-    font-family: 'Courier New', monospace;
-    text-shadow: 0 0 10px #00ff41;
 }
 
 /* Amber terminal */

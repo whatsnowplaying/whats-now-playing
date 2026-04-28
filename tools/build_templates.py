@@ -44,7 +44,7 @@ class TemplateBuilder:
                     break
 
         if actual_file:
-            content = actual_file.read_text()
+            content = actual_file.read_text(encoding='utf-8')
             relative_path = actual_file.relative_to(self.src_dir).as_posix()
 
             # Add source comment based on file type
@@ -176,6 +176,7 @@ class TemplateBuilder:
             "css_content": "\n\n".join(css_parts),
             "js_content": "\n\n".join(js_parts) if js_parts else None,
             "body_content": body_content,
+            "body_class": template_config.get("body_class"),
             "external_imports": "\n    ".join(external_imports) if external_imports else None,
             "refresh_rate": template_config.get("refresh_rate"),
             "image_field": template_config.get("image_field"),
@@ -218,7 +219,7 @@ class TemplateBuilder:
             # Render and write template
             output = base_template.render(context)
             output_file = self.output_dir / f"{template_name}.htm"
-            output_file.write_text(output)
+            output_file.write_text(output, encoding='utf-8')
             print(f"    Generated: {output_file}")
 
     @staticmethod
@@ -265,7 +266,7 @@ class TemplateBuilder:
             print(f"No vendor config found at {vendor_config_file}")
             return
 
-        config = yaml.safe_load(vendor_config_file.read_text())
+        config = yaml.safe_load(vendor_config_file.read_text(encoding='utf-8'))
         dependencies = config.get("vendor_dependencies", {})
 
         for filename, info in dependencies.items():
@@ -287,7 +288,7 @@ class TemplateBuilder:
         # Collect all template names from all configs
         active_templates = set()
         for config_file in (self.src_dir / "configs").glob("*.yaml"):
-            config = yaml.safe_load(config_file.read_text())
+            config = yaml.safe_load(config_file.read_text(encoding='utf-8'))
             for family_config in config["template_families"].values():
                 for template_name in family_config["templates"].keys():
                     active_templates.add(f"{template_name}.htm")
@@ -311,7 +312,7 @@ class TemplateBuilder:
 
         for config_file in (self.src_dir / "configs").glob("*.yaml"):
             print(f"Processing config: {config_file.name}")
-            config = yaml.safe_load(config_file.read_text())
+            config = yaml.safe_load(config_file.read_text(encoding='utf-8'))
 
             for family_name, family_config in config["template_families"].items():
                 self.build_template_family(family_name, family_config)
@@ -321,7 +322,7 @@ class TemplateBuilder:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         for config_file in (self.src_dir / "configs").glob("*.yaml"):
-            config = yaml.safe_load(config_file.read_text())
+            config = yaml.safe_load(config_file.read_text(encoding='utf-8'))
 
             if family_name in config["template_families"]:
                 family_config = config["template_families"][family_name]

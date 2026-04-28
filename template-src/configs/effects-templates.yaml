@@ -100,13 +100,6 @@ template_families:
         body_layout: typing_layout
         display_js: typed_effects
 
-      ws-typing-matrix:
-        title: "Typewriter Matrix"
-        description: "Matrix-style green typing effect"
-        body_layout: typing_layout
-        display_js: typed_effects
-        body_class: matrix-style
-
       ws-typing-amber:
         title: "Typewriter Amber"
         description: "Amber terminal typing effect"
@@ -136,3 +129,19 @@ template_families:
         description: "Frosted glass panel using CSS backdrop-filter blur"
         body_layout: frosted-glass-layout
         display_js: frosted-glass-display
+
+  matrix_rain:
+    base: websocket-base
+    description: "Matrix digital rain canvas effect with track info overlay"
+    common_css:
+      - obs-compatibility
+      - matrix-rain
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-typing-matrix:
+        title: "Matrix Rain"
+        description: "Matrix digital rain with falling katakana characters"
+        body_layout: matrix-rain-layout
+        display_js: matrix-rain
