@@ -50,7 +50,7 @@ Template Metadata (AI-parseable):
     <script src="/whatsnowplaying-websocket.js"></script>
 </head>
 
-<body>
+<body{%- if body_class %} class="{{body_class}}"{%- endif %}>
     {{body_content}}
 
     <script type="text/javascript">

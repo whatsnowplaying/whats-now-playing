@@ -1,0 +1,71 @@
+/* Matrix digital rain effect for What's Now Playing */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.track-overlay {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 16px 32px;
+    border: 1px solid #00ff41;
+    box-shadow: 0 0 18px rgba(0, 255, 65, 0.6), inset 0 0 10px rgba(0, 255, 65, 0.05);
+    min-width: 400px;
+    max-width: 90vw;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    transition: opacity 0.5s ease;
+}
+
+.track-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.track-artist {
+    font-size: 1.1em;
+    color: #00cc33;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px #00ff41;
+    text-transform: uppercase;
+}
+
+.track-title {
+    font-size: 1.5em;
+    color: #00ff41;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    text-shadow: 0 0 12px #00ff41, 0 0 24px rgba(0, 255, 65, 0.4);
+    font-weight: bold;
+}
+
+.track-album {
+    font-size: 0.85em;
+    color: #007a1f;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 6px #00ff41;
+    font-style: italic;
+}

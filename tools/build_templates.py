@@ -176,6 +176,7 @@ class TemplateBuilder:
             "css_content": "\n\n".join(css_parts),
             "js_content": "\n\n".join(js_parts) if js_parts else None,
             "body_content": body_content,
+            "body_class": template_config.get("body_class"),
             "external_imports": "\n    ".join(external_imports) if external_imports else None,
             "refresh_rate": template_config.get("refresh_rate"),
             "image_field": template_config.get("image_field"),

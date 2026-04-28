@@ -1,17 +1,40 @@
 # What's Now Playing
 
-> Free, open-source application for Windows, macOS, and Linux that reads live
-> track data from DJ software and makes it available to stream overlays, chat
-> bots, text files, and APIs.
+> Free, open-source application with pre-built binaries for Windows, macOS
+> (Intel and Apple Silicon), and Linux. No Python installation required.
+> Reads live track data from DJ software and delivers it to stream overlays,
+> chat bots, text files, and APIs, including artist images and bios from
+> Discogs, FanArt.TV, TheAudioDB, Last.fm, and Wikimedia, a chat-based
+> Guess Game, community charts, and viewer track requests.
+>
 > On first launch, WNP automatically detects which DJ software you are running —
 > no manual source selection required for most setups.
 > Supports Serato DJ, Traktor, Virtual DJ, Denon DJ, djay Pro, DJUCED, and more.
 > Vinyl decks, standalone CDJs, Rekordbox, and analog mixers are supported via
-> WNP EarShot, a companion app using Shazam-based audio identification.
+> WNP EarShot, an optional companion app using Shazam-based audio identification.
 > Outputs to OBS, Twitch, Kick, Discord, and custom HTML overlays via a built-in
 > web server with Jinja2 templating. Includes OBS scene export to generate
 > ready-to-import OBS 28+ scene collection JSON files with pre-configured browser
-> sources.
+> sources. Ships with 15 OBS browser overlay templates (including 6 WebGL
+> animated effects) and 36 text templates for Twitch, Kick, and plain text
+> output — all ready to use without editing.
+
+## Distinctive Features
+
+> - **Guess Game**: Twitch chat-based game where viewers guess the track and
+>   artist from masked text. Integrated leaderboards, scoring, and a live
+>   community leaderboard at whatsnowplaying.com.
+> - **Artist enrichment**: Fetches artist bios, images, and logos from Discogs,
+>   FanArt.TV, TheAudioDB, Last.fm, and Wikimedia for display in overlays and bots.
+> - **Track requests**: Viewers request tracks via Twitch channel point
+>   redemptions or chat commands.
+> - **Community charts**: whatsnowplaying.com tracks what DJs are playing across
+>   Twitch and Kick, with public streamer profiles, setlists, and charts.
+> - **EarShot always-accept**: When WNP EarShot (Shazam-based identification)
+>   is active alongside DJ software, it automatically overrides the active source
+>   when it identifies a different track — no manual switching required.
+> - **AcoustID/MusicBrainz recognition**: Identifies tracks by audio
+>   fingerprint for setups without DJ software metadata.
 
 ## Key Pages
 
@@ -23,7 +46,7 @@
 - [Streaming & Chat](https://whatsnowplaying.github.io/whats-now-playing/latest/output/twitchbot/): Twitch, Kick, and Discord bot integration
 - [Guess Game](https://whatsnowplaying.github.io/whats-now-playing/latest/output/guessgame/): Twitch chat-based track guessing game
 - [Track Requests](https://whatsnowplaying.github.io/whats-now-playing/latest/requests/): Viewer track request system
-- [Artist Data](https://whatsnowplaying.github.io/whats-now-playing/latest/extras/): Discogs, FanArt.TV, TheAudioDB, Wikimedia enrichment
+- [Artist Data](https://whatsnowplaying.github.io/whats-now-playing/latest/extras/): Discogs, FanArt.TV, TheAudioDB, Last.fm, and Wikimedia enrichment
 - [Recognition](https://whatsnowplaying.github.io/whats-now-playing/latest/recognition/): AcoustID and MusicBrainz track identification
 - [API Reference](https://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/): Web server REST API endpoints
 - [Charts](https://whatsnowplaying.github.io/whats-now-playing/latest/output/charts/): Community charts service at whatsnowplaying.com
