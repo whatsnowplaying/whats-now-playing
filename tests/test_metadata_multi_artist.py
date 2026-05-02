@@ -7,10 +7,11 @@ import asyncio
 import logging
 import pytest
 
+import wnpmb.artist_resolution
+
 import nowplaying.metadata
 import nowplaying.musicbrainz
 import nowplaying.musicbrainz.helper
-import nowplaying.utils.artists
 
 # Test data for artist splitting - only genuine collaborations that should be split
 SPLITTING_TEST_CASES = [
@@ -106,45 +107,21 @@ COLLABORATION_CASES = [
 @pytest.mark.parametrize("artist_string,expected", SPLITTING_TEST_CASES)
 def test_split_artist_string(artist_string, expected):
     """Test artist string splitting with various formats"""
-    result = nowplaying.utils.artists.split_artist_string(artist_string)
+    result = wnpmb.artist_resolution.split_artist_string(artist_string)
     assert result == expected
 
 
 @pytest.mark.parametrize("artist_string,expected", EDGE_CASE_TEST_CASES)
 def test_split_artist_string_edge_cases(artist_string, expected):
     """Test artist string splitting edge cases"""
-    result = nowplaying.utils.artists.split_artist_string(artist_string)
+    result = wnpmb.artist_resolution.split_artist_string(artist_string)
     assert result == expected
-
-
-def test_collaboration_delimiters_constant():
-    """Test that collaboration delimiter constants are properly defined"""
-
-    # Should contain common collaboration delimiters organized by specificity
-    assert " feat. " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
-    assert " featuring " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
-    assert " vs. " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
-    assert " presents " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
-
-    assert " with " in nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
-    assert " x " in nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
-
-    assert " & " in nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
-    assert " and " in nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
-
-    # Combined list should contain all delimiters
-    all_delimiters = (
-        nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
-        + nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
-        + nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
-    )
-    assert list(nowplaying.utils.artists.COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
 
 @pytest.mark.parametrize("artist_string,expected", DJ_COLLABORATION_CASES)
 def test_dj_collaboration_formats(artist_string, expected):
     """Test common DJ/electronic music collaboration formats"""
-    result = nowplaying.utils.artists.split_artist_string(artist_string)
+    result = wnpmb.artist_resolution.split_artist_string(artist_string)
     assert result == expected
 
 

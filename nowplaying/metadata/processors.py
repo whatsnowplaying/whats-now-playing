@@ -14,6 +14,7 @@ import textwrap
 from typing import TYPE_CHECKING
 
 import url_normalize
+import wnpmb.artist_resolution
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -22,7 +23,6 @@ import nowplaying.metadata.biohistory
 import nowplaying.metadata.tinytag_runner
 import nowplaying.musicbrainz
 import nowplaying.utils
-import nowplaying.utils.artists
 import nowplaying.utils.filters
 from nowplaying.types import TrackMetadata
 
@@ -464,7 +464,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not artist_str:
             return (None, None)
 
-        artists = nowplaying.utils.artists.split_artist_string(artist_str)
+        artists = wnpmb.artist_resolution.split_artist_string(artist_str)
         mbids = self.metadata.get("musicbrainzartistid") or []
         if isinstance(mbids, str):
             mbids = [mbids]
