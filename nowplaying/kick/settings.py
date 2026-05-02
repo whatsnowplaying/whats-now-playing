@@ -6,7 +6,7 @@ import os
 import pathlib
 from typing import Any
 
-from PySide6.QtCore import QTimer, Slot  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QObject, QTimer, Slot  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-name-in-module
 
 import nowplaying.config
@@ -149,7 +149,8 @@ class KickSettings:
         """Start periodic status updates to catch automatic token refresh"""
         if not self.status_timer:
             # Parent to widget so Qt automatically cleans up the timer on widget destruction
-            self.status_timer = QTimer(self.widget)
+            parent = self.widget if isinstance(self.widget, QObject) else None
+            self.status_timer = QTimer(parent)
             self.status_timer.timeout.connect(self.update_oauth_status)
             # Check every 30 seconds for token status changes
             self.status_timer.start(30000)
