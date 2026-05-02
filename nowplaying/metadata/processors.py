@@ -14,6 +14,7 @@ import textwrap
 from typing import TYPE_CHECKING
 
 import url_normalize
+import wnpmb.artist_resolution
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -22,7 +23,6 @@ import nowplaying.metadata.biohistory
 import nowplaying.metadata.tinytag_runner
 import nowplaying.musicbrainz
 import nowplaying.utils
-import wnpmb.artist_resolution
 import nowplaying.utils.filters
 from nowplaying.types import TrackMetadata
 

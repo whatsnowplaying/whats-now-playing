@@ -148,9 +148,8 @@ class KickSettings:
     def start_status_timer(self) -> None:
         """Start periodic status updates to catch automatic token refresh"""
         if not self.status_timer:
-            # Set widget as parent so Qt automatically cleans up timer on widget destruction
-            parent = self.widget or None
-            self.status_timer = QTimer(parent)
+            # Parent to widget so Qt automatically cleans up the timer on widget destruction
+            self.status_timer = QTimer(self.widget)
             self.status_timer.timeout.connect(self.update_oauth_status)
             # Check every 30 seconds for token status changes
             self.status_timer.start(30000)
