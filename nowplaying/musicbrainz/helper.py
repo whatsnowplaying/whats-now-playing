@@ -7,7 +7,7 @@ import contextlib
 import logging
 import os
 import sys
-from typing import Any
+from typing import Any, NamedTuple
 
 from wnpmb import (
     MusicBrainzClient,
@@ -25,6 +25,13 @@ import nowplaying.config
 import nowplaying.utils.metadata
 
 logger = logging.getLogger(__name__)
+
+
+class _RecordingLookup(NamedTuple):
+    """Result of _lastditchrid: resolved data and whether it came from a stripped-title fallback."""
+
+    data: dict | None
+    is_fallback: bool
 
 
 class MusicBrainzHelper:
@@ -84,18 +91,23 @@ class MusicBrainzHelper:
             self.mb_client.cache_service = WNPCacheAdapter(nowplaying.apicache.get_cache())
             self.emailaddressset = True
 
-    async def _lastditchrid(self, metadata):
-        """extract fields and run search"""
+    async def _lastditchrid(self, metadata) -> _RecordingLookup:
+        """extract fields and run search
+
+        Returns a _RecordingLookup where is_fallback=True means the match was
+        found only after stripping a generic suffix from the title — caller should
+        use artist data only and not treat the recording fields as authoritative.
+        """
         if metadata.get("musicbrainzrecordingid"):
             logger.debug("Skipping fallback: already have a rid")
-            return None
+            return _RecordingLookup(data=None, is_fallback=False)
 
         artist = metadata.get("artist")
         title = metadata.get("title")
         album = metadata.get("album")
 
         if not artist or not title:
-            return None
+            return _RecordingLookup(data=None, is_fallback=False)
 
         self._setemail()
         year = nowplaying.utils.metadata.get_best_year(metadata)
@@ -109,10 +121,13 @@ class MusicBrainzHelper:
                     year=year,
                 )
 
-        mbid = await self._mb_op_with_retry(_find, "find_recording", None)
-        if mbid:
-            return await self.recordingid(mbid)
-        return None
+        result = await self._mb_op_with_retry(_find, "find_recording", (None, None))
+        exact_mbid, fallback_mbid = result if result else (None, None)
+        if exact_mbid:
+            return _RecordingLookup(data=await self.recordingid(exact_mbid), is_fallback=False)
+        if fallback_mbid:
+            return _RecordingLookup(data=await self.recordingid(fallback_mbid), is_fallback=True)
+        return _RecordingLookup(data=None, is_fallback=False)
 
     async def lastditcheffort(self, metadata):
         """there is like no data, so..."""
@@ -122,11 +137,18 @@ class MusicBrainzHelper:
 
         self._setemail()
 
-        riddata = await self._lastditchrid(metadata)
+        lookup = await self._lastditchrid(metadata)
+        riddata = lookup.data
 
         if riddata:
-            if normalize(riddata.get("title")) != normalize(metadata.get("title")):
-                logger.debug("No title match, so just using artist data")
+            use_artist_only = lookup.is_fallback or (
+                normalize(riddata.get("title")) != normalize(metadata.get("title"))
+            )
+            if use_artist_only:
+                logger.debug(
+                    "Using artist data only: %s",
+                    "fallback match on stripped title" if lookup.is_fallback else "title mismatch",
+                )
 
                 strict_album_matching = self.config.cparser.value(
                     "musicbrainz/strict_album_matching", True, type=bool

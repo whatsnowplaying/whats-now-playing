@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 import url_normalize
 import wnpmb.artist_resolution
+import wnpmb.normalization
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -227,6 +228,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata["title"] = nowplaying.utils.filters.titlestripper(
                 config=self.config, title=self.metadata["title"]
             )
+            if isinstance(self.metadata.get("title"), str):
+                self.metadata["title"] = wnpmb.normalization.remove_duplicate_parentheticals(
+                    self.metadata["title"]
+                )
 
     def _uniqlists(self) -> None:
         if not self.metadata:
