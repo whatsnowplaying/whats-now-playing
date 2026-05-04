@@ -14,6 +14,22 @@ Hardware-based sources (Denon StageLinQ) are detected from the network. The
 detected source is shown in **Core Settings → Source** and can be changed at
 any time.
 
+## Two-Computer Setup
+
+Many DJs stream from a dedicated PC while running their DJ software on a
+separate laptop. WNP is built for this. The **Remote Output** feature
+automatically sends live track data from the DJ machine to the streaming
+machine over the local network.
+
+* No IP addresses to configure; uses Bonjour/Zeroconf auto-discovery
+* No port forwarding needed; works on any home or venue network
+* Works across platforms (DJ laptop on macOS, streaming PC on Windows, or
+  any combination)
+* Install WNP on both machines, point the streaming machine at the DJ
+  machine, and it just works
+
+See [Remote Output](input/remote.md) for setup details.
+
 ## Input Sources
 
 WNP reads track data directly from DJ software and media players. No manual
@@ -63,8 +79,8 @@ updates required.
 ### [Remote WNP Instance](input/remote.md)
 
 * One WNP instance can receive track data from another WNP instance over the
-  network, allowing a central streaming PC to consolidate output from one or
-  more DJ machines. Supports auto-discovery via Bonjour/Zeroconf.
+  network — the standard solution for a two-computer DJ/streaming setup.
+  Supports auto-discovery via Bonjour/Zeroconf.
 
 ## Track Recognition
 
@@ -112,7 +128,7 @@ overlays using the Jinja2 template engine. Supports:
 
 * Real-time updates via WebSockets
 * Full HTML, CSS, and JavaScript customization
-* 15 bundled OBS browser overlay templates, including 6 WebGL animated effects
+* 42 bundled OBS browser overlay templates, including 7 animated WebGL/canvas effects
 * Access to all track metadata as template variables
 * Remote control APIs
 
@@ -136,6 +152,7 @@ variable and exportable.
 * Chat commands for viewers: `!track`, `!artist`, `!album`, and more
 * Contextual help via `!track help`
 * Channel point redemption support
+* Automatic stream title updates on each track change using a Jinja2 template
 * Per-command permission controls (broadcaster, moderator, subscriber, VIP)
 * Cooldown timers per command and per user
 
@@ -206,14 +223,20 @@ MP3, FLAC, M4A, and AIFF formats.
 ## Charts and Analytics
 
 **[What's Now Playing Charts](https://whatsnowplaying.com/)** is an optional
-community service that tracks what DJs are playing across streams:
+community service that tracks what DJs are playing across streams. It is free,
+requires no account to start, and is built into WNP with no configuration needed.
 
 * WNP automatically submits track data using an anonymous API key generated
   on first run — no account required to contribute
-* Create an account (via Twitch or Kick login) to unlock a personal DJ profile
-* View your play history, top tracks, and session stats
+* Create an account (via Twitch or Kick login) to unlock a public DJ profile at
+  `whatsnowplaying.com/profile/(your-username)` showing:
+  * Play statistics: total plays, unique songs, and unique artists
+  * Top 10 tracks and artists with play counts
+  * Genre profile: auto-generated breakdown of your sets by genre and subgenre
+  * DJ setlists from recent streams, downloadable in multiple formats
+  * Recent track feed with artist, album, and timestamp
+  * Replay: year-in-review analytics for your streams
 * Community charts showing top tracks and artists across all streamers
-* Time-filtered views (24h, 7d, 30d, all time) by platform and genre
 * Online Guess Game leaderboard integration
 
 ## Platform Support

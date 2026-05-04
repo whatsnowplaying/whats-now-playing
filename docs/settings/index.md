@@ -16,40 +16,49 @@
   new track info once it's retrieved. If not populated, it will default
   to 0 seconds.
 
-* A setting of zero will update the track info on-screen immediately
-   as a new track is detected. If you're blending or crossfading, this
-   may be too soon; viewers would see the new track title before they
-   can hear it. A delay of 5–10 seconds gives your mix time to settle
-   before the display updates. Artist Extras also uses this window to
-   download images, so a longer delay means more content is ready when
-   the track appears.
+  A setting of zero will update the track info on-screen immediately
+  as a new track is detected. If you're blending or crossfading, this
+  may be too soon; viewers would see the new track title before they
+  can hear it. A delay of 5–10 seconds gives your mix time to settle
+  before the display updates. Artist Extras also uses this window to
+  download images, so a longer delay means more content is ready when
+  the track appears.
 
 * **Recognition Replacement** - By default, if a Music Recognition
   service is enabled, it will only supplement missing information.
   These options forcibly replace title and artist from any enabled
   recognition services.
 
-* **Logging Level** - By default, **What's Now Playing** will write
+* **Runtime Logging** - By default, **What's Now Playing** will write
   debug logs into your `Documents/WhatsNowPlaying/logs` directory. This option
   lets you control the level of logging.
+
+* **Tray Icon** - Controls whether the tray icon uses a light or dark variant.
+
+  * **Auto** (default) — switches automatically based on the OS color scheme.
+  * **Light** — always use the light (black) icon regardless of OS theme.
+  * **Dark** — always use the dark (white) icon regardless of OS theme.
+
+  Use Light or Dark to override Auto if your OS theme reporting is unreliable
+  (e.g. macOS with wallpaper tinting enabled).
 
 * **Configuration Backup** - Export and import your complete
   configuration to make version upgrades easier.
 
   * **Export Configuration** - Saves all your settings to a JSON file.
-   This includes API keys, passwords, file paths, and all plugin
-   configurations. ⚠️ **Security Warning**: The exported file
-   contains sensitive data including API keys and passwords. Store it
-   securely and do not share it.
+    This includes API keys, passwords, file paths, and all plugin
+    configurations. ⚠️ **Security Warning**: The exported file
+    contains sensitive data including API keys and passwords. Store it
+    securely and do not share it.
   * **Import Configuration** - Restores settings from a previously
-   exported JSON file. This will overwrite your current settings.
-   Cache and runtime settings are automatically excluded and rebuilt.
-   File paths that do not exist on the current machine are skipped
-   automatically; a `_import_warnings.txt` file is generated next to the
-   imported file listing any paths that need to be reconfigured manually.
+    exported JSON file. This will overwrite your current settings.
+    Cache and runtime settings are automatically excluded and rebuilt.
+    File paths that do not exist on the current machine are skipped
+    automatically; a `_import_warnings.txt` file is generated next to the
+    imported file listing any paths that need to be reconfigured manually.
   * **Portability**: The exporting machine's home directory is recorded in
-   the file so paths are automatically remapped when importing on a different
-   machine or operating system.
+    the file so paths are automatically remapped when importing on a different
+    machine or operating system.
   * **Use Cases**:
     * Back up settings before major version upgrades
     * Transfer settings between installations

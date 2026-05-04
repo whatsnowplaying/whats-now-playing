@@ -1,134 +1,76 @@
 
 # Changelog
 
-## Version 5.2.0 - In Progress
+## Version 5.2.0 - 2026-05-04
 
 * New Features
-  * WNP EarShot input source
-    * New dedicated EarShot source for vinyl, CDJs, and analog mixers using
-      Shazam-based identification via the WNP EarShot companion app
-    * Always-Accept mode runs WNP EarShot as a secondary monitor alongside any
-      DJ software source; WNP EarShot identifications automatically override the
-      active source when a new track is detected, then yield back when the DJ
-      software moves on
-    * Cover art can now be fetched from remote HTTP URLs supplied by the
-      EarShot companion app and embedded in track metadata
-    * WNP enforces a minimum version requirement for the EarShot app and
-      returns an explicit upgrade-required response for outdated clients
-  * OBS Scene Collection exporter
-    * New "Export for OBS..." system tray menu item generates a ready-to-import
-      OBS 28+ scene collection JSON file with pre-configured browser sources
-    * Customize template, dimensions, and canvas position per source before exporting
-    * Warns if OBS is already running so the new collection won't be missed
-    * Saves directly to the OBS scenes directory when found, or falls back to
-      Documents/WhatsNowPlaying/obs_scenes
-    * Includes two Guess Game scenes: "WNP Guess Game" with WebGL-enhanced
-      animated overlays, and "WNP Guess Game Basic" as a CSS-only fallback
-  * WebGL Guess Game overlays
-    * New animated game board with shader background, 3D letter-tile flip
-      reveals, particle bursts, and SVG arc timer
-    * New animated leaderboard with matching shader background, gold/cyan
-      accent colors, medal badges for top 3, and staggered row animations
-  * New WebGL and effects "Now Playing" overlay templates
-    * `ws-webgl-vinyl` — spinning vinyl record with cover art mapped as a
-      WebGL texture; center label and grooved outer area, 800×200
-    * `ws-webgl-spectrum` — 56 animated fake EQ bars with cyan-to-blue
-      gradient and burst effect on track change, 800×150
-    * `ws-webgl-hologram` — cyberpunk scanline panel with glitch slice
-      displacement and character-scramble text reveal, 800×150
-    * `ws-webgl-wave` — dark panel with animated wavy top edge and blue
-      glow line tracing the boundary, 800×150
-    * `ws-webgl-particles` — floating particles (Canvas 2D) over a fully
-      transparent background with burst on track change, 800×150
-    * `ws-webgl-cube` — rotating 3D WebGL cube textured with artist fanart
-      on faces 1–5 and cover art on face 0; falls back gracefully when
-      fewer than 6 fanart images are available, 800×200
-    * `ws-artistfanart-slideshow` — full-screen (1920×1080) CSS slideshow
-      cycling up to 20 artist fanart images with slide transitions every
-      8 seconds, resets on artist change
-    * `ws-frosted-glass` — CSS `backdrop-filter` frosted glass lower-third
-      that blurs actual stream content behind the panel, 800×150
-  * Template preview
-    * Web preview window has a "Use This Template" button that applies the
-      selected template back to the settings field that launched the preview
-    * Template preview is available from Twitch Bot, Kick Bot, Text Output,
-      Discord presence, and Discord channel settings
-    * WebGL templates display an amber warning banner in the preview window
-      when WebGL is unavailable (e.g. virtual machines); the text overlay
-      still renders correctly for end viewers whose GPU supports WebGL
-    * Fanart slideshow preview now cycles through six sample images
+  * WNP EarShot: new input source for vinyl, CDJs, and analog mixers via
+    Shazam-based identification; supports Always-Accept mode as a secondary
+    monitor alongside any DJ software source
+  * OBS Scene Collection exporter: "Export for OBS..." tray menu item generates
+    a ready-to-import OBS scene collection with pre-configured browser sources,
+    including WebGL and CSS-only Guess Game scenes
+  * New animated WebGL game board and leaderboard overlays for Guess Game
+  * Eight new WebGL and effects "Now Playing" overlay templates; see the
+    templates documentation for details
+  * `ws-typing-matrix` rebuilt as a full matrix digital rain canvas animation
+    with falling katakana characters
+  * Template preview now available from Twitch Bot, Kick Bot, Text Output,
+    Discord, and Discord channel settings; includes a "Use This Template" button
 
-* Removed
-  * Tenor GIF support has been removed; use Klipy instead
+* Remote Output
+  * Fixed duplicate Charts submissions when both sender and receiver have
+    Charts enabled
 
-* Twitch
-  * Stream title can now be updated automatically on every track change using
-    a Jinja2 template; works independently of Twitch chat being enabled, with
-    the same template picker and preview workflow used by chat announcements
-  * Broadcaster token scope warnings are now logged at startup when
-    `channel:manage:broadcast` is missing, with clearer HTTP 401/403
-    error messages on title update failures
+* Kick & Twitch
+  * Stream title can now be updated automatically on each track change using
+    a Jinja2 template (requires re-auth if upgrading)
+  * Twitch broadcaster tokens are no longer cleared on shutdown
+  * Fixed authentication when the webserver port wasn't 8899
 
-* Bug Fixes
-  * BPM and key are now read correctly from M4A files that store the same
-    field more than once
-  * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
-    is not configured, since guesses arrive exclusively via Twitch chat
-  * Filenames using an en dash separator (e.g. `Artist – Title.mp4`) are now
-    correctly split into artist and title when track tags are absent
-  * Kick and Twitch authentication failed if the webserver port wasn't 8899
-  * Twitch broadcaster OAuth tokens are no longer cleared on shutdown, so
-    re-authentication is not required every time WNP restarts
-  * Remote Output + Charts: when both the sending and receiving WNP instances
-    have Charts enabled, tracks were submitted to the charts server twice.
-    The sender now signals to the receiver to skip charts submission.
-  * WebGL overlay templates now degrade gracefully when WebGL is unavailable
-    instead of throwing a JavaScript error
-  * Tracks downloaded from YouTube with `Artist_-_Title` filenames are now
-    correctly split into artist and title even when no YouTube URL is present
-    in the file tags
-  * Windows font scaling is now correct across all settings screens; previously
-    hardcoded macOS font sizes caused oversized text on Windows and Linux
+* MPRIS
+  * Reduced log noise for unavailable D-Bus services and idle state
 
 * UI
-  * Major overhaul of all settings screens for improved layout consistency
-    and readability across platforms
-  * Improved dark mode support across all platforms
-    * Tray icon now automatically switches between black and white variants
-      to remain visible in both light and dark system themes
-    * New Tray Icon Appearance setting (Auto/Light/Dark) in General settings
-      to override auto-detection when OS theme reporting is unreliable
-      (e.g. macOS with wallpaper tinting enabled)
-    * Hardcoded light-mode colors removed from several UI panels so they
-      render correctly under dark themes on Linux and Windows
+  * Major overhaul of all settings screens for improved layout and consistency
+  * Tray icon switches automatically between light and dark variants based on
+    OS color scheme; new Auto/Light/Dark override in General settings
+  * Fixed dark mode rendering on several UI panels on Linux and Windows
 
 * VirtualDJ
-  * Track metadata (genre, BPM, key, label, year, etc.) is now pulled from
-    the local library database for tracks that have been previously cataloged
-    by WNP, including streaming service tracks
-  * Key and BPM from the Scan element are now captured during cataloging when
-    not present in the track tags
-  * BPM is now correctly converted from VirtualDJ's internal seconds-per-beat
-    format to beats-per-minute
+  * Track metadata is now pulled from the local library database for previously
+    cataloged tracks
+  * Key and BPM from the Scan element are captured when not present in track tags
+  * BPM is now correctly converted from VirtualDJ's internal format
 
 * Platform
-  * macOS binaries are now code-signed and notarized, eliminating Gatekeeper
-    warnings on first launch
-  * Windows binaries are now signed with Azure Trusted Signing, eliminating
-    SmartScreen warnings on first launch
+  * macOS binaries are now code-signed and notarized
+  * Windows binaries are now signed with Azure Trusted Signing
+  * Fixed font scaling on Windows and Linux settings screens
+
+* Removed
+  * Tenor GIF support; use Klipy instead
+
+* Bug Fixes
+  * Track titles with duplicate parenthetical suffixes (e.g.
+    `Song (Radio Edit) (radio edit)`) are now collapsed to a single suffix
+  * Fixed SQL injection, XSS, and unpinned CI action security issues
+  * BPM and key now read correctly from M4A files with duplicate fields
+  * Guess Game menu item is grayed out when Twitch Bot is not configured
+  * Filenames with en dash separators (e.g. `Artist – Title.mp4`) now split
+    correctly when track tags are absent
+  * YouTube `Artist_-_Title` filenames now split correctly even without a
+    YouTube URL in the file tags
 
 * Developer Stuff
   * Dependency updates
   * **Python 3.10 is no longer supported**; minimum version is now Python 3.11
   * **Python 3.14 is now supported**
-  * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
-    lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
-    client with improved release selection accuracy and HTTP/2 support;
-    wnpmb is installed as a wheel rather than vendored, and artist name
-    normalization utilities are now provided by wnpmb
-  * Extracted common Guess Game WebGL background shader to
-    `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
-    overlays
+  * Replaced vendored musicbrainzngs with wnpmb: ~3,500 lines of XML-based
+    client code replaced with a JSON async client with improved release
+    selection, HTTP/2 support, and artist name normalization; fallback
+    title-strip matches return artist data only, not a recording ID from the
+    stripped title
 
 ## Version 5.1.0 - 2026-03-26
 
