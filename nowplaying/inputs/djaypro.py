@@ -52,6 +52,9 @@ if TYPE_CHECKING:
     import nowplaying.uihelp
 
 
+_WAL_DEBOUNCE_SECONDS = 0.3
+
+
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for djay Pro"""
 
@@ -166,9 +169,15 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         with self._wal_timer_lock:
             if self._wal_timer is not None:
                 self._wal_timer.cancel()
-            self._wal_timer = threading.Timer(0.3, self._check_for_new_track)
+            self._wal_timer = threading.Timer(_WAL_DEBOUNCE_SECONDS, self._wal_timer_fired)
             self._wal_timer.daemon = True
             self._wal_timer.start()
+
+    def _wal_timer_fired(self):
+        """Called by the debounce timer; clears the timer reference then checks."""
+        with self._wal_timer_lock:
+            self._wal_timer = None
+        self._check_for_new_track()
 
     def _check_for_new_track(self):
         """Check for new track from NowPlaying.txt (macOS) or database (Windows)"""
