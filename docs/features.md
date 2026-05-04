@@ -37,31 +37,31 @@ updates required.
 
 ### DJ Software
 
-* **Serato DJ** — full library support, crate/playlist queries, streaming
+* **[Serato DJ](input/serato.md)** — full library support, crate/playlist queries, streaming
   services, artist search
-* **Traktor** — database integration with background refresh, artist search
-* **Virtual DJ** — history and playlist database with background refresh,
+* **[Traktor](input/traktor.md)** — database integration with background refresh, artist search
+* **[Virtual DJ](input/virtualdj.md)** — history and playlist database with background refresh,
   artist search
-* **Denon DJ** (StagelinQ protocol) — direct network connection to supported
+* **[Denon DJ](input/denon.md)** (StagelinQ protocol) — direct network connection to supported
   hardware
-* **djay Pro** — track detection and metadata
-* **DJUCED** — database integration, smart playlists, artist search
-* **JRiver Media Center** — via network API
-* **MIXXX** — via MPRIS2 (Linux) or Windows Media API (Windows)
+* **[djay Pro](input/djaypro.md)** — track detection and metadata
+* **[DJUCED](input/djuced.md)** — database integration, smart playlists, artist search
+* **[JRiver Media Center](input/jriver.md)** — via network API
+* **[MIXXX](input/mixxx.md)** — via MPRIS2 (Linux) or Windows Media API (Windows)
 
 ### Protocol-Based Sources
 
-* **Icecast** — receives metadata from butt, Traktor, MIXXX, and other
+* **[Icecast](input/icecast.md)** — receives metadata from butt, Traktor, MIXXX, and other
   Icecast-compatible streaming sources
 * **Remote API** — HTTP-based input for MegaSeg, Radiologik, and other
   software with HTTP output support
-* **M3U playlists** — file-based input for any software that writes M3U files
+* **[M3U playlists](input/m3u.md)** — file-based input for any software that writes M3U files
 
 ### System-Level Sources
 
-* **Windows Media API** — reads from Spotify, Amazon Music, SoundCloud,
+* **[Windows Media API](input/winmedia.md)** — reads from Spotify, Amazon Music, SoundCloud,
   Windows Media Player, and any other Windows media application
-* **MPRIS2** (Linux) — reads from VLC, Rhythmbox, Spotify, and any
+* **[MPRIS2](input/mpris2.md)** (Linux) — reads from VLC, Rhythmbox, Spotify, and any
   MPRIS2-compatible player
 
 ### [Vinyl, CDJs & Analog Mixers](https://whatsnowplaying.com/earshot)
@@ -71,7 +71,7 @@ updates required.
   vinyl decks, standalone CDJs, Rekordbox, and analog mixers, then sends them to
   WNP automatically over the local network. No software integration with the
   hardware required.
-* **Always-Accept mode** — enabled by default. When EarShot identifies a track it
+* **[Always-Accept mode](input/earshot.md)** — enabled by default. When EarShot identifies a track it
   overrides the active DJ software source automatically, with no manual source switching
   required mid-set. Can be disabled for setups where EarShot should only be used as the
   primary source.
@@ -100,7 +100,7 @@ WNP can automatically fetch additional artist information to enhance displays:
 * **[FanArt.TV](extras/fanarttv.md)** — high-quality fan art, artist logos, and background images
 * **[Wikimedia / Wikipedia](extras/wikimedia.md)** — artist biographies and images
 * **[Last.fm](extras/lastfm.md)** — album art lookup
-* **MusicBrainz** — artist website links, IDs, and relationship data
+* **[MusicBrainz](recognition/musicbrainz.md)** — artist website links, IDs, and relationship data
 
 Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.
@@ -109,11 +109,11 @@ shown twice during a stream.
 
 ### OBS Integration
 
-* **OBS WebSocket** — push track data directly to OBS text sources in
+* **[OBS WebSocket](output/obswebsocket.md)** — push track data directly to OBS text sources in
   real time
-* **Browser Sources** — serve custom HTML overlays via the built-in web
+* **[Browser Sources](output/webserver.md)** — serve custom HTML overlays via the built-in web
   server for display in OBS or any browser
-* **OBS Scene Export** — generate a ready-to-import OBS 28+ scene collection
+* **[OBS Scene Export](output/obs-export.md)** — generate a ready-to-import OBS 28+ scene collection
   JSON file from the system tray ("Export for OBS…"). Select which browser
   sources to include, choose the template for each, set dimensions and layout
   hints (fill, top, bottom, left, right, center), and preview each template
@@ -121,7 +121,7 @@ shown twice during a stream.
   (auto-detected per platform) so it appears in OBS immediately without
   manual file copying.
 
-### Web Server
+### [Web Server](output/webserver.md)
 
 WNP includes a built-in web server that serves customizable browser-based
 overlays using the Jinja2 template engine. Supports:
@@ -132,7 +132,7 @@ overlays using the Jinja2 template engine. Supports:
 * Access to all track metadata as template variables
 * Remote control APIs
 
-### Text Output
+### [Text Output](output/textoutput.md)
 
 Write track data to plain text files for use with any software that can read
 a text file, including older OBS setups and streaming tools.
@@ -144,7 +144,7 @@ variable and exportable.
 
 ## Chat Bot Integration
 
-### Twitch Bot
+### [Twitch Bot](output/twitchbot.md)
 
 * Automatic track announcements when tracks change
 * 36 bundled announcement and response templates for Twitch, Kick, and text output
@@ -156,12 +156,12 @@ variable and exportable.
 * Per-command permission controls (broadcaster, moderator, subscriber, VIP)
 * Cooldown timers per command and per user
 
-### Kick Bot
+### [Kick Bot](output/kickbot.md)
 
 * Automatic track announcements when tracks change
 * Configurable announcement templates
 
-### Discord Bot
+### [Discord Bot](output/discord.md)
 
 * Track announcements posted to a Discord channel
 * Optional cover art in announcements
@@ -201,7 +201,7 @@ All outputs use the Jinja2 template engine with access to a rich set of
 [template variables](reference/templatevariables.md) including artist, title,
 album, artwork, biographies, MusicBrainz IDs, timestamps, and more.
 
-### Filters
+### [Filters](settings/filter.md)
 
 Clean up track metadata before output:
 
@@ -210,7 +210,7 @@ Clean up track metadata before output:
 * Configurable via the UI with a simple rule system
 * Works across all outputs simultaneously
 
-### Track Skip
+### [Track Skip](settings/trackskip.md)
 
 Automatically skip tracks matching configurable metadata rules. For example,
 skip any track with "SKIP" in the genre field.
