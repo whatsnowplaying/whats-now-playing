@@ -3080,31 +3080,31 @@ machine over the local network.</p>
 updates required.</p>
 <h3 id="dj-software">DJ Software<a class="headerlink" href="#dj-software" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Serato DJ</strong> — full library support, crate/playlist queries, streaming
+<li><strong><a href="../input/serato/">Serato DJ</a></strong> — full library support, crate/playlist queries, streaming
   services, artist search</li>
-<li><strong>Traktor</strong> — database integration with background refresh, artist search</li>
-<li><strong>Virtual DJ</strong> — history and playlist database with background refresh,
+<li><strong><a href="../input/traktor/">Traktor</a></strong> — database integration with background refresh, artist search</li>
+<li><strong><a href="../input/virtualdj/">Virtual DJ</a></strong> — history and playlist database with background refresh,
   artist search</li>
-<li><strong>Denon DJ</strong> (StagelinQ protocol) — direct network connection to supported
+<li><strong><a href="../input/denon/">Denon DJ</a></strong> (StagelinQ protocol) — direct network connection to supported
   hardware</li>
-<li><strong>djay Pro</strong> — track detection and metadata</li>
-<li><strong>DJUCED</strong> — database integration, smart playlists, artist search</li>
-<li><strong>JRiver Media Center</strong> — via network API</li>
-<li><strong>MIXXX</strong> — via MPRIS2 (Linux) or Windows Media API (Windows)</li>
+<li><strong><a href="../input/djaypro/">djay Pro</a></strong> — track detection and metadata</li>
+<li><strong><a href="../input/djuced/">DJUCED</a></strong> — database integration, smart playlists, artist search</li>
+<li><strong><a href="../input/jriver/">JRiver Media Center</a></strong> — via network API</li>
+<li><strong><a href="../input/mixxx/">MIXXX</a></strong> — via MPRIS2 (Linux) or Windows Media API (Windows)</li>
 </ul>
 <h3 id="protocol-based-sources">Protocol-Based Sources<a class="headerlink" href="#protocol-based-sources" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Icecast</strong> — receives metadata from butt, Traktor, MIXXX, and other
+<li><strong><a href="../input/icecast/">Icecast</a></strong> — receives metadata from butt, Traktor, MIXXX, and other
   Icecast-compatible streaming sources</li>
 <li><strong>Remote API</strong> — HTTP-based input for MegaSeg, Radiologik, and other
   software with HTTP output support</li>
-<li><strong>M3U playlists</strong> — file-based input for any software that writes M3U files</li>
+<li><strong><a href="../input/m3u/">M3U playlists</a></strong> — file-based input for any software that writes M3U files</li>
 </ul>
 <h3 id="system-level-sources">System-Level Sources<a class="headerlink" href="#system-level-sources" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Windows Media API</strong> — reads from Spotify, Amazon Music, SoundCloud,
+<li><strong><a href="../input/winmedia/">Windows Media API</a></strong> — reads from Spotify, Amazon Music, SoundCloud,
   Windows Media Player, and any other Windows media application</li>
-<li><strong>MPRIS2</strong> (Linux) — reads from VLC, Rhythmbox, Spotify, and any
+<li><strong><a href="../input/mpris2/">MPRIS2</a></strong> (Linux) — reads from VLC, Rhythmbox, Spotify, and any
   MPRIS2-compatible player</li>
 </ul>
 <h3 id="vinyl-cdjs-analog-mixers"><a href="https://whatsnowplaying.com/earshot">Vinyl, CDJs &amp; Analog Mixers</a><a class="headerlink" href="#vinyl-cdjs-analog-mixers" title="Permanent link">&para;</a></h3>
@@ -3114,7 +3114,7 @@ updates required.</p>
   vinyl decks, standalone CDJs, Rekordbox, and analog mixers, then sends them to
   WNP automatically over the local network. No software integration with the
   hardware required.</li>
-<li><strong>Always-Accept mode</strong> — enabled by default. When EarShot identifies a track it
+<li><strong><a href="../input/earshot/">Always-Accept mode</a></strong> — enabled by default. When EarShot identifies a track it
   overrides the active DJ software source automatically, with no manual source switching
   required mid-set. Can be disabled for setups where EarShot should only be used as the
   primary source.</li>
@@ -3141,18 +3141,18 @@ updates required.</p>
 <li><strong><a href="../extras/fanarttv/">FanArt.TV</a></strong> — high-quality fan art, artist logos, and background images</li>
 <li><strong><a href="../extras/wikimedia/">Wikimedia / Wikipedia</a></strong> — artist biographies and images</li>
 <li><strong><a href="../extras/lastfm/">Last.fm</a></strong> — album art lookup</li>
-<li><strong>MusicBrainz</strong> — artist website links, IDs, and relationship data</li>
+<li><strong><a href="../recognition/musicbrainz/">MusicBrainz</a></strong> — artist website links, IDs, and relationship data</li>
 </ul>
 <p>Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.</p>
 <h2 id="outputs-and-display">Outputs and Display<a class="headerlink" href="#outputs-and-display" title="Permanent link">&para;</a></h2>
 <h3 id="obs-integration">OBS Integration<a class="headerlink" href="#obs-integration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>OBS WebSocket</strong> — push track data directly to OBS text sources in
+<li><strong><a href="../output/obswebsocket/">OBS WebSocket</a></strong> — push track data directly to OBS text sources in
   real time</li>
-<li><strong>Browser Sources</strong> — serve custom HTML overlays via the built-in web
+<li><strong><a href="../output/webserver/">Browser Sources</a></strong> — serve custom HTML overlays via the built-in web
   server for display in OBS or any browser</li>
-<li><strong>OBS Scene Export</strong> — generate a ready-to-import OBS 28+ scene collection
+<li><strong><a href="../output/obs-export/">OBS Scene Export</a></strong> — generate a ready-to-import OBS 28+ scene collection
   JSON file from the system tray ("Export for OBS…"). Select which browser
   sources to include, choose the template for each, set dimensions and layout
   hints (fill, top, bottom, left, right, center), and preview each template
@@ -3160,7 +3160,7 @@ shown twice during a stream.</p>
   (auto-detected per platform) so it appears in OBS immediately without
   manual file copying.</li>
 </ul>
-<h3 id="web-server">Web Server<a class="headerlink" href="#web-server" title="Permanent link">&para;</a></h3>
+<h3 id="web-server"><a href="../output/webserver/">Web Server</a><a class="headerlink" href="#web-server" title="Permanent link">&para;</a></h3>
 <p>WNP includes a built-in web server that serves customizable browser-based
 overlays using the Jinja2 template engine. Supports:</p>
 <ul>
@@ -3170,14 +3170,14 @@ overlays using the Jinja2 template engine. Supports:</p>
 <li>Access to all track metadata as template variables</li>
 <li>Remote control APIs</li>
 </ul>
-<h3 id="text-output">Text Output<a class="headerlink" href="#text-output" title="Permanent link">&para;</a></h3>
+<h3 id="text-output"><a href="../output/textoutput/">Text Output</a><a class="headerlink" href="#text-output" title="Permanent link">&para;</a></h3>
 <p>Write track data to plain text files for use with any software that can read
 a text file, including older OBS setups and streaming tools.</p>
 <h3 id="set-lists">Set Lists<a class="headerlink" href="#set-lists" title="Permanent link">&para;</a></h3>
 <p>Real-time set list generation as tracks are played, available as a template
 variable and exportable.</p>
 <h2 id="chat-bot-integration">Chat Bot Integration<a class="headerlink" href="#chat-bot-integration" title="Permanent link">&para;</a></h2>
-<h3 id="twitch-bot">Twitch Bot<a class="headerlink" href="#twitch-bot" title="Permanent link">&para;</a></h3>
+<h3 id="twitch-bot"><a href="../output/twitchbot/">Twitch Bot</a><a class="headerlink" href="#twitch-bot" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Automatic track announcements when tracks change</li>
 <li>36 bundled announcement and response templates for Twitch, Kick, and text output</li>
@@ -3189,12 +3189,12 @@ variable and exportable.</p>
 <li>Per-command permission controls (broadcaster, moderator, subscriber, VIP)</li>
 <li>Cooldown timers per command and per user</li>
 </ul>
-<h3 id="kick-bot">Kick Bot<a class="headerlink" href="#kick-bot" title="Permanent link">&para;</a></h3>
+<h3 id="kick-bot"><a href="../output/kickbot/">Kick Bot</a><a class="headerlink" href="#kick-bot" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Automatic track announcements when tracks change</li>
 <li>Configurable announcement templates</li>
 </ul>
-<h3 id="discord-bot">Discord Bot<a class="headerlink" href="#discord-bot" title="Permanent link">&para;</a></h3>
+<h3 id="discord-bot"><a href="../output/discord/">Discord Bot</a><a class="headerlink" href="#discord-bot" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Track announcements posted to a Discord channel</li>
 <li>Optional cover art in announcements</li>
@@ -3228,7 +3228,7 @@ track. Features include:</p>
 <p>All outputs use the Jinja2 template engine with access to a rich set of
 <a href="../reference/templatevariables/">template variables</a> including artist, title,
 album, artwork, biographies, MusicBrainz IDs, timestamps, and more.</p>
-<h3 id="filters">Filters<a class="headerlink" href="#filters" title="Permanent link">&para;</a></h3>
+<h3 id="filters"><a href="../settings/filter/">Filters</a><a class="headerlink" href="#filters" title="Permanent link">&para;</a></h3>
 <p>Clean up track metadata before output:</p>
 <ul>
 <li>Remove unwanted text from titles (e.g. "(Radio Edit)", "feat. ...",
@@ -3236,7 +3236,7 @@ album, artwork, biographies, MusicBrainz IDs, timestamps, and more.</p>
 <li>Configurable via the UI with a simple rule system</li>
 <li>Works across all outputs simultaneously</li>
 </ul>
-<h3 id="track-skip">Track Skip<a class="headerlink" href="#track-skip" title="Permanent link">&para;</a></h3>
+<h3 id="track-skip"><a href="../settings/trackskip/">Track Skip</a><a class="headerlink" href="#track-skip" title="Permanent link">&para;</a></h3>
 <p>Automatically skip tracks matching configurable metadata rules. For example,
 skip any track with "SKIP" in the genre field.</p>
 <h3 id="multi-value-fields">Multi-Value Fields<a class="headerlink" href="#multi-value-fields" title="Permanent link">&para;</a></h3>
