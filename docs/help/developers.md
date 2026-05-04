@@ -71,7 +71,7 @@ export QTWEBENGINE_CHROMIUM_FLAGS=--ignore-gpu-blocklist  # bash
 ```
 
 Then launch normally (`./wnppyi.py` or the executable). The animations will
-render in software — adequate for development and testing.
+render in software, adequate for development and testing.
 
 > NOTE: This flag is intentionally not set by default in WNP itself, because
 > bypassing the blocklist on a genuinely broken driver can cause crashes.

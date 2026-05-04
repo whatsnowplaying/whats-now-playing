@@ -60,7 +60,7 @@ The filename follows the pattern `WNP-YYYY-MM-DD-HHMMSS.json`.
 After exporting and relaunching OBS:
 
 1. Open the **Scene Collection** menu in the OBS menu bar
-2. The new **WhatsNowPlaying** collection will appear in the list — click it
+2. The new **WhatsNowPlaying** collection will appear in the list. Click it
    to switch to it
 
 [![Scene Collection menu showing WhatsNowPlaying collection](images/obs-scene-collection.png)](images/obs-scene-collection.png)

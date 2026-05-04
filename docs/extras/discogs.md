@@ -49,16 +49,16 @@ during live sets.
 
 ### No results returned
 
-* Confirm the track has both an **artist** and an **album** tag — both are required
+* Confirm the track has both an **artist** and an **album** tag; both are required
 * Check that the artist exists on [Discogs.com](https://www.discogs.com) by searching manually
 * Verify the token is correct and has not been revoked
 
 ### Wrong artist returned
 
-* Discogs matching is text-based — artists with common names can collide
+* Discogs matching is text-based; artists with common names can collide
 * Adding or correcting the album title in your track tags helps disambiguate
 
 ### No biography or images despite correct match
 
-* Not all Discogs artist pages have biographies or images — this is user-contributed content
+* Not all Discogs artist pages have biographies or images; this is user-contributed content
 * Check the artist page on Discogs.com to confirm the content exists there

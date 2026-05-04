@@ -23,6 +23,14 @@ MPRIS2-compatible players (Linux)
 **Via EarShot:** Vinyl decks, standalone CDJs, Rekordbox, and analog mixers —
 using Shazam-based audio identification on macOS, iOS, and watchOS
 
+## Two-Computer Setup
+
+WNP supports the common scenario where DJ software runs on one machine and
+OBS/streaming runs on another. The Remote Output feature uses Bonjour/Zeroconf
+auto-discovery with no IP configuration needed. See the
+[Remote Output docs](https://whatsnowplaying.github.io/whats-now-playing/latest/input/remote/)
+for details.
+
 ## Download
 
 [Get the latest release](https://github.com/whatsnowplaying/whats-now-playing/releases)
@@ -31,6 +39,7 @@ in binary or source forms.
 ## Quick Links
 
 - **[Quickstart Guide](http://whatsnowplaying.github.io/quickstart/)** - Get up and running
+- **[Feature Overview](http://whatsnowplaying.github.io/features/)** - Everything WNP can do
 - **[Gallery](http://whatsnowplaying.github.io/gallery/)** - See it in action
 - **[Charts](https://whatsnowplaying.com/signup)** — track your play history, view listening stats,
   and unlock the online Guess Game board

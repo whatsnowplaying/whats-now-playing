@@ -71,5 +71,5 @@ is more accurate and avoids collisions between artists who share a name.
 
 ### No biography or images despite correct match
 
-* Not all artists in TheAudioDB have complete information — this is community-contributed content
+* Not all artists in TheAudioDB have complete information; this is community-contributed content
 * Check the artist page on TheAudioDB.com to confirm the content exists there

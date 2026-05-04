@@ -51,7 +51,7 @@ a random noise reveal effect.
 
 [![Particle overlay](images/webgl-particles.png)](images/webgl-particles.png)
 
-Fully transparent background — no panel. Soft blue particles drift upward over the stream
+Fully transparent background, no panel. Soft blue particles drift upward over the stream
 continuously, with a burst of larger faster particles on each track change. Artist and title
 are rendered directly over the stream with a drop shadow for legibility against any content.
 Uses Canvas 2D rather than WebGL for reliable alpha compositing in OBS browser sources.

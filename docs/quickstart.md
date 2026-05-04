@@ -20,14 +20,14 @@ your software on startup, so it needs to already be running or have been run at 
 
 1. Launch your DJ software and let it fully start up.
 2. Launch **What's Now Playing**. The Settings window will open automatically. For some DJ
-   software, WNP builds a file index on first run — allow a few minutes for large libraries.
+   software, WNP builds a file index on first run. Allow a few minutes for large libraries.
 3. Verify or change the auto-detected source under **Core Settings → Source**
 4. Follow the setup instructions for your source if needed
 
 A few things to know about auto-detection:
 
 * Software-based sources (Serato, Traktor, Virtual DJ, etc.) are detected from files they
-  leave on disk — the software must have been run at least once
+  leave on disk; the software must have been run at least once
 * Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network
 * The first detected source wins. If multiple are found, you can change it afterwards.
@@ -37,6 +37,10 @@ A few things to know about auto-detection:
   your setup does not use DJ software.
 
 See [Input Sources](input/index.md) for per-source setup details.
+
+> **Two-computer setup?** If your DJ software runs on a separate machine from OBS/streaming,
+> see [Remote Output](input/remote.md). WNP handles this automatically with no IP
+> configuration needed.
 
 ## Step 3: Verify the Web Server
 
@@ -48,7 +52,7 @@ If you need to change the port or other settings, go to **Output & Display → W
 ## Step 4: Set Up OBS
 
 **What's Now Playing** can generate a ready-to-import OBS scene collection with all your
-browser sources pre-configured — no manual URL copying or source sizing required.
+browser sources pre-configured, with no manual URL copying or source sizing required.
 
 > NOTE: This requires OBS Studio 28 or later.
 
@@ -58,10 +62,10 @@ browser sources pre-configured — no manual URL copying or source sizing requir
    width/height, and pick a canvas position. Click **Preview** on any row to see
    how a template looks before committing.
 4. Click **Export**
-5. Relaunch OBS Studio — the new **WhatsNowPlaying** scene collection will appear
+5. Relaunch OBS Studio. The new **WhatsNowPlaying** scene collection will appear
    under **Scene Collection** in the menu bar
 
-WNP ships with 15 browser overlay templates (including 6 WebGL animated effects) and
+WNP ships with 42 browser overlay templates (including 7 WebGL animated effects) and
 36 text templates for Twitch, Kick, and plain text output, all ready to use without
 any editing. The exported collection contains pre-built scenes for your overlays and
 the Guess Game (including WebGL-enhanced versions). Copy the individual browser sources
@@ -90,4 +94,4 @@ instructions on adding a Browser Source by hand.
 * **[Guess Game](output/guessgame.md)**: a chat game where viewers guess the current track
 * **[Templates](reference/templatevariables.md)**: customize every aspect of what gets displayed
 * **[Charts](output/charts.md)**: track your play history, view listening stats, and unlock the
-  online Guess Game board — sign up at <https://whatsnowplaying.com/signup>
+  online Guess Game board. Sign up at <https://whatsnowplaying.com/signup>
