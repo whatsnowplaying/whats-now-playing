@@ -37,6 +37,11 @@
     OS color scheme; new Auto/Light/Dark override in General settings
   * Fixed dark mode rendering on several UI panels on Linux and Windows
 
+* djay Pro
+  * Fixed one-track-behind detection on Windows; djay Pro writes analysis data
+    and history in separate transactions, so track changes now debounce the WAL
+    file event to ensure both writes have landed before querying
+
 * VirtualDJ
   * Track metadata is now pulled from the local library database for previously
     cataloged tracks
