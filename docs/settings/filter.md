@@ -1,7 +1,7 @@
 # Filter
 
 Track titles often contain extra text that clutters stream overlays and chat
-announcements — DJ Pool tags, YouTube-style suffixes, remix labels, video quality
+announcements: DJ Pool tags, YouTube-style suffixes, remix labels, video quality
 flags, and more. **What's Now Playing** can automatically strip this extra text
 from track titles before sending it anywhere.
 
@@ -36,7 +36,7 @@ specific phrases in different formats (all case-insensitive):
 * **- phrase**: Matches `"- phrase"` at the end of titles (with a leading space)
 * **(phrase)**: Matches `"(phrase)"` anywhere in titles (with a leading space)
 * **[phrase]**: Matches `"[phrase]"` anywhere in titles (with a leading space)
-* **plain**: Matches `phrase` anywhere in titles (use with care — plain
+* **plain**: Matches `phrase` anywhere in titles (use with care; plain
   matching strips the phrase wherever it appears in the title)
 
 #### Default Phrases
@@ -51,7 +51,7 @@ By default, these phrases are enabled for dash/paren/bracket filtering:
 
 #### Additional Phrases (Off by Default)
 
-These phrases are available but not enabled by default — turn them on if
+These phrases are available but not enabled by default. Turn them on if
 they appear in your library:
 
 * Version types: acoustic, acoustic version, club mix, demo, demo version,
@@ -123,5 +123,5 @@ During playback, **What's Now Playing** applies filters in this order:
 2. **Complex regex patterns** (in the order shown in the Complex tab)
 
 Both types of filters work together to provide comprehensive title cleaning.
-The cleaned title is used everywhere — overlays, chat announcements, text
+The cleaned title is used everywhere: overlays, chat announcements, text
 output, the Guess Game, and set lists.

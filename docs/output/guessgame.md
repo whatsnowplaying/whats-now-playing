@@ -116,7 +116,7 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 ## OBS Integration
 
 The easiest way to add Guess Game sources to OBS is via **Export for OBS** in the system tray
-menu — it creates a scene collection with all three sources pre-configured. See
+menu; it creates a scene collection with all three sources pre-configured. See
 [Export for OBS](obs-export.md) for details.
 
 To add sources manually, use the URLs below.

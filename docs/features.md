@@ -2,13 +2,13 @@
 
 **What's Now Playing (WNP)** is a free, open-source application for Windows,
 macOS, and Linux that reads live track data from DJ software and sends it
-anywhere your audience can see it — overlays, chat bots, Discord, text files,
+anywhere your audience can see it: overlays, chat bots, Discord, text files,
 and more.
 
 ## Setup
 
-On first launch, WNP **automatically detects** which DJ software you are using —
-no manual source selection required for most setups. Software-based sources
+On first launch, WNP **automatically detects** which DJ software you are using,
+with no manual source selection required for most setups. Software-based sources
 (Serato, Traktor, Virtual DJ, etc.) are detected from files they write to disk.
 Hardware-based sources (Denon StageLinQ) are detected from the network. The
 detected source is shown in **Core Settings → Source** and can be changed at
@@ -79,7 +79,7 @@ updates required.
 ### [Remote WNP Instance](input/remote.md)
 
 * One WNP instance can receive track data from another WNP instance over the
-  network — the standard solution for a two-computer DJ/streaming setup.
+  network, the standard solution for a two-computer DJ/streaming setup.
   Supports auto-discovery via Bonjour/Zeroconf.
 
 ## Track Recognition
@@ -102,7 +102,7 @@ WNP can automatically fetch additional artist information to enhance displays:
 * **[Last.fm](extras/lastfm.md)** — album art lookup
 * **MusicBrainz** — artist website links, IDs, and relationship data
 
-Artist biographies are deduplicated per session — the same bio will not be
+Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.
 
 ## Outputs and Display
@@ -212,7 +212,7 @@ Clean up track metadata before output:
 
 ### Track Skip
 
-Automatically skip tracks matching configurable metadata rules — for example,
+Automatically skip tracks matching configurable metadata rules. For example,
 skip any track with "SKIP" in the genre field.
 
 ### Multi-Value Fields
@@ -227,7 +227,7 @@ community service that tracks what DJs are playing across streams. It is free,
 requires no account to start, and is built into WNP with no configuration needed.
 
 * WNP automatically submits track data using an anonymous API key generated
-  on first run — no account required to contribute
+  on first run, with no account required to contribute
 * Create an account (via Twitch or Kick login) to unlock a public DJ profile at
   `whatsnowplaying.com/profile/(your-username)` showing:
   * Play statistics: total plays, unique songs, and unique artists

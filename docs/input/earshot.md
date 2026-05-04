@@ -18,7 +18,7 @@ the local network.
 4. Click Save
 
 This is the right choice when your entire setup is vinyl, CDJs, or an analog
-mixer — WNP EarShot is the only source feeding track data.
+mixer, with WNP EarShot as the only source feeding track data.
 
 ### Always-Accept Mode
 
@@ -42,7 +42,7 @@ your DJ software moves on to a new track, it resumes control automatically.
 
 WNP EarShot sends identified tracks to WNP's remote input endpoint over the
 local network. The EarShot source filters incoming remote tracks to only those
-originating from WNP EarShot — other remote sources are ignored.
+originating from WNP EarShot; other remote sources are ignored.
 
 In always-accept mode, WNP compares artist and title between EarShot and the
 active DJ software source. If WNP EarShot hears the same track the DJ software

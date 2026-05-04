@@ -45,7 +45,7 @@ when your preferred language is not available.
 
 ### No results returned
 
-* Confirm another Artist Extras plugin is enabled and returning website data — Wikimedia
+* Confirm another Artist Extras plugin is enabled and returning website data. Wikimedia
   needs a Wikidata URL from the artist's website list to perform a lookup
 * Check that the artist has a Wikipedia article
 

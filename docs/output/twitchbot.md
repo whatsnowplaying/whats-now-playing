@@ -97,7 +97,7 @@ account or create and use another account.
   * For **chat functionality**: Log in as your **bot account** (if using a separate bot account)
 
   If you use both redemptions and a separate chat bot account, you will need to authenticate
-  twice — once for each. Click "Authenticate with Twitch" a second time while logged into
+  twice, once for each. Click "Authenticate with Twitch" a second time while logged into
   the other account.
 
 * **Required Permissions**: Accept the requested permissions (`chat:read` and `chat:edit`) to allow the bot to

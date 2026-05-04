@@ -32,7 +32,7 @@ This feature is built into macOS, Windows 10+, and most Linux distributions.
 ## Template Preview
 
 Click the **Preview** button in the Web Server settings to open a live preview
-of any template using sample metadata — no live track required. Use the
+of any template using sample metadata, with no live track required. Use the
 template dropdown in the preview window to browse templates, then click
 **Use This Template** to apply your selection to the HTML Template setting.
 

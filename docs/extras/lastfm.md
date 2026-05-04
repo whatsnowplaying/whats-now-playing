@@ -42,7 +42,7 @@ Enable only what your templates actually use.
 ### Biography Language
 
 When Biography is enabled, you can set a preferred **Language ISO Code** (e.g. `en`, `de`, `fr`,
-`ja`, `zh`). Last.fm has broad multilingual coverage — many popular artists have biographies in
+`ja`, `zh`). Last.fm has broad multilingual coverage; many popular artists have biographies in
 a dozen or more languages.
 
 Enable **Fallback to EN** to use the English biography when your preferred language is not
@@ -61,7 +61,7 @@ enabled.
 
 * Verify the API key is correct
 * Check that the artist exists on [Last.fm](https://www.last.fm) by searching manually
-* Last.fm's autocorrection may redirect the name — check what name is returned in the logs
+* Last.fm's autocorrection may redirect the name; check what name is returned in the logs
 
 ### Wrong biography returned
 
