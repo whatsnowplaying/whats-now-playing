@@ -10,20 +10,27 @@ manually update song titles during live streams, radio shows, or DJ sets.
 Focus on your music while your audience stays informed about every track you play.
 
 **Auto-detects your DJ software on first launch**, with no manual source selection
-required for most setups. Supports Serato DJ, Traktor, Virtual DJ, Denon DJ,
-djay Pro, DJUCED, and [many more](features.md). Two-computer DJ/streaming setups are supported via automatic network discovery
-with no IP addresses or port forwarding needed.
+required for most setups. Supports [Serato DJ](input/serato.md),
+[Traktor](input/traktor.md), [Virtual DJ](input/virtualdj.md),
+[Denon DJ](input/denon.md), [djay Pro](input/djaypro.md),
+[DJUCED](input/djuced.md), and [many more](features.md).
+[Two-computer DJ/streaming setups](input/remote.md) are supported via automatic
+network discovery with no IP addresses or port forwarding needed.
 
-Ships with **42 ready-to-use OBS browser overlay templates** including 7 WebGL
-animated effects. The **[OBS Scene Export](output/obs-export.md)** generates a
-complete, ready-to-import OBS scene collection in one click, with no manual source
-configuration or coding required.
+Ships with **[42 ready-to-use OBS browser overlay templates](gallery/index.md)**
+including 7 WebGL animated effects. The **[OBS Scene Export](output/obs-export.md)**
+generates a complete, ready-to-import OBS scene collection in one click, with no
+manual source configuration or coding required.
 
-Includes built-in **Twitch, Kick, and Discord bots** for automatic track
-announcements and chat commands. Fetches **album art and artist images** from Discogs, TheAudioDB, Last.fm,
-FanArt.TV, and Wikimedia (most require a free API key). Includes a viewer
-[Guess Game](output/guessgame.md) and builds a public DJ profile at
-whatsnowplaying.com with genre breakdowns, top tracks, setlists, and community charts.
+Includes built-in **[Twitch](output/twitchbot.md), [Kick](output/kickbot.md), and
+[Discord](output/discord.md) bots** for automatic track announcements and chat
+commands. Fetches **[album art and artist images](extras/index.md)** from
+[Discogs](extras/discogs.md), [TheAudioDB](extras/theaudiodb.md),
+[Last.fm](extras/lastfm.md), [FanArt.TV](extras/fanarttv.md), and
+[Wikimedia](extras/wikimedia.md) (most require a free API key).
+Includes a viewer [Guess Game](output/guessgame.md) and builds a public DJ profile
+at [whatsnowplaying.com](output/charts.md) with genre breakdowns, top tracks,
+setlists, and community charts.
 
 Free and open source for Windows, macOS, and Linux, with pre-built binaries
 available for all platforms. No subscription, no Pro version, no feature gating,
