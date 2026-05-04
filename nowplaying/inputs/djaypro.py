@@ -30,6 +30,7 @@ import logging
 import pathlib
 import sqlite3
 import sys
+import threading
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -65,6 +66,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.event_handler = None
         self.observer = None
         self.djaypro_dir = ""
+        self._wal_timer: threading.Timer | None = None
+        self._wal_timer_lock = threading.Lock()
         self.metadata: TrackMetadata = {
             "artist": None,
             "title": None,
@@ -151,12 +154,21 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         filename = event.src_path
 
-        # Only process specific files
-        if not (filename.endswith("NowPlaying.txt") or filename.endswith("MediaLibrary.db-wal")):
+        if filename.endswith("NowPlaying.txt"):
+            self._check_for_new_track()
             return
 
-        # Do synchronous work directly in this thread
-        self._check_for_new_track()
+        if not filename.endswith("MediaLibrary.db-wal"):
+            return
+
+        # On Windows, djay Pro writes analysis rows first then historySessionItems
+        # in a separate transaction.  Debounce so we query after both land.
+        with self._wal_timer_lock:
+            if self._wal_timer is not None:
+                self._wal_timer.cancel()
+            self._wal_timer = threading.Timer(0.3, self._check_for_new_track)
+            self._wal_timer.daemon = True
+            self._wal_timer.start()
 
     def _check_for_new_track(self):
         """Check for new track from NowPlaying.txt (macOS) or database (Windows)"""
@@ -433,6 +445,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     async def stop(self):
         """stop the watcher"""
+        with self._wal_timer_lock:
+            if self._wal_timer is not None:
+                self._wal_timer.cancel()
+                self._wal_timer = None
         if self.observer:
             self.observer.stop()
             self.observer.join()
