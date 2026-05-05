@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 import nowplaying.inputs.djuced
+import nowplaying.inputs.djaypro
 import nowplaying.inputs.traktor
 import nowplaying.inputs.virtualdj
 import nowplaying.serato3.plugin
@@ -50,6 +51,98 @@ TEST_PLAYLISTS_WITH_METADATA = [
     ("Electronic", "/music/uziq1.flac", "µ-Ziq", "Hasty Boom Alert"),
     ("Electronic", "/music/bjork1.flac", "Björk", "Human Behaviour"),
 ]
+
+
+def _build_djaypro_tsaf_blob(class_name: str, fields: dict[str, str]) -> bytes:
+    """Build a minimal TSAF blob with only string fields for djaypro tests."""
+    header = b"TSAF" + b"\x00" * 16  # 20-byte header
+    body = bytearray()
+    body += b"\x08" + class_name.encode() + b"\x00"
+    body += b"\x08test-uuid\x00"
+    body += bytes([0x05, len(fields)])
+    for key, value in fields.items():
+        body += b"\x08" + value.encode("utf-8") + b"\x00"
+        body += b"\x08" + key.encode("utf-8") + b"\x00"
+    return header + b"\x2b" + bytes(body)
+
+
+# Playlist assignments for djaypro: (playlist_name, track_index) where track_index
+# is the 0-based index into TEST_TRACKS.  Tracks not listed here belong to no playlist.
+_DJAYPRO_PLAYLIST_TRACKS = [
+    ("House", 0),  # Nine Inch Nails – Head Like a Hole
+    ("House", 2),  # The Beatles – Hey Jude
+    ("Techno", 1),  # Nine Inch Nails – Closer
+    ("Electronic", 5),  # µ-Ziq – Hasty Boom Alert
+    ("Electronic", 6),  # Björk – Human Behaviour
+]
+
+
+@pytest.fixture
+def djaypro_library():
+    """Create a djay Pro MediaLibrary.db with mediaItemTitleIDs TSAF blobs."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "MediaLibrary.db"
+
+        def _create_database():
+            with nowplaying.utils.sqlite.sqlite_connection(str(db_path), timeout=30.0) as conn:
+                conn.execute(
+                    "CREATE TABLE database2 "
+                    "(rowid INTEGER PRIMARY KEY, collection CHAR, key CHAR, "
+                    "data BLOB, metadata BLOB)"
+                )
+                # Insert test tracks as mediaItemTitleIDs TSAF blobs
+                for artist, title, *_ in TEST_TRACKS:
+                    blob = _build_djaypro_tsaf_blob(
+                        "ADCMediaItemTitleID",
+                        {"artist": artist, "title": title},
+                    )
+                    conn.execute(
+                        "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
+                        ("mediaItemTitleIDs", f"key-{artist}-{title}", blob),
+                    )
+
+                # Retrieve rowids to build playlist view tables
+                cursor = conn.execute(
+                    "SELECT rowid FROM database2 WHERE collection='mediaItemTitleIDs'"
+                    " ORDER BY rowid"
+                )
+                rowids = [row[0] for row in cursor.fetchall()]
+
+                # Build playlist view tables
+                conn.execute(
+                    "CREATE TABLE view_mediaItemPlaylistView_page "
+                    '(pageKey TEXT PRIMARY KEY, "group" TEXT, '
+                    "offset INTEGER, count INTEGER, data BLOB)"
+                )
+                conn.execute(
+                    "CREATE TABLE view_mediaItemPlaylistView_map (rowid TEXT, pageKey TEXT)"
+                )
+
+                page_keys: dict[str, str] = {}  # playlist_name → pageKey
+                for playlist_name, track_idx in _DJAYPRO_PLAYLIST_TRACKS:
+                    if playlist_name not in page_keys:
+                        page_key = f"page-{playlist_name}"
+                        page_keys[playlist_name] = page_key
+                        conn.execute(
+                            "INSERT INTO view_mediaItemPlaylistView_page "
+                            '(pageKey, "group", offset, count, data) VALUES (?, ?, 0, 0, NULL)',
+                            (page_key, playlist_name),
+                        )
+                    db2_rowid = rowids[track_idx]
+                    conn.execute(
+                        "INSERT INTO view_mediaItemPlaylistView_map (rowid, pageKey) VALUES (?, ?)",
+                        (str(db2_rowid), page_keys[playlist_name]),
+                    )
+
+                conn.commit()
+
+        nowplaying.utils.sqlite.retry_sqlite_operation(_create_database)
+        yield tmpdir
+
+
+def _setup_djaypro_plugin(plugin, tmpdir: str):
+    """Point the djaypro plugin at the temporary library directory."""
+    plugin.djaypro_dir = tmpdir
 
 
 @pytest.fixture
@@ -314,6 +407,14 @@ PLUGIN_TEST_DATA = [
         lambda cleanup_path: cleanup_path.unlink(missing_ok=True) if cleanup_path else None,
         id="djuced",
     ),
+    pytest.param(
+        nowplaying.inputs.djaypro.Plugin,
+        "djaypro/artist_query_scope",
+        _setup_djaypro_plugin,
+        "djaypro_library",
+        None,  # No cleanup needed; fixture uses TemporaryDirectory
+        id="djaypro",
+    ),
 ]
 
 
@@ -434,6 +535,7 @@ async def test_plugin_unicode_artists(
         (nowplaying.inputs.traktor.Plugin, "traktor/artist_query_scope"),
         (nowplaying.inputs.virtualdj.Plugin, "virtualdj/artist_query_scope"),
         (nowplaying.inputs.djuced.Plugin, "djuced/artist_query_scope"),
+        (nowplaying.inputs.djaypro.Plugin, "djaypro/artist_query_scope"),
     ],
 )
 async def test_plugin_database_error_handling(bootstrap, plugin_class, scope_key):
@@ -450,6 +552,8 @@ async def test_plugin_database_error_handling(bootstrap, plugin_class, scope_key
         plugin.playlists_databasefile = "/nonexistent/playlists.db"
     elif plugin_class == nowplaying.inputs.djuced.Plugin:
         plugin.djuceddir = "/nonexistent/directory"
+    elif plugin_class == nowplaying.inputs.djaypro.Plugin:
+        plugin.djaypro_dir = "/nonexistent/directory"
 
     # Should return False, not raise exception (critical for live performance)
     try:
@@ -485,6 +589,14 @@ async def test_plugin_database_error_handling(bootstrap, plugin_class, scope_key
             "djuced_database",
             lambda cleanup_path: cleanup_path.unlink(missing_ok=True) if cleanup_path else None,
             id="djuced",
+        ),
+        pytest.param(
+            nowplaying.inputs.djaypro.Plugin,
+            "djaypro/artist_query_scope",
+            _setup_djaypro_plugin,
+            "djaypro_library",
+            None,
+            id="djaypro",
         ),
     ],
 )
@@ -645,6 +757,7 @@ async def test_all_plugins_implement_has_tracks_by_artist(bootstrap):
         nowplaying.inputs.traktor.Plugin,
         nowplaying.inputs.virtualdj.Plugin,
         nowplaying.inputs.djuced.Plugin,
+        nowplaying.inputs.djaypro.Plugin,
         nowplaying.serato3.plugin.Plugin,
     ]
 

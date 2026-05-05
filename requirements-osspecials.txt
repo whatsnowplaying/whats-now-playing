@@ -1,3 +1,4 @@
 dbus-fast==4.0.4 ; sys_platform == 'linux'
+mac-alias ; sys_platform == 'darwin'
 winrt-windows-storage-streams ; sys_platform == 'win32'
 winrt-windows-media-control ; sys_platform == 'win32'
