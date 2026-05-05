@@ -9,6 +9,7 @@ import tempfile
 
 import pytest
 
+import nowplaying.djaypro.tsaf
 import nowplaying.inputs.djaypro
 
 
@@ -94,7 +95,7 @@ def test_parse_blob_string_fields(artist, title):
         [(artist, "artist"), (title, "title")],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["artist"] == artist
     assert result["title"] == title
@@ -111,7 +112,7 @@ def test_parse_blob_float_fields():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["duration"] == 240
     assert result["bpm"] == "128.5"
@@ -129,7 +130,7 @@ def test_parse_blob_isrc_field():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["isrc"] == "USEE10240944"
     assert result["source"] == "apple-music"
@@ -142,7 +143,7 @@ def test_parse_blob_no_isrc():
         [("Artist", "artist"), ("Title", "title")],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["isrc"] is None
 
@@ -157,7 +158,7 @@ def test_parse_blob_source_field():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["source"] == "spotify"
     assert result["title"] == "Test Track"
@@ -175,7 +176,7 @@ def test_parse_blob_file_uri():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["artist"] == "Test Artist"
     assert result["title"] == "Test Title"
@@ -193,7 +194,7 @@ def test_parse_blob_url_encoded_filename():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["filename"] == "/Users/aw/Music/Brücke - Test.flac"
 
@@ -209,7 +210,7 @@ def test_parse_blob_non_file_uri():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["artist"] == "ACTORS"
     assert result["title"] == "We Don't Have to Dance"
@@ -226,7 +227,7 @@ def test_parse_blob_ignores_root_only_file_uri():
         ],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["filename"] is None
 
@@ -238,7 +239,7 @@ def test_parse_blob_no_float_returns_none_bpm_duration():
         [("Track", "title")],
     )
 
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["bpm"] is None
     assert result["duration"] is None
@@ -246,7 +247,7 @@ def test_parse_blob_no_float_returns_none_bpm_duration():
 
 def test_parse_blob_empty():
     """_parse_blob returns all-None dict for an empty blob."""
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(b"")
+    result = nowplaying.djaypro.tsaf.parse_blob(b"")
 
     assert result["artist"] is None
     assert result["title"] is None
@@ -256,7 +257,7 @@ def test_parse_blob_empty():
 
 def test_parse_blob_malformed():
     """_parse_blob returns all-None dict for blobs without TSAF magic."""
-    result = nowplaying.inputs.djaypro.Plugin._parse_blob(b"\x00\x00\xff\xff\x00\x00")
+    result = nowplaying.djaypro.tsaf.parse_blob(b"\x00\x00\xff\xff\x00\x00")
 
     assert result["artist"] is None
     assert result["title"] is None
