@@ -182,6 +182,10 @@ class MockMetadataDB:
 @pytest.fixture
 def mock_dependencies():
     """Mock all the heavy dependencies for systemtray testing"""
+    # Capture the real implementation before it gets patched, so individual
+    # tests that specifically exercise vacuum logic can still call it.
+    real_start_background_vacuum = nowplaying.systemtray.Tray._start_background_vacuum
+
     with (
         patch("nowplaying.config.ConfigFile", MockConfig),
         patch("nowplaying.subprocesses.SubprocessManager", MockSubprocessManager),
@@ -192,6 +196,8 @@ def mock_dependencies():
         patch("nowplaying.db.MetadataDB", MockMetadataDB),
         patch("nowplaying.apicache.APIResponseCache.vacuum_database_file") as mock_api_vacuum,
         patch("nowplaying.guessgame.GuessGame.vacuum_database"),
+        patch("nowplaying.guessgame.GuessGame.initialize_database"),
+        patch("nowplaying.systemtray.Tray._start_background_vacuum"),
         patch("nowplaying.systemtray.QFileSystemWatcher") as mock_watcher,
     ):
         mock_load_ui.return_value = MagicMock()
@@ -206,6 +212,7 @@ def mock_dependencies():
             "api_vacuum": mock_api_vacuum,
             "mock_watcher": mock_watcher,
             "mock_watcher_instance": mock_watcher_instance,
+            "real_start_background_vacuum": real_start_background_vacuum,
         }
 
 
@@ -266,10 +273,11 @@ def test_start_background_vacuum(qtbot, mock_dependencies):
         mock_thread_instance = MagicMock()
         mock_thread_class.return_value = mock_thread_instance
 
-        with patch("nowplaying.systemtray.Tray._start_background_vacuum"):
-            tray = nowplaying.systemtray.Tray()
+        tray = nowplaying.systemtray.Tray()
 
-        tray._start_background_vacuum()
+        # Call the real implementation via the saved reference, bypassing the
+        # fixture's patch so we can verify it creates and starts a VacuumThread.
+        mock_dependencies["real_start_background_vacuum"](tray)
 
         mock_thread_class.assert_called_once_with()
         mock_thread_instance.start.assert_called_once()
