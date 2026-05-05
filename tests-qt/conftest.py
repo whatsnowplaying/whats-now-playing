@@ -18,7 +18,12 @@ def detect_stray_threads(request):
     running' crashes in subsequent tests are surfaced at the test that caused
     the leak rather than the test that happened to be running when Qt noticed.
     """
+    # Snapshot Python threads and QThread instances before the test so that
+    # long-lived global threads are not incorrectly flagged as leaks.
     threads_before = {t.ident for t in threading.enumerate()}
+    gc.collect()
+    qt_before = {id(obj) for obj in gc.get_objects() if isinstance(obj, QThread)}
+
     yield
 
     # Brief grace period for threads that are legitimately winding down.
@@ -31,18 +36,21 @@ def detect_stray_threads(request):
         if t.ident not in threads_before and not t.daemon and t.is_alive()
     ]
 
-    # Check for leaked QThread instances still running (catches PySide6 threads
-    # whose Python wrapper may outlive the test scope).
+    # Check for QThread instances created during the test that are still running.
     gc.collect()
-    stray_qt = [obj for obj in gc.get_objects() if isinstance(obj, QThread) and obj.isRunning()]
+    stray_qt = [
+        obj
+        for obj in gc.get_objects()
+        if isinstance(obj, QThread) and obj.isRunning() and id(obj) not in qt_before
+    ]
 
     messages = []
     if stray_python:
-        names = [t.name or f"<unnamed ident={t.ident}>" for t in stray_python]
-        messages.append(f"stray Python thread(s): {names}")
+        reprs = [f"{t.name or '<unnamed>'}(ident={t.ident}, {repr(t)})" for t in stray_python]
+        messages.append(f"stray Python thread(s): {reprs}")
     if stray_qt:
-        names = [type(obj).__name__ for obj in stray_qt]
-        messages.append(f"stray QThread(s) still running: {names}")
+        reprs = [f"{type(obj).__name__}({repr(obj)})" for obj in stray_qt]
+        messages.append(f"stray QThread(s) still running: {reprs}")
 
     if messages:
         pytest.fail(
