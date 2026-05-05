@@ -249,7 +249,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                                 if filename:
                                     track_data["filename"] = filename
 
-                        self.metadata = {
+                        new_meta: TrackMetadata = {
                             "artist": track_data["artist"],
                             "title": track_data["title"],
                             "album": track_data["album"],
@@ -257,13 +257,17 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                             "bpm": track_data["bpm"],
                             "duration": track_data["duration"],
                         }
+                        if isinstance(track_data.get("isrc"), str):
+                            new_meta["isrc"] = [track_data["isrc"]]
+                        self.metadata = new_meta
                         logging.info(
-                            "New track detected: %s - %s%s%s%s",
+                            "New track detected: %s - %s%s%s%s%s",
                             track_data["artist"],
                             track_data["title"],
                             f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
                             f" [{track_data['album']}]" if track_data["album"] else "",
                             f" - {track_data['filename']}" if track_data["filename"] else "",
+                            f" ISRC:{track_data['isrc']}" if track_data.get("isrc") else "",
                         )
 
         try:
@@ -324,10 +328,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # Check if this is a new track
         if self.metadata.get("artist") != artist or self.metadata.get("title") != title:
-            # Try to get filename from database
+            # Supplement NowPlaying.txt with database lookups
             filename = self._get_filename_from_db(artist, title)
+            isrc = self._get_isrc_from_db(artist, title)
 
-            self.metadata = {
+            new_meta: TrackMetadata = {
                 "artist": artist,
                 "title": title,
                 "album": album,
@@ -335,15 +340,62 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 "bpm": None,
                 "duration": duration,
             }
+            if isrc:
+                new_meta["isrc"] = [isrc]
+            self.metadata = new_meta
 
             logging.info(
-                "New track detected: %s - %s%s%s%s",
+                "New track detected: %s - %s%s%s%s%s",
                 artist,
                 title,
                 f" [{album}]" if album else "",
                 f" ({time_str})" if time_str else "",
                 f" - {filename}" if filename else " (no filename found)",
+                f" ISRC:{isrc}" if isrc else "",
             )
+
+    def _get_isrc_from_db(self, artist: str, title: str) -> str | None:
+        """Return the ISRC for the track by scanning recent historySessionItems.
+
+        The most recently added history entry is almost always the currently
+        playing track, so we scan from the end and stop as soon as we find a
+        matching artist/title pair.  Scanning is bounded to 20 rows to keep it
+        fast even for large history tables.
+        """
+        dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
+        if not dbfile.exists():
+            return None
+
+        artist_lower = artist.strip().lower()
+        title_lower = title.strip().lower()
+
+        def query_db():
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(dbfile), timeout=1
+            ) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT data FROM database2 "
+                    "WHERE collection='historySessionItems' "
+                    "ORDER BY rowid DESC LIMIT 20"
+                )
+                for (blob,) in cursor:
+                    parsed = self._parse_blob(blob)
+                    p_artist = parsed.get("artist")
+                    p_title = parsed.get("title")
+                    if (
+                        isinstance(p_artist, str)
+                        and isinstance(p_title, str)
+                        and p_artist.strip().lower() == artist_lower
+                        and p_title.strip().lower() == title_lower
+                    ):
+                        return parsed.get("isrc")
+                return None
+
+        try:
+            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
+        except (sqlite3.OperationalError, FileNotFoundError):
+            return None
 
     def _get_filename_from_db(self, artist: str, title: str) -> str | None:
         """Get filename from database by querying localMediaItemLocations"""
@@ -664,6 +716,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             bpm_raw = flat.get("bpm")
             bpm: str | None = str(bpm_raw) if isinstance(bpm_raw, float) else None
 
+            isrc_raw = flat.get("isrc")
+            isrc: str | None = str(isrc_raw) if isinstance(isrc_raw, str) and isrc_raw else None
+
             return {
                 "artist": flat.get("artist") or None,  # type: ignore[return-value]
                 "title": flat.get("title") or None,  # type: ignore[return-value]
@@ -672,6 +727,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 "filename": file_path,
                 "bpm": bpm,
                 "duration": duration,
+                "isrc": isrc,
             }
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.debug("Failed to parse blob: %s", err)
@@ -683,6 +739,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 "filename": None,
                 "bpm": None,
                 "duration": None,
+                "isrc": None,
             }
 
     async def stop(self):

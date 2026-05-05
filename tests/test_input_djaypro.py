@@ -117,6 +117,36 @@ def test_parse_blob_float_fields():
     assert result["bpm"] == "128.5"
 
 
+def test_parse_blob_isrc_field():
+    """_parse_blob extracts ISRC from streaming history items."""
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [
+            ("Missy Elliott", "artist"),
+            ("Work It", "title"),
+            ("USEE10240944", "isrc"),
+            ("apple-music", "originSourceID"),
+        ],
+    )
+
+    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+
+    assert result["isrc"] == "USEE10240944"
+    assert result["source"] == "apple-music"
+
+
+def test_parse_blob_no_isrc():
+    """_parse_blob returns isrc=None when the field is absent."""
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [("Artist", "artist"), ("Title", "title")],
+    )
+
+    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+
+    assert result["isrc"] is None
+
+
 def test_parse_blob_source_field():
     """_parse_blob maps originSourceID to the 'source' key."""
     blob = _build_tsaf_blob(
@@ -303,6 +333,73 @@ def test_check_for_new_track_with_data(bootstrap):
 
         assert plugin.metadata["artist"] == "Test Artist"
         assert plugin.metadata["title"] == "Test Song"
+
+
+def test_check_for_new_track_with_isrc(bootstrap):
+    """_check_for_new_track passes ISRC from history blob as list."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        conn = sqlite3.connect(dbfile)
+        conn.execute(
+            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+            "key CHAR, data BLOB, metadata BLOB)"
+        )
+        blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [
+                ("Missy Elliott", "artist"),
+                ("Work It", "title"),
+                ("USEE10240944", "isrc"),
+                ("apple-music", "originSourceID"),
+            ],
+        )
+        conn.execute(
+            "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
+            ("historySessionItems", "test-key", blob),
+        )
+        conn.commit()
+        conn.close()
+
+        plugin._check_for_new_track()
+
+        assert plugin.metadata.get("artist") == "Missy Elliott"
+        assert plugin.metadata.get("isrc") == ["USEE10240944"]
+
+
+def test_check_for_new_track_no_isrc_omitted(bootstrap):
+    """_check_for_new_track omits isrc key when track has no ISRC."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        conn = sqlite3.connect(dbfile)
+        conn.execute(
+            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+            "key CHAR, data BLOB, metadata BLOB)"
+        )
+        blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [("Local Artist", "artist"), ("Local Track", "title")],
+        )
+        conn.execute(
+            "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
+            ("historySessionItems", "test-key", blob),
+        )
+        conn.commit()
+        conn.close()
+
+        plugin._check_for_new_track()
+
+        assert plugin.metadata.get("artist") == "Local Artist"
+        assert "isrc" not in plugin.metadata
 
 
 def test_check_for_new_track_duplicate(bootstrap):
