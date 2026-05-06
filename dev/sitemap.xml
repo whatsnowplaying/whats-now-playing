@@ -6,6 +6,11 @@
         <changefreq>daily</changefreq>
     </url>
     <url>
+        <loc>http://whatsnowplaying.github.io/dev/changelog/</loc>
+        <lastmod>2026-05-06</lastmod>
+        <changefreq>daily</changefreq>
+    </url>
+    <url>
         <loc>http://whatsnowplaying.github.io/dev/contact/</loc>
         <lastmod>2026-05-06</lastmod>
         <changefreq>daily</changefreq>
