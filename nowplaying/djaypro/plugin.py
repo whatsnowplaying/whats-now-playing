@@ -239,10 +239,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "New track detected: %s - %s%s%s%s%s",
             track_data["artist"],
             track_data["title"],
-            " (BPM: %s)" % track_data["bpm"] if track_data["bpm"] else "",
-            " [%s]" % track_data["album"] if track_data["album"] else "",
-            " - %s" % track_data["filename"] if track_data["filename"] else "",
-            " ISRC:%s" % track_data["isrc"] if track_data.get("isrc") else "",
+            f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
+            f" [{track_data['album']}]" if track_data["album"] else "",
+            f" - {track_data['filename']}" if track_data["filename"] else "",
+            f" ISRC:{track_data['isrc']}" if track_data.get("isrc") else "",
         )
 
     def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
