@@ -72,6 +72,9 @@ markdown_extensions:
   - toc:
       permalink: true
 
+hooks:
+  - properdocs_hooks.py
+
 docs_dir: docs
 site_dir: site
 
@@ -82,6 +85,7 @@ nav:
   - Quickstart: quickstart.md
   - Usage: usage.md
   - Upgrading: upgrading.md
+  - Changelog: changelog.md
   - Core Settings:
       - General: settings/index.md
       - Source: input/index.md
