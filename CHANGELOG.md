@@ -267,7 +267,7 @@ This release fixes a critical bug in 5.0.0 that causes it to lock up if the Char
 * Revamped old templates to remove some sizing and background issues with OBS
 * New templates that mirror the boring templates everyone else uses
 * New templates with new special effects
-* All templates may now be referenced by name (e.g, `/template.htm` -> `/templates/template.htm`)
+* All templates may now be referenced by name (e.g., `/template.htm` -> `/templates/template.htm`)
 * ws-gifwords-fade.htm to show GifWords requests
 * ws-justthecover.htm to cycle through all of the front covers
 * Bundled copies of some common libraries available via the `/vendor` endpoint
@@ -327,7 +327,7 @@ This release fixes a critical bug in 5.0.0 that causes it to lock up if the Char
 * hasartist support
 * Smart playlists should now be supported
 
-### Icecast (butt, Traktor, MIXX, others)
+### Icecast (butt, Traktor, Mixxx, others)
 
 * Icecast protocol fixes to make it more reliable
 * Fixed an issue where files without metadata were not properly doing "dash" separations.
@@ -353,7 +353,7 @@ This release fixes a critical bug in 5.0.0 that causes it to lock up if the Char
 * Revamped database support, including automatic database refresh running in the background
 * hasartist support
 
-### Virtual DJ
+### VirtualDJ
 
 * Revamped database support, including automatic database refresh running in the background
 * hasartist support
