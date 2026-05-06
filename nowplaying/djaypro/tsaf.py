@@ -218,10 +218,13 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 value = bytes(blob[pos : pos + length])
                 pos += length
             else:
-                # Unknown type: cannot safely advance pos, so stop parsing
-                # this object rather than misreading value bytes as the next
-                # type code.
-                logging.debug("Unknown TSAF type 0x%02x at offset %d", tc, pos - 1)
+                # Unknown type: the value size is unknowable so the cursor
+                # cannot be advanced safely.  Stop parsing this object and
+                # return what was collected so far.  Log at WARNING so new
+                # type codes added by djay Pro updates are visible.
+                logging.warning(
+                    "Unknown TSAF type 0x%02x at offset %d; stopping parse", tc, pos - 1
+                )
                 break
 
             if pos < len(blob) and blob[pos] == 0x08:

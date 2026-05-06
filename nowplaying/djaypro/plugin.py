@@ -204,66 +204,46 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not dbfile.exists():
             return
 
-        def query_db():
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(dbfile), timeout=1, row_factory=sqlite3.Row
-            ) as connection:
-                cursor = connection.cursor()
+        records = self._query_recent_history(dbfile, limit=1)
+        if not records:
+            return
 
-                # Query for latest history item
-                cursor.execute(
-                    "SELECT rowid, data FROM database2 "
-                    "WHERE collection='historySessionItems' ORDER BY rowid DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
+        track_data = records[0]
+        if not (
+            self.metadata.get("artist") != track_data["artist"]
+            or self.metadata.get("title") != track_data["title"]
+        ):
+            return
 
-                if not row:
-                    return
+        # New track detected — look up filename if the history blob didn't include it
+        if not track_data["filename"]:
+            t_artist = track_data["artist"]
+            t_title = track_data["title"]
+            if isinstance(t_artist, str) and isinstance(t_title, str):
+                filename = self._get_filename_from_db(t_artist, t_title)
+                if filename:
+                    track_data["filename"] = filename
 
-                track_data = nowplaying.djaypro.tsaf.parse_blob(row["data"])
-
-                # Only require title - metadata extraction will handle the rest
-                if track_data["title"]:
-                    # Check if this is a new track
-                    if (
-                        self.metadata.get("artist") != track_data["artist"]
-                        or self.metadata.get("title") != track_data["title"]
-                    ):
-                        # If filename not in history blob, try to get it from
-                        # localMediaItemLocations
-                        if not track_data["filename"]:
-                            t_artist = track_data["artist"]
-                            t_title = track_data["title"]
-                            if isinstance(t_artist, str) and isinstance(t_title, str):
-                                filename = self._get_filename_for_track(cursor, t_artist, t_title)
-                                if filename:
-                                    track_data["filename"] = filename
-
-                        new_meta: TrackMetadata = {
-                            "artist": track_data["artist"],
-                            "title": track_data["title"],
-                            "album": track_data["album"],
-                            "filename": track_data["filename"],
-                            "bpm": track_data["bpm"],
-                            "duration": track_data["duration"],
-                        }
-                        if isinstance(track_data.get("isrc"), str):
-                            new_meta["isrc"] = [track_data["isrc"]]
-                        self.metadata = new_meta
-                        logging.info(
-                            "New track detected: %s - %s%s%s%s%s",
-                            track_data["artist"],
-                            track_data["title"],
-                            f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
-                            f" [{track_data['album']}]" if track_data["album"] else "",
-                            f" - {track_data['filename']}" if track_data["filename"] else "",
-                            f" ISRC:{track_data['isrc']}" if track_data.get("isrc") else "",
-                        )
-
-        try:
-            nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-        except (sqlite3.OperationalError, FileNotFoundError) as err:
-            logging.debug("Failed to query database: %s", err)
+        new_meta: TrackMetadata = {
+            "artist": track_data["artist"],
+            "title": track_data["title"],
+            "album": track_data["album"],
+            "filename": track_data["filename"],
+            "bpm": track_data["bpm"],
+            "duration": track_data["duration"],
+        }
+        if isinstance(track_data.get("isrc"), str):
+            new_meta["isrc"] = [track_data["isrc"]]
+        self.metadata = new_meta
+        logging.info(
+            "New track detected: %s - %s%s%s%s%s",
+            track_data["artist"],
+            track_data["title"],
+            " (BPM: %s)" % track_data["bpm"] if track_data["bpm"] else "",
+            " [%s]" % track_data["album"] if track_data["album"] else "",
+            " - %s" % track_data["filename"] if track_data["filename"] else "",
+            " ISRC:%s" % track_data["isrc"] if track_data.get("isrc") else "",
+        )
 
     def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
         """Read NowPlaying.txt file for current track (macOS)"""
@@ -344,6 +324,35 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 f" ISRC:{isrc}" if isrc else "",
             )
 
+    @staticmethod
+    def _query_recent_history(dbfile: pathlib.Path, limit: int = 20) -> list[dict]:
+        """Return parsed metadata dicts for the most recent historySessionItems.
+
+        Results are ordered newest-first.  Blobs that fail to parse are
+        silently skipped so callers always get a clean list of dicts.
+        """
+
+        def query_db():
+            records = []
+            with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT data FROM database2 "
+                    "WHERE collection='historySessionItems' "
+                    "ORDER BY rowid DESC LIMIT ?",
+                    (limit,),
+                )
+                for (blob,) in cursor:
+                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
+                    if parsed.get("title"):
+                        records.append(parsed)
+            return records
+
+        try:
+            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
+        except (sqlite3.OperationalError, FileNotFoundError):
+            return []
+
     def _get_isrc_from_db(self, artist: str, title: str) -> str | None:
         """Return the ISRC for the track by scanning recent historySessionItems.
 
@@ -352,38 +361,24 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         matching artist/title pair.  Scanning is bounded to 20 rows to keep it
         fast even for large history tables.
         """
-        dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
-        if not dbfile.exists():
+        dbfile = self._get_db_path()
+        if not dbfile:
             return None
 
         artist_lower = artist.strip().lower()
         title_lower = title.strip().lower()
 
-        def query_db():
-            with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
-                cursor = connection.cursor()
-                cursor.execute(
-                    "SELECT data FROM database2 "
-                    "WHERE collection='historySessionItems' "
-                    "ORDER BY rowid DESC LIMIT 20"
-                )
-                for (blob,) in cursor:
-                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
-                    p_artist = parsed.get("artist")
-                    p_title = parsed.get("title")
-                    if (
-                        isinstance(p_artist, str)
-                        and isinstance(p_title, str)
-                        and p_artist.strip().lower() == artist_lower
-                        and p_title.strip().lower() == title_lower
-                    ):
-                        return parsed.get("isrc")
-                return None
-
-        try:
-            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-        except (sqlite3.OperationalError, FileNotFoundError):
-            return None
+        for parsed in self._query_recent_history(dbfile, limit=20):
+            p_artist = parsed.get("artist")
+            p_title = parsed.get("title")
+            if (
+                isinstance(p_artist, str)
+                and isinstance(p_title, str)
+                and p_artist.strip().lower() == artist_lower
+                and p_title.strip().lower() == title_lower
+            ):
+                return parsed.get("isrc")  # type: ignore[return-value]
+        return None
 
     def _get_filename_from_db(self, artist: str, title: str) -> str | None:
         """Get filename from database by querying localMediaItemLocations"""
@@ -519,9 +514,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         to the configured directory so callers that run before the watcher
         starts still get a valid path.
         """
-        dbfile = pathlib.Path(self.djaypro_dir or "").joinpath("MediaLibrary.db")
-        if dbfile.exists():
-            return dbfile
+        if self.djaypro_dir:
+            dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
+            if dbfile.exists():
+                return dbfile
         configured = self.config.cparser.value("djaypro/directory", defaultValue="")
         if configured:
             dbfile = pathlib.Path(configured).joinpath("MediaLibrary.db")
