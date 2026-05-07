@@ -482,6 +482,45 @@
     <ul class="md-nav__list" data-md-component="toc">
       
         <li class="md-nav__item">
+  <a href="#version-521-in-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version 5.2.1 - in progress
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 5.2.1 - in progress">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#djay-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        djay Pro
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#version-520-2026-05-04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -549,7 +588,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#djay-pro" class="md-nav__link">
+  <a href="#djay-pro_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         djay Pro
@@ -593,7 +632,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bug-fixes" class="md-nav__link">
+  <a href="#bug-fixes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -924,7 +963,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_1" class="md-nav__link">
+  <a href="#bug-fixes_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug fixes
@@ -3252,6 +3291,18 @@
 
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="version-521-in-progress">Version 5.2.1 - in progress<a class="headerlink" href="#version-521-in-progress" title="Permanent link">&para;</a></h2>
+<h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
+    transient error; the loop now recovers automatically</li>
+</ul>
+<h3 id="djay-pro">djay Pro<a class="headerlink" href="#djay-pro" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Added <code>has_tracks_by_artist</code> support for track requests</li>
+<li>Added playlist support: available playlists can now be selected for
+    artist queries</li>
+</ul>
 <h2 id="version-520-2026-05-04">Version 5.2.0 - 2026-05-04<a class="headerlink" href="#version-520-2026-05-04" title="Permanent link">&para;</a></h2>
 <h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3292,7 +3343,7 @@
     OS color scheme; new Auto/Light/Dark override in General settings</li>
 <li>Fixed dark mode rendering on several UI panels on Linux and Windows</li>
 </ul>
-<h3 id="djay-pro">djay Pro<a class="headerlink" href="#djay-pro" title="Permanent link">&para;</a></h3>
+<h3 id="djay-pro_1">djay Pro<a class="headerlink" href="#djay-pro_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Fixed one-track-behind detection on Windows; djay Pro writes analysis data
     and history in separate transactions, so track changes now debounce the WAL
@@ -3315,7 +3366,7 @@
 <ul>
 <li>Tenor GIF support; use Klipy instead</li>
 </ul>
-<h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_1">Bug Fixes<a class="headerlink" href="#bug-fixes_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Track titles with duplicate parenthetical suffixes (e.g.
     <code>Song (Radio Edit) (radio edit)</code>) are now collapsed to a single suffix</li>
@@ -3546,7 +3597,7 @@
     executable.  This was done to speed up launch time by removing the
     need to extract the content.</li>
 </ul>
-<h3 id="bug-fixes_1">Bug fixes<a class="headerlink" href="#bug-fixes_1" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_2">Bug fixes<a class="headerlink" href="#bug-fixes_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>M3U-based systems (Virtual DJ) file watching fixes</li>
 <li>Wikimedia links did not correctly redirect</li>
