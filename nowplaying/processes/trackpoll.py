@@ -233,15 +233,16 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(0.5)
-            self.config.get()
-
-            if not await self.switch_input_plugin():
-                continue
-
             try:
+                self.config.get()
+
+                if not await self.switch_input_plugin():
+                    continue
+
                 await self.gettrack()
             except Exception as error:  # pylint: disable=broad-except
                 logging.error("Failed attempting to get a track: %s", error, exc_info=True)
+                self.previousinput = None  # force input plugin restart on next iteration
 
         if not self.testmode and self.config.cparser.value("setlist/enabled", type=bool):
             nowplaying.db.create_setlist(self.config)

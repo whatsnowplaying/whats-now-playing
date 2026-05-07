@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 5.2.1 - in progress
+
+### Bug Fixes
+
+* Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
+    transient error; the loop now recovers automatically
+
+### djay Pro
+
+* Added `has_tracks_by_artist` support for track requests
+* Added playlist support: available playlists can now be selected for
+    artist queries
+
 ## Version 5.2.0 - 2026-05-04
 
 ### New Features
