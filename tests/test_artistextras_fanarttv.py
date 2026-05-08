@@ -14,6 +14,7 @@ from utils_artistextras import (
 )
 
 import nowplaying.apicache
+from utils_artistextras import FakeImageCache
 
 
 def _setup_fanarttv_plugin(bootstrap):
@@ -99,3 +100,84 @@ async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_api_ca
     finally:
         # Restore original cache
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "coverart_enabled,expect_cover",
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+async def test_fanarttv_coverart_config_gate(bootstrap, coverart_enabled, expect_cover):
+    """test that cover art is queued only when fanarttv/coverart is enabled"""
+    config = bootstrap
+    config.cparser.setValue("fanarttv/enabled", True)
+    config.cparser.setValue("fanarttv/apikey", "fake-test-key")
+    config.cparser.setValue("fanarttv/coverart", coverart_enabled)
+    for field in ["banners", "logos", "fanart", "thumbnails"]:
+        config.cparser.setValue(f"fanarttv/{field}", False)
+
+    plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.fanarttv"]
+    imagecache = FakeImageCache()
+
+    album_mbid = "f4a31f0a-51dd-4fa7-986d-3095c40c5ed9"
+    cover_url = "https://assets.fanart.tv/fanart/music/test/albumcover/test.jpg"
+
+    async def mock_fetch(apikey, artistid):  # pylint: disable=unused-argument
+        return {"albums": {album_mbid: {"albumcover": [{"url": cover_url, "likes": 10}]}}}
+
+    plugin._fetch_async = mock_fetch  # pylint: disable=protected-access
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "The Downward Spiral",
+        "imagecacheartist": "nineinchnails",
+        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
+        "musicbrainzalbumid": album_mbid,
+    }
+
+    await plugin.download_async(metadata, imagecache=imagecache)
+
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    has_cover = "front_cover" in imagecache.urls.get(identifier, {})
+    assert has_cover == expect_cover
+
+
+@pytest.mark.asyncio
+async def test_fanarttv_coverart_no_album_mbid(bootstrap):
+    """test that cover art is not queued when musicbrainzalbumid is absent"""
+    config = bootstrap
+    config.cparser.setValue("fanarttv/enabled", True)
+    config.cparser.setValue("fanarttv/apikey", "fake-test-key")
+    config.cparser.setValue("fanarttv/coverart", True)
+    for field in ["banners", "logos", "fanart", "thumbnails"]:
+        config.cparser.setValue(f"fanarttv/{field}", False)
+
+    plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.fanarttv"]
+    imagecache = FakeImageCache()
+
+    async def mock_fetch(apikey, artistid):  # pylint: disable=unused-argument
+        return {
+            "albums": {
+                "some-mbid": {
+                    "albumcover": [{"url": "https://example.com/cover.jpg", "likes": 10}]
+                }
+            }
+        }
+
+    plugin._fetch_async = mock_fetch  # pylint: disable=protected-access
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "The Downward Spiral",
+        "imagecacheartist": "nineinchnails",
+        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
+        # no musicbrainzalbumid
+    }
+
+    await plugin.download_async(metadata, imagecache=imagecache)
+
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert "front_cover" not in imagecache.urls.get(identifier, {})

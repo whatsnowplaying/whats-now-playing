@@ -440,3 +440,52 @@ async def test_musicbrainz_missing_metadata_fields(getmusicbrainz):  # pylint: d
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.warning("Missing metadata case %d raised exception: %s", i, exc)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "coverart_enabled,expect_image",
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+async def test_musicbrainz_coverart_config_gate(bootstrap, coverart_enabled, expect_image):
+    """test that cover art fetch is gated by musicbrainz/coverart config"""
+    from unittest.mock import AsyncMock, MagicMock
+
+    config = bootstrap
+    config.cparser.setValue("musicbrainz/enabled", True)
+    config.cparser.setValue("musicbrainz/coverart", coverart_enabled)
+    config.cparser.setValue("musicbrainz/emailaddress", "test@test.com")
+
+    helper = nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
+
+    fake_image = b"fake-image-bytes"
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.set_useragent = MagicMock()
+    mock_client.get_recording_by_id = AsyncMock(return_value={"id": "test-id"})
+    mock_client.process_recording_data = AsyncMock(
+        return_value={
+            "musicbrainz_recording_id": "test-id",
+            "title": "Test Song",
+            "artist": "Test Artist",
+            "musicbrainz_artist_id": ["test-artist-id"],
+            "musicbrainz_release_id": "test-release-id",
+        }
+    )
+    mock_client.get_image_front = AsyncMock(return_value=fake_image)
+
+    helper.mb_client = mock_client
+
+    result = await helper._recordingid_uncached("test-recording-id")  # pylint: disable=protected-access
+
+    if expect_image:
+        assert result.get("coverimageraw") == fake_image
+        mock_client.get_image_front.assert_called()
+    else:
+        assert "coverimageraw" not in result
+        mock_client.get_image_front.assert_not_called()

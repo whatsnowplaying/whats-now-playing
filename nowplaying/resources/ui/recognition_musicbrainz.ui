@@ -34,23 +34,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="mb_fallback_checkbox">
-     <property name="text">
-      <string>Use MusicBrainz when all else fails</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QCheckBox" name="strict_album_checkbox">
-     <property name="text">
-      <string>Strict album matching</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QLabel" name="config_label">
      <property name="text">
       <string>**Configuration**</string>
@@ -86,6 +69,33 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="mb_fallback_checkbox">
+     <property name="text">
+      <string>Use MusicBrainz when all else fails</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="strict_album_checkbox">
+     <property name="text">
+      <string>Strict album matching</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="coverart_checkbox">
+     <property name="text">
+      <string>Fetch cover art from Cover Art Archive</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QCheckBox" name="websites_checkbox">
@@ -201,12 +211,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>musicbrainz_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>mb_fallback_checkbox</receiver>
-   <slot>setEnabled(bool)</slot>
-  </connection>
-  <connection>
-   <sender>musicbrainz_checkbox</sender>
-   <signal>toggled(bool)</signal>
    <receiver>emailaddress_label</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
@@ -219,7 +223,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>musicbrainz_checkbox</sender>
    <signal>toggled(bool)</signal>
+   <receiver>mb_fallback_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>musicbrainz_checkbox</sender>
+   <signal>toggled(bool)</signal>
    <receiver>strict_album_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>musicbrainz_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>coverart_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>

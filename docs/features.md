@@ -94,13 +94,15 @@ For tracks that are untagged or missing metadata:
 
 WNP can automatically fetch additional artist information to enhance displays:
 
-* **[Discogs](extras/discogs.md)** — artist biographies and images
+* **[Discogs](extras/discogs.md)** — artist biographies, images, and album cover art
 * **[TheAudioDB](extras/theaudiodb.md)** — artist biographies, images, and album art (free tier
   available without API key)
-* **[FanArt.TV](extras/fanarttv.md)** — high-quality fan art, artist logos, and background images
+* **[FanArt.TV](extras/fanarttv.md)** — high-quality fan art, artist logos, background images,
+  and album cover art
 * **[Wikimedia / Wikipedia](extras/wikimedia.md)** — artist biographies and images
 * **[Last.fm](extras/lastfm.md)** — album art lookup
-* **[MusicBrainz](recognition/musicbrainz.md)** — artist website links, IDs, and relationship data
+* **[MusicBrainz](recognition/musicbrainz.md)** — artist website links, IDs, relationship data,
+  and album cover art via Cover Art Archive
 
 Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.

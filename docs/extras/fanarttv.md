@@ -8,6 +8,7 @@ fanart.tv is a community-driven database of curated, high-quality images for art
 * Artist fan art (background images)
 * Artist logos (HD where available)
 * Artist thumbnails
+* Album cover art
 
 ## Requirements
 
@@ -37,6 +38,7 @@ Once enabled and an API key is entered, select what to download:
 * **Fanart** — large background/fan art images
 * **Logos** — artist logo graphics (HD version used when available)
 * **Thumbnails** — artist photos and thumbnails
+* **Cover Art** — album cover image
 
 ## Troubleshooting
 

@@ -11,6 +11,7 @@ MusicBrainz provides enhanced metadata beyond basic track identification:
 - Website links (official sites, social media, streaming platforms)
 - Additional album and release information
 - Relationships between artists, albums, and tracks
+- Album cover art via the [Cover Art Archive](https://coverartarchive.org/)
 
 MusicBrainz works in two ways:
 
@@ -39,10 +40,11 @@ corporation dedicated to keeping MusicBrainz free and open source.
 2. Select Recognition->MusicBrainz from the left-hand column
 3. Check "Enable MusicBrainz metadata lookups"
 4. Enter your email address (required for API access)
-5. Configure website options:
+5. Check "Fetch cover art from Cover Art Archive" to enable album cover art (on by default)
+6. Configure website options:
    - Check "Ask MusicBrainz for artist's websites" to fetch website links
    - Select which types of websites you want included
-6. Click Save
+7. Click Save
 
 ## Fallback Mode
 

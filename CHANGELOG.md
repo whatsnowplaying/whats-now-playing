@@ -8,6 +8,14 @@
 * Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
     transient error; the loop now recovers automatically
 
+### Artist Extras
+
+* Discogs and fanart.tv now fetch album cover art when available, using
+    data already retrieved during artist lookups (no extra API calls);
+    each provider has a new Cover Art checkbox in settings
+* MusicBrainz cover art fetching from Cover Art Archive can now be
+    toggled via a new checkbox in MusicBrainz settings (enabled by default)
+
 ### djay Pro
 
 * Added `has_tracks_by_artist` support for track requests

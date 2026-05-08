@@ -473,7 +473,13 @@ class StaticContentHandler:
                         "cover URL Content-Length %d exceeds limit: %s", content_length, url
                     )
                     return None
-                return await resp.content.read(self.MAX_COVER_BYTES)
+                data = await resp.read()
+                if len(data) > self.MAX_COVER_BYTES:
+                    logging.warning(
+                        "cover URL body %d bytes exceeds limit: %s", len(data), url
+                    )
+                    return None
+                return data
         except Exception:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to fetch cover URL: %s", url, exc_info=True)
         return None
@@ -562,7 +568,10 @@ class StaticContentHandler:
         if isinstance(cover_url, str) and cover_url.startswith("http"):
             cover_bytes = await self._fetch_cover_url(request, cover_url)
             if cover_bytes:
+                logging.debug("Fetched cover art (%d bytes) from coverurl for %s", len(cover_bytes), source)
                 clean_metadata["coverimageraw"] = cover_bytes
+            else:
+                logging.debug("Cover art fetch returned nothing for coverurl from %s", source)
 
         # Strip null bytes from all string fields (radiologik and other sources may send them)
         for key, value in clean_metadata.items():

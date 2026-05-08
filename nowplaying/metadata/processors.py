@@ -89,10 +89,18 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if "artistfanarturls" not in self.metadata:
             self.metadata["artistfanarturls"] = []
 
+        try:
+            for processor in "hostmeta", "tinytag", "image2png":
+                logging.debug("running %s", processor)
+                func = getattr(self, f"_process_{processor}")
+                func()
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Ignoring sub-metaproc failure.")
+
         if self.imagecache and self.metadata.get("artist") and self.metadata.get("album"):
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
             if self.metadata.get("coverimageraw"):
-                logging.debug("Placing provided front cover")
+                logging.debug("Placing provided front cover for %s", identifier)
                 _ = self.imagecache.put_db_cachekey(
                     identifier=identifier,
                     srclocation=f"{identifier}_provided_0",
@@ -106,14 +114,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if cached:
                     logging.debug("Restoring coverimageraw from imagecache for %s", identifier)
                     self.metadata["coverimageraw"] = cached
-
-        try:
-            for processor in "hostmeta", "tinytag", "image2png":
-                logging.debug("running %s", processor)
-                func = getattr(self, f"_process_{processor}")
-                func()
-        except Exception:  # pylint: disable=broad-except
-            logging.exception("Ignoring sub-metaproc failure.")
+                    self.metadata["coverimagetype"] = "png"
+                    self.metadata["coverurl"] = "cover.png"
 
         self._fix_filename_stem()
         self._fix_artist_in_title()

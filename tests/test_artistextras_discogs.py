@@ -9,7 +9,12 @@ import os
 
 import pytest
 from aiohttp import ClientResponseError
-from utils_artistextras import configureplugins, configuresettings, skip_no_discogs_key
+from utils_artistextras import (
+    FakeImageCache,
+    configureplugins,
+    configuresettings,
+    skip_no_discogs_key,
+)
 
 import nowplaying.apicache  # pylint: disable=import-error
 import nowplaying.discogsclient  # pylint: disable=import-error
@@ -1143,3 +1148,54 @@ async def test_discogs_api_call_count(bootstrap, isolated_api_cache):  # pylint:
     finally:
         # Restore original cache
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "coverart_enabled,expect_cover",
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+async def test_discogs_coverart_config_gate(bootstrap, coverart_enabled, expect_cover):
+    """test that cover art is queued only when discogs/coverart is enabled"""
+    config = bootstrap
+    config.cparser.setValue("discogs/enabled", True)
+    config.cparser.setValue("discogs/apikey", "fake-test-key")
+    config.cparser.setValue("discogs/coverart", coverart_enabled)
+    for field in ["bio", "fanart", "thumbnails", "websites"]:
+        config.cparser.setValue(f"discogs/{field}", False)
+
+    plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.discogs"]
+    imagecache = FakeImageCache()
+
+    cover_url = "https://i.discogs.com/test-cover.jpg"
+    mock_artist = nowplaying.discogsclient.Models.Artist(
+        {"id": 999, "name": "Nine Inch Nails", "images": [], "profile": "", "urls": []}
+    )
+
+    async def mock_no_website(*args, **kwargs):  # pylint: disable=unused-argument
+        return False
+
+    async def mock_releaselist(*args, **kwargs):  # pylint: disable=unused-argument
+        return mock_artist, cover_url
+
+    def mock_process_metadata(*args, **kwargs):  # pylint: disable=unused-argument
+        pass
+
+    plugin._find_discogs_website_async = mock_no_website  # pylint: disable=protected-access
+    plugin._find_discogs_artist_releaselist_async = mock_releaselist  # pylint: disable=protected-access
+    plugin._process_metadata = mock_process_metadata  # pylint: disable=protected-access
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "The Downward Spiral",
+        "imagecacheartist": "nineinchnails",
+    }
+
+    await plugin.download_async(metadata, imagecache=imagecache)
+
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    has_cover = "front_cover" in imagecache.urls.get(identifier, {})
+    assert has_cover == expect_cover
