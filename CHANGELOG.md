@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 
+* Fixed incorrect Discord invite link in About window
 * Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
     transient error; the loop now recovers automatically
 
