@@ -43,7 +43,7 @@ in binary or source forms.
 - **[Gallery](http://whatsnowplaying.github.io/gallery/)** - See it in action
 - **[Charts](https://whatsnowplaying.com/signup)** — track your play history, view listening stats,
   and unlock the online Guess Game board
-- **[Discord Community](https://discord.gg/rgEvcdUHUV)** - Get help and share setups
+- **[Discord Community](https://discord.gg/bGdgm64Erb)** - Get help and share setups
 
 ---
 
