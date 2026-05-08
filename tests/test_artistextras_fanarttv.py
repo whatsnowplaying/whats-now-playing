@@ -2,8 +2,8 @@
 """test artistextras fanarttv plugin"""
 
 import os
+
 import pytest
-import nowplaying.apicache
 from utils_artistextras import (
     FakeImageCache,
     configureplugins,
@@ -13,6 +13,8 @@ from utils_artistextras import (
     run_failure_cache_test,
     skip_no_fanarttv_key,
 )
+
+import nowplaying.apicache
 
 
 def _setup_fanarttv_plugin(bootstrap):
