@@ -2,6 +2,7 @@
 """test musicbrainz"""
 
 import logging
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -452,8 +453,6 @@ async def test_musicbrainz_missing_metadata_fields(getmusicbrainz):  # pylint: d
 )
 async def test_musicbrainz_coverart_config_gate(bootstrap, coverart_enabled, expect_image):
     """test that cover art fetch is gated by musicbrainz/coverart config"""
-    from unittest.mock import AsyncMock, MagicMock
-
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     config.cparser.setValue("musicbrainz/coverart", coverart_enabled)

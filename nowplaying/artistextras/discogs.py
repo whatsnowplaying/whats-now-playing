@@ -330,6 +330,7 @@ class Plugin(ArtistExtrasPlugin):
 
         if (
             cover_url
+            and imagecache
             and metadata.get("album")
             and self.config.cparser.value("discogs/coverart", type=bool)
         ):

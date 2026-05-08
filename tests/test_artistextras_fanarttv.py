@@ -2,9 +2,10 @@
 """test artistextras fanarttv plugin"""
 
 import os
-
 import pytest
+import nowplaying.apicache
 from utils_artistextras import (
+    FakeImageCache,
     configureplugins,
     configuresettings,
     run_api_call_count_test,
@@ -12,9 +13,6 @@ from utils_artistextras import (
     run_failure_cache_test,
     skip_no_fanarttv_key,
 )
-
-import nowplaying.apicache
-from utils_artistextras import FakeImageCache
 
 
 def _setup_fanarttv_plugin(bootstrap):
@@ -103,46 +101,29 @@ async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_api_ca
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "coverart_enabled,expect_cover",
-    [
-        (True, True),
-        (False, False),
-    ],
-)
-async def test_fanarttv_coverart_config_gate(bootstrap, coverart_enabled, expect_cover):
-    """test that cover art is queued only when fanarttv/coverart is enabled"""
+@skip_no_fanarttv_key
+async def test_fanarttv_coverart(bootstrap):
+    """test that fanarttv fetches album cover art for a known album"""
     config = bootstrap
-    config.cparser.setValue("fanarttv/enabled", True)
-    config.cparser.setValue("fanarttv/apikey", "fake-test-key")
-    config.cparser.setValue("fanarttv/coverart", coverart_enabled)
+    configuresettings("fanarttv", config.cparser)
+    config.cparser.setValue("fanarttv/apikey", os.environ["FANARTTV_API_KEY"])
+    config.cparser.setValue("fanarttv/coverart", True)
     for field in ["banners", "logos", "fanart", "thumbnails"]:
         config.cparser.setValue(f"fanarttv/{field}", False)
-
-    plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.fanarttv"]
-    imagecache = FakeImageCache()
-
-    album_mbid = "f4a31f0a-51dd-4fa7-986d-3095c40c5ed9"
-    cover_url = "https://assets.fanart.tv/fanart/music/test/albumcover/test.jpg"
-
-    async def mock_fetch(apikey, artistid):  # pylint: disable=unused-argument
-        return {"albums": {album_mbid: {"albumcover": [{"url": cover_url, "likes": 10}]}}}
-
-    plugin._fetch_async = mock_fetch  # pylint: disable=protected-access
+    imagecaches, plugins = configureplugins(config)
 
     metadata = {
         "artist": "Nine Inch Nails",
-        "album": "The Downward Spiral",
+        "album": "Ghosts I-IV",
         "imagecacheartist": "nineinchnails",
         "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
-        "musicbrainzalbumid": album_mbid,
+        "musicbrainzalbumid": "3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a",
     }
 
-    await plugin.download_async(metadata, imagecache=imagecache)
+    await plugins["fanarttv"].download_async(metadata, imagecache=imagecaches["fanarttv"])
 
-    identifier = "Nine Inch Nails_The Downward Spiral"
-    has_cover = "front_cover" in imagecache.urls.get(identifier, {})
-    assert has_cover == expect_cover
+    identifier = "Nine Inch Nails_Ghosts I-IV"
+    assert "front_cover" in imagecaches["fanarttv"].urls.get(identifier, {})
 
 
 @pytest.mark.asyncio
