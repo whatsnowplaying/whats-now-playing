@@ -130,7 +130,7 @@ class DiscordSupport:
         logging.debug("ipc setup")
 
     async def _update_bot(self, templateout: str) -> None:
-        if not self.config or not self.clients.bot:
+        if not self.config or not self.clients.bot or not self.clients.bot.is_ready():
             return
         if (
             channelname := self.config.cparser.value("twitchbot/channel")

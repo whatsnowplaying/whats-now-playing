@@ -29,6 +29,7 @@ class Plugin(WNPBasePlugin):
         qsettings.setValue("musicbrainz/fallback", False)
         qsettings.setValue("musicbrainz/emailaddress", "")
         qsettings.setValue("musicbrainz/strict_album_matching", True)
+        qsettings.setValue("musicbrainz/coverart", True)
 
         # Website preferences (moved from acoustidmb)
         qsettings.setValue("musicbrainz/websites", False)
@@ -51,6 +52,9 @@ class Plugin(WNPBasePlugin):
             self.config.cparser.value(
                 "musicbrainz/strict_album_matching", type=bool, defaultValue=True
             )
+        )
+        qwidget.coverart_checkbox.setChecked(
+            self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True)
         )
 
         qwidget.websites_checkbox.setChecked(
@@ -86,6 +90,7 @@ class Plugin(WNPBasePlugin):
         self.config.cparser.setValue(
             "musicbrainz/strict_album_matching", qwidget.strict_album_checkbox.isChecked()
         )
+        self.config.cparser.setValue("musicbrainz/coverart", qwidget.coverart_checkbox.isChecked())
 
         self.config.cparser.setValue("musicbrainz/websites", qwidget.websites_checkbox.isChecked())
 
@@ -117,6 +122,7 @@ class Plugin(WNPBasePlugin):
         qwidget.musicbrainz_checkbox.toggled.connect(qwidget.emailaddress_lineedit.setEnabled)
         qwidget.musicbrainz_checkbox.toggled.connect(qwidget.emailaddress_label.setEnabled)
         qwidget.musicbrainz_checkbox.toggled.connect(qwidget.strict_album_checkbox.setEnabled)
+        qwidget.musicbrainz_checkbox.toggled.connect(qwidget.coverart_checkbox.setEnabled)
         qwidget.musicbrainz_checkbox.toggled.connect(qwidget.websites_checkbox.setEnabled)
 
         # Website checkboxes depend on both musicbrainz and websites being enabled

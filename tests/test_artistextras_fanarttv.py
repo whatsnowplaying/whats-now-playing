@@ -5,6 +5,7 @@ import os
 
 import pytest
 from utils_artistextras import (
+    FakeImageCache,
     configureplugins,
     configuresettings,
     run_api_call_count_test,
@@ -99,3 +100,67 @@ async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_api_ca
     finally:
         # Restore original cache
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+@skip_no_fanarttv_key
+async def test_fanarttv_coverart(bootstrap):
+    """test that fanarttv fetches album cover art for a known album"""
+    config = bootstrap
+    configuresettings("fanarttv", config.cparser)
+    config.cparser.setValue("fanarttv/apikey", os.environ["FANARTTV_API_KEY"])
+    config.cparser.setValue("fanarttv/coverart", True)
+    for field in ["banners", "logos", "fanart", "thumbnails"]:
+        config.cparser.setValue(f"fanarttv/{field}", False)
+    imagecaches, plugins = configureplugins(config)
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "imagecacheartist": "nineinchnails",
+        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
+        "musicbrainzreleasegroupid": "550bf4b9-92ca-30ba-9ea2-8b45f9d081f1",
+    }
+
+    await plugins["fanarttv"].download_async(metadata, imagecache=imagecaches["fanarttv"])
+
+    identifier = "Nine Inch Nails_Ghosts I-IV"
+    assert "front_cover" in imagecaches["fanarttv"].urls.get(identifier, {})
+
+
+@pytest.mark.asyncio
+async def test_fanarttv_coverart_no_album_mbid(bootstrap):
+    """test that cover art is not queued when musicbrainzalbumid is absent"""
+    config = bootstrap
+    config.cparser.setValue("fanarttv/enabled", True)
+    config.cparser.setValue("fanarttv/apikey", "fake-test-key")
+    config.cparser.setValue("fanarttv/coverart", True)
+    for field in ["banners", "logos", "fanart", "thumbnails"]:
+        config.cparser.setValue(f"fanarttv/{field}", False)
+
+    plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.fanarttv"]
+    imagecache = FakeImageCache()
+
+    async def mock_fetch(apikey, artistid):  # pylint: disable=unused-argument
+        return {
+            "albums": {
+                "some-mbid": {
+                    "albumcover": [{"url": "https://example.com/cover.jpg", "likes": 10}]
+                }
+            }
+        }
+
+    plugin._fetch_async = mock_fetch  # pylint: disable=protected-access
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "The Downward Spiral",
+        "imagecacheartist": "nineinchnails",
+        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
+        # no musicbrainzalbumid
+    }
+
+    await plugin.download_async(metadata, imagecache=imagecache)
+
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert "front_cover" not in imagecache.urls.get(identifier, {})

@@ -162,7 +162,6 @@ class MusicBrainzHelper:
 
                 for delitem in [
                     "album",
-                    "coverimageraw",
                     "date",
                     "genre",
                     "genres",
@@ -271,20 +270,25 @@ class MusicBrainzHelper:
                         newdata[key] = enriched[key]
                 if "musicbrainz_artist_id" in enriched:
                     newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
+                if "musicbrainz_release_group_id" in enriched:
+                    newdata["musicbrainzreleasegroupid"] = enriched["musicbrainz_release_group_id"]
                 if "genres" in enriched:
                     newdata["genres"] = enriched["genres"]
                     newdata["genre"] = "/".join(enriched["genres"])
 
                 # Cover art — use the release already selected by process_recording_data
-                if release_id := enriched.get("musicbrainz_release_id"):
-                    with contextlib.suppress(Exception):
-                        newdata["coverimageraw"] = await self.mb_client.get_image_front(release_id)
-                if not newdata.get("coverimageraw"):
-                    if rg_id := enriched.get("musicbrainz_release_group_id"):
+                if self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True):
+                    if release_id := enriched.get("musicbrainz_release_id"):
                         with contextlib.suppress(Exception):
                             newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                                rg_id, "release-group"
+                                release_id
                             )
+                    if not newdata.get("coverimageraw"):
+                        if rg_id := enriched.get("musicbrainz_release_group_id"):
+                            with contextlib.suppress(Exception):
+                                newdata["coverimageraw"] = await self.mb_client.get_image_front(
+                                    rg_id, "release-group"
+                                )
                 return newdata
 
         return await self._mb_op_with_retry(_fetch, "get_recording_by_id", {})

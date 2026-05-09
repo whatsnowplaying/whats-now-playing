@@ -76,6 +76,7 @@ def configuresettings(pluginname, cparser):
     for key in [
         "banners",
         "bio",
+        "coverart",
         "enabled",
         "fanart",
         "logos",

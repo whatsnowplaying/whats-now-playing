@@ -230,13 +230,18 @@ class Plugin(ArtistExtrasPlugin):
 
         return False
 
-    async def _find_discogs_artist_releaselist_async(self, metadata):
-        """async given metadata, find the releases for an artist"""
+    async def _find_discogs_artist_releaselist_async(
+        self, metadata
+    ) -> tuple[nowplaying.discogsclient.Models.Artist | None, str | None]:
+        """async given metadata, find the releases for an artist.
+
+        Returns a tuple of (artist, cover_url) where cover_url may be None.
+        """
         if not self.client and not self._setup_client():
-            return None
+            return None, None
 
         if not self.client:
-            return None
+            return None, None
 
         artistname = metadata["artist"]
         try:
@@ -247,19 +252,18 @@ class Plugin(ArtistExtrasPlugin):
                 resultlist = resultlist.page(1)
         except TimeoutError:
             logging.error("discogs async releaselist timeout error")
-            return None
+            return None, None
         except Exception as error:  # pragma: no cover pylint: disable=broad-except
             logging.error("discogs async hit %s", error)
-            return None
+            return None, None
 
-        return next(
-            (
-                result.artists[0]
-                for result in resultlist
-                if isinstance(result, nowplaying.discogsclient.Models.Release)
-            ),
-            None,
-        )
+        for result in resultlist:
+            if isinstance(result, nowplaying.discogsclient.Models.Release):
+                artist = result.artists[0] if result.artists else None
+                cover_url = result.data.get("cover_image") or result.data.get("thumb")
+                return artist, cover_url
+
+        return None, None
 
     async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
         """async download content"""
@@ -293,9 +297,12 @@ class Plugin(ArtistExtrasPlugin):
 
         oldartist = metadata["artist"]
         artistresultlist = None
+        cover_url = None
         for variation in nowplaying.utils.artist_name_variations(metadata["artist"]):
             metadata["artist"] = variation
-            artistresultlist = await self._find_discogs_artist_releaselist_async(metadata)
+            artistresultlist, cover_url = await self._find_discogs_artist_releaselist_async(
+                metadata
+            )
             if artistresultlist:
                 break
 
@@ -320,6 +327,18 @@ class Plugin(ArtistExtrasPlugin):
                     artistresultlist = full_artist
 
         self._process_metadata(metadata["imagecacheartist"], artistresultlist, imagecache)
+
+        if (
+            cover_url
+            and imagecache
+            and metadata.get("album")
+            and self.config.cparser.value("discogs/coverart", type=bool)
+        ):
+            logging.debug(
+                "discogs: queuing release cover for %s - %s", metadata["artist"], metadata["album"]
+            )
+            self.queue_front_cover(metadata["artist"], metadata["album"], cover_url, imagecache)
+
         return self.addmeta
 
     def providerinfo(self):  # pylint: disable=no-self-use
@@ -327,6 +346,7 @@ class Plugin(ArtistExtrasPlugin):
         return [
             "artistlongbio",
             "artistthumbnailraw",
+            "coverimageraw",
             "discogs-artistfanarturls",
             "artistwebsites",
         ]
@@ -339,7 +359,7 @@ class Plugin(ArtistExtrasPlugin):
             qwidget.discogs_checkbox.setChecked(False)
         qwidget.apikey_lineedit.setText(self.config.cparser.value("discogs/apikey"))
 
-        for field in ["bio", "fanart", "thumbnails", "websites"]:
+        for field in ["bio", "fanart", "thumbnails", "websites", "coverart"]:
             func = getattr(qwidget, f"{field}_checkbox")
             func.setChecked(self.config.cparser.value(f"discogs/{field}", type=bool))
 
@@ -349,12 +369,12 @@ class Plugin(ArtistExtrasPlugin):
         self.config.cparser.setValue("discogs/enabled", qwidget.discogs_checkbox.isChecked())
         self.config.cparser.setValue("discogs/apikey", qwidget.apikey_lineedit.text())
 
-        for field in ["bio", "fanart", "thumbnails", "websites"]:
+        for field in ["bio", "fanart", "thumbnails", "websites", "coverart"]:
             func = getattr(qwidget, f"{field}_checkbox")
             self.config.cparser.setValue(f"discogs/{field}", func.isChecked())
 
     def defaults(self, qsettings):
-        for field in ["bio", "fanart", "thumbnails"]:
+        for field in ["bio", "fanart", "thumbnails", "coverart"]:
             qsettings.setValue(f"discogs/{field}", False)
 
         qsettings.setValue("discogs/enabled", False)

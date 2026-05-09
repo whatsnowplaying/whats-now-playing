@@ -137,6 +137,27 @@ class Plugin(ArtistExtrasPlugin):
                 artist_data["artistbackground"], metadata, identifier, imagecache
             )
 
+        # Process album cover art — already in the response, keyed by album MBID
+        if self.config.cparser.value("fanarttv/coverart", type=bool):
+            self._process_album_cover(artist_data, metadata, imagecache)
+
+    def _process_album_cover(self, artist_data: dict, metadata: TrackMetadata, imagecache) -> None:
+        """Queue album cover art from the albums section of the FanartTV response."""
+        album_mbid = metadata.get("musicbrainzreleasegroupid")
+        artist = metadata.get("artist")
+        album = metadata.get("album")
+        if not album_mbid or not artist or not album:
+            return
+        albums = artist_data.get("albums", {})
+        album_entry = albums.get(album_mbid, {})
+        covers = album_entry.get("albumcover", [])
+        if not covers:
+            return
+        sorted_covers = sorted(covers, key=lambda x: x.get("likes", 0), reverse=True)
+        if url := sorted_covers[0].get("url"):
+            logging.debug("fanarttv: queuing album cover for %s - %s", artist, album)
+            self.queue_front_cover(artist, album, url, imagecache)
+
     def _queue_images(self, image_list, identifier, image_type, imagecache):
         """Queue images sorted by popularity (likes)."""
         sorted_images = sorted(image_list, key=lambda x: x.get("likes", 0), reverse=True)
@@ -168,6 +189,7 @@ class Plugin(ArtistExtrasPlugin):
             "artistbannerraw",
             "artistlogoraw",
             "artistthumbnailraw",
+            "coverimageraw",
             "fanarttv-artistfanarturls",
         ]
 
@@ -182,7 +204,7 @@ class Plugin(ArtistExtrasPlugin):
             qwidget.fanarttv_checkbox.setChecked(False)
         qwidget.apikey_lineedit.setText(self.config.cparser.value("fanarttv/apikey"))
 
-        for field in ["banners", "logos", "fanart", "thumbnails"]:
+        for field in ["banners", "logos", "fanart", "thumbnails", "coverart"]:
             func = getattr(qwidget, f"{field}_checkbox")
             func.setChecked(self.config.cparser.value(f"fanarttv/{field}", type=bool))
 
@@ -195,12 +217,12 @@ class Plugin(ArtistExtrasPlugin):
         self.config.cparser.setValue("fanarttv/enabled", qwidget.fanarttv_checkbox.isChecked())
         self.config.cparser.setValue("fanarttv/apikey", qwidget.apikey_lineedit.text())
 
-        for field in ["banners", "logos", "fanart", "thumbnails"]:
+        for field in ["banners", "logos", "fanart", "thumbnails", "coverart"]:
             func = getattr(qwidget, f"{field}_checkbox")
             self.config.cparser.setValue(f"fanarttv/{field}", func.isChecked())
 
     def defaults(self, qsettings):
-        for field in ["banners", "logos", "fanart", "thumbnails"]:
+        for field in ["banners", "logos", "fanart", "thumbnails", "coverart"]:
             qsettings.setValue(f"fanarttv/{field}", False)
 
         qsettings.setValue("fanarttv/enabled", False)

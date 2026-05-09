@@ -7,6 +7,17 @@
 * Fixed incorrect Discord invite link in About window
 * Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
     transient error; the loop now recovers automatically
+* Fixed EarShot and two-computer setups sending cover art via HTTP URL:
+    only the first ~16KB of the image was being read due to an aiohttp
+    buffering issue; full image data is now fetched correctly
+
+### Artist Extras
+
+* Discogs and fanart.tv now fetch album cover art when available, using
+    data already retrieved during artist lookups (no extra API calls);
+    each provider has a new Cover Art checkbox in settings
+* MusicBrainz cover art fetching from Cover Art Archive can now be
+    toggled via a new checkbox in MusicBrainz settings (enabled by default)
 
 ### djay Pro
 

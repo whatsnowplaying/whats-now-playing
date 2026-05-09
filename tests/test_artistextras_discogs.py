@@ -9,7 +9,11 @@ import os
 
 import pytest
 from aiohttp import ClientResponseError
-from utils_artistextras import configureplugins, configuresettings, skip_no_discogs_key
+from utils_artistextras import (
+    configureplugins,
+    configuresettings,
+    skip_no_discogs_key,
+)
 
 import nowplaying.apicache  # pylint: disable=import-error
 import nowplaying.discogsclient  # pylint: disable=import-error
@@ -1143,3 +1147,25 @@ async def test_discogs_api_call_count(bootstrap, isolated_api_cache):  # pylint:
     finally:
         # Restore original cache
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+@skip_no_discogs_key
+async def test_discogs_coverart(bootstrap):
+    """test that discogs fetches album cover art for a known album"""
+    config = bootstrap
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
+    config.cparser.setValue("discogs/coverart", True)
+    imagecaches, plugins = configureplugins(config)
+
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "album": "The Downward Spiral",
+        "imagecacheartist": "nineinchnails",
+    }
+
+    result = await plugins["discogs"].download_async(metadata, imagecache=imagecaches["discogs"])
+    assert result is not None
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert "front_cover" in imagecaches["discogs"].urls.get(identifier, {})

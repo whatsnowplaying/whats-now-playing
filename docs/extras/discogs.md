@@ -9,6 +9,7 @@ artists.
 * Artist biographies
 * Artist images (fan art, thumbnails)
 * Artist websites and social media links
+* Album cover art (from release search results)
 
 ## Requirements
 
@@ -41,6 +42,7 @@ Once enabled and a token is entered, select what to download:
 * **Fanart** — larger artist images
 * **Thumbnails** — smaller artist images
 * **Websites** — artist URLs and social media links
+* **Cover Art** — album cover image from the release search result
 
 Enable only what your templates actually use. Disabling unused types reduces lookup time
 during live sets.
