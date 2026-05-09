@@ -505,6 +505,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#artist-extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artist Extras
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#djay-pro" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -715,7 +726,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#artist-extras" class="md-nav__link">
+  <a href="#artist-extras_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Artist Extras
@@ -3297,6 +3308,17 @@
 <li>Fixed incorrect Discord invite link in About window</li>
 <li>Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
     transient error; the loop now recovers automatically</li>
+<li>Fixed EarShot and two-computer setups sending cover art via HTTP URL:
+    only the first ~16KB of the image was being read due to an aiohttp
+    buffering issue; full image data is now fetched correctly</li>
+</ul>
+<h3 id="artist-extras">Artist Extras<a class="headerlink" href="#artist-extras" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Discogs and fanart.tv now fetch album cover art when available, using
+    data already retrieved during artist lookups (no extra API calls);
+    each provider has a new Cover Art checkbox in settings</li>
+<li>MusicBrainz cover art fetching from Cover Art Archive can now be
+    toggled via a new checkbox in MusicBrainz settings (enabled by default)</li>
 </ul>
 <h3 id="djay-pro">djay Pro<a class="headerlink" href="#djay-pro" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3445,7 +3467,7 @@
 <li>Arrow overlay now uses a filled arrowhead and wider text area</li>
 <li>Fixed font scaling on Windows in several settings panels</li>
 </ul>
-<h3 id="artist-extras">Artist Extras<a class="headerlink" href="#artist-extras" title="Permanent link">&para;</a></h3>
+<h3 id="artist-extras_1">Artist Extras<a class="headerlink" href="#artist-extras_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Artist biographies are now deduplicated per session. The same bio will not be shown twice
     during a stream. This can be disabled in settings.</li>
