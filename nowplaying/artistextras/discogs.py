@@ -346,6 +346,7 @@ class Plugin(ArtistExtrasPlugin):
         return [
             "artistlongbio",
             "artistthumbnailraw",
+            "coverimageraw",
             "discogs-artistfanarturls",
             "artistwebsites",
         ]

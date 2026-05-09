@@ -30,7 +30,8 @@
 > - **Artist enrichment**: Fetches artist bios, album cover art, images, and logos
 >   from Discogs, FanArt.TV, TheAudioDB, Last.fm, Wikimedia, and MusicBrainz
 >   Cover Art Archive for display in overlays and bots. Most services require a
->   free API key; MusicBrainz and Cover Art Archive are free with no key required.
+>   free API key; MusicBrainz and Cover Art Archive are free with no key required;
+>   TheAudioDB includes a free key bundled with the app.
 > - **Track requests**: Viewers request tracks via Twitch channel point
 >   redemptions or chat commands.
 > - **Community charts and DJ profile**: whatsnowplaying.com builds a public

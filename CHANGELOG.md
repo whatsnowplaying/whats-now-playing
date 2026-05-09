@@ -7,6 +7,9 @@
 * Fixed incorrect Discord invite link in About window
 * Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
     transient error; the loop now recovers automatically
+* Fixed EarShot and two-computer setups sending cover art via HTTP URL:
+    only the first ~16KB of the image was being read due to an aiohttp
+    buffering issue; full image data is now fetched correctly
 
 ### Artist Extras
 

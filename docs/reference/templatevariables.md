@@ -72,6 +72,7 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.
 | musicbrainzalbumid | MusicBrainz Album Id |
 | musicbrainzartistid | List of MusicBrainz Artist Ids |
 | musicbrainzrecordingid | MusicBrainz Recording Id |
+| musicbrainzreleasegroupid | MusicBrainz Release Group Id |
 | now() | Current time in HH:MM:SS format (function call) |
 | originalyear | Original release year of the song |
 | previoustrack | See [Previous Track Details](#previous-track-details) below |

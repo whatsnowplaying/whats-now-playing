@@ -189,6 +189,7 @@ class Plugin(ArtistExtrasPlugin):
             "artistbannerraw",
             "artistlogoraw",
             "artistthumbnailraw",
+            "coverimageraw",
             "fanarttv-artistfanarturls",
         ]
 
