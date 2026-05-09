@@ -143,7 +143,7 @@ class Plugin(ArtistExtrasPlugin):
 
     def _process_album_cover(self, artist_data: dict, metadata: TrackMetadata, imagecache) -> None:
         """Queue album cover art from the albums section of the FanartTV response."""
-        album_mbid = metadata.get("musicbrainzalbumid")
+        album_mbid = metadata.get("musicbrainzreleasegroupid")
         artist = metadata.get("artist")
         album = metadata.get("album")
         if not album_mbid or not artist or not album:

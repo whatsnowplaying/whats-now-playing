@@ -119,7 +119,7 @@ async def test_fanarttv_coverart(bootstrap):
         "album": "Ghosts I-IV",
         "imagecacheartist": "nineinchnails",
         "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
-        "musicbrainzalbumid": "3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a",
+        "musicbrainzreleasegroupid": "550bf4b9-92ca-30ba-9ea2-8b45f9d081f1",
     }
 
     await plugins["fanarttv"].download_async(metadata, imagecache=imagecaches["fanarttv"])

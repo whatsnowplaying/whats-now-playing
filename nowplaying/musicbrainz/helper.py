@@ -270,6 +270,8 @@ class MusicBrainzHelper:
                         newdata[key] = enriched[key]
                 if "musicbrainz_artist_id" in enriched:
                     newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
+                if "musicbrainz_release_group_id" in enriched:
+                    newdata["musicbrainzreleasegroupid"] = enriched["musicbrainz_release_group_id"]
                 if "genres" in enriched:
                     newdata["genres"] = enriched["genres"]
                     newdata["genre"] = "/".join(enriched["genres"])

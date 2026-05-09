@@ -52,6 +52,7 @@ class TrackMetadata(TypedDict, total=False):
     isrc: list[str]
     musicbrainzartistid: list[str]
     musicbrainzalbumid: str
+    musicbrainzreleasegroupid: str
     musicbrainzrecordingid: str
     acoustidid: str
 
