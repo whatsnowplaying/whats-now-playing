@@ -647,7 +647,7 @@ def test_check_for_new_track_with_data(bootstrap):
     ],
     ids=["history_isrc", "location_isrc", "history_wins", "no_isrc"],
 )
-def test_check_for_new_track_isrc_sources(
+def test_check_for_new_track_isrc_sources(  # pylint: disable=too-many-arguments
     bootstrap, artist, title, history_extra_fields, location_fields, expected_isrc
 ):
     """_check_for_new_track picks up ISRC from the correct source."""
