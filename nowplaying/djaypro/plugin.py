@@ -43,6 +43,7 @@ import logging
 import pathlib
 import sqlite3
 import threading
+import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
@@ -123,7 +124,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "album": None,
             "filename": None,
             "bpm": None,
+            "deck": None,
             "duration": None,
+            "key": None,
         }
 
     async def setup_watcher(self, configkey: str = "djaypro/directory"):
@@ -215,22 +218,31 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         ):
             return
 
+        t_artist = track_data["artist"]
+        t_title = track_data["title"]
+
         # New track detected — look up filename if the history blob didn't include it
         if not track_data["filename"]:
-            t_artist = track_data["artist"]
-            t_title = track_data["title"]
             if isinstance(t_artist, str) and isinstance(t_title, str):
                 filename = self._get_filename_from_db(t_artist, t_title)
                 if filename:
                     track_data["filename"] = filename
+
+        # Supplement with analyzed data (bpm, key) if not already present
+        analyzed: dict = {}
+        if isinstance(t_artist, str) and isinstance(t_title, str):
+            if not track_data.get("bpm") or not track_data.get("key"):
+                analyzed = self._get_analyzed_data_from_db(t_artist, t_title)
 
         new_meta: TrackMetadata = {
             "artist": track_data["artist"],
             "title": track_data["title"],
             "album": track_data["album"],
             "filename": track_data["filename"],
-            "bpm": track_data["bpm"],
+            "bpm": track_data["bpm"] or analyzed.get("bpm"),
+            "deck": track_data.get("deck"),
             "duration": track_data["duration"],
+            "key": track_data.get("key") or analyzed.get("key"),
         }
         if isinstance(track_data.get("isrc"), str):
             new_meta["isrc"] = [track_data["isrc"]]
@@ -298,17 +310,27 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # Check if this is a new track
         if self.metadata.get("artist") != artist or self.metadata.get("title") != title:
-            # Supplement NowPlaying.txt with database lookups
+            # Supplement NowPlaying.txt with database lookups.
+            # djay Pro writes NowPlaying.txt before committing to
+            # localMediaItemLocations, so retry once after a short wait if
+            # the first lookup misses.
             filename = self._get_filename_from_db(artist, title)
+            if filename is None:
+                time.sleep(0.5)
+                filename = self._get_filename_from_db(artist, title)
+
             isrc = self._get_isrc_from_db(artist, title)
+            analyzed = self._get_analyzed_data_from_db(artist, title)
 
             new_meta: TrackMetadata = {
                 "artist": artist,
                 "title": title,
                 "album": album,
                 "filename": filename,
-                "bpm": None,
+                "bpm": analyzed.get("bpm"),
+                "deck": analyzed.get("deck"),
                 "duration": duration,
+                "key": analyzed.get("key"),
             }
             if isrc:
                 new_meta["isrc"] = [isrc]
@@ -352,6 +374,46 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
         except (sqlite3.OperationalError, FileNotFoundError):
             return []
+
+    def _get_analyzed_data_from_db(self, artist: str, title: str) -> dict:
+        """Look up bpm and key from mediaItemAnalyzedData by artist/title match."""
+        dbfile = self._get_db_path()
+        if not dbfile:
+            return {}
+
+        artist_lower = artist.strip().lower()
+        title_lower = title.strip().lower()
+
+        def query_db() -> dict:
+            with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT data FROM database2 WHERE collection='mediaItemAnalyzedData'"
+                )
+                for (blob,) in cursor:
+                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
+                    p_artist = parsed.get("artist")
+                    p_title = parsed.get("title")
+                    if (
+                        isinstance(p_artist, str)
+                        and isinstance(p_title, str)
+                        and p_artist.strip().lower() == artist_lower
+                        and p_title.strip().lower() == title_lower
+                    ):
+                        result = {}
+                        if parsed.get("bpm"):
+                            result["bpm"] = parsed["bpm"]
+                        if parsed.get("deck"):
+                            result["deck"] = parsed["deck"]
+                        if parsed.get("key"):
+                            result["key"] = parsed["key"]
+                        return result
+            return {}
+
+        try:
+            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
+        except (sqlite3.OperationalError, FileNotFoundError):
+            return {}
 
     def _get_isrc_from_db(self, artist: str, title: str) -> str | None:
         """Return the ISRC for the track by scanning recent historySessionItems.

@@ -23,6 +23,7 @@ def _build_tsaf_blob(
     fields: list of (value, key) tuples where value is one of:
     - str   → 0x08 null-terminated string
     - float → 0x14 float64 with 8-byte alignment
+    - int   → 0x0F uint8 (e.g. deckNumber)
     - list[str] → 0x0b array of 0x21-wrapped strings with 4-byte-aligned count
     """
     header = b"TSAF" + b"\x00" * 16  # 20-byte header
@@ -42,6 +43,13 @@ def _build_tsaf_blob(
             encoded = value.encode("utf-8")
             field_bytes += b"\x08" + encoded + b"\x00"
             current_offset += 1 + len(encoded) + 1
+        elif isinstance(value, bool):
+            # bool is a subclass of int — handle before int to avoid misclassification
+            raise TypeError("Use int for uint8 values, not bool")
+        elif isinstance(value, int):
+            # 0x0F uint8 — type byte + 1-byte value, no alignment
+            field_bytes += bytes([0x0F, value & 0xFF])
+            current_offset += 2
         elif isinstance(value, float):
             field_bytes += b"\x14"
             current_offset += 1
@@ -261,6 +269,271 @@ def test_parse_blob_malformed():
 
     assert result["artist"] is None
     assert result["title"] is None
+
+
+@pytest.mark.parametrize(
+    "deck_num,expected",
+    [
+        (1, "1"),
+        (2, "2"),
+    ],
+)
+def test_parse_blob_deck_uint8(deck_num, expected):
+    """_parse_blob extracts deckNumber from a 0x0F uint8 field."""
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [
+            ("Test Artist", "artist"),
+            ("Test Title", "title"),
+            (deck_num, "deckNumber"),
+        ],
+    )
+
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["deck"] == expected
+
+
+@pytest.mark.parametrize(
+    "key_index,expected_key",
+    [
+        (5, "Cm"),  # Camelot 10A — confirmed from Ladytron "Cease2xist"
+        (8, "F"),  # Camelot 12B — confirmed from Sinéad O'Connor "Silent Night"
+        (9, "Dm"),  # Camelot 12A — relative minor of F (8)
+        (10, "F#"),  # Camelot 7B
+        (11, "Ebm"),  # Camelot 7A — confirmed from Amanda Palmer "On The Door"
+        (0, "Db"),  # Camelot 8B
+        (1, "Bbm"),  # Camelot 8A — relative minor of Db (0)
+        (17, "F#m"),  # Camelot 4A
+    ],
+)
+def test_parse_blob_key_signature(key_index, expected_key):
+    """_parse_blob maps keySignatureIndex to the correct key name (Camelot wheel order)."""
+    blob = _build_tsaf_blob(
+        "ADCMediaItemAnalyzedData",
+        [
+            ("Test Artist", "artist"),
+            ("Test Title", "title"),
+            (float(key_index), "keySignatureIndex"),
+        ],
+    )
+
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["key"] == expected_key
+
+
+def test_parse_blob_key_out_of_range():
+    """_parse_blob returns key=None for an out-of-range keySignatureIndex."""
+    blob = _build_tsaf_blob(
+        "ADCMediaItemAnalyzedData",
+        [
+            ("Test Artist", "artist"),
+            (99.0, "keySignatureIndex"),
+        ],
+    )
+
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["key"] is None
+
+
+def test_parse_blob_deck_none_when_absent():
+    """_parse_blob returns deck=None when deckNumber field is not present."""
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [("Artist", "artist"), ("Title", "title")],
+    )
+
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["deck"] is None
+
+
+# ---------------------------------------------------------------------------
+# parse_tsaf primitive type smoke tests
+# ---------------------------------------------------------------------------
+
+
+def _build_typed_tsaf(tc: int, alignment: int, value_bytes: bytes, key: str) -> bytes:
+    """Build a minimal TSAF blob with one typed field for parse_tsaf testing.
+
+    Computes alignment padding so the value starts at the correct boundary.
+    The prefix is 29 bytes; the value begins at offset 30 (after the tc byte).
+    """
+    prefix = b"TSAF" + b"\x00" * 16 + b"\x2b\x08C\x00\x08I\x00\x05\x01"
+    value_offset = len(prefix) + 1  # offset where value bytes start (after tc byte)
+    pad = 0
+    if alignment > 1:
+        rem = value_offset % alignment
+        if rem:
+            pad = alignment - rem
+    key_bytes = b"\x08" + key.encode() + b"\x00"
+    return prefix + bytes([tc]) + b"\x00" * pad + value_bytes + key_bytes
+
+
+@pytest.mark.parametrize(
+    "tc,alignment,value_bytes,key,expected",
+    [
+        (0x0A, 2, struct.pack("<h", -5), "sortOrder", -5),
+        (0x0C, 4, struct.pack("<i", 100), "playCount", 100),
+        (0x11, 4, struct.pack("<I", 10_000_000), "fileSize", 10_000_000),
+        (0x1A, 4, struct.pack("<I", 3), "colorIndex", 3),
+        (0x12, 8, struct.pack("<Q", 5_000_000_000), "fileSizeLarge", 5_000_000_000),
+        (0x0D, 1, b"", "isStraightGrid", 0),
+        (0x0E, 1, b"", "featured", 1),
+    ],
+)
+def test_parse_tsaf_primitive_types(tc, alignment, value_bytes, key, expected):
+    """parse_tsaf correctly decodes new primitive type codes."""
+    blob = _build_typed_tsaf(tc, alignment, value_bytes, key)
+
+    result = nowplaying.djaypro.tsaf.parse_tsaf(blob)
+
+    assert result.get(key) == expected
+
+
+# ---------------------------------------------------------------------------
+# _get_analyzed_data_from_db integration tests
+# ---------------------------------------------------------------------------
+
+
+def _make_db_with_collections(dbfile: pathlib.Path, blobs_by_collection: dict[str, list]) -> None:
+    """Create a MediaLibrary.db with the given blobs in each collection."""
+    conn = sqlite3.connect(dbfile)
+    conn.execute(
+        "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+        "key CHAR, data BLOB, metadata BLOB)"
+    )
+    for collection, blobs in blobs_by_collection.items():
+        for i, blob in enumerate(blobs):
+            conn.execute(
+                "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
+                (collection, f"key-{i}", blob),
+            )
+    conn.commit()
+    conn.close()
+
+
+def test_get_analyzed_data_from_db_returns_bpm_and_key(bootstrap):
+    """_get_analyzed_data_from_db returns bpm and key for a matching track."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        analyzed_blob = _build_tsaf_blob(
+            "ADCMediaItemAnalyzedData",
+            [
+                ("DJ Artist", "artist"),
+                ("Club Track", "title"),
+                (128.0, "bpm"),
+                (8.0, "keySignatureIndex"),  # F major (Camelot 12B, confirmed)
+            ],
+        )
+        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
+
+        result = plugin._get_analyzed_data_from_db("DJ Artist", "Club Track")
+
+        assert result["bpm"] == "128.0"
+        assert result["key"] == "F"
+
+
+def test_get_analyzed_data_from_db_case_insensitive(bootstrap):
+    """_get_analyzed_data_from_db matches artist/title case-insensitively."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        analyzed_blob = _build_tsaf_blob(
+            "ADCMediaItemAnalyzedData",
+            [
+                ("DJ Artist", "artist"),
+                ("Club Track", "title"),
+                (140.0, "bpm"),
+            ],
+        )
+        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
+
+        result = plugin._get_analyzed_data_from_db("dj artist", "club track")
+
+        assert result["bpm"] == "140.0"
+
+
+def test_get_analyzed_data_from_db_no_match(bootstrap):
+    """_get_analyzed_data_from_db returns empty dict when no match is found."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        analyzed_blob = _build_tsaf_blob(
+            "ADCMediaItemAnalyzedData",
+            [("Other Artist", "artist"), ("Other Track", "title"), (120.0, "bpm")],
+        )
+        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
+
+        result = plugin._get_analyzed_data_from_db("DJ Artist", "Club Track")
+
+        assert not result
+
+
+def test_get_analyzed_data_from_db_missing_db(bootstrap):
+    """_get_analyzed_data_from_db returns empty dict when database is absent."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        # No MediaLibrary.db created
+
+        result = plugin._get_analyzed_data_from_db("Artist", "Title")
+
+        assert not result
+
+
+def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
+    """_check_for_new_track supplements missing bpm from mediaItemAnalyzedData."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        history_blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [("Beat Artist", "artist"), ("Kick Drum", "title")],
+        )
+        analyzed_blob = _build_tsaf_blob(
+            "ADCMediaItemAnalyzedData",
+            [
+                ("Beat Artist", "artist"),
+                ("Kick Drum", "title"),
+                (174.0, "bpm"),
+                (22.0, "keySignatureIndex"),  # C major (Camelot 1B, idx=22)
+            ],
+        )
+        _make_db_with_collections(
+            dbfile,
+            {
+                "historySessionItems": [history_blob],
+                "mediaItemAnalyzedData": [analyzed_blob],
+            },
+        )
+
+        plugin._check_for_new_track()
+
+        assert plugin.metadata["artist"] == "Beat Artist"
+        assert plugin.metadata["bpm"] == "174.0"
+        assert plugin.metadata["key"] == "C"
 
 
 # ---------------------------------------------------------------------------

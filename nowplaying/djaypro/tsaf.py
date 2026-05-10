@@ -15,15 +15,25 @@ Type codes:
   0x00  end-of-object marker
   0x05  2-byte skip marker / field-count hint
   0x08  null-terminated UTF-8 string
+  0x0a  int16 (2-byte-aligned) — seen in contentPacks (sortOrder)
   0x0b  array (4-byte-aligned int32 count, then typed elements)
+  0x0c  int32 (4-byte-aligned) — seen in contentPacks / historySessions
+  0x0d  boolean False (implicit 0, zero-byte) — e.g. isStraightGrid; present on
+        tracks with a constant-tempo beatgrid; absent when analysis was skipped
+  0x0e  boolean True (implicit 1, zero-byte) — e.g. featured in contentPacks;
+        completes the 0x0d/0x0e implicit boolean pair
   0x0f  uint8 value (e.g. deckNumber on macOS)
+  0x11  uint32 (4-byte-aligned) — fileSize in contentPacks
+  0x12  uint64 (8-byte-aligned) — inferred; handles fileSize > 4 GB
   0x13  float32 (4-byte-aligned) — macOS only
   0x14  float64 (8-byte-aligned)
   0x15  binary blob: 4-byte-aligned uint32 length, then raw bytes
         (macOS: CFURLBookmarkData stored in urlBookmarkData)
+  0x1a  uint32 (4-byte-aligned) — colorIndex in mediaItemUserData
   0x21  string wrapper: skip 1 sub-type byte, read string, skip trailing 0x00
   0x2b  nested object whose fields merge into the parent
-  0x2d  implicit integer 1 (seen before deckNumber on macOS)
+  0x2d  implicit integer 1 (zero-byte) — seen before deckNumber on macOS
+  0x2e  implicit None (zero-byte) — keySignatureIndex not yet determined by djay
   0x30  timestamp float64 (8-byte-aligned)
 """
 
@@ -82,6 +92,15 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             pos += 8 - rem
         val = struct.unpack_from("<d", blob, pos)[0]
         pos += 8
+        return val
+
+    def read_aligned_int(width: int, fmt: str) -> int:
+        nonlocal pos
+        rem = pos % width
+        if rem:
+            pos += width - rem
+        val = struct.unpack_from(fmt, blob, pos)[0]
+        pos += width
         return val
 
     def _merge_list_into(target: dict, items: list) -> None:
@@ -171,7 +190,10 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             tc = blob[pos]
             pos += 1
 
-            if tc == 0x08:
+            if tc == 0x0A:
+                # int16 (2-byte-aligned) — sortOrder in contentPacks
+                value: object = read_aligned_int(2, "<h")
+            elif tc == 0x08:
                 value: object = read_string()
             elif tc == 0x0F:
                 # uint8: value is the next byte (e.g. deckNumber on macOS)
@@ -183,10 +205,27 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             elif tc in (0x14, 0x30):
                 # float64 with 8-byte alignment; 0x30 = timestamp
                 value = read_float64()
+            elif tc == 0x0D:
+                # Boolean False marker (zero-byte, implicit 0).  Seen on
+                # isStraightGrid, which djay sets on tracks that have a
+                # constant-tempo (straight) beatgrid.  Absent when djay has not
+                # analysed the track or when the grid is dynamic/variable.
+                value = 0
+            elif tc == 0x0E:
+                # Boolean True marker (zero-byte, implicit 1).  Completes the
+                # 0x0d/0x0e implicit boolean pair.  Seen on the "featured" flag
+                # in contentPacks.
+                value = 1
             elif tc == 0x2D:
                 # Zero-byte integer marker seen before deckNumber=1 on macOS.
                 # The value is implicit (1); no value bytes precede the key.
                 value = 1
+            elif tc == 0x2E:
+                # Zero-byte null/indeterminate marker.  Seen before
+                # keySignatureIndex when djay has not determined the key for
+                # a track.  The value is implicit None; no value bytes precede
+                # the key.  Parsing continues so subsequent fields are read.
+                value = None
             elif tc == 0x2B:
                 # Inline nested object: merge fields into parent
                 sub = parse_object()
@@ -195,11 +234,7 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 continue  # no separate key
             elif tc == 0x0B:
                 # Array: 4-byte-aligned int32 count, then elements
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                count = struct.unpack_from("<i", blob, pos)[0]
-                pos += 4
+                count = read_aligned_int(4, "<i")
                 value = [read_array_element() for _ in range(count) if pos < len(blob)]
             elif tc == 0x21:
                 if pos < len(blob):
@@ -207,14 +242,24 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 value = read_string()
                 if pos < len(blob) and blob[pos] == 0x00:
                     pos += 1
+            elif tc == 0x0C:
+                # int32 (4-byte-aligned).  Seen in contentPacks and
+                # historySessions; not used for track metadata but handled
+                # so parsing continues past these fields without warnings.
+                value = read_aligned_int(4, "<i")
+            elif tc in (0x11, 0x1A):
+                # uint32 (4-byte-aligned).
+                # 0x11: fileSize in contentPacks
+                # 0x1a: colorIndex in mediaItemUserData
+                value = read_aligned_int(4, "<I")
+            elif tc == 0x12:
+                # uint64 (8-byte-aligned).  Inferred counterpart to 0x11;
+                # would be used for fileSize values exceeding 4 GB.
+                value = read_aligned_int(8, "<Q")
             elif tc == 0x15:
                 # Binary blob: 4-byte-aligned uint32 length, then raw bytes
                 # Used on macOS for CFURLBookmarkData (urlBookmarkData field)
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                length = struct.unpack_from("<I", blob, pos)[0]
-                pos += 4
+                length = read_aligned_int(4, "<I")
                 value = bytes(blob[pos : pos + length])
                 pos += length
             else:
@@ -246,6 +291,43 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
         return {}
     pos += 1
     return parse_object()
+
+
+# djay Pro keySignatureIndex → musical key name.
+#
+# Even indices are major keys (Camelot B ring); odd indices are their relative
+# minor keys (Camelot A ring).  Each pair (2n, 2n+1) shares the same Camelot
+# position.  The Camelot number is: (7 × (idx // 2) + 8) % 12, with 0 → 12.
+# Sequence starts at Camelot 8 (Db/Bbm) and follows the circle of fifths.
+#
+# Verified: idx 5 = Cm (10A), idx 8 = F (12B), idx 11 = Ebm (7A),
+#           idx 18 = Bb (11B).
+KEY_SIGNATURE_MAP: dict[int, str] = {
+    0: "Db",
+    1: "Bbm",  # Camelot 8B / 8A
+    2: "D",
+    3: "Bm",  # Camelot 3B / 3A
+    4: "Eb",
+    5: "Cm",  # Camelot 10B / 10A
+    6: "E",
+    7: "C#m",  # Camelot 5B / 5A
+    8: "F",
+    9: "Dm",  # Camelot 12B / 12A
+    10: "F#",
+    11: "Ebm",  # Camelot 7B / 7A
+    12: "G",
+    13: "Em",  # Camelot 2B / 2A
+    14: "Ab",
+    15: "Fm",  # Camelot 9B / 9A
+    16: "A",
+    17: "F#m",  # Camelot 4B / 4A
+    18: "Bb",
+    19: "Gm",  # Camelot 11B / 11A
+    20: "B",
+    21: "Abm",  # Camelot 6B / 6A
+    22: "C",
+    23: "Am",  # Camelot 1B / 1A
+}
 
 
 def flatten_tsaf_raw(raw: dict) -> dict[str, object]:
@@ -296,12 +378,13 @@ def resolve_bookmark(bookmark_data: bytes) -> str | None:
         components: object = bm.get(_kBookmarkPath, None)
         if isinstance(components, list) and components:
             return "/" + "/".join(str(c) for c in components)
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
+        logging.debug("resolve_bookmark: no path components in bookmark")
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.debug("resolve_bookmark: failed to parse bookmark: %s", err)
     return None
 
 
-def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:
+def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-locals
     """Parse a TSAF blob and return a flat track-metadata dict."""
     try:
         flat = flatten_tsaf_raw(parse_tsaf(blob_data))
@@ -313,6 +396,13 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:
             bookmark = flat.get("urlBookmarkData")
             if isinstance(bookmark, bytes):
                 file_path = resolve_bookmark(bookmark)
+                if file_path is None:
+                    logging.debug(
+                        "parse_blob: urlBookmarkData present but resolve_bookmark returned None"
+                        " for artist=%r title=%r",
+                        flat.get("artist"),
+                        flat.get("title"),
+                    )
 
         duration_raw = flat.get("duration")
         duration: int | None = int(duration_raw) if isinstance(duration_raw, float) else None
@@ -323,6 +413,16 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:
         isrc_raw = flat.get("isrc")
         isrc: str | None = str(isrc_raw) if isinstance(isrc_raw, str) and isrc_raw else None
 
+        deck_raw = flat.get("deckNumber")
+        deck: str | None = str(int(deck_raw)) if isinstance(deck_raw, (int, float)) else None
+
+        key_idx_raw = flat.get("keySignatureIndex")
+        key: str | None = (
+            KEY_SIGNATURE_MAP.get(int(key_idx_raw))
+            if isinstance(key_idx_raw, (int, float))
+            else None
+        )
+
         return {
             "artist": flat.get("artist") or None,  # type: ignore[return-value]
             "title": flat.get("title") or None,  # type: ignore[return-value]
@@ -330,8 +430,10 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:
             "source": flat.get("originSourceID") or None,  # type: ignore[return-value]
             "filename": file_path,
             "bpm": bpm,
+            "deck": deck,
             "duration": duration,
             "isrc": isrc,
+            "key": key,
         }
     except Exception as err:  # pylint: disable=broad-exception-caught
         logging.debug("Failed to parse blob: %s", err)
