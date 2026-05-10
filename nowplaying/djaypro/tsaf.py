@@ -94,6 +94,15 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
         pos += 8
         return val
 
+    def read_aligned_int(width: int, fmt: str) -> int:
+        nonlocal pos
+        rem = pos % width
+        if rem:
+            pos += width - rem
+        val = struct.unpack_from(fmt, blob, pos)[0]
+        pos += width
+        return val
+
     def _merge_list_into(target: dict, items: list) -> None:
         """Merge dict items from a keyless array into *target* (first-seen wins)."""
         for item in items:
@@ -183,11 +192,7 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
 
             if tc == 0x0A:
                 # int16 (2-byte-aligned) — sortOrder in contentPacks
-                rem = pos % 2
-                if rem:
-                    pos += 1
-                value: object = struct.unpack_from("<h", blob, pos)[0]
-                pos += 2
+                value: object = read_aligned_int(2, "<h")
             elif tc == 0x08:
                 value: object = read_string()
             elif tc == 0x0F:
@@ -229,11 +234,7 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 continue  # no separate key
             elif tc == 0x0B:
                 # Array: 4-byte-aligned int32 count, then elements
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                count = struct.unpack_from("<i", blob, pos)[0]
-                pos += 4
+                count = read_aligned_int(4, "<i")
                 value = [read_array_element() for _ in range(count) if pos < len(blob)]
             elif tc == 0x21:
                 if pos < len(blob):
@@ -245,36 +246,20 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 # int32 (4-byte-aligned).  Seen in contentPacks and
                 # historySessions; not used for track metadata but handled
                 # so parsing continues past these fields without warnings.
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                value = struct.unpack_from("<i", blob, pos)[0]
-                pos += 4
+                value = read_aligned_int(4, "<i")
             elif tc in (0x11, 0x1A):
                 # uint32 (4-byte-aligned).
                 # 0x11: fileSize in contentPacks
                 # 0x1a: colorIndex in mediaItemUserData
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                value = struct.unpack_from("<I", blob, pos)[0]
-                pos += 4
+                value = read_aligned_int(4, "<I")
             elif tc == 0x12:
                 # uint64 (8-byte-aligned).  Inferred counterpart to 0x11;
                 # would be used for fileSize values exceeding 4 GB.
-                rem = pos % 8
-                if rem:
-                    pos += 8 - rem
-                value = struct.unpack_from("<Q", blob, pos)[0]
-                pos += 8
+                value = read_aligned_int(8, "<Q")
             elif tc == 0x15:
                 # Binary blob: 4-byte-aligned uint32 length, then raw bytes
                 # Used on macOS for CFURLBookmarkData (urlBookmarkData field)
-                rem = pos % 4
-                if rem:
-                    pos += 4 - rem
-                length = struct.unpack_from("<I", blob, pos)[0]
-                pos += 4
+                length = read_aligned_int(4, "<I")
                 value = bytes(blob[pos : pos + length])
                 pos += length
             else:

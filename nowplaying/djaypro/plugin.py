@@ -403,6 +403,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                         result = {}
                         if parsed.get("bpm"):
                             result["bpm"] = parsed["bpm"]
+                        if parsed.get("deck"):
+                            result["deck"] = parsed["deck"]
                         if parsed.get("key"):
                             result["key"] = parsed["key"]
                         return result

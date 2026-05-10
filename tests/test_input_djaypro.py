@@ -351,6 +351,49 @@ def test_parse_blob_deck_none_when_absent():
 
 
 # ---------------------------------------------------------------------------
+# parse_tsaf primitive type smoke tests
+# ---------------------------------------------------------------------------
+
+
+def _build_typed_tsaf(tc: int, alignment: int, value_bytes: bytes, key: str) -> bytes:
+    """Build a minimal TSAF blob with one typed field for parse_tsaf testing.
+
+    Computes alignment padding so the value starts at the correct boundary.
+    The prefix is 29 bytes; the value begins at offset 30 (after the tc byte).
+    """
+    prefix = b"TSAF" + b"\x00" * 16 + b"\x2b\x08C\x00\x08I\x00\x05\x01"
+    value_offset = len(prefix) + 1  # offset where value bytes start (after tc byte)
+    pad = 0
+    if alignment > 1:
+        rem = value_offset % alignment
+        if rem:
+            pad = alignment - rem
+    key_bytes = b"\x08" + key.encode() + b"\x00"
+    return prefix + bytes([tc]) + b"\x00" * pad + value_bytes + key_bytes
+
+
+@pytest.mark.parametrize(
+    "tc,alignment,value_bytes,key,expected",
+    [
+        (0x0A, 2, struct.pack("<h", -5), "sortOrder", -5),
+        (0x0C, 4, struct.pack("<i", 100), "playCount", 100),
+        (0x11, 4, struct.pack("<I", 10_000_000), "fileSize", 10_000_000),
+        (0x1A, 4, struct.pack("<I", 3), "colorIndex", 3),
+        (0x12, 8, struct.pack("<Q", 5_000_000_000), "fileSizeLarge", 5_000_000_000),
+        (0x0D, 1, b"", "isStraightGrid", 0),
+        (0x0E, 1, b"", "featured", 1),
+    ],
+)
+def test_parse_tsaf_primitive_types(tc, alignment, value_bytes, key, expected):
+    """parse_tsaf correctly decodes new primitive type codes."""
+    blob = _build_typed_tsaf(tc, alignment, value_bytes, key)
+
+    result = nowplaying.djaypro.tsaf.parse_tsaf(blob)
+
+    assert result.get(key) == expected
+
+
+# ---------------------------------------------------------------------------
 # _get_analyzed_data_from_db integration tests
 # ---------------------------------------------------------------------------
 
