@@ -103,6 +103,45 @@
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="deck_config_layout">
+     <item>
+      <widget class="QLabel" name="djaypro_ignoredeck_label">
+       <property name="text">
+        <string>Ignore Deck(s)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="djaypro_deck1_skip_checkbox">
+       <property name="text">
+        <string>1</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="djaypro_deck2_skip_checkbox">
+       <property name="text">
+        <string>2</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="djaypro_deck3_skip_checkbox">
+       <property name="text">
+        <string>3</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="djaypro_deck4_skip_checkbox">
+       <property name="text">
+        <string>4</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QTextBrowser" name="help_label">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -115,8 +154,10 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body&gt;
-&lt;p&gt;djay Pro is professional DJ software by Algoriddim for macOS, Windows, and iOS.&lt;/p&gt;
-&lt;p&gt;Use &lt;span style=&quot;font-weight:600;&quot;&gt;Artist Query Scope&lt;/span&gt; to control which tracks are searched for the !hasartist Twitch chat command. Choose &lt;span style=&quot;font-weight:600;&quot;&gt;Entire Library&lt;/span&gt; to search all tracks, or &lt;span style=&quot;font-weight:600;&quot;&gt;Selected Playlists&lt;/span&gt; and enter comma-separated playlist names to limit the search.&lt;/p&gt;
+&lt;p&gt;djay Pro is professional DJ software by Algoriddim for macOS and Windows.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Artist Query Scope&lt;/span&gt; controls which tracks are searched for the !hasartist Twitch chat command and roulette playlist requests. Choose &lt;span style=&quot;font-weight:600;&quot;&gt;Entire Library&lt;/span&gt; to search all tracks, or &lt;span style=&quot;font-weight:600;&quot;&gt;Selected Playlists&lt;/span&gt; and enter comma-separated playlist names to limit the search. Note: Selected Playlists only finds playlists created natively in djay Pro.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Analysis Delay&lt;/span&gt; controls how long (in seconds) What&apos;s Now Playing waits after a new track starts before reading BPM, key, and file path data. djay Pro writes the track name first, then commits analysis data in a separate database transaction. The default of 0.5 seconds works for most systems. If BPM, key, or file path are consistently missing, increase this value.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Ignore Deck(s)&lt;/span&gt; — check any deck numbers that What&apos;s Now Playing should never report. Useful for preview decks or sampler decks that should not trigger now-playing updates.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>

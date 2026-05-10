@@ -384,7 +384,7 @@ def resolve_bookmark(bookmark_data: bytes) -> str | None:
     return None
 
 
-def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-locals
+def parse_blob(blob_data: bytes) -> dict[str, str | int | float | None]:  # pylint: disable=too-many-locals
     """Parse a TSAF blob and return a flat track-metadata dict."""
     try:
         flat = flatten_tsaf_raw(parse_tsaf(blob_data))
@@ -423,6 +423,11 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disa
             else None
         )
 
+        starttime_raw = flat.get("startTime")
+        starttime: float | None = (
+            float(starttime_raw) if isinstance(starttime_raw, (int, float)) else None
+        )
+
         return {
             "artist": flat.get("artist") or None,  # type: ignore[return-value]
             "title": flat.get("title") or None,  # type: ignore[return-value]
@@ -434,6 +439,7 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disa
             "duration": duration,
             "isrc": isrc,
             "key": key,
+            "starttime": starttime,
         }
     except Exception as err:  # pylint: disable=broad-exception-caught
         logging.debug("Failed to parse blob: %s", err)
@@ -446,4 +452,5 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disa
             "bpm": None,
             "duration": None,
             "isrc": None,
+            "starttime": None,
         }

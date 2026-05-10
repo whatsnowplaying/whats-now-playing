@@ -385,7 +385,7 @@ class APIResponseCache:
         provider: str,
         artist_name: str,
         endpoint: str,
-        fetch_func: t.Callable[[], t.Awaitable[dict]],
+        fetch_func: t.Callable[[], t.Awaitable[dict | None]],
         ttl_seconds: int | None = None,
         params: dict | None = None,
     ):
@@ -620,7 +620,7 @@ async def cached_fetch(
     provider: str,
     artist_name: str,
     endpoint: str,
-    fetch_func: t.Callable[[], t.Awaitable[dict]],
+    fetch_func: t.Callable[[], t.Awaitable[dict | None]],
     ttl_seconds: int | None = None,
 ) -> dict | None:
     """Utility function for manual cache-or-fetch operations.
