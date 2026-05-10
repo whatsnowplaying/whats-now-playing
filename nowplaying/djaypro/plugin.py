@@ -203,7 +203,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self._wal_timer = None
         self._check_for_new_track()
 
-    def _supplement_from_db(
+    def _supplement_from_db(  # pylint: disable=too-many-arguments
         self,
         artist: str,
         title: str,
@@ -349,7 +349,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             source=track_data.get("source"),
         )
 
-    def _read_nowplaying_file(self):
+    def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
         """Read NowPlaying.txt file for current track (macOS)"""
         nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
         if not nowplaying_file.exists():
