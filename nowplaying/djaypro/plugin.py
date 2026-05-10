@@ -39,6 +39,7 @@ Database Location:
 """
 
 import asyncio
+import dataclasses
 import logging
 import pathlib
 import sqlite3
@@ -66,6 +67,14 @@ if TYPE_CHECKING:
 
 
 _WAL_DEBOUNCE_SECONDS = 0.3
+_ANALYZED_DATA_RETRY_DEFAULT = 0.5
+
+
+@dataclasses.dataclass
+class _HistoryExtras:
+    isrc: str | None = None
+    source: str | None = None
+    deck: str | None = None
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -194,6 +203,93 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self._wal_timer = None
         self._check_for_new_track()
 
+    def _supplement_from_db(  # pylint: disable=too-many-arguments
+        self,
+        artist: str,
+        title: str,
+        *,
+        seed_bpm: str | None = None,
+        seed_key: str | None = None,
+        retry_filename: bool = False,
+    ) -> tuple[str | None, dict, str | None]:
+        """Look up file path, analyzed data, and location ISRC from the database.
+
+        seed_bpm / seed_key: BPM/key already known from historySessionItems
+        (Windows path). When both are provided the mediaItemAnalyzedData lookup
+        is skipped entirely.
+
+        retry_filename: retry the filename lookup on first miss (macOS path,
+        where NowPlaying.txt fires before localMediaItemLocations is committed).
+
+        Returns (filename, analyzed, loc_isrc).
+        """
+        filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title)
+
+        need_analyzed = not seed_bpm or not seed_key
+        analyzed: dict = {}
+        if need_analyzed:
+            analyzed = self._get_analyzed_data_by_uuid(track_uuid or "")
+
+        needs_retry = (retry_filename and filename is None) or (
+            need_analyzed and (not analyzed.get("bpm") or not analyzed.get("key"))
+        )
+        if needs_retry:
+            delay = self.config.cparser.value(
+                "djaypro/analyzed_data_delay",
+                defaultValue=_ANALYZED_DATA_RETRY_DEFAULT,
+                type=float,
+            )
+            time.sleep(delay)
+            if retry_filename and filename is None:
+                filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title)
+            if need_analyzed and (not analyzed.get("bpm") or not analyzed.get("key")):
+                analyzed = self._get_analyzed_data_by_uuid(track_uuid or "")
+
+        return filename, analyzed, loc_isrc
+
+    def _commit_new_track(  # pylint: disable=too-many-arguments
+        self,
+        *,
+        artist: str | None,
+        title: str | None,
+        album: str | None,
+        duration: int | None,
+        filename: str | None,
+        bpm: str | None,
+        key: str | None,
+        deck: str | None,
+        isrc: str | None,
+        source: str | None,
+    ) -> None:
+        """Assemble new_meta from resolved fields, commit it, and log the track."""
+        new_meta: TrackMetadata = {
+            "artist": artist,
+            "title": title,
+            "album": album,
+            "filename": filename,
+            "bpm": bpm,
+            "deck": deck,
+            "duration": duration,
+            "key": key,
+        }
+        if isrc:
+            new_meta["isrc"] = [isrc]
+        if source:
+            new_meta["source"] = source
+        self.metadata = new_meta
+        logging.info(
+            "New track detected: %s - %s%s%s%s%s%s%s%s",
+            artist,
+            title,
+            f" (BPM: {bpm})" if bpm else "",
+            f" (Key: {key})" if key else "",
+            f" [deck {deck}]" if deck else "",
+            f" [source: {source}]" if source else "",
+            f" [{album}]" if album else "",
+            f" - {filename}" if filename else " (no filename found)",
+            f" ISRC:{isrc}" if isrc else "",
+        )
+
     def _check_for_new_track(self):
         """Check for new track from NowPlaying.txt (macOS) or database (Windows)"""
         # Try NowPlaying.txt first (macOS)
@@ -212,55 +308,50 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return
 
         track_data = records[0]
-        if not (
-            self.metadata.get("artist") != track_data["artist"]
-            or self.metadata.get("title") != track_data["title"]
+        if (
+            self.metadata.get("artist") == track_data["artist"]
+            and self.metadata.get("title") == track_data["title"]
         ):
             return
 
         t_artist = track_data["artist"]
         t_title = track_data["title"]
+        if not isinstance(t_title, str):
+            return
 
-        # New track detected — look up filename if the history blob didn't include it
-        if not track_data["filename"]:
-            if isinstance(t_artist, str) and isinstance(t_title, str):
-                filename = self._get_filename_from_db(t_artist, t_title)
-                if filename:
-                    track_data["filename"] = filename
+        # localMediaItemLocations is authoritative for file paths; supplement
+        # historySessionItems BPM/key with mediaItemAnalyzedData when missing.
+        # retry_filename=True because localMediaItemLocations is written in the
+        # same second transaction as analyzedData and may not yet be present.
+        filename, analyzed, loc_isrc = self._supplement_from_db(
+            t_artist or "",
+            t_title,
+            seed_bpm=track_data.get("bpm"),
+            seed_key=track_data.get("key"),
+            retry_filename=True,
+        )
+        if filename:
+            track_data["filename"] = filename
 
-        # Supplement with analyzed data (bpm, key) if not already present
-        analyzed: dict = {}
-        if isinstance(t_artist, str) and isinstance(t_title, str):
-            if not track_data.get("bpm") or not track_data.get("key"):
-                analyzed = self._get_analyzed_data_from_db(t_artist, t_title)
+        # Prefer history blob ISRC (streaming); fall back to location blob (local files).
+        isrc_str = track_data.get("isrc") if isinstance(track_data.get("isrc"), str) else loc_isrc
 
-        new_meta: TrackMetadata = {
-            "artist": track_data["artist"],
-            "title": track_data["title"],
-            "album": track_data["album"],
-            "filename": track_data["filename"],
-            "bpm": track_data["bpm"] or analyzed.get("bpm"),
-            "deck": track_data.get("deck"),
-            "duration": track_data["duration"],
-            "key": track_data.get("key") or analyzed.get("key"),
-        }
-        if isinstance(track_data.get("isrc"), str):
-            new_meta["isrc"] = [track_data["isrc"]]
-        self.metadata = new_meta
-        logging.info(
-            "New track detected: %s - %s%s%s%s%s",
-            track_data["artist"],
-            track_data["title"],
-            f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
-            f" [{track_data['album']}]" if track_data["album"] else "",
-            f" - {track_data['filename']}" if track_data["filename"] else "",
-            f" ISRC:{track_data['isrc']}" if track_data.get("isrc") else "",
+        self._commit_new_track(
+            artist=t_artist,
+            title=t_title,
+            album=track_data.get("album"),
+            duration=track_data.get("duration"),
+            filename=track_data.get("filename"),
+            bpm=track_data.get("bpm") or analyzed.get("bpm"),
+            key=track_data.get("key") or analyzed.get("key"),
+            deck=track_data.get("deck"),
+            isrc=isrc_str,
+            source=track_data.get("source"),
         )
 
     def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
         """Read NowPlaying.txt file for current track (macOS)"""
         nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
-
         if not nowplaying_file.exists():
             return
 
@@ -278,7 +369,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not content:
             return
 
-        # Parse line by line
         track_data = {}
         for line in content.split("\n"):
             line = line.strip()
@@ -308,43 +398,29 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             except (ValueError, IndexError):
                 pass
 
-        # Check if this is a new track
-        if self.metadata.get("artist") != artist or self.metadata.get("title") != title:
-            # Supplement NowPlaying.txt with database lookups.
-            # djay Pro writes NowPlaying.txt before committing to
-            # localMediaItemLocations, so retry once after a short wait if
-            # the first lookup misses.
-            filename = self._get_filename_from_db(artist, title)
-            if filename is None:
-                time.sleep(0.5)
-                filename = self._get_filename_from_db(artist, title)
+        if self.metadata.get("artist") == artist and self.metadata.get("title") == title:
+            return
 
-            isrc = self._get_isrc_from_db(artist, title)
-            analyzed = self._get_analyzed_data_from_db(artist, title)
+        # NowPlaying.txt fires before localMediaItemLocations and
+        # mediaItemAnalyzedData are committed — retry once after the delay.
+        filename, analyzed, loc_isrc = self._supplement_from_db(artist, title, retry_filename=True)
 
-            new_meta: TrackMetadata = {
-                "artist": artist,
-                "title": title,
-                "album": album,
-                "filename": filename,
-                "bpm": analyzed.get("bpm"),
-                "deck": analyzed.get("deck"),
-                "duration": duration,
-                "key": analyzed.get("key"),
-            }
-            if isrc:
-                new_meta["isrc"] = [isrc]
-            self.metadata = new_meta
+        # ISRC, source, and deck come from historySessionItems; fall back to location blob ISRC.
+        extras = self._get_history_extras_from_db(artist, title)
+        isrc = extras.isrc if extras.isrc is not None else loc_isrc
 
-            logging.info(
-                "New track detected: %s - %s%s%s%s%s",
-                artist,
-                title,
-                f" [{album}]" if album else "",
-                f" ({time_str})" if time_str else "",
-                f" - {filename}" if filename else " (no filename found)",
-                f" ISRC:{isrc}" if isrc else "",
-            )
+        self._commit_new_track(
+            artist=artist,
+            title=title,
+            album=album,
+            duration=duration,
+            filename=filename,
+            bpm=analyzed.get("bpm"),
+            key=analyzed.get("key"),
+            deck=extras.deck,
+            isrc=isrc,
+            source=extras.source,
+        )
 
     @staticmethod
     def _query_recent_history(dbfile: pathlib.Path, limit: int = 20) -> list[dict]:
@@ -375,48 +451,45 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         except (sqlite3.OperationalError, FileNotFoundError):
             return []
 
-    def _get_analyzed_data_from_db(self, artist: str, title: str) -> dict:
-        """Look up bpm and key from mediaItemAnalyzedData by artist/title match."""
-        dbfile = self._get_db_path()
-        if not dbfile:
-            return {}
+    def _get_analyzed_data_by_uuid(self, track_uuid: str) -> dict:
+        """Look up bpm, deck, and key from mediaItemAnalyzedData by track UUID.
 
-        artist_lower = artist.strip().lower()
-        title_lower = title.strip().lower()
+        Uses the database key column for an O(1) lookup rather than scanning
+        all blobs.  The track UUID is the shared key between
+        localMediaItemLocations and mediaItemAnalyzedData.
+        """
+        dbfile = self._get_db_path()
+        if not dbfile or not track_uuid:
+            return {}
 
         def query_db() -> dict:
             with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "SELECT data FROM database2 WHERE collection='mediaItemAnalyzedData'"
+                    "SELECT data FROM database2"
+                    " WHERE collection='mediaItemAnalyzedData' AND key=?",
+                    (track_uuid,),
                 )
-                for (blob,) in cursor:
-                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
-                    p_artist = parsed.get("artist")
-                    p_title = parsed.get("title")
-                    if (
-                        isinstance(p_artist, str)
-                        and isinstance(p_title, str)
-                        and p_artist.strip().lower() == artist_lower
-                        and p_title.strip().lower() == title_lower
-                    ):
-                        result = {}
-                        if parsed.get("bpm"):
-                            result["bpm"] = parsed["bpm"]
-                        if parsed.get("deck"):
-                            result["deck"] = parsed["deck"]
-                        if parsed.get("key"):
-                            result["key"] = parsed["key"]
-                        return result
-            return {}
+                row = cursor.fetchone()
+                if not row:
+                    return {}
+                parsed = nowplaying.djaypro.tsaf.parse_blob(row[0])
+                result = {}
+                if parsed.get("bpm"):
+                    result["bpm"] = parsed["bpm"]
+                if parsed.get("deck"):
+                    result["deck"] = parsed["deck"]
+                if parsed.get("key"):
+                    result["key"] = parsed["key"]
+                return result
 
         try:
             return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
         except (sqlite3.OperationalError, FileNotFoundError):
             return {}
 
-    def _get_isrc_from_db(self, artist: str, title: str) -> str | None:
-        """Return the ISRC for the track by scanning recent historySessionItems.
+    def _get_history_extras_from_db(self, artist: str, title: str) -> _HistoryExtras:
+        """Return isrc, source, and deck for a track by scanning recent historySessionItems.
 
         The most recently added history entry is almost always the currently
         playing track, so we scan from the end and stop as soon as we find a
@@ -425,7 +498,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """
         dbfile = self._get_db_path()
         if not dbfile:
-            return None
+            return _HistoryExtras()
 
         artist_lower = artist.strip().lower()
         title_lower = title.strip().lower()
@@ -439,56 +512,91 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 and p_artist.strip().lower() == artist_lower
                 and p_title.strip().lower() == title_lower
             ):
-                return parsed.get("isrc")  # type: ignore[return-value]
-        return None
+                isrc = parsed.get("isrc")
+                source = parsed.get("source")
+                deck = parsed.get("deck")
+                return _HistoryExtras(
+                    isrc=isrc if isinstance(isrc, str) else None,
+                    source=source if isinstance(source, str) else None,
+                    deck=deck if isinstance(deck, str) else None,
+                )
+        return _HistoryExtras()
 
-    def _get_filename_from_db(self, artist: str, title: str) -> str | None:
-        """Get filename from database by querying localMediaItemLocations"""
-        dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
-        if not dbfile.exists():
-            return None
+    def _get_filename_from_db(
+        self, artist: str, title: str
+    ) -> tuple[str | None, str | None, str | None]:
+        """Get filename, track UUID, and ISRC from localMediaItemLocations.
 
-        def query_db():
+        Returns (filename, track_uuid, isrc).  Any value may be None.
+        The track UUID is the shared key between localMediaItemLocations
+        and mediaItemAnalyzedData, used for O(1) BPM/key lookup.
+        ISRC is returned when djay Pro has stored it in the location blob
+        (e.g. for local files that carry an embedded ISRC tag).
+        """
+        dbfile = self._get_db_path()
+        if not dbfile:
+            return None, None, None
+
+        def query_db() -> tuple[str | None, str | None, str | None]:
             with nowplaying.utils.sqlite.sqlite_connection(
                 str(dbfile), timeout=1, row_factory=sqlite3.Row
             ) as connection:
                 cursor = connection.cursor()
-                filename = self._get_filename_for_track(cursor, artist, title)
-                return filename
+                return self._get_filename_for_track(cursor, artist, title)
 
         try:
             return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
         except (sqlite3.OperationalError, FileNotFoundError):
-            return None
+            return None, None, None
 
     @staticmethod
-    def _get_filename_for_track(cursor, artist: str, title: str) -> str | None:
-        """Query localMediaItemLocations collection for file path"""
+    def _get_filename_for_track(
+        cursor, artist: str, title: str
+    ) -> tuple[str | None, str | None, str | None]:
+        """Query localMediaItemLocations for file path, track UUID, and ISRC.
+
+        Returns (filename, track_uuid, isrc).  Matches on title+artist when
+        both are present; falls back to title-only when artist is absent from
+        the caller or from the stored blob (common on Windows for files that
+        have no artist tag).
+        """
         try:
-            cursor.execute("SELECT data FROM database2 WHERE collection='localMediaItemLocations'")
+            cursor.execute(
+                "SELECT key, data FROM database2"
+                " WHERE collection IN"
+                " ('localMediaItemLocations', 'globalMediaItemLocations')"
+            )
+
+            artist_norm = artist.strip().lower() if artist else ""
+            title_norm = title.strip().lower() if title else ""
+            if not title_norm:
+                return None, None, None
 
             # Iterate the cursor lazily — fetchall() would load the whole library
             # into memory before we even start comparing.
             for row in cursor:
-                blob_data = row[0]
-                parsed = nowplaying.djaypro.tsaf.parse_blob(blob_data)
+                track_uuid = row[0]
+                parsed = nowplaying.djaypro.tsaf.parse_blob(row[1])
 
-                # Case-insensitive, whitespace-normalized comparison
-                artist_norm = artist.strip().lower() if artist else ""
-                title_norm = title.strip().lower() if title else ""
-                if not (artist_norm and title_norm and parsed["artist"] and parsed["title"]):
+                p_title = parsed.get("title")
+                p_artist = parsed.get("artist")
+                if not isinstance(p_title, str):
                     continue
-                if (
-                    parsed["artist"].strip().lower() == artist_norm
-                    and parsed["title"].strip().lower() == title_norm
-                ):
-                    if parsed["filename"]:
-                        return parsed["filename"]
+                if p_title.strip().lower() != title_norm:
+                    continue
+                # Accept when either side has no artist; require match when both do.
+                # Treat empty/whitespace-only stored artist as absent.
+                if artist_norm and isinstance(p_artist, str) and p_artist.strip():
+                    if p_artist.strip().lower() != artist_norm:
+                        continue
 
-        except Exception as err:  # pylint: disable=broad-exception-caught
+                isrc = parsed.get("isrc")
+                return parsed.get("filename"), track_uuid, isrc if isinstance(isrc, str) else None
+
+        except (sqlite3.Error, ValueError, KeyError) as err:
             logging.debug("Error searching localMediaItemLocations: %s", err)
 
-        return None
+        return None, None, None
 
     async def stop(self):
         """stop the watcher"""
@@ -664,6 +772,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("djaypro/directory", str(djaypro))
         qsettings.setValue("djaypro/artist_query_scope", "entire_library")
         qsettings.setValue("djaypro/selected_playlists", "")
+        qsettings.setValue("djaypro/analyzed_data_delay", _ANALYZED_DATA_RETRY_DEFAULT)
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """connect djay Pro button to filename picker"""
@@ -687,6 +796,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.config.cparser.value("djaypro/selected_playlists", defaultValue="")
         )
 
+        qwidget.djaypro_analyzed_delay_lineedit.setText(
+            str(
+                self.config.cparser.value(
+                    "djaypro/analyzed_data_delay",
+                    defaultValue=_ANALYZED_DATA_RETRY_DEFAULT,
+                    type=float,
+                )
+            )
+        )
+
     def verify_settingsui(self, qwidget: "QWidget"):
         """verify settings are valid"""
         if not pathlib.Path(qwidget.dir_lineedit.text()).exists():
@@ -705,6 +824,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.config.cparser.setValue(
             "djaypro/selected_playlists", qwidget.djaypro_playlists_lineedit.text()
         )
+        try:
+            delay = float(qwidget.djaypro_analyzed_delay_lineedit.text())
+        except ValueError:
+            delay = _ANALYZED_DATA_RETRY_DEFAULT
+        delay = max(0.0, min(delay, 10.0))
+        self.config.cparser.setValue("djaypro/analyzed_data_delay", delay)
 
     def on_djaypro_dir_button(self):
         """open file browser to set djay Pro directory"""

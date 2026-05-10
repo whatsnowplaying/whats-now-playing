@@ -2,8 +2,6 @@
 
 djay Pro is DJ software by Algoriddim available for macOS and Windows.
 
-> NOTE: This is basic support with the groundwork in place. Artist query features are not yet implemented.
->
 > NOTE: Only tested with djay Pro 5.x on macOS and Windows
 >
 > NOTE: iOS and Android versions are not supported
@@ -24,21 +22,37 @@ djay Pro is DJ software by Algoriddim available for macOS and Windows.
    * Windows: `%USERPROFILE%\Music\djay\djay Media Library`
 3. Click Save
 
-## How It Works
+## Settings
 
-**What's Now Playing** monitors djay Pro in two ways:
+### Artist Query Scope
 
-* **NowPlaying.txt file** (macOS): djay Pro writes current track info to this file in real-time
-* **Media Library database**: Queries the play history from djay Pro's SQLite database
+Controls which tracks are searched for the `!hasartist` Twitch chat command and roulette playlist
+requests. Choose **Entire Library** to search all tracks, or **Selected Playlists** and enter
+comma-separated playlist names to limit the search to specific playlists.
 
-The plugin automatically uses the appropriate method based on your platform and djay Pro configuration.
+> NOTE: **Selected Playlists** only searches playlists created natively in djay Pro. Playlists
+> from iTunes/Music or other sources are not visible to this feature.
 
-## Known Limitations
+### Analysis Delay
 
-* Artist query features are not supported
-  * The !hasartist Twitch chat command will not work
-  * Roulette playlist requests are not available
-* Only "newest" mix mode is supported
+djay Pro writes the new track name immediately but commits BPM, key, and file path data in a
+separate database transaction that arrives shortly after. **Analysis Delay** controls how long
+(in seconds) What's Now Playing waits for that second write before reporting the track.
+
+The default of `0.5` seconds works for most systems. If BPM, key, or the file path are
+consistently missing, increase the value. On fast NVMe storage you may be able to lower it.
+
+Note that the file path is also required for What's Now Playing to read tags stored in the audio
+file itself (cover art, ISRC, MusicBrainz IDs, and other metadata not kept in djay Pro's
+database). If the file path is missing, those tags will not be available.
+
+## Metadata provided
+
+* Artist, title, duration
+* Album (macOS only)
+* BPM and musical key (from djay Pro's own analysis, when available)
+* Deck number
+* Filename / file path (local tracks only)
 
 ## Troubleshooting
 
@@ -49,3 +63,10 @@ If tracks are not being detected:
 3. Ensure the MediaLibrary.db file exists in the configured directory
 4. Try playing a few tracks to populate the play history
 5. Check the **What's Now Playing** logs for database connection errors
+
+If BPM, key, or file path are missing:
+
+* Increase the **Analysis Delay** setting — djay Pro may be writing analysis data slower than
+  the default 0.5 s wait on your hardware
+* BPM and key are only available after djay Pro has analysed the track; newly imported tracks
+  may not have this data yet
