@@ -506,7 +506,7 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     metadatain = {"artist": "TR/ST", "title": "Iris"}
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
-    del metadataout["coverimageraw"]
+    metadataout.pop("coverimageraw", None)
     assert metadataout["album"] in ["Iris", "The Destroyer — 2", "Destroyer Vol 1 & 2"]
     assert metadataout["artistwebsites"] == ["https://www.discogs.com/artist/2028711"]
     assert metadataout["artist"] == "TR/ST"
