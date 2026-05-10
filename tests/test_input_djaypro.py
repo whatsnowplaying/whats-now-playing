@@ -394,29 +394,38 @@ def test_parse_tsaf_primitive_types(tc, alignment, value_bytes, key, expected):
 
 
 # ---------------------------------------------------------------------------
-# _get_analyzed_data_from_db integration tests
+# _get_analyzed_data_by_uuid integration tests
 # ---------------------------------------------------------------------------
 
 
 def _make_db_with_collections(dbfile: pathlib.Path, blobs_by_collection: dict[str, list]) -> None:
-    """Create a MediaLibrary.db with the given blobs in each collection."""
+    """Create a MediaLibrary.db with the given blobs in each collection.
+
+    Each collection's list may contain either:
+    - bytes: blob inserted with an auto-generated key
+    - tuple[str, bytes]: (key, blob) inserted with the given key
+    """
     conn = sqlite3.connect(dbfile)
     conn.execute(
         "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
         "key CHAR, data BLOB, metadata BLOB)"
     )
-    for collection, blobs in blobs_by_collection.items():
-        for i, blob in enumerate(blobs):
+    for collection, items in blobs_by_collection.items():
+        for i, item in enumerate(items):
+            if isinstance(item, tuple):
+                key, blob = item
+            else:
+                key, blob = f"key-{i}", item
             conn.execute(
                 "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
-                (collection, f"key-{i}", blob),
+                (collection, key, blob),
             )
     conn.commit()
     conn.close()
 
 
-def test_get_analyzed_data_from_db_returns_bpm_and_key(bootstrap):
-    """_get_analyzed_data_from_db returns bpm and key for a matching track."""
+def test_get_analyzed_data_by_uuid_returns_bpm_and_key(bootstrap):
+    """_get_analyzed_data_by_uuid returns bpm and key for a matching UUID."""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
@@ -433,40 +442,18 @@ def test_get_analyzed_data_from_db_returns_bpm_and_key(bootstrap):
                 (8.0, "keySignatureIndex"),  # F major (Camelot 12B, confirmed)
             ],
         )
-        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
+        _make_db_with_collections(
+            dbfile, {"mediaItemAnalyzedData": [("track-uuid-1", analyzed_blob)]}
+        )
 
-        result = plugin._get_analyzed_data_from_db("DJ Artist", "Club Track")
+        result = plugin._get_analyzed_data_by_uuid("track-uuid-1")
 
         assert result["bpm"] == "128.0"
         assert result["key"] == "F"
 
 
-def test_get_analyzed_data_from_db_case_insensitive(bootstrap):
-    """_get_analyzed_data_from_db matches artist/title case-insensitively."""
-    config = bootstrap
-    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        plugin.djaypro_dir = tmpdir
-        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
-
-        analyzed_blob = _build_tsaf_blob(
-            "ADCMediaItemAnalyzedData",
-            [
-                ("DJ Artist", "artist"),
-                ("Club Track", "title"),
-                (140.0, "bpm"),
-            ],
-        )
-        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
-
-        result = plugin._get_analyzed_data_from_db("dj artist", "club track")
-
-        assert result["bpm"] == "140.0"
-
-
-def test_get_analyzed_data_from_db_no_match(bootstrap):
-    """_get_analyzed_data_from_db returns empty dict when no match is found."""
+def test_get_analyzed_data_by_uuid_no_match(bootstrap):
+    """_get_analyzed_data_by_uuid returns empty dict when UUID is not found."""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
@@ -478,15 +465,17 @@ def test_get_analyzed_data_from_db_no_match(bootstrap):
             "ADCMediaItemAnalyzedData",
             [("Other Artist", "artist"), ("Other Track", "title"), (120.0, "bpm")],
         )
-        _make_db_with_collections(dbfile, {"mediaItemAnalyzedData": [analyzed_blob]})
+        _make_db_with_collections(
+            dbfile, {"mediaItemAnalyzedData": [("other-uuid", analyzed_blob)]}
+        )
 
-        result = plugin._get_analyzed_data_from_db("DJ Artist", "Club Track")
+        result = plugin._get_analyzed_data_by_uuid("track-uuid-1")
 
         assert not result
 
 
-def test_get_analyzed_data_from_db_missing_db(bootstrap):
-    """_get_analyzed_data_from_db returns empty dict when database is absent."""
+def test_get_analyzed_data_by_uuid_missing_db(bootstrap):
+    """_get_analyzed_data_by_uuid returns empty dict when database is absent."""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
@@ -494,13 +483,17 @@ def test_get_analyzed_data_from_db_missing_db(bootstrap):
         plugin.djaypro_dir = tmpdir
         # No MediaLibrary.db created
 
-        result = plugin._get_analyzed_data_from_db("Artist", "Title")
+        result = plugin._get_analyzed_data_by_uuid("any-uuid")
 
         assert not result
 
 
 def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
-    """_check_for_new_track supplements missing bpm from mediaItemAnalyzedData."""
+    """_check_for_new_track supplements missing bpm from mediaItemAnalyzedData.
+
+    The UUID from localMediaItemLocations links to mediaItemAnalyzedData so
+    BPM and key are retrieved even when absent from the history blob.
+    """
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
@@ -508,15 +501,20 @@ def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
         plugin.djaypro_dir = tmpdir
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
+        track_uuid = "beat-artist-kick-drum-uuid"
+
         history_blob = _build_tsaf_blob(
             "ADCHistorySessionItem",
+            [("Beat Artist", "artist"), ("Kick Drum", "title")],
+        )
+        # localMediaItemLocations blob links artist+title to the track UUID
+        location_blob = _build_tsaf_blob(
+            "ADCMediaItemLocation",
             [("Beat Artist", "artist"), ("Kick Drum", "title")],
         )
         analyzed_blob = _build_tsaf_blob(
             "ADCMediaItemAnalyzedData",
             [
-                ("Beat Artist", "artist"),
-                ("Kick Drum", "title"),
                 (174.0, "bpm"),
                 (22.0, "keySignatureIndex"),  # C major (Camelot 1B, idx=22)
             ],
@@ -525,7 +523,8 @@ def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
             dbfile,
             {
                 "historySessionItems": [history_blob],
-                "mediaItemAnalyzedData": [analyzed_blob],
+                "localMediaItemLocations": [(track_uuid, location_blob)],
+                "mediaItemAnalyzedData": [(track_uuid, analyzed_blob)],
             },
         )
 
@@ -580,6 +579,7 @@ def test_check_for_new_track_empty_db(bootstrap):
 def test_check_for_new_track_with_data(bootstrap):
     """_check_for_new_track extracts track metadata from a valid TSAF blob."""
     config = bootstrap
+    config.cparser.setValue("djaypro/analyzed_data_delay", 0)
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -609,76 +609,79 @@ def test_check_for_new_track_with_data(bootstrap):
         assert plugin.metadata["title"] == "Test Song"
 
 
-def test_check_for_new_track_with_isrc(bootstrap):
-    """_check_for_new_track passes ISRC from history blob as list."""
+@pytest.mark.parametrize(
+    "artist,title,history_extra_fields,location_fields,expected_isrc",
+    [
+        # ISRC from historySessionItems (streaming track — no location blob needed)
+        (
+            "Missy Elliott",
+            "Work It",
+            [("USEE10240944", "isrc"), ("apple-music", "originSourceID")],
+            None,
+            ["USEE10240944"],
+        ),
+        # ISRC from localMediaItemLocations (local file — history has no ISRC)
+        (
+            "Local Artist",
+            "Local Track",
+            [],
+            [("Local Artist", "artist"), ("Local Track", "title"), ("USRC10000001", "isrc")],
+            ["USRC10000001"],
+        ),
+        # historySessionItems ISRC takes priority over localMediaItemLocations ISRC
+        (
+            "Missy Elliott",
+            "Work It",
+            [("USEE10240944", "isrc"), ("apple-music", "originSourceID")],
+            [("Missy Elliott", "artist"), ("Work It", "title"), ("DIFFERENT0001", "isrc")],
+            ["USEE10240944"],
+        ),
+        # No ISRC in either source — key must be absent from metadata
+        (
+            "Local Artist",
+            "Local Track",
+            [],
+            None,
+            None,
+        ),
+    ],
+    ids=["history_isrc", "location_isrc", "history_wins", "no_isrc"],
+)
+def test_check_for_new_track_isrc_sources(
+    bootstrap, artist, title, history_extra_fields, location_fields, expected_isrc
+):
+    """_check_for_new_track picks up ISRC from the correct source."""
     config = bootstrap
+    config.cparser.setValue("djaypro/analyzed_data_delay", 0)
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         plugin.djaypro_dir = tmpdir
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
-        conn = sqlite3.connect(dbfile)
-        conn.execute(
-            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
-            "key CHAR, data BLOB, metadata BLOB)"
-        )
-        blob = _build_tsaf_blob(
+        history_blob = _build_tsaf_blob(
             "ADCHistorySessionItem",
-            [
-                ("Missy Elliott", "artist"),
-                ("Work It", "title"),
-                ("USEE10240944", "isrc"),
-                ("apple-music", "originSourceID"),
-            ],
+            [(artist, "artist"), (title, "title")] + history_extra_fields,
         )
-        conn.execute(
-            "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
-            ("historySessionItems", "test-key", blob),
-        )
-        conn.commit()
-        conn.close()
+        collections: dict = {"historySessionItems": [history_blob]}
+        if location_fields is not None:
+            location_blob = _build_tsaf_blob("ADCMediaItemLocation", location_fields)
+            collections["localMediaItemLocations"] = [("loc-uuid", location_blob)]
+        _make_db_with_collections(dbfile, collections)
 
         plugin._check_for_new_track()
 
-        assert plugin.metadata.get("artist") == "Missy Elliott"
-        assert plugin.metadata.get("isrc") == ["USEE10240944"]
-
-
-def test_check_for_new_track_no_isrc_omitted(bootstrap):
-    """_check_for_new_track omits isrc key when track has no ISRC."""
-    config = bootstrap
-    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        plugin.djaypro_dir = tmpdir
-        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
-
-        conn = sqlite3.connect(dbfile)
-        conn.execute(
-            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
-            "key CHAR, data BLOB, metadata BLOB)"
-        )
-        blob = _build_tsaf_blob(
-            "ADCHistorySessionItem",
-            [("Local Artist", "artist"), ("Local Track", "title")],
-        )
-        conn.execute(
-            "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
-            ("historySessionItems", "test-key", blob),
-        )
-        conn.commit()
-        conn.close()
-
-        plugin._check_for_new_track()
-
-        assert plugin.metadata.get("artist") == "Local Artist"
-        assert "isrc" not in plugin.metadata
+        assert plugin.metadata.get("artist") == artist
+        if expected_isrc is None:
+            assert "isrc" not in plugin.metadata
+        else:
+            assert plugin.metadata.get("isrc") == expected_isrc
 
 
 def test_check_for_new_track_duplicate(bootstrap):
     """_check_for_new_track preserves metadata when the same track is polled twice."""
     config = bootstrap
+    config.cparser.setValue("djaypro/analyzed_data_delay", 0)
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
     with tempfile.TemporaryDirectory() as tmpdir:
