@@ -763,21 +763,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How It Works
+        Settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#artist-query-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artist Query Scope
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#known-limitations" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#analysis-delay" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Known Limitations
+        Analysis Delay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-provided" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata provided
       
     </span>
   </a>
@@ -2794,7 +2822,6 @@
 <h1 id="djay-pro-support">djay Pro Support<a class="headerlink" href="#djay-pro-support" title="Permanent link">&para;</a></h1>
 <p>djay Pro is DJ software by Algoriddim available for macOS and Windows.</p>
 <blockquote>
-<p>NOTE: This is basic support with the groundwork in place. Artist query features are not yet implemented.</p>
 <p>NOTE: Only tested with djay Pro 5.x on macOS and Windows</p>
 <p>NOTE: iOS and Android versions are not supported</p>
 </blockquote>
@@ -2813,19 +2840,31 @@
 <li>Windows: <code>%USERPROFILE%\Music\djay\djay Media Library</code></li>
 <li>Click Save</li>
 </ol>
-<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p><strong>What's Now Playing</strong> monitors djay Pro in two ways:</p>
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
+<h3 id="artist-query-scope">Artist Query Scope<a class="headerlink" href="#artist-query-scope" title="Permanent link">&para;</a></h3>
+<p>Controls which tracks are searched for the <code>!hasartist</code> Twitch chat command and roulette playlist
+requests. Choose <strong>Entire Library</strong> to search all tracks, or <strong>Selected Playlists</strong> and enter
+comma-separated playlist names to limit the search to specific playlists.</p>
+<blockquote>
+<p>NOTE: <strong>Selected Playlists</strong> only searches playlists created natively in djay Pro. Playlists
+from iTunes/Music or other sources are not visible to this feature.</p>
+</blockquote>
+<h3 id="analysis-delay">Analysis Delay<a class="headerlink" href="#analysis-delay" title="Permanent link">&para;</a></h3>
+<p>djay Pro writes the new track name immediately but commits BPM, key, and file path data in a
+separate database transaction that arrives shortly after. <strong>Analysis Delay</strong> controls how long
+(in seconds) What's Now Playing waits for that second write before reporting the track.</p>
+<p>The default of <code>0.5</code> seconds works for most systems. If BPM, key, or the file path are
+consistently missing, increase the value. On fast NVMe storage you may be able to lower it.</p>
+<p>Note that the file path is also required for What's Now Playing to read tags stored in the audio
+file itself (cover art, ISRC, MusicBrainz IDs, and other metadata not kept in djay Pro's
+database). If the file path is missing, those tags will not be available.</p>
+<h2 id="metadata-provided">Metadata provided<a class="headerlink" href="#metadata-provided" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>NowPlaying.txt file</strong> (macOS): djay Pro writes current track info to this file in real-time</li>
-<li><strong>Media Library database</strong>: Queries the play history from djay Pro's SQLite database</li>
-</ul>
-<p>The plugin automatically uses the appropriate method based on your platform and djay Pro configuration.</p>
-<h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Artist query features are not supported</li>
-<li>The !hasartist Twitch chat command will not work</li>
-<li>Roulette playlist requests are not available</li>
-<li>Only "newest" mix mode is supported</li>
+<li>Artist, title, duration</li>
+<li>Album (macOS only)</li>
+<li>BPM and musical key (from djay Pro's own analysis, when available)</li>
+<li>Deck number</li>
+<li>Filename / file path (local tracks only)</li>
 </ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>If tracks are not being detected:</p>
@@ -2836,6 +2875,13 @@
 <li>Try playing a few tracks to populate the play history</li>
 <li>Check the <strong>What's Now Playing</strong> logs for database connection errors</li>
 </ol>
+<p>If BPM, key, or file path are missing:</p>
+<ul>
+<li>Increase the <strong>Analysis Delay</strong> setting — djay Pro may be writing analysis data slower than
+  the default 0.5 s wait on your hardware</li>
+<li>BPM and key are only available after djay Pro has analysed the track; newly imported tracks
+  may not have this data yet</li>
+</ul>
 
 
 
