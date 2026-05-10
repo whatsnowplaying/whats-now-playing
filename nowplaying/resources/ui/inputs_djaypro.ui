@@ -79,6 +79,30 @@
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="analyzed_delay_layout">
+     <item>
+      <widget class="QLabel" name="analyzed_delay_label">
+       <property name="text">
+        <string>Analysis Delay (secs)</string>
+       </property>
+       <property name="toolTip">
+        <string>How long to wait (in seconds) for djay Pro to finish writing BPM/key analysis data after a new track starts. Increase on slower hardware if BPM or key are missing.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="djaypro_analyzed_delay_lineedit">
+       <property name="toolTip">
+        <string>How long to wait (in seconds) for djay Pro to finish writing BPM/key analysis data after a new track starts. Increase on slower hardware if BPM or key are missing.</string>
+       </property>
+       <property name="placeholderText">
+        <string>0.5</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QTextBrowser" name="help_label">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
