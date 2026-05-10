@@ -585,14 +585,15 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 if p_title.strip().lower() != title_norm:
                     continue
                 # Accept when either side has no artist; require match when both do.
-                if artist_norm and isinstance(p_artist, str):
+                # Treat empty/whitespace-only stored artist as absent.
+                if artist_norm and isinstance(p_artist, str) and p_artist.strip():
                     if p_artist.strip().lower() != artist_norm:
                         continue
 
                 isrc = parsed.get("isrc")
                 return parsed.get("filename"), track_uuid, isrc if isinstance(isrc, str) else None
 
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except (sqlite3.Error, ValueError, KeyError) as err:
             logging.debug("Error searching localMediaItemLocations: %s", err)
 
         return None, None, None
@@ -827,6 +828,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             delay = float(qwidget.djaypro_analyzed_delay_lineedit.text())
         except ValueError:
             delay = _ANALYZED_DATA_RETRY_DEFAULT
+        delay = max(0.0, min(delay, 10.0))
         self.config.cparser.setValue("djaypro/analyzed_data_delay", delay)
 
     def on_djaypro_dir_button(self):
