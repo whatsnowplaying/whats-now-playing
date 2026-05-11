@@ -23,7 +23,23 @@
 
 * Added `has_tracks_by_artist` support for track requests
 * Added playlist support: available playlists can now be selected for
-    artist queries
+    artist queries and roulette requests
+* BPM, key, and deck number are now read from djay Pro's analysis database
+    and included in track metadata
+* Configurable analysis delay: how long to wait for djay Pro to commit
+    BPM, key, and file path after a track starts (separate DB transaction)
+* Configurable deck skip: individual decks can be excluded from reporting
+    via checkboxes in settings
+* Tracks already playing when WNP launches are silently skipped; djay Pro
+    does not clear NowPlaying.txt between sessions so this prevents
+    re-reporting stale tracks on startup
+
+### MusicBrainz
+
+* Fixed a Cover Art Archive cache poisoning issue where failed CAA fetches
+    were baked into the 7-day recording cache entry, preventing retries;
+    cover art is now cached independently so failures are always retried
+* Fixed false rate-limit errors from the MusicBrainz client
 
 ## Version 5.2.0 - 2026-05-04
 

@@ -14,8 +14,9 @@ required for most setups. Supports [Serato DJ](input/serato.md),
 [Traktor](input/traktor.md), [Virtual DJ](input/virtualdj.md),
 [Denon DJ](input/denon.md), [djay Pro](input/djaypro.md),
 [DJUCED](input/djuced.md), and [many more](features.md).
-[Two-computer DJ/streaming setups](input/remote.md) are supported via automatic
-network discovery with no IP addresses or port forwarding needed.
+Setups with 2 or more computers are supported: each DJ's machine sends to a
+single central WNP instance via [automatic network discovery](input/remote.md)
+with no IP addresses or port forwarding needed.
 
 Ships with **[42 ready-to-use OBS browser overlay templates](gallery/index.md)**
 including 7 WebGL animated effects. The **[OBS Scene Export](output/obs-export.md)**

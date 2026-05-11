@@ -63,14 +63,18 @@ jobs:
             mike deploy --push -F properdocs.yml dev
           fi
 
-      - name: Update root 404 redirect page
+      - name: Update root-level files (404, robots.txt, llms.txt)
         run: |
           cp docs/404.html /tmp/404.html
+          cp docs/robots.txt /tmp/robots.txt
+          cp docs/llms.txt /tmp/llms.txt
           git fetch origin gh-pages
           git checkout -B gh-pages origin/gh-pages
           cp /tmp/404.html 404.html
-          git add 404.html
+          cp /tmp/robots.txt robots.txt
+          cp /tmp/llms.txt llms.txt
+          git add 404.html robots.txt llms.txt
           git diff --cached --quiet || \
-            git commit -m "ci: update root 404 redirect"
+            git commit -m "ci: update root-level files"
           git push origin gh-pages
           git checkout -
