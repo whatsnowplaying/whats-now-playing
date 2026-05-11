@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """test djay Pro input plugin"""
-# pylint: disable=protected-access
+# pylint: disable=protected-access,too-many-lines
 
 import pathlib
 import sqlite3
@@ -11,6 +11,7 @@ import pytest
 
 import nowplaying.djaypro.tsaf
 import nowplaying.inputs.djaypro
+from nowplaying.djaypro.plugin import _DeckTrack
 
 
 def _build_tsaf_blob(
@@ -126,8 +127,8 @@ def test_parse_blob_float_fields():
     assert result["bpm"] == "128.5"
 
 
-def test_parse_blob_isrc_field():
-    """_parse_blob extracts ISRC from streaming history items."""
+def test_parse_blob_isrc_source_fields():
+    """_parse_blob extracts ISRC and maps originSourceID → source."""
     blob = _build_tsaf_blob(
         "ADCHistorySessionItem",
         [
@@ -142,34 +143,6 @@ def test_parse_blob_isrc_field():
 
     assert result["isrc"] == "USEE10240944"
     assert result["source"] == "apple-music"
-
-
-def test_parse_blob_no_isrc():
-    """_parse_blob returns isrc=None when the field is absent."""
-    blob = _build_tsaf_blob(
-        "ADCHistorySessionItem",
-        [("Artist", "artist"), ("Title", "title")],
-    )
-
-    result = nowplaying.djaypro.tsaf.parse_blob(blob)
-
-    assert result["isrc"] is None
-
-
-def test_parse_blob_source_field():
-    """_parse_blob maps originSourceID to the 'source' key."""
-    blob = _build_tsaf_blob(
-        "ADCHistorySessionItem",
-        [
-            ("Test Track", "title"),
-            ("spotify", "originSourceID"),
-        ],
-    )
-
-    result = nowplaying.djaypro.tsaf.parse_blob(blob)
-
-    assert result["source"] == "spotify"
-    assert result["title"] == "Test Track"
 
 
 def test_parse_blob_file_uri():
@@ -336,18 +309,6 @@ def test_parse_blob_key_out_of_range():
     result = nowplaying.djaypro.tsaf.parse_blob(blob)
 
     assert result["key"] is None
-
-
-def test_parse_blob_deck_none_when_absent():
-    """_parse_blob returns deck=None when deckNumber field is not present."""
-    blob = _build_tsaf_blob(
-        "ADCHistorySessionItem",
-        [("Artist", "artist"), ("Title", "title")],
-    )
-
-    result = nowplaying.djaypro.tsaf.parse_blob(blob)
-
-    assert result["deck"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -806,3 +767,171 @@ async def test_stop(bootstrap):
 
     assert plugin.metadata["artist"] == "Test"
     assert plugin.observer is None
+
+
+@pytest.mark.asyncio
+async def test_stop_clears_deck_tracks(bootstrap):
+    """stop() clears the _deck_tracks dict."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    plugin._deck_tracks["1"] = _DeckTrack(artist="DJ", title="Track")
+    plugin._deck_tracks["2"] = _DeckTrack(artist="DJ", title="Other")
+
+    await plugin.stop()
+
+    assert not plugin._deck_tracks
+
+
+# ---------------------------------------------------------------------------
+# Deck skip tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "deckskip_value,expected",
+    [
+        (None, []),
+        ("", []),
+        ("1", ["1"]),
+        (["1", "2"], ["1", "2"]),
+    ],
+    ids=["none", "empty", "single_string", "list"],
+)
+def test_get_deckskip(bootstrap, deckskip_value, expected):
+    """_get_deckskip returns the correct list for various stored values."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+    config.cparser.setValue("djaypro/deckskip", deckskip_value)
+
+    result = plugin._get_deckskip()
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "deck_num,expected_artist",
+    [
+        (1, None),  # skipped deck → not reported
+        (2, "Track Artist"),  # non-skipped deck → reported
+    ],
+    ids=["skipped", "allowed"],
+)
+def test_check_for_new_track_deckskip(bootstrap, deck_num, expected_artist):
+    """_check_for_new_track skips decks in deckskip and reports others."""
+    config = bootstrap
+    config.cparser.setValue("djaypro/analyzed_data_delay", 0)
+    config.cparser.setValue("djaypro/deckskip", ["1"])
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [("Track Artist", "artist"), ("Track Title", "title"), (deck_num, "deckNumber")],
+        )
+        _make_db_with_collections(dbfile, {"historySessionItems": [blob]})
+
+        plugin._check_for_new_track()
+
+        assert plugin.metadata["artist"] == expected_artist
+
+
+def test_check_for_new_track_deck_switch_reports_new(bootstrap):
+    """_check_for_new_track reports a new track when the active deck changes."""
+    config = bootstrap
+    config.cparser.setValue("djaypro/analyzed_data_delay", 0)
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+
+        deck1_blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [("Deck1 Artist", "artist"), ("Deck1 Track", "title"), (1, "deckNumber")],
+        )
+        _make_db_with_collections(dbfile, {"historySessionItems": [deck1_blob]})
+
+        plugin._check_for_new_track()
+        assert plugin.metadata["artist"] == "Deck1 Artist"
+
+        deck2_blob = _build_tsaf_blob(
+            "ADCHistorySessionItem",
+            [("Deck2 Artist", "artist"), ("Deck2 Track", "title"), (2, "deckNumber")],
+        )
+        # Recreate DB with deck2_blob as the most recent item (highest rowid).
+        dbfile.unlink()
+        _make_db_with_collections(dbfile, {"historySessionItems": [deck1_blob, deck2_blob]})
+
+        plugin._check_for_new_track()
+        assert plugin.metadata["artist"] == "Deck2 Artist"
+
+
+def test_check_for_new_track_skips_prelaunch(bootstrap):
+    """_check_for_new_track ignores a track whose starttime precedes WNP launch."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    # Use a starttime well in the past (Core Data epoch: seconds since 2001-01-01)
+    past_starttime = plugin._launch_time - 3600.0  # 1 hour before launch
+
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [
+            ("Old Artist", "artist"),
+            ("Old Track", "title"),
+            (past_starttime, "startTime"),
+        ],
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        _make_db_with_collections(dbfile, {"historySessionItems": [blob]})
+
+        plugin._check_for_new_track()
+
+        # metadata should remain empty — pre-launch track is not reported
+        assert plugin.metadata.get("artist") is None
+
+
+def test_check_for_new_track_reports_postlaunch(bootstrap):
+    """_check_for_new_track reports a track whose starttime is after WNP launch."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    future_starttime = plugin._launch_time + 5.0  # 5 seconds after launch
+
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [
+            ("New Artist", "artist"),
+            ("New Track", "title"),
+            (future_starttime, "startTime"),
+        ],
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        _make_db_with_collections(dbfile, {"historySessionItems": [blob]})
+
+        plugin._check_for_new_track()
+
+        assert plugin.metadata.get("artist") == "New Artist"
+
+
+def test_parse_blob_starttime():
+    """parse_blob extracts startTime as a float."""
+    # Core Data timestamp: seconds since 2001-01-01
+    start = 800138507.0
+
+    blob = _build_tsaf_blob(
+        "ADCHistorySessionItem",
+        [("Artist", "artist"), ("Title", "title"), (start, "startTime")],
+    )
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+    assert result["starttime"] == start

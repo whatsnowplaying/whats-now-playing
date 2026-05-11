@@ -3,7 +3,6 @@
 """support for musicbrainz"""
 
 import asyncio
-import contextlib
 import logging
 import os
 import sys
@@ -247,7 +246,67 @@ class MusicBrainzHelper:
             # than baked into the cached recording data
             data = dict(data)
             data["artistwebsites"] = await self._websites(data["musicbrainzartistid"])
+
+        # Fetch cover art separately from the recording cache so that CAA
+        # failures (timeout, 404, network error) do not poison the 7-day
+        # recording cache entry.  Cover art is cached in its own entry;
+        # failures are not cached so they are retried on the next play.
+        if data and not data.get("coverimageraw"):
+            if self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True):
+                release_id = data.get("musicbrainzalbumid")
+                rg_id = data.get("musicbrainzreleasegroupid")
+                if release_id or rg_id:
+                    if coverart := await self._fetch_cover_art(release_id, rg_id):
+                        data = dict(data)
+                        data["coverimageraw"] = coverart
+
         return data
+
+    async def _fetch_cover_art(self, release_id: str | None, rg_id: str | None) -> bytes | None:
+        """Fetch front cover art from CAA, trying release then release-group.
+
+        Results are cached per entity in their own apicache entries so that
+        a successful fetch is reused on subsequent plays without re-hitting
+        CAA.  Failed fetches are NOT cached so they are retried next time.
+        """
+        self._setemail()
+
+        async def _try(entity_id: str, entity_type: str) -> bytes | None:
+            async def _do_fetch() -> dict | None:
+                try:
+                    async with self.mb_client:
+                        logger.debug("Fetching CAA cover art for %s/%s", entity_type, entity_id)
+                        raw = await self.mb_client.get_image_front(entity_id, entity_type)
+                        if raw:
+                            logger.debug(
+                                "Got CAA cover art (%d bytes) for %s/%s",
+                                len(raw),
+                                entity_type,
+                                entity_id,
+                            )
+                            return {"coverimageraw": raw}
+                except Exception:  # pylint: disable=broad-except
+                    logger.debug("CAA cover art fetch failed for %s/%s", entity_type, entity_id)
+                return None
+
+            result = await nowplaying.apicache.cached_fetch(
+                provider="musicbrainz_caa",
+                artist_name=entity_type,
+                endpoint=f"front/{entity_id}",
+                fetch_func=_do_fetch,
+                ttl_seconds=7 * 24 * 60 * 60,
+            )
+            if result and isinstance(result.get("coverimageraw"), bytes):
+                return result["coverimageraw"]
+            return None
+
+        if release_id:
+            if art := await _try(release_id, "release"):
+                return art
+        if rg_id:
+            if art := await _try(rg_id, "release-group"):
+                return art
+        return None
 
     async def _recordingid_uncached(self, recordingid) -> dict:
         """uncached version of recordingid lookup"""
@@ -270,25 +329,14 @@ class MusicBrainzHelper:
                         newdata[key] = enriched[key]
                 if "musicbrainz_artist_id" in enriched:
                     newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
+                # Store release ID so the separate cover-art fetch can use it
+                if "musicbrainz_release_id" in enriched:
+                    newdata["musicbrainzalbumid"] = enriched["musicbrainz_release_id"]
                 if "musicbrainz_release_group_id" in enriched:
                     newdata["musicbrainzreleasegroupid"] = enriched["musicbrainz_release_group_id"]
                 if "genres" in enriched:
                     newdata["genres"] = enriched["genres"]
                     newdata["genre"] = "/".join(enriched["genres"])
-
-                # Cover art — use the release already selected by process_recording_data
-                if self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True):
-                    if release_id := enriched.get("musicbrainz_release_id"):
-                        with contextlib.suppress(Exception):
-                            newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                                release_id
-                            )
-                    if not newdata.get("coverimageraw"):
-                        if rg_id := enriched.get("musicbrainz_release_group_id"):
-                            with contextlib.suppress(Exception):
-                                newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                                    rg_id, "release-group"
-                                )
                 return newdata
 
         return await self._mb_op_with_retry(_fetch, "get_recording_by_id", {})

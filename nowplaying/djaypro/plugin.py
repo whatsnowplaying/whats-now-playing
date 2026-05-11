@@ -40,6 +40,7 @@ Database Location:
 
 import asyncio
 import dataclasses
+import datetime
 import logging
 import pathlib
 import sqlite3
@@ -69,9 +70,29 @@ if TYPE_CHECKING:
 _WAL_DEBOUNCE_SECONDS = 0.3
 _ANALYZED_DATA_RETRY_DEFAULT = 0.5
 
+# djay Pro stores timestamps as Core Data epoch: seconds since 2001-01-01 UTC.
+_COREDATA_EPOCH = datetime.datetime(2001, 1, 1, tzinfo=datetime.timezone.utc)
+
 
 @dataclasses.dataclass
 class _HistoryExtras:
+    isrc: str | None = None
+    source: str | None = None
+    deck: str | None = None
+    starttime: float | None = None
+
+
+@dataclasses.dataclass
+class _DeckTrack:  # pylint: disable=too-many-instance-attributes
+    """Full track state for one deck, used by mix mode selection."""
+
+    artist: str | None = None
+    title: str | None = None
+    album: str | None = None
+    duration: int | None = None
+    filename: str | None = None
+    bpm: str | None = None
+    key: str | None = None
     isrc: str | None = None
     source: str | None = None
     deck: str | None = None
@@ -87,12 +108,17 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "djay Pro"
-        self.mixmode = "newest"
         self.event_handler = None
         self.observer = None
         self.djaypro_dir = ""
         self._wal_timer: threading.Timer | None = None
         self._wal_timer_lock = threading.Lock()
+        self._deck_tracks: dict[str, _DeckTrack] = {}
+        # Record launch time in Core Data epoch (seconds since 2001-01-01 UTC)
+        # so we can skip tracks that were already playing when WNP started.
+        self._launch_time: float = (
+            datetime.datetime.now(datetime.timezone.utc) - _COREDATA_EPOCH
+        ).total_seconds()
         self.metadata: TrackMetadata = {
             "artist": None,
             "title": None,
@@ -203,6 +229,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self._wal_timer = None
         self._check_for_new_track()
 
+    def _get_deckskip(self) -> list[str]:
+        """Return the list of deck numbers to skip, or empty list."""
+        deckskip = self.config.cparser.value("djaypro/deckskip")
+        if not deckskip:
+            return []
+        if isinstance(deckskip, list):
+            return deckskip
+        # QSettings returns a plain string when only one value is stored.
+        return [deckskip]
+
     def _supplement_from_db(  # pylint: disable=too-many-arguments
         self,
         artist: str,
@@ -290,7 +326,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             f" ISRC:{isrc}" if isrc else "",
         )
 
-    def _check_for_new_track(self):
+    def _check_for_new_track(self):  # pylint: disable=too-many-locals,too-many-return-statements
         """Check for new track from NowPlaying.txt (macOS) or database (Windows)"""
         # Try NowPlaying.txt first (macOS)
         nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
@@ -308,15 +344,39 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return
 
         track_data = records[0]
-        if (
-            self.metadata.get("artist") == track_data["artist"]
-            and self.metadata.get("title") == track_data["title"]
-        ):
+        t_artist = track_data.get("artist")
+        t_title = track_data.get("title")
+        if not isinstance(t_title, str):
             return
 
-        t_artist = track_data["artist"]
-        t_title = track_data["title"]
-        if not isinstance(t_title, str):
+        deck = track_data.get("deck")
+        deck_key = deck or "0"
+
+        # Skip if this deck is configured to be ignored.
+        deckskip = self._get_deckskip()
+        if deckskip and deck_key in deckskip:
+            return
+
+        # If this deck's track hasn't changed, the mix mode selection is unchanged.
+        existing = self._deck_tracks.get(deck_key)
+        if existing and existing.artist == t_artist and existing.title == t_title:
+            return
+
+        # Skip tracks that started before WNP launched — record state to avoid
+        # re-processing on every poll, but do not report them as new tracks.
+        starttime = track_data.get("starttime")
+        if isinstance(starttime, float) and starttime < self._launch_time:
+            logging.debug(
+                "Skipping pre-launch track on deck %s: %s - %s",
+                deck_key,
+                t_artist,
+                t_title,
+            )
+            self._deck_tracks[deck_key] = _DeckTrack(
+                artist=t_artist,
+                title=t_title,
+                deck=deck,
+            )
             return
 
         # localMediaItemLocations is authoritative for file paths; supplement
@@ -336,7 +396,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # Prefer history blob ISRC (streaming); fall back to location blob (local files).
         isrc_str = track_data.get("isrc") if isinstance(track_data.get("isrc"), str) else loc_isrc
 
-        self._commit_new_track(
+        new_track = _DeckTrack(
             artist=t_artist,
             title=t_title,
             album=track_data.get("album"),
@@ -344,12 +404,32 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             filename=track_data.get("filename"),
             bpm=track_data.get("bpm") or analyzed.get("bpm"),
             key=track_data.get("key") or analyzed.get("key"),
-            deck=track_data.get("deck"),
             isrc=isrc_str,
             source=track_data.get("source"),
+            deck=deck,
+        )
+        self._deck_tracks[deck_key] = new_track
+
+        if (
+            self.metadata.get("artist") == new_track.artist
+            and self.metadata.get("title") == new_track.title
+        ):
+            return
+
+        self._commit_new_track(
+            artist=new_track.artist,
+            title=new_track.title,
+            album=new_track.album,
+            duration=new_track.duration,
+            filename=new_track.filename,
+            bpm=new_track.bpm,
+            key=new_track.key,
+            deck=new_track.deck,
+            isrc=new_track.isrc,
+            source=new_track.source,
         )
 
-    def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
+    def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-return-statements
         """Read NowPlaying.txt file for current track (macOS)"""
         nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
         if not nowplaying_file.exists():
@@ -398,18 +478,46 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             except (ValueError, IndexError):
                 pass
 
-        if self.metadata.get("artist") == artist and self.metadata.get("title") == title:
+        # Get deck from historySessionItems first — needed for deckskip check
+        # before doing the expensive file-path / analysis-data lookup.
+        extras = self._get_history_extras_from_db(artist, title)
+        deck_key = extras.deck or "0"
+
+        deckskip = self._get_deckskip()
+        if deckskip and deck_key in deckskip:
+            return
+
+        existing = self._deck_tracks.get(deck_key)
+        if existing and existing.artist == artist and existing.title == title:
+            return
+
+        # Skip tracks that started before WNP launched.  NowPlaying.txt is
+        # never deleted between sessions so it persists from previous runs;
+        # the starttime from historySessionItems is the only reliable signal
+        # that the track is actually new since WNP started.
+        if extras.starttime is not None and extras.starttime < self._launch_time:
+            logging.debug(
+                "Skipping pre-launch track on deck %s: %s - %s",
+                deck_key,
+                artist,
+                title,
+            )
+            self._deck_tracks[deck_key] = _DeckTrack(
+                artist=artist,
+                title=title,
+                album=album,
+                duration=duration,
+                deck=extras.deck,
+            )
             return
 
         # NowPlaying.txt fires before localMediaItemLocations and
         # mediaItemAnalyzedData are committed — retry once after the delay.
         filename, analyzed, loc_isrc = self._supplement_from_db(artist, title, retry_filename=True)
 
-        # ISRC, source, and deck come from historySessionItems; fall back to location blob ISRC.
-        extras = self._get_history_extras_from_db(artist, title)
         isrc = extras.isrc if extras.isrc is not None else loc_isrc
 
-        self._commit_new_track(
+        new_track = _DeckTrack(
             artist=artist,
             title=title,
             album=album,
@@ -417,9 +525,29 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             filename=filename,
             bpm=analyzed.get("bpm"),
             key=analyzed.get("key"),
-            deck=extras.deck,
             isrc=isrc,
             source=extras.source,
+            deck=extras.deck,
+        )
+        self._deck_tracks[deck_key] = new_track
+
+        if (
+            self.metadata.get("artist") == new_track.artist
+            and self.metadata.get("title") == new_track.title
+        ):
+            return
+
+        self._commit_new_track(
+            artist=new_track.artist,
+            title=new_track.title,
+            album=new_track.album,
+            duration=new_track.duration,
+            filename=new_track.filename,
+            bpm=new_track.bpm,
+            key=new_track.key,
+            deck=new_track.deck,
+            isrc=new_track.isrc,
+            source=new_track.source,
         )
 
     @staticmethod
@@ -515,10 +643,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 isrc = parsed.get("isrc")
                 source = parsed.get("source")
                 deck = parsed.get("deck")
+                starttime = parsed.get("starttime")
                 return _HistoryExtras(
                     isrc=isrc if isinstance(isrc, str) else None,
                     source=source if isinstance(source, str) else None,
                     deck=deck if isinstance(deck, str) else None,
+                    starttime=starttime if isinstance(starttime, float) else None,
                 )
         return _HistoryExtras()
 
@@ -608,6 +738,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.observer.stop()
             self.observer.join()
             self.observer = None
+        self._deck_tracks.clear()
 
     async def start(self):
         """setup the watcher"""
@@ -773,6 +904,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("djaypro/artist_query_scope", "entire_library")
         qsettings.setValue("djaypro/selected_playlists", "")
         qsettings.setValue("djaypro/analyzed_data_delay", _ANALYZED_DATA_RETRY_DEFAULT)
+        qsettings.setValue("djaypro/deckskip", None)
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """connect djay Pro button to filename picker"""
@@ -806,6 +938,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             )
         )
 
+        deckskip = self._get_deckskip()
+        qwidget.djaypro_deck1_skip_checkbox.setChecked("1" in deckskip)
+        qwidget.djaypro_deck2_skip_checkbox.setChecked("2" in deckskip)
+        qwidget.djaypro_deck3_skip_checkbox.setChecked("3" in deckskip)
+        qwidget.djaypro_deck4_skip_checkbox.setChecked("4" in deckskip)
+
     def verify_settingsui(self, qwidget: "QWidget"):
         """verify settings are valid"""
         if not pathlib.Path(qwidget.dir_lineedit.text()).exists():
@@ -830,6 +968,17 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             delay = _ANALYZED_DATA_RETRY_DEFAULT
         delay = max(0.0, min(delay, 10.0))
         self.config.cparser.setValue("djaypro/analyzed_data_delay", delay)
+
+        deckskip = []
+        if qwidget.djaypro_deck1_skip_checkbox.isChecked():
+            deckskip.append("1")
+        if qwidget.djaypro_deck2_skip_checkbox.isChecked():
+            deckskip.append("2")
+        if qwidget.djaypro_deck3_skip_checkbox.isChecked():
+            deckskip.append("3")
+        if qwidget.djaypro_deck4_skip_checkbox.isChecked():
+            deckskip.append("4")
+        self.config.cparser.setValue("djaypro/deckskip", deckskip)
 
     def on_djaypro_dir_button(self):
         """open file browser to set djay Pro directory"""

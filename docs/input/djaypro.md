@@ -46,6 +46,12 @@ Note that the file path is also required for What's Now Playing to read tags sto
 file itself (cover art, ISRC, MusicBrainz IDs, and other metadata not kept in djay Pro's
 database). If the file path is missing, those tags will not be available.
 
+### Ignore Deck(s)
+
+Check the deck numbers you want What's Now Playing to ignore. Tracks played on ignored decks
+are never reported. Useful for preview decks or sampler decks that should not trigger
+now-playing updates.
+
 ## Metadata provided
 
 * Artist, title, duration
