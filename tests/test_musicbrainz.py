@@ -128,11 +128,15 @@ async def test_recordingid_api_cache_call_count(
                 f"got {api_call_count}"
             )
 
-            assert result1 == result2, "Results should be identical when using cache"
-
             assert result1["title"] == "15 Ghosts II"
             assert result1["artist"] == "Nine Inch Nails"
             assert result1["musicbrainzrecordingid"] == test_recording_id
+
+            # coverimageraw comes from a separate CAA cache entry and may be
+            # absent on the first call if CAA is flaky; strip it before comparing.
+            result1.pop("coverimageraw", None)
+            result2.pop("coverimageraw", None)
+            assert result1 == result2, "Recording fields should be identical when using cache"
 
             # Third call to further confirm caching
             result3 = await mbhelper.recordingid(test_recording_id)
@@ -141,6 +145,7 @@ async def test_recordingid_api_cache_call_count(
                 f"Expected 1 API call after third recordingid lookup (cache hit), "
                 f"got {api_call_count}"
             )
+            result3.pop("coverimageraw", None)
             assert result1 == result3, "Third result should also be identical (cached)"
 
         finally:
@@ -481,6 +486,7 @@ async def test_musicbrainz_coverart_config_gate(bootstrap, coverart_enabled, exp
             ) as mock_fetch_cover:
                 result = await helper.recordingid("test-recording-id")
 
+    assert result is not None
     if expect_image:
         assert result.get("coverimageraw") == fake_image
         mock_fetch_cover.assert_called_once_with("test-release-id", None)
