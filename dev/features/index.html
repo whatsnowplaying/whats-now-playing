@@ -23,6 +23,11 @@
       
       
       
+        
+          
+        
+        <link rel="alternate" type="text/markdown" href="https://github.com/whatsnowplaying/whats-now-playing/raw/main/docs/features.md">
+      
       
         
         
@@ -68,7 +73,7 @@
     
     
 
-<link rel="alternate" type="text/plain" href="https://whatsnowplaying.com/llms.txt" />
+<link rel="llms-txt" type="text/plain" href="https://whatsnowplaying.com/llms.txt" />
 
   </head>
   
@@ -386,10 +391,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#two-computer-setup" class="md-nav__link">
+  <a href="#multi-computer-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two-Computer Setup
+        Multi-Computer Setup
       
     </span>
   </a>
@@ -3089,18 +3094,21 @@ with no manual source selection required for most setups. Software-based sources
 Hardware-based sources (Denon StageLinQ) are detected from the network. The
 detected source is shown in <strong>Core Settings → Source</strong> and can be changed at
 any time.</p>
-<h2 id="two-computer-setup">Two-Computer Setup<a class="headerlink" href="#two-computer-setup" title="Permanent link">&para;</a></h2>
+<h2 id="multi-computer-setup">Multi-Computer Setup<a class="headerlink" href="#multi-computer-setup" title="Permanent link">&para;</a></h2>
 <p>Many DJs stream from a dedicated PC while running their DJ software on a
 separate laptop. WNP is built for this. The <strong>Remote Output</strong> feature
-automatically sends live track data from the DJ machine to the streaming
-machine over the local network.</p>
+automatically sends live track data from 2 or more DJ machines to a central
+WNP instance over the local network, covering everything from a simple
+DJ-laptop/streaming-PC split to a full multi-DJ event where each performer's
+laptop feeds the same streaming machine.</p>
 <ul>
 <li>No IP addresses to configure; uses Bonjour/Zeroconf auto-discovery</li>
 <li>No port forwarding needed; works on any home or venue network</li>
 <li>Works across platforms (DJ laptop on macOS, streaming PC on Windows, or
   any combination)</li>
-<li>Install WNP on both machines, point the streaming machine at the DJ
-  machine, and it just works</li>
+<li>2 or more DJ machines can all send to a single central instance simultaneously</li>
+<li>Install WNP on each machine, point the DJ machines at the central one,
+  and it just works</li>
 </ul>
 <p>See <a href="../input/remote/">Remote Output</a> for setup details.</p>
 <h2 id="input-sources">Input Sources<a class="headerlink" href="#input-sources" title="Permanent link">&para;</a></h2>
@@ -3149,8 +3157,9 @@ updates required.</p>
 </ul>
 <h3 id="remote-wnp-instance"><a href="../input/remote/">Remote WNP Instance</a><a class="headerlink" href="#remote-wnp-instance" title="Permanent link">&para;</a></h3>
 <ul>
-<li>One WNP instance can receive track data from another WNP instance over the
-  network, the standard solution for a two-computer DJ/streaming setup.
+<li>A central WNP instance can receive track data from two or more DJ machines
+  simultaneously over the network, covering everything from a simple
+  DJ-laptop/streaming-PC split to a full multi-DJ event.
   Supports auto-discovery via Bonjour/Zeroconf.</li>
 </ul>
 <h2 id="track-recognition">Track Recognition<a class="headerlink" href="#track-recognition" title="Permanent link">&para;</a></h2>
@@ -3386,7 +3395,7 @@ requires no account to start, and is built into WNP with no configuration needed
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.path", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "content.code.copy", "toc.follow", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "code.download": "Download", "code.select": "Toggle line selection", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike", "warning": [{"text": "\u26a0\ufe0f Development version - features may be unstable", "url": "../latest/", "version": "dev"}]}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.path", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.agents", "toc.follow", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "code.download": "Download", "code.select": "Toggle line selection", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike", "warning": [{"text": "\u26a0\ufe0f Development version - features may be unstable", "url": "../latest/", "version": "dev"}]}}</script>
     
     
       <script src="../assets/javascripts/bundle.1a8646e9.min.js"></script>

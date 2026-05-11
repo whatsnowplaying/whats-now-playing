@@ -23,6 +23,11 @@
       
       
       
+        
+          
+        
+        <link rel="alternate" type="text/markdown" href="https://github.com/whatsnowplaying/whats-now-playing/raw/main/docs/changelog.md">
+      
       
         
         
@@ -68,7 +73,7 @@
     
     
 
-<link rel="alternate" type="text/plain" href="https://whatsnowplaying.com/llms.txt" />
+<link rel="llms-txt" type="text/plain" href="https://whatsnowplaying.com/llms.txt" />
 
   </head>
   
@@ -521,6 +526,17 @@
     <span class="md-ellipsis">
       
         djay Pro
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#musicbrainz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MusicBrainz
       
     </span>
   </a>
@@ -3325,7 +3341,23 @@
 <ul>
 <li>Added <code>has_tracks_by_artist</code> support for track requests</li>
 <li>Added playlist support: available playlists can now be selected for
-    artist queries</li>
+    artist queries and roulette requests</li>
+<li>BPM, key, and deck number are now read from djay Pro's analysis database
+    and included in track metadata</li>
+<li>Configurable analysis delay: how long to wait for djay Pro to commit
+    BPM, key, and file path after a track starts (separate DB transaction)</li>
+<li>Configurable deck skip: individual decks can be excluded from reporting
+    via checkboxes in settings</li>
+<li>Tracks already playing when WNP launches are silently skipped; djay Pro
+    does not clear NowPlaying.txt between sessions so this prevents
+    re-reporting stale tracks on startup</li>
+</ul>
+<h3 id="musicbrainz">MusicBrainz<a class="headerlink" href="#musicbrainz" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fixed a Cover Art Archive cache poisoning issue where failed CAA fetches
+    were baked into the 7-day recording cache entry, preventing retries;
+    cover art is now cached independently so failures are always retried</li>
+<li>Fixed false rate-limit errors from the MusicBrainz client</li>
 </ul>
 <h2 id="version-520-2026-05-04">Version 5.2.0 - 2026-05-04<a class="headerlink" href="#version-520-2026-05-04" title="Permanent link">&para;</a></h2>
 <h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
@@ -3774,7 +3806,7 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.path", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "content.code.copy", "toc.follow", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "code.download": "Download", "code.select": "Toggle line selection", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike", "warning": [{"text": "\u26a0\ufe0f Development version - features may be unstable", "url": "../latest/", "version": "dev"}]}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.path", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.agents", "toc.follow", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "code.download": "Download", "code.select": "Toggle line selection", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike", "warning": [{"text": "\u26a0\ufe0f Development version - features may be unstable", "url": "../latest/", "version": "dev"}]}}</script>
     
     
       <script src="../assets/javascripts/bundle.1a8646e9.min.js"></script>
