@@ -298,10 +298,23 @@ jobs:
       - name: display artifacts
         run: ls -aR
         working-directory: artifacts
+      - name: rename per-OS coverage files
+        run: |
+          # coverage 7.14 auto-combines per-OS at end of test, so each
+          # artifact contains a single .coverage file.  Give each one a
+          # unique parallel-style suffix so coverage.combine merges them
+          # instead of reading one and overwriting the rest.
+          for dir in artifacts/*/; do
+            name=$(basename "$dir")
+            if [ -f "$dir/.coverage" ]; then
+              mv "$dir/.coverage" ".coverage.$name"
+            fi
+          done
+          ls -al .coverage*
       - name: merge coverage files
         run: |
           source /tmp/venv/bin/activate
-          coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
+          coverage combine
           coverage html
           coverage xml
       - name: artifact full tests
