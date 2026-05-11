@@ -67,7 +67,7 @@ Kick templates support powerful formatting features:
 
 Example announcement template:
 
-``` jinja
+``` jinja { title="kickbot_track.txt" data-download="blob" }
 {% raw %}
 {% if artist %}{{ artist }} - {% endif %}"{{ title }}"
 {% if album %} from {{ album }}{% endif %}

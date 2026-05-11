@@ -253,7 +253,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 
 **twitchbot_guess.txt**: Response when a viewer makes a guess
 
-```jinja
+```jinja { title="twitchbot_guess.txt" data-download="blob" }
 {% raw %}
 {% if guess_error -%}
 {{ guess_error }}
@@ -277,7 +277,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 
 **twitchbot_mypoints.txt**: Response when a viewer checks their stats
 
-```jinja
+```jinja { title="twitchbot_mypoints.txt" data-download="blob" }
 {% raw %}
 {% if stats_none -%}
 @{{ stats_user }} You haven't played yet! Type !guess to start playing.
@@ -291,7 +291,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 
 **twitchbot_gamestart.txt**: Automatic announcement when a new game starts
 
-```jinja
+```jinja { title="twitchbot_gamestart.txt" data-download="blob" }
 {% raw %}
 🎮 New guessing game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
 Artist: {{ masked_artist }}

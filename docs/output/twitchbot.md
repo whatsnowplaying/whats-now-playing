@@ -247,7 +247,7 @@ the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:
 
-```jinja
+```jinja { title="twitchbot_websites_snippet.txt" data-download="blob" }
 {% raw %}
 {% if artistwebsites %}
 {% for website in artistwebsites %}

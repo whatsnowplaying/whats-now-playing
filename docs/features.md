@@ -14,19 +14,22 @@ Hardware-based sources (Denon StageLinQ) are detected from the network. The
 detected source is shown in **Core Settings → Source** and can be changed at
 any time.
 
-## Two-Computer Setup
+## Multi-Computer Setup
 
 Many DJs stream from a dedicated PC while running their DJ software on a
 separate laptop. WNP is built for this. The **Remote Output** feature
-automatically sends live track data from the DJ machine to the streaming
-machine over the local network.
+automatically sends live track data from 2 or more DJ machines to a central
+WNP instance over the local network, covering everything from a simple
+DJ-laptop/streaming-PC split to a full multi-DJ event where each performer's
+laptop feeds the same streaming machine.
 
 * No IP addresses to configure; uses Bonjour/Zeroconf auto-discovery
 * No port forwarding needed; works on any home or venue network
 * Works across platforms (DJ laptop on macOS, streaming PC on Windows, or
   any combination)
-* Install WNP on both machines, point the streaming machine at the DJ
-  machine, and it just works
+* 2 or more DJ machines can all send to a single central instance simultaneously
+* Install WNP on each machine, point the DJ machines at the central one,
+  and it just works
 
 See [Remote Output](input/remote.md) for setup details.
 
@@ -78,8 +81,9 @@ updates required.
 
 ### [Remote WNP Instance](input/remote.md)
 
-* One WNP instance can receive track data from another WNP instance over the
-  network, the standard solution for a two-computer DJ/streaming setup.
+* A central WNP instance can receive track data from two or more DJ machines
+  simultaneously over the network, covering everything from a simple
+  DJ-laptop/streaming-PC split to a full multi-DJ event.
   Supports auto-discovery via Bonjour/Zeroconf.
 
 ## Track Recognition
