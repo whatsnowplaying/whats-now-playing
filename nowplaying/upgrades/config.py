@@ -15,6 +15,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.apicache
 import nowplaying.artistextras.theaudiodb
 import nowplaying.trackrequests
 import nowplaying.utils.config_json
@@ -294,6 +295,9 @@ class UpgradeConfig:
         if oldversion < Version("5.2.0"):
             self._upgrade_to_5_2_0(config)
 
+        if oldversion < Version("5.2.1"):
+            self._upgrade_to_5_2_1()
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -506,6 +510,18 @@ class UpgradeConfig:
             config.setValue("discord/bot_enabled", enabled)
             config.setValue("discord/richpresence_enabled", enabled)
             config.remove("discord/enabled")
+
+    @staticmethod
+    def _upgrade_to_5_2_1() -> None:
+        """Upgrade to 5.2.1 — purge MusicBrainz apicache entries.
+
+        wnpmb 0.3.0 changed release scoring (better handling of singles, reissues,
+        and compilations with missing secondary-types).  Entries cached by older
+        wnpmb versions can still return wrong albums even after the upgrade, so
+        we invalidate them once on first 5.2.1 launch.  The vacuum pass that
+        follows on startup reclaims the freed disk pages.
+        """
+        nowplaying.apicache.APIResponseCache.purge_providers(["musicbrainz", "musicbrainz_caa"])
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:
