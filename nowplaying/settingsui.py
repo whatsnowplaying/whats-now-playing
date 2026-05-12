@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 import nowplaying.config
 import nowplaying.firstinstall
-import nowplaying.guessgamesettings
+import nowplaying.guessgame.settings
 import nowplaying.preview.textwindow
 import nowplaying.preview.window
 import nowplaying.hostmeta
@@ -92,7 +92,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick": nowplaying.kick.settings.KickSettings(),
             "kickchat": nowplaying.kick.settings.KickChatSettings(),
             "requests": nowplaying.trackrequests.TrackRequestSettings(),
-            "guessgame": nowplaying.guessgamesettings.GuessGameSettings(),
+            "guessgame": nowplaying.guessgame.settings.GuessGameSettings(),
             "recognition_musicbrainz": nowplaying.musicbrainz.plugin.Plugin(config=self.config),
         }
 

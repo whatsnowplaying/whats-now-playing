@@ -141,7 +141,17 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             if valid.get("status") == 401:
                 logging.debug("Chat token expired, attempting refresh")
                 self.config.cparser.setValue(CHAT_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
-                return await self._refresh_chat_token()
+                new_token = await self._refresh_chat_token()
+                if not new_token:
+                    return None
+                # Re-validate the refreshed token so the status and username
+                # in settings reflect the working token.
+                try:
+                    valid = await validate_token(new_token)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error("cannot validate refreshed chat token: %s", error)
+                    return new_token
+                token = new_token
         except Exception as error:  # pylint: disable=broad-except
             logging.error("cannot validate chat token: %s", error)
             return None

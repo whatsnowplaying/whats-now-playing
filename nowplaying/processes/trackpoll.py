@@ -398,6 +398,26 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 return False
         return True
 
+    async def _maybe_flush_pending(self) -> None:
+        """Publish deferred metadata if the guess game has ended.
+
+        Called from idle gettrack cycles (same track or empty input) so that
+        a solved/timed-out game flushes the deferred write without waiting for
+        the next track change.
+        """
+        if not (self._pending_meta and self.guessgame):
+            return
+        try:
+            await self.guessgame.check_game_timeout()
+            if await self.guessgame.may_publish():
+                logging.debug("Publishing deferred metadata after may_publish=True")
+                await self._publish(self._pending_meta)
+                self._pending_meta = None
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("Guessgame idle check failed, publishing deferred track: %s", err)
+            await self._publish(self._pending_meta)
+            self._pending_meta = None
+
     @staticmethod
     def _isignored(metadata: TrackMetadata) -> bool:
         """bail out if the text WNPIGNORE appears in the comment field"""
@@ -492,22 +512,16 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         nextmeta, _ = await self._check_earshot_override(nextmeta)
 
         if self._ismetaempty(nextmeta) or self._isignored(nextmeta):
+            # No fresh input this cycle.  If a previous track is still deferred
+            # waiting on a guess game, drive the publish-permission check here
+            # too — otherwise change-only sources (EarShot, Remote) leave
+            # deferred metadata stuck until the next track.
+            await self._maybe_flush_pending()
             return
 
         if self._ismetasame(nextmeta):
             # Same track still playing — use this idle cycle to check write permission.
-            if self._pending_meta and self.guessgame:
-                try:
-                    await self.guessgame.check_game_timeout()
-                    if await self.guessgame.may_publish():
-                        await self._publish(self._pending_meta)
-                        self._pending_meta = None
-                except Exception as err:  # pylint: disable=broad-except
-                    logging.exception(
-                        "Guessgame idle check failed, publishing deferred track: %s", err
-                    )
-                    await self._publish(self._pending_meta)
-                    self._pending_meta = None
+            await self._maybe_flush_pending()
             return
 
         # fill in the blanks and make it live
