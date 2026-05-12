@@ -76,6 +76,13 @@ class APIResponseCache:
             self.__lock = asyncio.Lock()
         return self.__lock
 
+    @staticmethod
+    def _default_db_path() -> pathlib.Path:
+        """Return the default api_responses.db path under Qt's cache location."""
+        return pathlib.Path(
+            QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
+        ).joinpath("api_cache", "api_responses.db")
+
     def __init__(self, cache_dir: pathlib.Path | None = None):
         """Initialize the API cache.
 
@@ -84,13 +91,12 @@ class APIResponseCache:
         """
         if cache_dir:
             self.cache_dir = pathlib.Path(cache_dir)
+            self.db_file = self.cache_dir / "api_responses.db"
         else:
-            self.cache_dir = pathlib.Path(
-                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
-            ).joinpath("api_cache")
+            self.db_file = self._default_db_path()
+            self.cache_dir = self.db_file.parent
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.db_file = self.cache_dir / "api_responses.db"
         self.__lock: asyncio.Lock | None = None
         self.__lock_loop: asyncio.AbstractEventLoop | None = None
         self._initialized = False
@@ -577,11 +583,7 @@ class APIResponseCache:
             db_file: Path to database file. If None, uses default cache location.
         """
         if db_file is None:
-            # Use same path construction as APIResponseCache.__init__
-            cache_dir = pathlib.Path(
-                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
-            ).joinpath("api_cache")
-            db_file = cache_dir / "api_responses.db"
+            db_file = APIResponseCache._default_db_path()
 
         logging.debug("Checking API cache database at: %s", db_file)
         logging.debug("Cache directory exists: %s", db_file.parent.exists())
@@ -612,30 +614,29 @@ class APIResponseCache:
             return 0
 
         if db_file is None:
-            cache_dir = pathlib.Path(
-                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
-            ).joinpath("api_cache")
-            db_file = cache_dir / "api_responses.db"
+            db_file = APIResponseCache._default_db_path()
 
         if not db_file.exists():
             return 0
 
-        placeholders = ",".join("?" * len(providers))
         try:
+            removed = 0
             with nowplaying.utils.sqlite.sqlite_connection(db_file) as connection:
-                cursor = connection.execute(
-                    f"DELETE FROM api_responses WHERE provider IN ({placeholders})",
-                    providers,
-                )
-                connection.commit()
-                removed = cursor.rowcount or 0
-                if removed:
-                    logging.info(
-                        "Purged %d cached row(s) for provider(s): %s",
-                        removed,
-                        ", ".join(providers),
+                # One literal statement per provider keeps the SQL fully static
+                # (no string interpolation) and the input bound as a parameter.
+                for provider in providers:
+                    cursor = connection.execute(
+                        "DELETE FROM api_responses WHERE provider = ?", (provider,)
                     )
-                return removed
+                    removed += cursor.rowcount or 0
+                connection.commit()
+            if removed:
+                logging.info(
+                    "Purged %d cached row(s) for provider(s): %s",
+                    removed,
+                    ", ".join(providers),
+                )
+            return removed
         except (sqlite3.Error, OSError) as error:
             logging.error("Database error during provider purge: %s", error, exc_info=True)
             return 0
