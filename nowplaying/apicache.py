@@ -597,6 +597,49 @@ class APIResponseCache:
         except (sqlite3.Error, OSError) as error:
             logging.error("Database error during vacuum: %s", error, exc_info=True)
 
+    @staticmethod
+    def purge_providers(providers: list[str], db_file: pathlib.Path | None = None) -> int:
+        """Synchronously delete all cached rows for the given providers.
+
+        Used by version-upgrade hooks to evict cache entries produced by an
+        older library whose output format or scoring has since changed.
+        Reclaiming the disk pages is left to the vacuum pass that runs
+        right after.
+
+        Returns the number of rows removed.
+        """
+        if not providers:
+            return 0
+
+        if db_file is None:
+            cache_dir = pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
+            ).joinpath("api_cache")
+            db_file = cache_dir / "api_responses.db"
+
+        if not db_file.exists():
+            return 0
+
+        placeholders = ",".join("?" * len(providers))
+        try:
+            with nowplaying.utils.sqlite.sqlite_connection(db_file) as connection:
+                cursor = connection.execute(
+                    f"DELETE FROM api_responses WHERE provider IN ({placeholders})",
+                    providers,
+                )
+                connection.commit()
+                removed = cursor.rowcount or 0
+                if removed:
+                    logging.info(
+                        "Purged %d cached row(s) for provider(s): %s",
+                        removed,
+                        ", ".join(providers),
+                    )
+                return removed
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Database error during provider purge: %s", error, exc_info=True)
+            return 0
+
 
 # Global cache instance for use across the application
 _global_cache_instance: APIResponseCache | None = None  # pylint: disable=invalid-name
