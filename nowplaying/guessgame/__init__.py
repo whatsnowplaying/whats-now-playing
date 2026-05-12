@@ -932,31 +932,34 @@ class GuessGame(GuessGameServerMixin):  # pylint: disable=too-many-instance-attr
         if not self.is_enabled():
             return None
 
-        # Whitelist column names to prevent SQL injection
-        column_mapping = {
-            "session": ("session_score", "session_solves"),
-            "all_time": ("all_time_score", "all_time_solves"),
+        # Literal queries per leaderboard type — no string interpolation into
+        # SQL.  Anything not in this mapping is rejected before any DB access.
+        leaderboard_queries = {
+            "session": """
+                SELECT username, session_score as score, session_solves as solves
+                FROM user_scores
+                WHERE session_score > 0
+                ORDER BY session_score DESC, session_solves DESC
+                LIMIT ?
+            """,
+            "all_time": """
+                SELECT username, all_time_score as score, all_time_solves as solves
+                FROM user_scores
+                WHERE all_time_score > 0
+                ORDER BY all_time_score DESC, all_time_solves DESC
+                LIMIT ?
+            """,
         }
 
-        if leaderboard_type not in column_mapping:
+        query = leaderboard_queries.get(leaderboard_type)
+        if query is None:
             logging.error("Invalid leaderboard_type: %s", leaderboard_type)
             return None
-
-        score_col, solves_col = column_mapping[leaderboard_type]
 
         async def _do_get_leaderboard():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
-
-                # Use validated column names (not from user input directly)
-                query = f"""
-                    SELECT username, {score_col} as score, {solves_col} as solves
-                    FROM user_scores
-                    WHERE {score_col} > 0
-                    ORDER BY {score_col} DESC, {solves_col} DESC
-                    LIMIT ?
-                """
 
                 await cursor.execute(query, (limit,))
 

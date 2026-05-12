@@ -22,7 +22,7 @@ class GuessGameServerMixin:
 
     if TYPE_CHECKING:
         config: "nowplaying.config.ConfigFile | None"
-        stopevent: asyncio.Event
+        stopevent: asyncio.Event | None
         _http_session: aiohttp.ClientSession | None
 
         def is_enabled(self) -> bool:  # pylint: disable=missing-function-docstring,no-self-use
@@ -218,6 +218,9 @@ class GuessGameServerMixin:
 
         Respects the guessgame/send_to_server config option.
         """
+        if self.stopevent is None:
+            logging.debug("send_game_state_to_server: no stopevent provided, not running loop")
+            return
         while not self.stopevent.is_set():
             try:
                 _, sleep_duration = await self._send_single_update()
