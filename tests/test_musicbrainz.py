@@ -102,10 +102,10 @@ async def test_recordingid_api_cache_call_count(
         original_recordingid_uncached = mbhelper._recordingid_uncached  # pylint: disable=protected-access
         api_call_count = 0
 
-        async def mock_recordingid_uncached(recordingid):
+        async def mock_recordingid_uncached(recordingid, *args, **kwargs):
             nonlocal api_call_count
             api_call_count += 1
-            return await original_recordingid_uncached(recordingid)
+            return await original_recordingid_uncached(recordingid, *args, **kwargs)
 
         mbhelper._recordingid_uncached = mock_recordingid_uncached  # pylint: disable=protected-access
 
