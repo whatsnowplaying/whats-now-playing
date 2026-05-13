@@ -326,9 +326,7 @@ class MusicBrainzHelper:
                 return art
         return None
 
-    async def _recordingid_uncached(
-        self, recordingid, track_data: dict | None = None
-    ) -> dict:
+    async def _recordingid_uncached(self, recordingid, track_data: dict | None = None) -> dict:
         """uncached version of recordingid lookup.
 
         track_data: optional original metadata (e.g. EarShot's Shazam result)
