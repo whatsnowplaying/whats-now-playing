@@ -123,9 +123,15 @@ class MusicBrainzHelper:
         result = await self._mb_op_with_retry(_find, "find_recording", (None, None))
         exact_mbid, fallback_mbid = result if result else (None, None)
         if exact_mbid:
-            return _RecordingLookup(data=await self.recordingid(exact_mbid), is_fallback=False)
+            return _RecordingLookup(
+                data=await self.recordingid(exact_mbid, track_data=metadata),
+                is_fallback=False,
+            )
         if fallback_mbid:
-            return _RecordingLookup(data=await self.recordingid(fallback_mbid), is_fallback=True)
+            return _RecordingLookup(
+                data=await self.recordingid(fallback_mbid, track_data=metadata),
+                is_fallback=True,
+            )
         return _RecordingLookup(data=None, is_fallback=False)
 
     async def lastditcheffort(self, metadata):
@@ -187,13 +193,15 @@ class MusicBrainzHelper:
 
         if metadata.get("musicbrainzrecordingid"):
             logger.debug("Preprocessing with musicbrainz recordingid")
-            addmeta = await self.recordingid(metadata["musicbrainzrecordingid"])
+            addmeta = await self.recordingid(
+                metadata["musicbrainzrecordingid"], track_data=metadata
+            )
             if addmeta:
                 return addmeta
 
         if metadata.get("isrc"):
             logger.debug("Preprocessing with musicbrainz isrc")
-            addmeta = await self.isrc(metadata["isrc"])
+            addmeta = await self.isrc(metadata["isrc"], track_data=metadata)
             if addmeta:
                 return addmeta
 
@@ -209,8 +217,12 @@ class MusicBrainzHelper:
 
         return addmeta
 
-    async def isrc(self, isrclist):
-        """lookup musicbrainz information based upon isrc"""
+    async def isrc(self, isrclist, track_data: dict | None = None):
+        """lookup musicbrainz information based upon isrc.
+
+        track_data: optional original metadata forwarded to the recording lookup
+        so album/year hints reach wnpmb's release scorer.
+        """
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
 
@@ -222,16 +234,22 @@ class MusicBrainzHelper:
 
         mbid = await self._mb_op_with_retry(_resolve, "resolve_recording_by_isrc", None)
         if mbid:
-            return await self.recordingid(mbid)
+            return await self.recordingid(mbid, track_data=track_data)
         return None
 
-    async def recordingid(self, recordingid):
-        """lookup the musicbrainz information based upon recording id"""
+    async def recordingid(self, recordingid, track_data: dict | None = None):
+        """lookup the musicbrainz information based upon recording id.
+
+        track_data: optional original metadata passed to wnpmb's release scorer
+        so album/year hints from upstream (e.g. EarShot) influence which release
+        is picked.  The recording cache is keyed only on recording_id, so the
+        first call's hint determines the cached pick for the TTL period.
+        """
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
 
         async def fetch_func():
-            return await self._recordingid_uncached(recordingid)
+            return await self._recordingid_uncached(recordingid, track_data=track_data)
 
         data = await nowplaying.apicache.cached_fetch(
             provider="musicbrainz",
@@ -308,8 +326,14 @@ class MusicBrainzHelper:
                 return art
         return None
 
-    async def _recordingid_uncached(self, recordingid) -> dict:
-        """uncached version of recordingid lookup"""
+    async def _recordingid_uncached(
+        self, recordingid, track_data: dict | None = None
+    ) -> dict:
+        """uncached version of recordingid lookup.
+
+        track_data: optional original metadata (e.g. EarShot's Shazam result)
+        whose 'album', 'year', 'date' fields wnpmb uses as release-scoring hints.
+        """
         self._setemail()
 
         async def _fetch() -> dict:
@@ -318,7 +342,9 @@ class MusicBrainzHelper:
                 if not mb_data:
                     return {}
 
-                enriched = await self.mb_client.process_recording_data(mb_data, recordingid)
+                enriched = await self.mb_client.process_recording_data(
+                    mb_data, recordingid, original_track_data=track_data
+                )
 
                 # Map wnpmb key names to WNP TrackMetadata key names
                 newdata: dict[str, Any] = {
