@@ -19,7 +19,16 @@ if [[ -z "${MACOS_SIGN_IDENTITY:-}" ]]; then
 fi
 
 echo "=== Verifying signature ==="
-codesign --verify --deep --strict --verbose=2 "${APP}"
+# codesign --verify --deep --strict exits 0 even when it reports
+# "code object is not signed at all" for a subcomponent.  Parse the
+# output and fail explicitly so CI catches unsigned bundle parts
+# (e.g. .cpp.o build artifacts shipped by PySide6 wheels).
+VERIFY_OUT=$(codesign --verify --deep --strict --verbose=2 "${APP}" 2>&1)
+echo "${VERIFY_OUT}"
+if echo "${VERIFY_OUT}" | grep -qE "not signed at all|invalid signature|failed"; then
+  echo "ERROR: codesign verification reported failure in ${APP}"
+  exit 1
+fi
 
 # Notarize only if all three Apple credentials are present
 if [[ -n "${APPLE_ID:-}" && -n "${APPLE_ID_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
@@ -56,7 +65,15 @@ if [[ -n "${APPLE_ID:-}" && -n "${APPLE_ID_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-
   xcrun stapler staple "${APP}"
 
   echo "=== Verifying notarization ==="
-  spctl --assess --type execute --verbose "${APP}"
+  # spctl --assess can exit 0 while printing "rejected"; parse the
+  # output to fail explicitly.  This is the Gatekeeper-equivalent
+  # check users hit at first launch.
+  SPCTL_OUT=$(spctl --assess --type execute --verbose "${APP}" 2>&1)
+  echo "${SPCTL_OUT}"
+  if echo "${SPCTL_OUT}" | grep -q "rejected"; then
+    echo "ERROR: spctl rejected ${APP}"
+    exit 1
+  fi
 else
   echo "=== Skipping notarization (APPLE_ID/APPLE_ID_PASSWORD/APPLE_TEAM_ID not set) ==="
 fi
