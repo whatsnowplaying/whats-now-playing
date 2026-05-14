@@ -39,6 +39,8 @@ jobs:
 
   pyinstaller-linux:
     runs-on: ubuntu-latest
+    environment: >-
+      ${{ startsWith(github.ref, 'refs/tags/') && 'linux-signing' || '' }}
     permissions:
       contents: read
     steps:
@@ -55,6 +57,27 @@ jobs:
         with:
           name: linux-dist
           path: "*.zip"
+
+      # Release upload runs only inside the linux-signing environment
+      # (active on tag pushes), which provides the RELEASE_TOKEN PAT
+      # scoped to release-write on this repo only.
+      - name: upload zip to GitHub Release
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" \
+                 --repo "$GITHUB_REPOSITORY" \
+                 --draft \
+                 --title "$TAG" \
+                 --generate-notes
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            WhatsNowPlaying-*.zip
 
   pyinstaller-linux-smoke:
     needs: pyinstaller-linux
@@ -165,3 +188,43 @@ jobs:
           name: windows-dist
           # Windows builds create a directory, not a zip (see builder.sh line 146)
           path: "WhatsNowPlaying*windows"
+
+      # Windows zip is produced here (post-signing) rather than in
+      # builder.sh because the signing step has to run against the
+      # unpacked directory.
+      - name: zip windows dist for release
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          DIR=$(find . -maxdepth 1 -type d -name "WhatsNowPlaying-*-Windows" | head -1)
+          if [[ -z "$DIR" ]]; then
+            echo "Windows dist directory not found" >&2
+            exit 1
+          fi
+          # Strip leading ./ so the archive doesn't contain it.
+          DIR="${DIR#./}"
+          7z a -tzip "${DIR}.zip" "${DIR}"
+
+      # Release upload runs only inside the windows-signing environment
+      # (active on tag pushes), which provides the RELEASE_TOKEN PAT
+      # scoped to release-write on this repo only.
+      - name: upload zip to GitHub Release
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" \
+                 --repo "$GITHUB_REPOSITORY" \
+                 --draft \
+                 --title "$TAG" \
+                 --generate-notes
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            WhatsNowPlaying-*-Windows.zip

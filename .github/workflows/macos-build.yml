@@ -89,3 +89,27 @@ jobs:
         with:
           name: ${{ inputs.artifact-name }}
           path: "*.zip"
+
+      # Release upload runs only when the build is inside a signing
+      # environment that has RELEASE_TOKEN configured.  RELEASE_TOKEN
+      # is a fine-scoped PAT with permission to write releases on this
+      # repo only.  Outside a signing environment the secret is empty
+      # and this step is skipped — no path for unsigned binaries to
+      # land on the public Releases page.
+      - name: upload zip to GitHub Release
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" \
+                 --repo "$GITHUB_REPOSITORY" \
+                 --draft \
+                 --title "$TAG" \
+                 --generate-notes
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            WhatsNowPlaying-*.zip
