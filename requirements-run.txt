@@ -1,6 +1,7 @@
 aiocache==0.12.3
 aiofiles==25.1.0
 aiohttp==3.13.5
+httpx[http2]==0.28.1
 aiosqlite==0.22.1
 chardet<8 # required by requests
 charset-normalizer==3.4.7
@@ -11,6 +12,7 @@ jinja2==3.1.6
 lxml==6.1.0
 netifaces-plus==0.12.5
 nltk==3.9.4
+orjson==3.11.8
 pillow==12.2.0
 pillow_avif_plugin==1.5.5
 psutil==7.2.2

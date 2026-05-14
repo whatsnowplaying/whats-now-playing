@@ -25,6 +25,7 @@ import nowplaying.upgrades
 import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
+import nowplaying.datacache.storage
 import nowplaying.db
 import nowplaying.firstinstall
 import nowplaying.guessgame
@@ -43,7 +44,7 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
     """Background thread for database vacuum operations on startup."""
 
     def run(self) -> None:  # pylint: disable=no-self-use
-        """Run vacuum operations on API cache and guess game databases."""
+        """Run vacuum and maintenance operations on all databases."""
         logging.debug("Starting background database vacuum")
         try:
             nowplaying.apicache.APIResponseCache.vacuum_database_file()
@@ -53,6 +54,11 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
             nowplaying.guessgame.GuessGame.vacuum_database()
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming guess game database: %s", error)
+        try:
+            stats = nowplaying.datacache.storage.run_datacache_maintenance()
+            logging.debug("Datacache maintenance completed: %s", stats)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Error during datacache maintenance: %s", error)
         logging.debug("Background database vacuum complete")
 
 
@@ -457,6 +463,20 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.vacuum_thread = _VacuumThread()
         self.vacuum_thread.start()
 
+    def _wait_for_vacuum_thread(self) -> None:
+        """Wait for the background vacuum thread to finish if it is still running."""
+        thread = getattr(self, "vacuum_thread", None)
+        if thread is not None and thread.isRunning():
+            thread.wait()
+
+    def __del__(self) -> None:
+        """Ensure the vacuum thread is joined before Python drops this object.
+
+        Tests that create Tray() without calling cleanquit() rely on this so that
+        PySide6 does not call ~QThread() while the OS thread is still running.
+        """
+        self._wait_for_vacuum_thread()
+
     def _setup_charts_key(self) -> None:
         """Generate anonymous charts key if none exists, or ping version if key already present"""
         self._update_startup_progress("Setting up Charts service...")
@@ -624,8 +644,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.subprocesses.stop_all_processes()
 
         # Wait for background vacuum thread to finish before cleanup
-        if self.vacuum_thread and self.vacuum_thread.isRunning():
-            self.vacuum_thread.wait()
+        self._wait_for_vacuum_thread()
 
         # Clean up any stray temporary OAuth2 credentials before shutdown
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
