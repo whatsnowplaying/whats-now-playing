@@ -43,6 +43,10 @@ jobs:
       ${{ startsWith(github.ref, 'refs/tags/') && 'linux-signing' || '' }}
     permissions:
       contents: read
+    env:
+      # Hoisted to job level so env.RELEASE_TOKEN is visible to the
+      # step-level if: condition below.
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
     steps:
       - name: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -64,8 +68,7 @@ jobs:
       - name: upload zip to GitHub Release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
         env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
@@ -133,6 +136,9 @@ jobs:
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      # Hoisted to job level so env.RELEASE_TOKEN is visible to step-level
+      # if: conditions on the zip + verify + upload steps below.
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
     steps:
       - name: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -194,8 +200,6 @@ jobs:
       # unpacked directory.
       - name: zip windows dist for release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
-        env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         shell: bash
         run: |
           DIR=$(find . -maxdepth 1 -type d -name "WhatsNowPlaying-*-Windows" | head -1)
@@ -212,10 +216,12 @@ jobs:
       # signature on the main exe.  The runner's in-place verification
       # earlier in the job has been shown to mask issues that only
       # appear after the zip+extract path users actually exercise.
+      # Gated only on RELEASE_TOKEN (signing-env active + tag push) —
+      # AZURE_CLIENT_ID gates the actual signing earlier; if we got
+      # here in the signing env, the binary should be signed and the
+      # verification should run.
       - name: verify signed bundle survives zip round-trip
-        if: ${{ env.AZURE_CLIENT_ID != '' && env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
-        env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
         shell: powershell
         run: |
           $zip = Get-ChildItem -Filter "WhatsNowPlaying-*-Windows.zip" | Select-Object -First 1
@@ -247,8 +253,7 @@ jobs:
       - name: upload zip to GitHub Release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
         env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
           TAG: ${{ github.ref_name }}
         shell: bash
         run: |

@@ -29,6 +29,10 @@ jobs:
       contents: read
     env:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      # Hoisted to job level so `env.RELEASE_TOKEN` is visible in
+      # step-level `if:` conditions (step-local env isn't always
+      # available to the if-expression evaluator).
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
     steps:
       - name: cpu diagnostics
         run: |
@@ -93,6 +97,10 @@ jobs:
       # Catching this here means a bad zip never becomes a workflow
       # artifact or a release asset.
       - name: verify signed bundle survives zip round-trip
+        # Only run when the build entered a signing environment.  On a
+        # plain branch push (no environment, no MACOS_SIGN_IDENTITY) the
+        # bundle was never signed, so this check would fail spuriously.
+        if: ${{ inputs.environment != '' }}
         run: |
           # GitHub Actions runs bash -e; we have to be careful not to let
           # codesign/spctl non-zero exits kill the assignment before we get
@@ -152,8 +160,7 @@ jobs:
       - name: upload zip to GitHub Release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
         env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \

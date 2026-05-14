@@ -20,12 +20,18 @@ fi
 
 echo "=== Verifying signature ==="
 # codesign --verify --deep --strict exits 0 even when it reports
-# "code object is not signed at all" for a subcomponent.  Parse the
-# output and fail explicitly so CI catches unsigned bundle parts
-# (e.g. .cpp.o build artifacts shipped by PySide6 wheels).
+# "code object is not signed at all" for a subcomponent — so parse
+# the output too.  Also catch any non-zero exit (internal error,
+# missing file, etc.) that wouldn't match the grep.
+# `set -e` is active so wrap the assignment to capture exit code.
+set +e
 VERIFY_OUT=$(codesign --verify --deep --strict --verbose=2 "${APP}" 2>&1)
+CODESIGN_EXIT=$?
+set -e
 echo "${VERIFY_OUT}"
-if echo "${VERIFY_OUT}" | grep -qE "not signed at all|invalid signature|failed"; then
+echo "codesign exit code: ${CODESIGN_EXIT}"
+if [[ ${CODESIGN_EXIT} -ne 0 ]] \
+   || echo "${VERIFY_OUT}" | grep -qE "not signed at all|invalid signature|failed"; then
   echo "ERROR: codesign verification reported failure in ${APP}"
   exit 1
 fi
@@ -66,12 +72,16 @@ if [[ -n "${APPLE_ID:-}" && -n "${APPLE_ID_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-
 
   echo "=== Verifying notarization ==="
   # spctl --assess can exit 0 while printing "rejected"; parse the
-  # output to fail explicitly.  This is the Gatekeeper-equivalent
-  # check users hit at first launch.
+  # output to fail explicitly.  Also catch any non-zero exit that
+  # wouldn't match the grep.
+  set +e
   SPCTL_OUT=$(spctl --assess --type execute --verbose "${APP}" 2>&1)
+  SPCTL_EXIT=$?
+  set -e
   echo "${SPCTL_OUT}"
-  if echo "${SPCTL_OUT}" | grep -q "rejected"; then
-    echo "ERROR: spctl rejected ${APP}"
+  echo "spctl exit code: ${SPCTL_EXIT}"
+  if [[ ${SPCTL_EXIT} -ne 0 ]] || echo "${SPCTL_OUT}" | grep -q "rejected"; then
+    echo "ERROR: spctl rejected ${APP} (exit=${SPCTL_EXIT})"
     exit 1
   fi
 else
