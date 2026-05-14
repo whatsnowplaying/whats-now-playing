@@ -29,6 +29,10 @@ jobs:
       contents: read
     env:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      # Hoisted to job level so `env.RELEASE_TOKEN` is visible in
+      # step-level `if:` conditions (step-local env isn't always
+      # available to the if-expression evaluator).
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
     steps:
       - name: cpu diagnostics
         run: |
@@ -84,8 +88,88 @@ jobs:
         run: |
           BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
           "${BINARY}" --smoke-test
+
+      # Re-extract the zip into a fresh location and verify the bundle
+      # there.  codesign on the runner's in-place dist/ has been seen
+      # to silently accept bundles that fail verification once they
+      # round-trip through zip+unzip (e.g. PySide6 6.11.1 ships .cpp.o
+      # build artifacts that aren't in the signature manifest).
+      # Catching this here means a bad zip never becomes a workflow
+      # artifact or a release asset.
+      - name: verify signed bundle survives zip round-trip
+        # Only run when the build entered a signing environment.  On a
+        # plain branch push (no environment, no MACOS_SIGN_IDENTITY) the
+        # bundle was never signed, so this check would fail spuriously.
+        if: ${{ inputs.environment != '' }}
+        run: |
+          # GitHub Actions runs bash -e; we have to be careful not to let
+          # codesign/spctl non-zero exits kill the assignment before we get
+          # a chance to print the diagnostic output.
+          ZIP=$(ls WhatsNowPlaying-*.zip | head -1)
+          if [[ -z "$ZIP" ]]; then
+            echo "ERROR: no zip found to verify"
+            exit 1
+          fi
+          EXTRACT=$(mktemp -d)
+          ditto -xk "$ZIP" "$EXTRACT"
+          APP=$(find "$EXTRACT" -name "WhatsNowPlaying.app" -type d | head -1)
+          if [[ -z "$APP" ]]; then
+            echo "ERROR: WhatsNowPlaying.app not found inside $ZIP"
+            exit 1
+          fi
+
+          echo "=== codesign --verify --deep --strict on extracted bundle ==="
+          set +e
+          VERIFY_OUT=$(codesign --verify --deep --strict --verbose=2 "$APP" 2>&1)
+          CODESIGN_EXIT=$?
+          set -e
+          echo "$VERIFY_OUT"
+          echo "codesign exit code: $CODESIGN_EXIT"
+          if [[ $CODESIGN_EXIT -ne 0 ]] || \
+             echo "$VERIFY_OUT" | grep -qE "not signed at all|invalid signature|failed"; then
+            echo "ERROR: codesign --verify reports failure on extracted bundle"
+            exit 1
+          fi
+
+          echo "=== spctl --assess on extracted bundle ==="
+          set +e
+          SPCTL_OUT=$(spctl --assess --type execute --verbose "$APP" 2>&1)
+          SPCTL_EXIT=$?
+          set -e
+          echo "$SPCTL_OUT"
+          echo "spctl exit code: $SPCTL_EXIT"
+          if [[ $SPCTL_EXIT -ne 0 ]] || echo "$SPCTL_OUT" | grep -q "rejected"; then
+            echo "ERROR: spctl rejected extracted bundle"
+            exit 1
+          fi
+
+          rm -rf "$EXTRACT"
+
       - name: artifact dist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: ${{ inputs.artifact-name }}
           path: "*.zip"
+
+      # Release upload runs only when the build is inside a signing
+      # environment that has RELEASE_TOKEN configured.  RELEASE_TOKEN
+      # is a fine-scoped PAT with permission to write releases on this
+      # repo only.  Outside a signing environment the secret is empty
+      # and this step is skipped — no path for unsigned binaries to
+      # land on the public Releases page.
+      - name: upload zip to GitHub Release
+        if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" \
+                 --repo "$GITHUB_REPOSITORY" \
+                 --draft \
+                 --title "$TAG" \
+                 --generate-notes
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            WhatsNowPlaying-*.zip
