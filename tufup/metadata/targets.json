@@ -2,14 +2,26 @@
  "signatures": [
   {
    "keyid": "c3536321bc6fa06c71f9e9068a9b43ab5613cd566bda4b72b7377c68a291aec3",
-   "sig": "e0914566d70597de62601530e68429187931748cb7c3155cef9cf479d716600e770be54ba2100eb60a549a3ebe20cc941e9c342920f0cba9b6d115ed2f875b0a"
+   "sig": "6a63ac75b69eb5d1ae200586786a3842ab204254087dc2cfb6bc741483c87aec32a77a709ea909947dd54a0c3aab4e8fb0bf5f1a6dc2609adbbf406e7be8fa00"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-06-14T15:29:08Z",
+  "expires": "2026-06-14T22:14:41Z",
   "spec_version": "1.0.31",
   "targets": {
+   "WhatsNowPlaying_linux_x86_64-5.2.0.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "194159feea7f2d097fa1b82bdcb751554141fa5901ca58ecbec81c4e60f64d66"
+    },
+    "length": 305173529
+   },
    "WhatsNowPlaying_macos15_arm-5.2.0.tar.gz": {
     "custom": {
      "tufup": {
@@ -21,8 +33,32 @@
      "sha256": "181954d641faa332d5e825d2969f29f471f0e8c044b589c437c805ff7eae5011"
     },
     "length": 267456651
+   },
+   "WhatsNowPlaying_macos15_intel-5.2.0.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "fa2d364e75082ab17d988faead6c5b6f31a8ec9cb878f7ab58a33a5cd1fff6f1"
+    },
+    "length": 288355760
+   },
+   "WhatsNowPlaying_windows_x86_64-5.2.0.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "14194dd30e58a86680254666524dab56ffee86377787a8812292c1fb93b943ce"
+    },
+    "length": 310376025
    }
   },
-  "version": 2
+  "version": 3
  }
 }
