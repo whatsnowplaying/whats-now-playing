@@ -1,0 +1,28 @@
+{
+ "signatures": [
+  {
+   "keyid": "c3536321bc6fa06c71f9e9068a9b43ab5613cd566bda4b72b7377c68a291aec3",
+   "sig": "e0914566d70597de62601530e68429187931748cb7c3155cef9cf479d716600e770be54ba2100eb60a549a3ebe20cc941e9c342920f0cba9b6d115ed2f875b0a"
+  }
+ ],
+ "signed": {
+  "_type": "targets",
+  "expires": "2026-06-14T15:29:08Z",
+  "spec_version": "1.0.31",
+  "targets": {
+   "WhatsNowPlaying_macos15_arm-5.2.0.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "181954d641faa332d5e825d2969f29f471f0e8c044b589c437c805ff7eae5011"
+    },
+    "length": 267456651
+   }
+  },
+  "version": 2
+ }
+}
