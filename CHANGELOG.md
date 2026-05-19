@@ -10,6 +10,11 @@
 * Fixed EarShot and two-computer setups sending cover art via HTTP URL:
     only the first ~16KB of the image was being read due to an aiohttp
     buffering issue; full image data is now fetched correctly
+* Fixed Wikipedia, MusicBrainz, Discogs, and fanart.tv remembering
+    transient errors (rate limits, network failures) as "no data" for
+    hours or days, so artist bios, images, and album metadata for the
+    affected track stayed blank until the entry expired.  Stale entries
+    are cleared automatically on upgrade
 
 ### Artist Extras
 
@@ -26,6 +31,8 @@
     artist queries and roulette requests
 * BPM, key, and deck number are now read from djay Pro's analysis database
     and included in track metadata
+* ISRC codes are now included in track metadata when djay Pro provides
+    them, improving downstream metadata lookups
 * Configurable analysis delay: how long to wait for djay Pro to commit
     BPM, key, and file path after a track starts (separate DB transaction)
 * Configurable deck skip: individual decks can be excluded from reporting
@@ -36,9 +43,14 @@
 
 ### MusicBrainz
 
-* Fixed a Cover Art Archive cache poisoning issue where failed CAA fetches
-    were baked into the 7-day recording cache entry, preventing retries;
-    cover art is now cached independently so failures are always retried
+* Improved album selection: when EarShot (or another source) provides an
+    album name, the canonical studio album is preferred over compilations
+    or reissues that happen to contain the same recording
+* Improved album selection for ISRC-only lookups: canonical singles and
+    studio releases are preferred over compilations and reissues
+* Fixed cover art going permanently missing for a track after a single
+    failed fetch from the Cover Art Archive; failed fetches now retry
+    on the next play
 * Fixed false rate-limit errors from the MusicBrainz client
 
 ## Version 5.2.0 - 2026-05-04

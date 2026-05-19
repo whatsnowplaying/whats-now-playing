@@ -513,15 +513,26 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_2_1() -> None:
-        """Upgrade to 5.2.1 — purge MusicBrainz apicache entries.
+        """Upgrade to 5.2.1 — purge MusicBrainz, Wikimedia, and Discogs apicache.
 
         wnpmb 0.3.0 changed release scoring (better handling of singles, reissues,
         and compilations with missing secondary-types).  Entries cached by older
         wnpmb versions can still return wrong albums even after the upgrade, so
-        we invalidate them once on first 5.2.1 launch.  The vacuum pass that
-        follows on startup reclaims the freed disk pages.
+        we invalidate them once on first 5.2.1 launch.  This also clears any
+        MusicBrainz recording entries poisoned by a 5.2.0 rate-limit failure
+        (the recording lookup used to cache an empty dict for 7 days).
+
+        Wikimedia and Discogs entries are purged for the same shape of bug:
+        5.2.0 silently cached empty results when the upstream API returned a
+        transient error (HTTP 429, network failure), poisoning the entry for
+        24 hours (Wikimedia) or 7 days (Discogs).  5.2.1 no longer caches
+        transient failures, but existing 5.2.0 caches may still hold them.
+
+        The vacuum pass that follows on startup reclaims the freed disk pages.
         """
-        nowplaying.apicache.APIResponseCache.purge_providers(["musicbrainz", "musicbrainz_caa"])
+        nowplaying.apicache.APIResponseCache.purge_providers(
+            ["musicbrainz", "musicbrainz_caa", "wikimedia", "discogs"]
+        )
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:

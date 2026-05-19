@@ -40,14 +40,20 @@ class Plugin(ArtistExtrasPlugin):
         ) or self.config.cparser.value("wikimedia/thumbnails", type=bool)
 
         async def fetch_func():
-            page = await nowplaying.wikiclient.get_page_async(
-                entity=entity,
-                lang=lang,
-                timeout=5,
-                need_bio=need_bio,
-                need_images=need_images,
-                max_images=5,  # Limit for performance during live shows
-            )
+            try:
+                page = await nowplaying.wikiclient.get_page_async(
+                    entity=entity,
+                    lang=lang,
+                    timeout=5,
+                    need_bio=need_bio,
+                    need_images=need_images,
+                    max_images=5,  # Limit for performance during live shows
+                )
+            except Exception as err:  # pylint: disable=broad-except
+                # Returning None tells apicache to skip caching, so a transient
+                # wikidata failure (e.g. 429) does not poison the entry.
+                logging.debug("wikimedia fetch failed for %s/%s: %s", entity, lang, err)
+                return None
             # Convert to JSON-serializable format for caching
             if page:
                 return {

@@ -326,11 +326,18 @@ class MusicBrainzHelper:
                 return art
         return None
 
-    async def _recordingid_uncached(self, recordingid, track_data: dict | None = None) -> dict:
+    async def _recordingid_uncached(
+        self, recordingid, track_data: dict | None = None
+    ) -> dict | None:
         """uncached version of recordingid lookup.
 
         track_data: optional original metadata (e.g. EarShot's Shazam result)
         whose 'album', 'year', 'date' fields wnpmb uses as release-scoring hints.
+
+        Returns None on rate-limit / MusicBrainzError so the caller does not
+        cache a poisoned empty result for the 7-day TTL.  Returns {} when the
+        lookup succeeded but MusicBrainz genuinely has no recording — caching
+        that negative result is desirable.
         """
         self._setemail()
 
@@ -363,7 +370,7 @@ class MusicBrainzHelper:
                     newdata["genre"] = "/".join(enriched["genres"])
                 return newdata
 
-        return await self._mb_op_with_retry(_fetch, "get_recording_by_id", {})
+        return await self._mb_op_with_retry(_fetch, "get_recording_by_id", None)
 
     async def artistids(self, idlist):
         """add data available via musicbrainz artist ids"""

@@ -173,8 +173,14 @@ class AsyncDiscogsClient:
         per_page: int = 50,
         load_full_artists: bool = True,
         max_results: int | None = None,
-    ) -> DiscogsSearchResult:
-        """Search for releases, artists, etc."""
+    ) -> DiscogsSearchResult | None:
+        """Search for releases, artists, etc.
+
+        Returns None on transient errors (429, non-200 HTTP, network exceptions)
+        so callers can avoid caching a poisoned empty result for the 7-day TTL.
+        A successful response with zero matches still returns an empty
+        DiscogsSearchResult so legitimate negatives can be cached.
+        """
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
 
@@ -187,7 +193,7 @@ class AsyncDiscogsClient:
 
         try:
             if not self.session:
-                return DiscogsSearchResult([], self)
+                return None
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 self._log_rate_limit(response)
                 if response.status == 200:
@@ -210,10 +216,10 @@ class AsyncDiscogsClient:
                     logging.warning("Discogs search rate limited (429), skipping")
                 else:
                     logging.warning("Discogs search failed with status %d", response.status)
-                return DiscogsSearchResult([], self)
+                return None
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Discogs search error: %s", error)
-            return DiscogsSearchResult([], self)
+            return None
 
     async def artist(
         self, artist_id: int | str, limit_images: int | None = None, include_bio: bool = True
@@ -286,8 +292,12 @@ class AsyncDiscogsClientWrapper:
 
     async def search_async(
         self, query: str, artist: str | None = None, search_type: str = "release"
-    ) -> DiscogsSearchResult:
-        """Search for releases (async version)."""
+    ) -> DiscogsSearchResult | None:
+        """Search for releases (async version).
+
+        Returns None on transient errors so the cache layer does not store
+        a poisoned empty result.
+        """
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
             return await client.search(
                 query, artist, search_type, max_results=10, load_full_artists=True
