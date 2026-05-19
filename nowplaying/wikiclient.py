@@ -367,34 +367,46 @@ class AsyncWikiClient:
         fetch_images: bool = True,
         max_images: int = 10,
     ) -> WikiPage:
-        """Get a Wikipedia page by Wikidata entity ID with selective fetching."""
+        """Get a Wikipedia page by Wikidata entity ID with selective fetching.
+
+        Raises on transient failures of the primary Wikidata lookup (e.g.
+        HTTP 429 rate limits) so callers can avoid caching a poisoned empty
+        result. Secondary best-effort fetches (extract, images) swallow
+        their own errors and contribute whatever data they were able to
+        retrieve.
+        """
         wiki_page = WikiPage(entity, lang)
 
-        try:
-            # Get Wikidata info, including sitelinks if we need bio or images
-            include_sitelinks = fetch_bio or fetch_images
-            wikidata_info = await self._get_wikidata_info(entity, lang, include_sitelinks)
-            wiki_page.data.update(wikidata_info)
+        # Primary Wikidata lookup - if this fails, the page is unusable.
+        # Let the exception propagate so callers do not cache the empty result.
+        include_sitelinks = fetch_bio or fetch_images
+        wikidata_info = await self._get_wikidata_info(entity, lang, include_sitelinks)
+        wiki_page.data.update(wikidata_info)
 
-            # Extract sitelinks for reuse
-            sitelinks = wikidata_info.get("sitelinks") if include_sitelinks else None
+        # Extract sitelinks for reuse
+        sitelinks = wikidata_info.get("sitelinks") if include_sitelinks else None
 
-            # Only fetch bio if requested - reuse sitelinks to avoid extra API call
-            if fetch_bio:
+        # Secondary fetches are best-effort: a partial page is still cacheable.
+        # Catch only network/HTTP errors here so unexpected bugs in our parsers
+        # (KeyError, TypeError, etc.) still propagate and get noticed.  Log at
+        # warning so repeated upstream failures show up in normal logs.
+        if fetch_bio:
+            try:
                 extract = await self._get_wikipedia_extract(entity, lang, sitelinks)
                 if extract:
                     wiki_page.data["extext"] = extract
+            except (aiohttp.ClientError, TimeoutError) as error:
+                logging.warning("Wikipedia extract fetch failed for %s: %s", entity, error)
 
-            # Only fetch images if requested - reuse sitelinks to avoid extra API call
-            if fetch_images:
+        if fetch_images:
+            try:
                 wikidata_images = await self._get_wikidata_images(entity)
                 wikipedia_images = await self._get_wikipedia_images(entity, lang, sitelinks)
                 # Limit total images for performance
                 all_images = wikidata_images + wikipedia_images
                 wiki_page._images = all_images[:max_images]  # pylint: disable=protected-access
-
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.debug("Error fetching page data for %s: %s", entity, error)
+            except (aiohttp.ClientError, TimeoutError) as error:
+                logging.warning("Wikipedia image fetch failed for %s: %s", entity, error)
 
         return wiki_page
 

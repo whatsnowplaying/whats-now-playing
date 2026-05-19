@@ -53,6 +53,11 @@ class Plugin(ArtistExtrasPlugin):
             result = await self.client.search_async(
                 album_title, artist=artist_name, search_type=search_type
             )
+            # search_async returns None on transient errors (429, network);
+            # propagating None tells apicache to skip caching so the next
+            # call retries instead of serving a poisoned empty result.
+            if result is None:
+                return None
             # Convert to JSON-serializable format for caching
             if hasattr(result, "results"):
                 return {
@@ -257,7 +262,9 @@ class Plugin(ArtistExtrasPlugin):
             logging.error("discogs async hit %s", error)
             return None, None
 
-        for result in resultlist:
+        # _search_async_cached returns None on transient errors (so the empty
+        # result is not cached); treat that the same as "no match here".
+        for result in resultlist or []:
             if isinstance(result, nowplaying.discogsclient.Models.Release):
                 artist = result.artists[0] if result.artists else None
                 cover_url = result.data.get("cover_image") or result.data.get("thumb")

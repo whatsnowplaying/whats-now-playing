@@ -34,6 +34,19 @@ class Plugin(ArtistExtrasPlugin):
                 async with session.get(
                     f"{baseurl}?api_key={apikey}", timeout=aiohttp.ClientTimeout(total=delay)
                 ) as response:
+                    # Only 200 and 404 are cache-worthy.  A 404 means "artist
+                    # not in the database", which is a legitimate negative
+                    # result that should be remembered.  Everything else —
+                    # 429, 5xx, plus credential/config errors like 400/401/403
+                    # — should be retried on the next play rather than baked
+                    # into a 7-day cache entry.
+                    if response.status not in (200, 404):
+                        logging.warning(
+                            "fanart.tv HTTP %d for artistid %s; not caching",
+                            response.status,
+                            artistid,
+                        )
+                        return None
                     return await response.json()
         except TimeoutError:
             logging.error("fantart.tv async timeout getting artistid %s", artistid)

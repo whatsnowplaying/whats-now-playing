@@ -58,6 +58,7 @@ now-playing updates.
 * Album (macOS only)
 * BPM and musical key (from djay Pro's own analysis, when available)
 * Deck number
+* ISRC, when djay Pro has it
 * Filename / file path (local tracks only)
 
 ## Troubleshooting
