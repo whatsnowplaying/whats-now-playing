@@ -3,6 +3,8 @@
 
 import logging
 
+import aiohttp
+
 import nowplaying.apicache
 import nowplaying.wikiclient
 from nowplaying.artistextras import ArtistExtrasPlugin
@@ -49,9 +51,12 @@ class Plugin(ArtistExtrasPlugin):
                     need_images=need_images,
                     max_images=5,  # Limit for performance during live shows
                 )
-            except Exception as err:  # pylint: disable=broad-except
+            except (aiohttp.ClientError, TimeoutError) as err:
                 # Returning None tells apicache to skip caching, so a transient
-                # wikidata failure (e.g. 429) does not poison the entry.
+                # wikidata failure (e.g. 429) does not poison the entry.  Only
+                # network/HTTP errors are caught here so genuine bugs in our
+                # own parsing logic still surface instead of being treated as
+                # transient.
                 logging.debug("wikimedia fetch failed for %s/%s: %s", entity, lang, err)
                 return None
             # Convert to JSON-serializable format for caching
