@@ -39,6 +39,7 @@ import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
 import nowplaying.settings.tabs
+import nowplaying.utils.qt
 from nowplaying.exceptions import PluginVerifyError
 
 try:
@@ -1069,8 +1070,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             )
             window.template_selected.connect(on_selected)
             setattr(self, attr, window)
-        window.show()
-        window.raise_()
+        nowplaying.utils.qt.focus_window(window)
 
     @Slot()
     def on_discordbot_template_preview_button(self):
@@ -1124,9 +1124,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 config=self.config, enable_select_button=True
             )
             self._webpreview_window.template_selected.connect(self._on_webserver_template_selected)
-        self._webpreview_window.show()
-        self._webpreview_window.raise_()
-        self._webpreview_window.activateWindow()
+        nowplaying.utils.qt.focus_window(self._webpreview_window)
 
     @Slot(str)
     def _on_webserver_template_selected(self, template_name: str) -> None:
@@ -1453,8 +1451,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.tray:
             self.tray.settings_action.setEnabled(False)
         if self.qtui:
-            self.qtui.show()
-            self.qtui.setFocus()
+            nowplaying.utils.qt.focus_window(self.qtui)
         # UI is already populated during initialization, no need to update on show
         # Only update if UI hasn't been populated yet (fallback)
         if not self.ui_populated:

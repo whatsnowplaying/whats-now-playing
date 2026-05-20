@@ -19,6 +19,7 @@ import nowplaying.apicache
 import nowplaying.artistextras.theaudiodb
 import nowplaying.trackrequests
 import nowplaying.utils.config_json
+import nowplaying.utils.qt
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 from . import Version
@@ -77,6 +78,7 @@ class UpgradeConfig:
                 "Your old directory will remain as a backup."
             )
             msgbox.setStandardButtons(QMessageBox.Ok)
+            nowplaying.utils.qt.focus_window(msgbox)
             msgbox.exec()
 
             try:
@@ -597,7 +599,7 @@ class UpgradeConfig:
             if not self.testdir:
                 msgbox = QMessageBox()
                 msgbox.setText("M3U has been converted to VirtualDJ.")
-                msgbox.show()
+                nowplaying.utils.qt.focus_window(msgbox)
                 msgbox.exec()
 
     @staticmethod

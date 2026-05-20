@@ -12,6 +12,8 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.utils.qt
+
 # Import unified checksum function and exclusion list
 from nowplaying.utils.checksum import EXCLUDED_FILES, checksum
 
@@ -48,7 +50,7 @@ class UpgradeTemplates:
             msgbox.setText("Updated templates have been placed.")
             msgbox.setModal(True)
             msgbox.setWindowTitle("What's Now Playing Templates")
-            msgbox.show()
+            nowplaying.utils.qt.focus_window(msgbox)
             msgbox.exec()
 
     def preload(self) -> None:

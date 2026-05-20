@@ -13,6 +13,7 @@ import nowplaying.config
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
 import nowplaying.preview.textwindow
+import nowplaying.utils.qt
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.kick.constants import (
     ACCESS_TOKEN_KEY,
@@ -249,8 +250,7 @@ class KickChatSettings:
                 enable_select_button=True,
             )
             self._textpreview_window.template_selected.connect(self._on_announce_template_selected)
-        self._textpreview_window.show()
-        self._textpreview_window.raise_()
+        nowplaying.utils.qt.focus_window(self._textpreview_window)
 
     @Slot(str)
     def _on_announce_template_selected(self, template_name: str) -> None:
