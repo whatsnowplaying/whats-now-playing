@@ -3,7 +3,8 @@
 **What's Now Playing (WNP)** is a free, open-source DJ stream metadata bridge
 for Windows, macOS, and Linux that reads live track data from DJ software and
 sends it anywhere your audience can see it: overlays, chat bots, Discord, text
-files, and more.
+files, and more. It is used by everyone from hobby Twitch streamers to
+professional event DJs and internet radio stations.
 
 ## Setup
 
@@ -94,19 +95,24 @@ For tracks that are untagged or missing metadata:
 * **[MusicBrainz](recognition/musicbrainz.md)** — look up detailed track and artist metadata by fingerprint
   or ID
 
-## Artist Data Enrichment
+## Cover Art and Artist Enrichment
 
-WNP can automatically fetch additional artist information to enhance displays:
+WNP automatically downloads cover art and artist images as each track plays —
+no manual uploads or per-track tagging required.  Sources are queried in
+priority order; the first provider with usable data wins.  Multiple providers
+can be enabled together for fallback coverage.
 
-* **[Discogs](extras/discogs.md)** — artist biographies, images, and album cover art
-* **[TheAudioDB](extras/theaudiodb.md)** — artist biographies, images, and album art (free tier
-  available without API key)
-* **[FanArt.TV](extras/fanarttv.md)** — high-quality fan art, artist logos, background images,
-  and album cover art
-* **[Wikimedia / Wikipedia](extras/wikimedia.md)** — artist biographies and images
-* **[Last.fm](extras/lastfm.md)** — album art lookup
-* **[MusicBrainz](recognition/musicbrainz.md)** — artist website links, IDs, relationship data,
-  and album cover art via Cover Art Archive
+| Source                                              | Bio | Artist images | Cover art | API key  |
+| --------------------------------------------------- | --- | ------------- | --------- | -------- |
+| **[Cover Art Archive](recognition/musicbrainz.md)** |     |               | ✓         | none     |
+| **[Wikimedia / Wikipedia](extras/wikimedia.md)**    | ✓   | ✓             |           | none     |
+| **[TheAudioDB](extras/theaudiodb.md)**              | ✓   | ✓             | ✓         | bundled  |
+| **[Discogs](extras/discogs.md)**                    | ✓   | ✓             | ✓         | free\*   |
+| **[FanArt.TV](extras/fanarttv.md)**                 |     | ✓ (HD)        | ✓         | free\*   |
+| **[Last.fm](extras/lastfm.md)**                     |     |               | ✓         | free\*   |
+
+\* Free signup required for an API key.  Last.fm's free tier is
+non-commercial; commercial broadcasters should consult their licence.
 
 Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.
