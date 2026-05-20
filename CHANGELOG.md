@@ -1,15 +1,13 @@
 # Changelog
 
-## Version 5.2.1 - in progress
+## Version 5.2.1 - 2026-05-05
 
 ### Bug Fixes
 
 * Fixed incorrect Discord invite link in About window
-* Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
-    transient error; the loop now recovers automatically
-* Fixed EarShot and two-computer setups sending cover art via HTTP URL:
-    only the first ~16KB of the image was being read due to an aiohttp
-    buffering issue; full image data is now fetched correctly
+* Fixed a bug where track detection silently stopped after a system sleep/wake
+    cycle or transient error
+* Fixed EarShot and two-computer setups truncating cover art
 * Fixed Wikipedia, MusicBrainz, Discogs, and fanart.tv remembering
     transient errors (rate limits, network failures) as "no data" for
     hours or days, so artist bios, images, and album metadata for the
@@ -26,32 +24,32 @@
 
 ### djay Pro
 
-* Added `has_tracks_by_artist` support for track requests
-* Added playlist support: available playlists can now be selected for
-    artist queries and roulette requests
 * BPM, key, and deck number are now read from djay Pro's analysis database
     and included in track metadata
 * ISRC codes are now included in track metadata when djay Pro provides
     them, improving downstream metadata lookups
-* Configurable analysis delay: how long to wait for djay Pro to commit
-    BPM, key, and file path after a track starts (separate DB transaction)
+* Configurable analysis delay: how long to wait for djay Pro to make BPM,
+    key, and file path available after a track starts
 * Configurable deck skip: individual decks can be excluded from reporting
     via checkboxes in settings
-* Tracks already playing when WNP launches are silently skipped; djay Pro
-    does not clear NowPlaying.txt between sessions so this prevents
-    re-reporting stale tracks on startup
+* Tracks already playing when WNP launches are silently skipped, preventing
+    stale tracks from being re-reported on startup
+* These features should work but I lack a full djay Pro license to test:
+  * The Twitch `!hasartist` chat command now works with djay Pro
+  * Added playlist support: available playlists can now be selected for
+      artist queries and roulette requests
 
 ### MusicBrainz
 
-* Improved album selection: when EarShot (or another source) provides an
-    album name, the canonical studio album is preferred over compilations
-    or reissues that happen to contain the same recording
+* Improved album and album art selection when an album name was provided by
+    EarShot iOS and macOS. The canonical studio album is preferred over
+    compilations or reissues that happen to contain the same recording.
 * Improved album selection for ISRC-only lookups: canonical singles and
     studio releases are preferred over compilations and reissues
 * Fixed cover art going permanently missing for a track after a single
     failed fetch from the Cover Art Archive; failed fetches now retry
     on the next play
-* Fixed false rate-limit errors from the MusicBrainz client
+* Fixed false rate-limit errors when talking to MusicBrainz
 
 ## Version 5.2.0 - 2026-05-04
 
