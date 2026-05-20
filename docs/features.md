@@ -1,9 +1,9 @@
 # Feature Overview
 
-**What's Now Playing (WNP)** is a free, open-source application for Windows,
-macOS, and Linux that reads live track data from DJ software and sends it
-anywhere your audience can see it: overlays, chat bots, Discord, text files,
-and more.
+**What's Now Playing (WNP)** is a free, open-source DJ stream metadata bridge
+for Windows, macOS, and Linux that reads live track data from DJ software and
+sends it anywhere your audience can see it: overlays, chat bots, Discord, text
+files, and more.
 
 ## Setup
 

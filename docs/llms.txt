@@ -1,10 +1,10 @@
 # What's Now Playing
 
-> What's Now Playing displays the current track from your DJ software on
-> streams, in chat, and anywhere your audience can see it. It connects to
-> DJ software, reads live track data, and delivers track titles, artists,
-> album art, and other metadata to OBS browser overlays, Twitch/Kick/Discord
-> chat bots, text files, and APIs in real time.
+> What's Now Playing is a DJ stream metadata bridge: it displays the current
+> track from your DJ software on streams, in chat, and anywhere your audience
+> can see it. It connects to DJ software, reads live track data, and delivers
+> track titles, artists, album art, and other metadata to OBS browser overlays,
+> Twitch/Kick/Discord chat bots, text files, and APIs in real time.
 >
 > Free, open-source, with pre-built binaries for Windows, macOS (Intel and
 > Apple Silicon), and Linux. No Python installation required.

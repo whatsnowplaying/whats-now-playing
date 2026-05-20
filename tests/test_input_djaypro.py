@@ -935,3 +935,185 @@ def test_parse_blob_starttime():
     )
     result = nowplaying.djaypro.tsaf.parse_blob(blob)
     assert result["starttime"] == start
+
+
+def _add_playlist_views(
+    dbfile: pathlib.Path,
+    playlist_assignments: dict[str, list[int]],
+) -> None:
+    """Create the view_mediaItemPlaylistView_{map,page} helper tables.
+
+    playlist_assignments maps a playlist display name to the list of
+    database2 rowids that belong to that playlist.  Real djay Pro stores
+    these as SQL views over deeper structures; for tests we just create
+    plain tables with the same column shape the production query uses.
+    """
+    conn = sqlite3.connect(dbfile)
+    conn.execute("CREATE TABLE view_mediaItemPlaylistView_map (rowid INTEGER, pageKey TEXT)")
+    conn.execute('CREATE TABLE view_mediaItemPlaylistView_page (pageKey TEXT, "group" TEXT)')
+    for page_key, (playlist_name, rowids) in enumerate(playlist_assignments.items(), start=1):
+        conn.execute(
+            'INSERT INTO view_mediaItemPlaylistView_page (pageKey, "group") VALUES (?, ?)',
+            (str(page_key), playlist_name),
+        )
+        for rowid in rowids:
+            conn.execute(
+                "INSERT INTO view_mediaItemPlaylistView_map (rowid, pageKey) VALUES (?, ?)",
+                (rowid, str(page_key)),
+            )
+    conn.commit()
+    conn.close()
+
+
+@pytest.mark.parametrize(
+    "library_artist,query_artist,expected",
+    [
+        ("Daft Punk", "Daft Punk", True),
+        ("Daft Punk", "Other Artist", False),
+        ("Daft Punk", "daft punk", True),
+        ("Daft Punk", "  Daft Punk  ", True),
+    ],
+    ids=["exact-match", "no-match", "case-insensitive", "whitespace-trim"],
+)
+@pytest.mark.asyncio
+async def test_has_tracks_by_artist_entire_library(
+    bootstrap, library_artist, query_artist, expected
+):
+    """has_tracks_by_artist scans mediaItemTitleIDs in entire-library mode."""
+    config = bootstrap
+    config.cparser.setValue("djaypro/artist_query_scope", "entire_library")
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        blob = _build_tsaf_blob(
+            "ADCMediaItemTitleID",
+            [(library_artist, "artist"), ("Some Title", "title")],
+        )
+        _make_db_with_collections(dbfile, {"mediaItemTitleIDs": [blob]})
+
+        assert await plugin.has_tracks_by_artist(query_artist) is expected
+
+
+@pytest.mark.parametrize("artist_name", ["", "   ", "\t"], ids=["empty", "spaces", "tab"])
+@pytest.mark.asyncio
+async def test_has_tracks_by_artist_empty_query(bootstrap, artist_name):
+    """has_tracks_by_artist returns False for empty / whitespace queries."""
+    config = bootstrap
+    config.cparser.setValue("djaypro/artist_query_scope", "entire_library")
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        blob = _build_tsaf_blob(
+            "ADCMediaItemTitleID",
+            [("Daft Punk", "artist"), ("Some Title", "title")],
+        )
+        _make_db_with_collections(dbfile, {"mediaItemTitleIDs": [blob]})
+
+        assert await plugin.has_tracks_by_artist(artist_name) is False
+
+
+@pytest.mark.asyncio
+async def test_has_tracks_by_artist_missing_db(bootstrap):
+    """has_tracks_by_artist returns False when MediaLibrary.db is absent."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        # No MediaLibrary.db created
+
+        assert await plugin.has_tracks_by_artist("Daft Punk") is False
+
+
+@pytest.mark.parametrize(
+    "selected_playlists,view_assignments,expected",
+    [
+        ("Friday Set", {"Friday Set": [1]}, True),
+        ("Friday Set", {"Saturday Set": [1]}, False),
+        ("", {"Friday Set": [1]}, False),
+        ("Friday Set", None, False),
+    ],
+    ids=["track-in-selected", "track-in-other", "no-playlist-configured", "no-view-tables"],
+)
+@pytest.mark.asyncio
+async def test_has_tracks_by_artist_selected_playlists(
+    bootstrap, selected_playlists, view_assignments, expected
+):
+    """has_tracks_by_artist in selected_playlists mode across playlist scenarios.
+
+    view_assignments=None means the view tables are not created at all, which
+    is djay Pro state when the user has never made a native playlist.
+    """
+    config = bootstrap
+    config.cparser.setValue("djaypro/artist_query_scope", "selected_playlists")
+    config.cparser.setValue("djaypro/selected_playlists", selected_playlists)
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        blob = _build_tsaf_blob(
+            "ADCMediaItemTitleID",
+            [("Daft Punk", "artist"), ("Some Title", "title")],
+        )
+        # The first rowid inserted by _make_db_with_collections is 1.
+        _make_db_with_collections(dbfile, {"mediaItemTitleIDs": [blob]})
+        if view_assignments is not None:
+            _add_playlist_views(dbfile, view_assignments)
+
+        assert await plugin.has_tracks_by_artist("Daft Punk") is expected
+
+
+@pytest.mark.asyncio
+async def test_get_available_playlists_returns_sorted_unique(bootstrap):
+    """get_available_playlists returns a sorted list of distinct playlist names."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        # database2 must exist for _make_db_with_collections to be useful, but the
+        # playlists query reads only from the view tables.  Create an empty one.
+        _make_db_with_collections(dbfile, {})
+        _add_playlist_views(
+            dbfile,
+            {"Zulu Set": [1], "Alpha Set": [2], "Mike Set": [3]},
+        )
+
+        result = await plugin.get_available_playlists()
+
+        assert result == ["Alpha Set", "Mike Set", "Zulu Set"]
+
+
+@pytest.mark.asyncio
+async def test_get_available_playlists_view_missing(bootstrap):
+    """get_available_playlists returns [] when the view table doesn't exist."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
+        # Create the DB but no playlist views — djay Pro state when the user has
+        # never made a playlist.
+        _make_db_with_collections(dbfile, {})
+
+        assert await plugin.get_available_playlists() == []
+
+
+@pytest.mark.asyncio
+async def test_get_available_playlists_missing_db(bootstrap):
+    """get_available_playlists returns [] when MediaLibrary.db is absent."""
+    config = bootstrap
+    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin.djaypro_dir = tmpdir
+        # No MediaLibrary.db created
+
+        assert await plugin.get_available_playlists() == []
