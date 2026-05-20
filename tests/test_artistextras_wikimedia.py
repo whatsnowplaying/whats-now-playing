@@ -787,16 +787,24 @@ async def test_wikimedia_api_call_count(bootstrap, isolated_api_cache):  # pylin
             "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
         }
 
-        # Mock the actual Wikipedia API call to count calls
+        # Mock the actual Wikipedia API call to count calls.  This test
+        # verifies that the apicache layer short-circuits the second
+        # download_async; it is not testing Wikipedia's response.  Using a
+        # synthetic WikiPage (instead of delegating to the real network call)
+        # keeps the test deterministic when Wikipedia is rate-limiting CI.
         original_get_page = nowplaying.wikiclient.get_page_async
         api_call_count = 0
 
-        async def mock_get_page_async(*args, **kwargs):
+        async def mock_get_page_async(*args, **kwargs):  # pylint: disable=unused-argument
             nonlocal api_call_count
             api_call_count += 1
             logging.debug("Mock Wikipedia API call #%d", api_call_count)
-            # Call the original method to get real data
-            return await original_get_page(*args, **kwargs)
+            page = nowplaying.wikiclient.WikiPage(entity="Q11647", lang="en")
+            page.data = {
+                "claims": {},
+                "description": "American industrial rock band",
+            }
+            return page
 
         # Replace the method with our mock
         nowplaying.wikiclient.get_page_async = mock_get_page_async
