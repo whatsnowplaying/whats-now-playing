@@ -1450,8 +1450,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """show the system tray"""
         if self.tray:
             self.tray.settings_action.setEnabled(False)
-        if self.qtui:
-            nowplaying.utils.qt.focus_window(self.qtui)
+        nowplaying.utils.qt.focus_window(self.qtui)
         # UI is already populated during initialization, no need to update on show
         # Only update if UI hasn't been populated yet (fallback)
         if not self.ui_populated:
