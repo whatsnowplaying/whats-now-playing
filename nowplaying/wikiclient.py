@@ -88,7 +88,7 @@ class AsyncWikiClient:
     def _parse_retry_after(retry_after_header: str | None) -> float | None:
         """Parse a Retry-After header value into a delay in seconds.
 
-        Returns None on missing / unparseable input.  RFC 9110 allows two
+        Returns None on missing / unparsable input.  RFC 9110 allows two
         forms: delta-seconds (an integer) and HTTP-date.  We accept both.
         Negative or already-past dates collapse to 0 (caller bumps to a
         minimum tick).
@@ -112,7 +112,7 @@ class AsyncWikiClient:
         """Record a 429 hit and return the chosen backoff in seconds.
 
         Honours the Retry-After header in either delta-seconds or HTTP-date
-        form (RFC 9110).  Missing or unparseable values fall back to the
+        form (RFC 9110).  Missing or unparsable values fall back to the
         default.  Values are floored at 1 second so we always wait at least
         a tick.
         """
@@ -131,7 +131,7 @@ class AsyncWikiClient:
         """GET a Wikimedia JSON endpoint with shared rate-limit handling.
 
         Caps process-wide concurrency at three, raises WikiRateLimitError if
-        we are in cooldown (either pre-emptively or after a fresh 429), and
+        we are in cooldown (either preemptively or after a fresh 429), and
         raises on other non-200 statuses so callers can decide whether to
         skip caching.
         """
