@@ -485,10 +485,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#artist-data-enrichment" class="md-nav__link">
+  <a href="#cover-art-and-artist-enrichment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Artist Data Enrichment
+        Cover Art and Artist Enrichment
       
     </span>
   </a>
@@ -3086,7 +3086,8 @@
 <p><strong>What's Now Playing (WNP)</strong> is a free, open-source DJ stream metadata bridge
 for Windows, macOS, and Linux that reads live track data from DJ software and
 sends it anywhere your audience can see it: overlays, chat bots, Discord, text
-files, and more.</p>
+files, and more. It is used by everyone from hobby Twitch streamers to
+professional event DJs and internet radio stations.</p>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <p>On first launch, WNP <strong>automatically detects</strong> which DJ software you are using,
 with no manual source selection required for most setups. Software-based sources
@@ -3169,19 +3170,68 @@ updates required.</p>
 <li><strong><a href="../recognition/musicbrainz/">MusicBrainz</a></strong> — look up detailed track and artist metadata by fingerprint
   or ID</li>
 </ul>
-<h2 id="artist-data-enrichment">Artist Data Enrichment<a class="headerlink" href="#artist-data-enrichment" title="Permanent link">&para;</a></h2>
-<p>WNP can automatically fetch additional artist information to enhance displays:</p>
-<ul>
-<li><strong><a href="../extras/discogs/">Discogs</a></strong> — artist biographies, images, and album cover art</li>
-<li><strong><a href="../extras/theaudiodb/">TheAudioDB</a></strong> — artist biographies, images, and album art (free tier
-  available without API key)</li>
-<li><strong><a href="../extras/fanarttv/">FanArt.TV</a></strong> — high-quality fan art, artist logos, background images,
-  and album cover art</li>
-<li><strong><a href="../extras/wikimedia/">Wikimedia / Wikipedia</a></strong> — artist biographies and images</li>
-<li><strong><a href="../extras/lastfm/">Last.fm</a></strong> — album art lookup</li>
-<li><strong><a href="../recognition/musicbrainz/">MusicBrainz</a></strong> — artist website links, IDs, relationship data,
-  and album cover art via Cover Art Archive</li>
-</ul>
+<h2 id="cover-art-and-artist-enrichment">Cover Art and Artist Enrichment<a class="headerlink" href="#cover-art-and-artist-enrichment" title="Permanent link">&para;</a></h2>
+<p>WNP automatically downloads cover art and artist images as each track plays —
+no manual uploads or per-track tagging required.  Sources are queried in
+priority order; the first provider with usable data wins.  Multiple providers
+can be enabled together for fallback coverage.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Bio</th>
+<th>Artist images</th>
+<th>Cover art</th>
+<th>API key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="../recognition/musicbrainz/">Cover Art Archive</a></strong></td>
+<td></td>
+<td></td>
+<td>✓</td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong><a href="../extras/wikimedia/">Wikimedia / Wikipedia</a></strong></td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong><a href="../extras/theaudiodb/">TheAudioDB</a></strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>bundled</td>
+</tr>
+<tr>
+<td><strong><a href="../extras/discogs/">Discogs</a></strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>free*</td>
+</tr>
+<tr>
+<td><strong><a href="../extras/fanarttv/">FanArt.TV</a></strong></td>
+<td></td>
+<td>✓ (HD)</td>
+<td>✓</td>
+<td>free*</td>
+</tr>
+<tr>
+<td><strong><a href="../extras/lastfm/">Last.fm</a></strong></td>
+<td></td>
+<td></td>
+<td>✓</td>
+<td>free*</td>
+</tr>
+</tbody>
+</table>
+<p>* Free signup required for an API key.  Last.fm's free tier is
+non-commercial; commercial broadcasters should consult their licence.</p>
 <p>Artist biographies are deduplicated per session; the same bio will not be
 shown twice during a stream.</p>
 <h2 id="outputs-and-display">Outputs and Display<a class="headerlink" href="#outputs-and-display" title="Permanent link">&para;</a></h2>
