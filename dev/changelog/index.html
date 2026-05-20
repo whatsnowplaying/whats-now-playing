@@ -488,15 +488,15 @@
     <ul class="md-nav__list" data-md-component="toc">
       
         <li class="md-nav__item">
-  <a href="#version-521-in-progress" class="md-nav__link">
+  <a href="#version-521-2026-05-05" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version 5.2.1 - in progress
+        Version 5.2.1 - 2026-05-05
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Version 5.2.1 - in progress">
+    <nav class="md-nav" aria-label="Version 5.2.1 - 2026-05-05">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3319,20 +3319,23 @@
 
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="version-521-in-progress">Version 5.2.1 - in progress<a class="headerlink" href="#version-521-in-progress" title="Permanent link">&para;</a></h2>
+<h2 id="version-521-2026-05-05">Version 5.2.1 - 2026-05-05<a class="headerlink" href="#version-521-2026-05-05" title="Permanent link">&para;</a></h2>
 <h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Fixed incorrect Discord invite link in About window</li>
-<li>Fixed trackpoll loop silently stopping after a system sleep/wake cycle or
-    transient error; the loop now recovers automatically</li>
-<li>Fixed EarShot and two-computer setups sending cover art via HTTP URL:
-    only the first ~16KB of the image was being read due to an aiohttp
-    buffering issue; full image data is now fetched correctly</li>
+<li>Fixed a bug where track detection silently stopped after a system sleep/wake
+    cycle or transient error</li>
+<li>Fixed cover art being truncated in EarShot and two-computer setups</li>
 <li>Fixed Wikipedia, MusicBrainz, Discogs, and fanart.tv remembering
     transient errors (rate limits, network failures) as "no data" for
     hours or days, so artist bios, images, and album metadata for the
     affected track stayed blank until the entry expired.  Stale entries
     are cleared automatically on upgrade</li>
+<li>Improved how WNP behaves when Wikipedia is rate-limiting traffic:
+    WNP now backs off for as long as Wikipedia asks (honoring their
+    Retry-After header) and caps parallel Wikipedia requests, so a
+    short throttling window no longer cascades into prolonged missing
+    artist data</li>
 </ul>
 <h3 id="artist-extras">Artist Extras<a class="headerlink" href="#artist-extras" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3344,32 +3347,32 @@
 </ul>
 <h3 id="djay-pro">djay Pro<a class="headerlink" href="#djay-pro" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Added <code>has_tracks_by_artist</code> support for track requests</li>
-<li>Added playlist support: available playlists can now be selected for
-    artist queries and roulette requests</li>
 <li>BPM, key, and deck number are now read from djay Pro's analysis database
     and included in track metadata</li>
 <li>ISRC codes are now included in track metadata when djay Pro provides
     them, improving downstream metadata lookups</li>
-<li>Configurable analysis delay: how long to wait for djay Pro to commit
-    BPM, key, and file path after a track starts (separate DB transaction)</li>
+<li>Configurable analysis delay: how long to wait for djay Pro to make BPM,
+    key, and file path available after a track starts</li>
 <li>Configurable deck skip: individual decks can be excluded from reporting
     via checkboxes in settings</li>
-<li>Tracks already playing when WNP launches are silently skipped; djay Pro
-    does not clear NowPlaying.txt between sessions so this prevents
-    re-reporting stale tracks on startup</li>
+<li>Tracks already playing when WNP launches are silently skipped, preventing
+    stale tracks from being re-reported on startup</li>
+<li>These features should work but I lack a full djay Pro license to test:</li>
+<li>The Twitch <code>!hasartist</code> chat command now works with djay Pro</li>
+<li>Added playlist support: available playlists can now be selected for
+      artist queries and roulette requests</li>
 </ul>
 <h3 id="musicbrainz">MusicBrainz<a class="headerlink" href="#musicbrainz" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Improved album selection: when EarShot (or another source) provides an
-    album name, the canonical studio album is preferred over compilations
-    or reissues that happen to contain the same recording</li>
+<li>Improved album and album art selection when an album name is provided by
+    EarShot iOS and macOS. The canonical studio album is preferred over
+    compilations or reissues that happen to contain the same recording.</li>
 <li>Improved album selection for ISRC-only lookups: canonical singles and
     studio releases are preferred over compilations and reissues</li>
 <li>Fixed cover art going permanently missing for a track after a single
     failed fetch from the Cover Art Archive; failed fetches now retry
     on the next play</li>
-<li>Fixed false rate-limit errors from the MusicBrainz client</li>
+<li>Fixed false rate-limit errors when talking to MusicBrainz</li>
 </ul>
 <h2 id="version-520-2026-05-04">Version 5.2.0 - 2026-05-04<a class="headerlink" href="#version-520-2026-05-04" title="Permanent link">&para;</a></h2>
 <h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
