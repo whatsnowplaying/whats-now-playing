@@ -18,7 +18,7 @@ def getacoustidplugin(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", True)
     config.cparser.setValue("musicbrainz/enabled", True)
     config.cparser.setValue("acoustidmb/acoustidapikey", os.environ["ACOUSTID_TEST_APIKEY"])
-    config.cparser.setValue("musicbrainz/emailaddress", "aw+wnptest@effectivemachines.com")
+    config.cparser.setValue("musicbrainz/emailaddress", "wnp+test@effectivemachines.com")
     yield nowplaying.recognition.acoustid.Plugin(config=config)
 
 

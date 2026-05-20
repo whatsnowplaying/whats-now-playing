@@ -25,7 +25,7 @@ def getmusicbrainz(bootstrap):
     config.cparser.setValue("musicbrainz/websites", True)
     for site in ["bandcamp", "homepage", "lastfm", "discogs"]:
         config.cparser.setValue(f"musicbrainz/{site}", True)
-    config.cparser.setValue("musicbrainz/emailaddress", "aw+wnptest@effectivemachines.com")
+    config.cparser.setValue("musicbrainz/emailaddress", "wnp+test@effectivemachines.com")
     return nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
 
 

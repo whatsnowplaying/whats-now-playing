@@ -7,12 +7,17 @@
 * Fixed incorrect Discord invite link in About window
 * Fixed a bug where track detection silently stopped after a system sleep/wake
     cycle or transient error
-* Fixed EarShot and two-computer setups truncating cover art
+* Fixed cover art being truncated in EarShot and two-computer setups
 * Fixed Wikipedia, MusicBrainz, Discogs, and fanart.tv remembering
     transient errors (rate limits, network failures) as "no data" for
     hours or days, so artist bios, images, and album metadata for the
     affected track stayed blank until the entry expired.  Stale entries
     are cleared automatically on upgrade
+* Improved how WNP behaves when Wikipedia is rate-limiting traffic:
+    WNP now backs off for as long as Wikipedia asks (honoring their
+    Retry-After header) and caps parallel Wikipedia requests, so a
+    short throttling window no longer cascades into prolonged missing
+    artist data
 
 ### Artist Extras
 
@@ -41,7 +46,7 @@
 
 ### MusicBrainz
 
-* Improved album and album art selection when an album name was provided by
+* Improved album and album art selection when an album name is provided by
     EarShot iOS and macOS. The canonical studio album is preferred over
     compilations or reissues that happen to contain the same recording.
 * Improved album selection for ISRC-only lookups: canonical singles and

@@ -84,7 +84,7 @@ class MusicBrainzHelper:
         if not self.emailaddressset:
             emailaddress = (
                 self.config.cparser.value("musicbrainz/emailaddress")
-                or "aw+wnp@effectivemachines.com"
+                or "wnp@effectivemachines.com"
             )
             self.mb_client.set_useragent(emailaddress)
             self.mb_client.cache_service = WNPCacheAdapter(nowplaying.apicache.get_cache())
