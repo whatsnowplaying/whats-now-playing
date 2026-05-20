@@ -12,6 +12,8 @@ import asyncio
 import logging
 import ssl
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -75,30 +77,50 @@ class AsyncWikiClient:
     @classmethod
     def _raise_if_rate_limited(cls) -> None:
         """Raise WikiRateLimitError if we are inside a 429-induced cooldown."""
-        now = time.time()
+        # Monotonic clock — NTP / DST adjustments must not shorten or extend
+        # cooldowns mid-flight.
+        now = time.monotonic()
         if now < cls._rate_limit_until:
             remaining = cls._rate_limit_until - now
             raise WikiRateLimitError(f"Wikimedia cooldown active; {remaining:.0f}s remaining")
+
+    @staticmethod
+    def _parse_retry_after(retry_after_header: str | None) -> float | None:
+        """Parse a Retry-After header value into a delay in seconds.
+
+        Returns None on missing / unparseable input.  RFC 9110 allows two
+        forms: delta-seconds (an integer) and HTTP-date.  We accept both.
+        Negative or already-past dates collapse to 0 (caller bumps to a
+        minimum tick).
+        """
+        if not retry_after_header:
+            return None
+        try:
+            return float(retry_after_header)
+        except (TypeError, ValueError):
+            pass
+        try:
+            target = parsedate_to_datetime(retry_after_header)
+        except (TypeError, ValueError):
+            return None
+        if target.tzinfo is None:
+            target = target.replace(tzinfo=timezone.utc)
+        return max((target - datetime.now(timezone.utc)).total_seconds(), 0.0)
 
     @classmethod
     def _record_rate_limit(cls, retry_after_header: str | None) -> float:
         """Record a 429 hit and return the chosen backoff in seconds.
 
-        Honours the Retry-After header when it parses as a delta-seconds
-        integer.  HTTP-date forms and missing values fall back to the
-        default.  A negative or zero value is bumped to 1 second so we
-        always wait at least a tick.
+        Honours the Retry-After header in either delta-seconds or HTTP-date
+        form (RFC 9110).  Missing or unparseable values fall back to the
+        default.  Values are floored at 1 second so we always wait at least
+        a tick.
         """
-        try:
-            delay = (
-                float(retry_after_header)
-                if retry_after_header
-                else cls._DEFAULT_RETRY_AFTER_SECONDS
-            )
-        except (TypeError, ValueError):
+        delay = cls._parse_retry_after(retry_after_header)
+        if delay is None:
             delay = cls._DEFAULT_RETRY_AFTER_SECONDS
         delay = max(delay, 1.0)
-        cls._rate_limit_until = time.time() + delay
+        cls._rate_limit_until = time.monotonic() + delay
         logging.warning(
             "Wikimedia returned 429; backing off all Wikimedia requests for %.0fs",
             delay,
