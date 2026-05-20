@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Qt UI helpers."""
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
 
 
 def focus_window(widget: QWidget | None) -> None:
