@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 import nowplaying.obs.scenebuilder
 import nowplaying.preview.window
+import nowplaying.utils.qt
 
 logger = logging.getLogger(__name__)
 
@@ -167,9 +168,7 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
                 if idx >= 0:
                     self._preview_window.template_combo.setCurrentIndex(idx)
 
-            self._preview_window.show()
-            self._preview_window.raise_()
-            self._preview_window.activateWindow()
+            nowplaying.utils.qt.focus_window(self._preview_window)
 
         return _handler
 

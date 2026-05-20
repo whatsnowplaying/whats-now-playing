@@ -35,6 +35,7 @@ import nowplaying.subprocesses
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
 import nowplaying.utils.charts_api
+import nowplaying.utils.qt
 
 LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
@@ -183,9 +184,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self._obs_export_dialog = nowplaying.obs.exportdialog.OBSExportDialog(
                 config=self.config
             )
-        self._obs_export_dialog.show()
-        self._obs_export_dialog.raise_()
-        self._obs_export_dialog.activateWindow()
+        nowplaying.utils.qt.focus_window(self._obs_export_dialog)
 
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
@@ -193,11 +192,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             return
         self.config.get()
         self.settingswindow.update_all_oauth_status()
+        # The wrapper's show() runs focus_window on qtui internally.
         self.settingswindow.show()
-        if self.settingswindow.qtui:
-            self.settingswindow.qtui.raise_()
-            self.settingswindow.qtui.activateWindow()
-            self.settingswindow.qtui.setFocus()
 
     @staticmethod
     def _open_documentation() -> None:
@@ -446,7 +442,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             f"Critical error: Failed to load {ui_file}. "
             "Installation appears corrupt. Please reinstall the application."
         )
-        msgbox.show()
+        nowplaying.utils.qt.focus_window(msgbox)
         msgbox.exec()
         if app := QApplication.instance():
             app.exit(1)
@@ -671,14 +667,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.config.cparser.remove("settings/input")
             msgbox = QErrorMessage()
             msgbox.showMessage(f"Configured source {plugin} is not supported. Reconfiguring.")
-            msgbox.show()
+            nowplaying.utils.qt.focus_window(msgbox)
             msgbox.exec()
         elif not plugin:
             msgbox = QMessageBox()
             msgbox.setText(
                 "New installation! Thanks! Determining setup. This operation may take a bit!"
             )
-            msgbox.show()
+            nowplaying.utils.qt.focus_window(msgbox)
             msgbox.exec()
         else:
             return
@@ -700,7 +696,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             " Please check the Source is correct for"
             " your DJ software."
         )
-        msgbox.show()
+        nowplaying.utils.qt.focus_window(msgbox)
         msgbox.exec()
 
         self._show_settings()

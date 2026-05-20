@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=no-na
 
 import nowplaying.preview.textwindow
 import nowplaying.twitch.oauth2
+import nowplaying.utils.qt
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
     BROADCASTER_OAUTH_STATUS_KEY,
@@ -265,8 +266,7 @@ class TwitchSettings:
         current = pathlib.Path(self.widget.streamtitle_lineedit.text()).name
         if current:
             self._streamtitle_preview_window.select_template(current)
-        self._streamtitle_preview_window.show()
-        self._streamtitle_preview_window.raise_()
+        nowplaying.utils.qt.focus_window(self._streamtitle_preview_window)
 
     @Slot(str)
     def _on_streamtitle_template_selected(self, template_name: str) -> None:
