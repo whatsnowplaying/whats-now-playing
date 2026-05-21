@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 5.2.1 - 2026-05-05
+## Version 5.2.1 - 2026-05-20
 
 ### Bug Fixes
 
