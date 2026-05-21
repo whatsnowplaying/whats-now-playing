@@ -1,0 +1,5 @@
+# Pinned tufup version for CI workflows that re-sign or generate
+# TUF metadata.  Bump deliberately after testing — upstream changes
+# can affect archive-format suffix, signing semantics, and CLI
+# argument parsing.
+tufup==0.10.0
