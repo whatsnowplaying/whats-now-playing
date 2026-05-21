@@ -63,7 +63,8 @@ jobs:
           fi
           for f in root.json targets.json snapshot.json timestamp.json; do
             if [[ ! -f "$metadata_dir/$f" ]]; then
-              echo "::error::Required metadata file missing on gh-pages: tufup/metadata/$f"
+              echo "::error::Required metadata file missing on gh-pages:"
+              echo "  tufup/metadata/$f"
               exit 1
             fi
           done
