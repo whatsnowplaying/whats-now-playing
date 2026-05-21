@@ -1,0 +1,122 @@
+---
+name: tufup daily resign
+
+# Re-signs TUF metadata daily so timestamp.json (24h expiry),
+# snapshot.json (7-day expiry), and targets.json (30-day expiry) never
+# go stale.  Without this, clients refuse to fetch updates as soon as
+# the most recent metadata expires.
+#
+# See docs/dev/tufup-hosting.md for the proxy + hosting context.
+
+on:  # yamllint disable-line rule:truthy
+  schedule:
+    # Daily at 06:00 UTC.  GH Actions cron is best-effort and can be
+    # delayed 15-30 min under load; timestamp's 24h expiry has plenty
+    # of slack.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+# Serialize with any other workflow that publishes to gh-pages tufup
+# metadata (e.g. release-time CI signer, when that ships).
+concurrency:
+  group: tufup-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  resign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+
+      - name: Install tufup
+        run: pip install tufup
+
+      - name: Clone gh-pages metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          git clone --depth 1 --branch gh-pages \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
+              "${RUNNER_TEMP}/ghpages"
+          mkdir -p "${RUNNER_TEMP}/tufup-repo/metadata"
+          mkdir -p "${RUNNER_TEMP}/tufup-repo/targets"
+          cp "${RUNNER_TEMP}/ghpages/tufup/metadata/"*.json \
+             "${RUNNER_TEMP}/tufup-repo/metadata/"
+
+      - name: Restore signing key
+        env:
+          TUFUP_KEY: ${{ secrets.TUFUP_KEY }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/keystore"
+          chmod 700 "${RUNNER_TEMP}/keystore"
+          printf '%s' "$TUFUP_KEY" > "${RUNNER_TEMP}/keystore/wnp_prod_key"
+          chmod 600 "${RUNNER_TEMP}/keystore/wnp_prod_key"
+          cp bincomponents/wnp_prod_key.pub \
+             "${RUNNER_TEMP}/keystore/"
+
+      - name: Generate tufup config
+        # app_name is a no-op for `tufup sign` (only used by
+        # add_bundle when registering a new target).  Clients filter
+        # targets.json by their own app_name, not the repo's, so this
+        # value is effectively a placeholder for the cron path.
+        # Targets for windows/linux/intel channels are all served from
+        # the same metadata regardless of what's here.
+        run: |
+          python -c "
+          import json, os
+          rt = os.environ['RUNNER_TEMP']
+          roles = ('root', 'snapshot', 'targets', 'timestamp')
+          config = {
+              'app_name': 'WhatsNowPlaying',
+              'app_version_attr': 'nowplaying.version.__VERSION__',
+              'binary_diff': None,
+              'encrypted_keys': [],
+              'expiration_days': {
+                  'root': 365, 'snapshot': 7, 'targets': 30, 'timestamp': 1,
+              },
+              'key_map': {r: ['wnp_prod_key'] for r in roles},
+              'keys_dir': f'{rt}/keystore',
+              'repo_dir': f'{rt}/tufup-repo',
+              'thresholds': {r: 1 for r in roles},
+          }
+          with open(f'{rt}/tufup-repo/.tufup-repo-config', 'w') as f:
+              json.dump(config, f, indent=4)"
+
+      - name: Re-sign all roles
+        # `tufup sign` without -e only adds a threshold signature; -e
+        # is required to actually push the expires field forward.
+        # Order matters: bottom-up, so each role's hash-of-the-next is
+        # taken against fresh content.  Days match expiration_days in
+        # the config above; passing them explicitly avoids relying on
+        # tufup's argparse `nargs='?'` ambiguity.
+        working-directory: ${{ runner.temp }}/tufup-repo
+        run: |
+          tufup sign -e 30 targets   "${RUNNER_TEMP}/keystore"
+          tufup sign -e 7  snapshot  "${RUNNER_TEMP}/keystore"
+          tufup sign -e 1  timestamp "${RUNNER_TEMP}/keystore"
+
+      - name: Push refreshed metadata to gh-pages
+        run: |
+          cp "${RUNNER_TEMP}/tufup-repo/metadata/"*.json \
+             "${RUNNER_TEMP}/ghpages/tufup/metadata/"
+          cd "${RUNNER_TEMP}/ghpages"
+          git config user.name 'github-actions[bot]'
+          git config user.email \
+              '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tufup/metadata
+          if git diff --cached --quiet; then
+            echo "No metadata change; skipping push"
+            exit 0
+          fi
+          git commit -m "tufup: daily re-sign"
+          git push origin gh-pages
