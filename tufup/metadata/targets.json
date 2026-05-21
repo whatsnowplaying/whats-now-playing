@@ -1,16 +1,16 @@
 {
  "signatures": [
   {
-   "keyid": "c3536321bc6fa06c71f9e9068a9b43ab5613cd566bda4b72b7377c68a291aec3",
-   "sig": "6a63ac75b69eb5d1ae200586786a3842ab204254087dc2cfb6bc741483c87aec32a77a709ea909947dd54a0c3aab4e8fb0bf5f1a6dc2609adbbf406e7be8fa00"
+   "keyid": "3009823a498e7d7dd5b244f5f7c3fab05d5a7f0923e141de96d0f1eaa8d2fe9e",
+   "sig": "0e7044c177b19a220cd197f98bc1a64c8f2a6296a99e7638cddbfeb63908d3491719efbfd83cce790b9a11f83f66fba74a248233708910edd1f78556e9341506"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-06-14T22:14:41Z",
+  "expires": "2026-06-20T16:11:50Z",
   "spec_version": "1.0.31",
   "targets": {
-   "WhatsNowPlaying_linux_x86_64-5.2.0.tar.gz": {
+   "WhatsNowPlaying_linux_x86_64-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
       "required": false
@@ -18,11 +18,11 @@
      "user": null
     },
     "hashes": {
-     "sha256": "194159feea7f2d097fa1b82bdcb751554141fa5901ca58ecbec81c4e60f64d66"
+     "sha256": "09695fb4ecb96f98e4b3b03350b0b0cbbe673dd5bc262e1f8d4066b454e221b6"
     },
-    "length": 305173529
+    "length": 305077186
    },
-   "WhatsNowPlaying_macos15_arm-5.2.0.tar.gz": {
+   "WhatsNowPlaying_macos15_arm-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
       "required": false
@@ -30,11 +30,11 @@
      "user": null
     },
     "hashes": {
-     "sha256": "181954d641faa332d5e825d2969f29f471f0e8c044b589c437c805ff7eae5011"
+     "sha256": "434aaa5901848daed14fbc43f22c8c0dd08dd7d59580a110250e470dbed980ee"
     },
-    "length": 267456651
+    "length": 267564724
    },
-   "WhatsNowPlaying_macos15_intel-5.2.0.tar.gz": {
+   "WhatsNowPlaying_macos15_intel-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
       "required": false
@@ -42,11 +42,11 @@
      "user": null
     },
     "hashes": {
-     "sha256": "fa2d364e75082ab17d988faead6c5b6f31a8ec9cb878f7ab58a33a5cd1fff6f1"
+     "sha256": "01d1442b228a8ebe83fa80ad67a4ec339b05035db27d0993228aa3d379b91baf"
     },
-    "length": 288355760
+    "length": 288464812
    },
-   "WhatsNowPlaying_windows_x86_64-5.2.0.tar.gz": {
+   "WhatsNowPlaying_windows_x86_64-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
       "required": false
@@ -54,11 +54,11 @@
      "user": null
     },
     "hashes": {
-     "sha256": "14194dd30e58a86680254666524dab56ffee86377787a8812292c1fb93b943ce"
+     "sha256": "f7c2418e3da5a8f8b606998d6368f7e5dcca161bf84fe9beafa5acf3d6ba4826"
     },
-    "length": 310376025
+    "length": 310434739
    }
   },
-  "version": 3
+  "version": 2
  }
 }
