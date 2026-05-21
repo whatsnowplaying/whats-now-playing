@@ -38,7 +38,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install tufup
-        run: pip install tufup
+        run: pip install -r requirements-tufup.txt
 
       - name: Clone gh-pages metadata
         env:
@@ -48,10 +48,29 @@ jobs:
           git clone --depth 1 --branch gh-pages \
               "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
               "${RUNNER_TEMP}/ghpages"
+
+          # Fail fast with a clear error if gh-pages doesn't have the
+          # expected metadata files.  Without this guard, the cp below
+          # would fail with a generic "no such file" and downstream
+          # tufup sign calls would emit confusing tracebacks.
+          metadata_dir="${RUNNER_TEMP}/ghpages/tufup/metadata"
+          if [[ ! -d "$metadata_dir" ]]; then
+            echo "::error::gh-pages is missing tufup/metadata/ directory."
+            echo "Either tufup hosting has never been initialized on this"
+            echo "branch, or the directory was deleted.  See"
+            echo "docs/dev/tufup-hosting.md for the expected layout."
+            exit 1
+          fi
+          for f in root.json targets.json snapshot.json timestamp.json; do
+            if [[ ! -f "$metadata_dir/$f" ]]; then
+              echo "::error::Required metadata file missing on gh-pages: tufup/metadata/$f"
+              exit 1
+            fi
+          done
+
           mkdir -p "${RUNNER_TEMP}/tufup-repo/metadata"
           mkdir -p "${RUNNER_TEMP}/tufup-repo/targets"
-          cp "${RUNNER_TEMP}/ghpages/tufup/metadata/"*.json \
-             "${RUNNER_TEMP}/tufup-repo/metadata/"
+          cp "$metadata_dir/"*.json "${RUNNER_TEMP}/tufup-repo/metadata/"
 
       - name: Restore signing key
         env:
