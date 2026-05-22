@@ -21,23 +21,6 @@
     <number>10</number>
    </property>
    <item>
-    <widget class="QLabel" name="notify_label">
-     <property name="text">
-      <string>**Notification Indicator**</string>
-     </property>
-     <property name="textFormat">
-      <enum>Qt::MarkdownText</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QCheckBox" name="notify_checkbox">
-     <property name="text">
-      <string>Show OS system notification when new song is retrieved</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QLabel" name="delay_label">
      <property name="text">
       <string>**Write Delay**</string>
@@ -117,6 +100,96 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="notify_label">
+     <property name="text">
+      <string>**Notification Indicator**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="notify_checkbox">
+     <property name="text">
+      <string>Show OS system notification when new song is retrieved</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="tray_icon_label">
+     <property name="text">
+      <string>**Tray Icon**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="tray_icon_layout">
+     <item>
+      <widget class="QLabel" name="tray_icon_combo_label">
+       <property name="text">
+        <string>Appearance</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="tray_icon_combobox">
+       <item>
+        <property name="text">
+         <string>Auto</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Light</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Dark</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="prerelease_label">
+     <property name="text">
+      <string>**Update Track**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="prerelease_checkbox">
+     <property name="text">
+      <string>Include pre-release versions when checking for updates</string>
+     </property>
+     <property name="toolTip">
+      <string>When enabled, the update check will surface pre-release (preview) builds in addition to stable releases.  Users already running a pre-release see them regardless of this setting.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="logging_header_label">
      <property name="text">
       <string>**Runtime Logging**</string>
@@ -160,59 +233,6 @@
        <item>
         <property name="text">
          <string>CRITICAL</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QLabel" name="tray_icon_label">
-     <property name="text">
-      <string>**Tray Icon**</string>
-     </property>
-     <property name="textFormat">
-      <enum>Qt::MarkdownText</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="tray_icon_layout">
-     <item>
-      <widget class="QLabel" name="tray_icon_combo_label">
-       <property name="text">
-        <string>Appearance</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="tray_icon_combobox">
-       <item>
-        <property name="text">
-         <string>Auto</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Light</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Dark</string>
         </property>
        </item>
       </widget>

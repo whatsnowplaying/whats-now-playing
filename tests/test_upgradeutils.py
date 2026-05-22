@@ -200,3 +200,44 @@ def test_check_for_update_prerelease_sends_track_param(monkeypatch, up_to_date_r
 
     assert sent_params.get("version") == "5.1.0-rc1"
     assert sent_params.get("track") == "prerelease"
+
+
+def test_check_for_update_stable_no_track_by_default(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
+    """stable builds with no prefer_prerelease opt-in do not send track param"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
+
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        nowplaying.upgrades.check_for_update(platform_info)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+
+    assert "track" not in sent_params
+
+
+def test_check_for_update_stable_with_prefer_prerelease_sends_track(
+    monkeypatch, up_to_date_response
+):  # pylint: disable=redefined-outer-name
+    """stable users who opt into prereleases via settings get track=prerelease"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
+
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        nowplaying.upgrades.check_for_update(platform_info, prefer_prerelease=True)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+
+    assert sent_params.get("track") == "prerelease"
+
+
+def test_check_for_update_prerelease_running_ignores_setting(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
+    """already-on-prerelease users keep track=prerelease regardless of setting"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.1.0-rc1", raising=False)  # pylint: disable=no-member
+
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        nowplaying.upgrades.check_for_update(platform_info, prefer_prerelease=False)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+
+    assert sent_params.get("track") == "prerelease"
