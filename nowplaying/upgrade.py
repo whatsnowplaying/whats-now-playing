@@ -6,6 +6,7 @@ import pathlib
 import sys
 import webbrowser
 
+from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QDialog,
     QDialogButtonBox,
@@ -77,7 +78,15 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
         platform_info = PlatformDetector.get_platform_info()
         platform_str = PlatformDetector.get_platform_display_string()
 
-        if data := nowplaying.upgrades.check_for_update(platform_info):
+        # QSettings reads the org/app name set up by bootstrap.set_qt_names()
+        # so it lands on the same backing store as the rest of the app.
+        # value() returns `object` even with type=bool, so cast defensively.
+        prefer_prerelease = bool(
+            QSettings().value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
+        )
+        if data := nowplaying.upgrades.check_for_update(
+            platform_info, prefer_prerelease=prefer_prerelease
+        ):
             dialog = UpgradeDialog()
             dialog.fill_it_in(
                 nowplaying.version.__VERSION__,  # pylint: disable=no-member

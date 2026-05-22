@@ -469,6 +469,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             str(self.config.cparser.value("settings/delay"))
         )
         self.widgets["general"].notify_checkbox.setChecked(self.config.notif)
+        self.widgets["general"].prerelease_checkbox.setChecked(
+            self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
+        )
 
         tray_theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
         tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
@@ -726,6 +729,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         tray_theme = TRAY_ICON_THEMES[self.widgets["general"].tray_icon_combobox.currentIndex()]
         self.config.cparser.setValue("tray/icontheme", tray_theme)
+
+        self.config.cparser.setValue(
+            "upgrades/prefer_prerelease",
+            self.widgets["general"].prerelease_checkbox.isChecked(),
+        )
 
         self.config.put(
             initialized=True,
