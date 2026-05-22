@@ -195,8 +195,19 @@ def _is_prerelease(version: str) -> bool:
     return any(marker in version for marker in _PRERELEASE_MARKERS)
 
 
-def _build_version_params(platform_info: dict[str, t.Any]) -> dict[str, t.Any]:
-    """Build query params for the version-check API from platform info."""
+def _build_version_params(
+    platform_info: dict[str, t.Any],
+    prefer_prerelease: bool = False,
+) -> dict[str, t.Any]:
+    """Build query params for the version-check API from platform info.
+
+    prefer_prerelease: opt-in flag from settings.  Sends `track=prerelease`
+    even when the user is currently on a stable build, so stable users
+    can subscribe to the prerelease track via the settings checkbox.
+    The auto-detection of `_is_prerelease(current_version)` still
+    applies: a user already running a prerelease keeps getting
+    prereleases regardless of the setting.
+    """
     current_version = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
     params: dict[str, t.Any] = {
@@ -208,7 +219,7 @@ def _build_version_params(platform_info: dict[str, t.Any]) -> dict[str, t.Any]:
         params["chipset"] = chipset
     if macos_version := platform_info.get("macos_version"):
         params["macos_version"] = macos_version
-    if _is_prerelease(current_version):
+    if _is_prerelease(current_version) or prefer_prerelease:
         params["track"] = "prerelease"
 
     return params
@@ -242,13 +253,18 @@ def ping_version(config: "nowplaying.config.ConfigFile") -> None:
         logging.debug("Version ping failed", exc_info=True)
 
 
-def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None:
+def check_for_update(
+    platform_info: dict[str, t.Any],
+    prefer_prerelease: bool = False,
+) -> dict[str, t.Any] | None:
     """Check for updates via whatsnowplaying.com API.
 
     Sends current version and platform info to the API.
     Returns the response dict if an update is available, None otherwise.
+
+    prefer_prerelease: opt-in flag from settings; see _build_version_params.
     """
-    params = _build_version_params(platform_info)
+    params = _build_version_params(platform_info, prefer_prerelease=prefer_prerelease)
 
     try:
         response = requests.get(UPDATE_CHECK_URL, params=params, timeout=10)
