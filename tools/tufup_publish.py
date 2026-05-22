@@ -41,7 +41,7 @@ import os
 import pathlib
 import sys
 
-from tufup.repo import Repository, make_gztar_archive
+from tufup.repo import Repository, make_gztar_archive  # pylint: disable=import-error
 
 
 KEY_NAME = "wnp_prod_key"
@@ -89,6 +89,7 @@ def _write_config(repo_dir: pathlib.Path, keys_dir: pathlib.Path) -> pathlib.Pat
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse args, archive each bundle, register targets, and re-sign."""
     parser = argparse.ArgumentParser(
         description="Register platform bundles as tufup targets and re-sign metadata.",
     )
@@ -161,9 +162,10 @@ def main(argv: list[str] | None = None) -> int:
         # custom typing in tufup is JsonDict-recursive; pyright is too
         # strict about the nested {"required": False} shape, but the
         # runtime accepts it (same pattern as backfill scripts).
+        custom = {"user": None, "tufup": {"required": False}}
         repo.roles.add_or_update_target(
             local_path=archive_path,
-            custom=dict(user=None, tufup={"required": False}),  # type: ignore[arg-type]
+            custom=custom,  # type: ignore[arg-type]
         )
 
     print("publishing changes...")
