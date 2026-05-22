@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Platform detection for upgrades"""
 
+import functools
 import logging
 import platform
 import subprocess
@@ -8,6 +9,10 @@ import sys
 import typing as t
 
 
+# Rosetta state is fixed for the lifetime of a process (you can't
+# un-translate an already-running binary), so cache the probe result
+# rather than spawning sysctl on every upgrade check.
+@functools.lru_cache(maxsize=None)
 def _macos_running_under_rosetta() -> bool:
     """Return True if this Intel process is being translated on Apple Silicon.
 

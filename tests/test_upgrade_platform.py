@@ -7,7 +7,20 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from nowplaying.upgrades.platform import PlatformDetector
+from nowplaying.upgrades.platform import (
+    PlatformDetector,
+    _macos_running_under_rosetta,
+)
+
+
+@pytest.fixture(autouse=True)
+def _clear_rosetta_cache():
+    """`_macos_running_under_rosetta()` uses lru_cache; clear it between
+    tests so each test's subprocess.run mock actually gets invoked
+    rather than the cache returning the previous test's result."""
+    _macos_running_under_rosetta.cache_clear()
+    yield
+    _macos_running_under_rosetta.cache_clear()
 
 
 def test_platform_detection_returns_valid_data():
