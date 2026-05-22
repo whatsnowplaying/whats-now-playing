@@ -98,19 +98,43 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.meta.outputs.tag }}
         run: |
+          set -euo pipefail
           mkdir -p "${RUNNER_TEMP}/release-assets"
-          # Pull only the 4 platform zips.  Other assets (tar.gz from
-          # prior runs, source archives, etc.) are skipped.
           cd "${RUNNER_TEMP}/release-assets"
-          for pattern in \
-              "WhatsNowPlaying-*-Linux-x86_64.zip" \
-              "WhatsNowPlaying-*-macOS15-AppleSilicon.zip" \
-              "WhatsNowPlaying-*-macOS15-Intel.zip" \
-              "WhatsNowPlaying-*-Windows.zip"; do
+
+          patterns=(
+              "WhatsNowPlaying-*-Linux-x86_64.zip"
+              "WhatsNowPlaying-*-macOS15-AppleSilicon.zip"
+              "WhatsNowPlaying-*-macOS15-Intel.zip"
+              "WhatsNowPlaying-*-Windows.zip"
+          )
+
+          # Pull only the 4 platform zips.  Other assets (tar.gz from
+          # prior runs, source archives, etc.) are skipped by pattern.
+          for pattern in "${patterns[@]}"; do
             gh release download "$TAG" \
                 --repo "${GITHUB_REPOSITORY}" \
                 --pattern "$pattern"
           done
+
+          # Explicit post-download validation.  `gh release download`
+          # errors on a missing pattern, but the underlying error can
+          # be noisy; collect every missing pattern and report them
+          # together to make misconfigured releases obvious.
+          missing=()
+          for pattern in "${patterns[@]}"; do
+            if ! compgen -G "$pattern" > /dev/null; then
+              missing+=("$pattern")
+            fi
+          done
+          if [ "${#missing[@]}" -ne 0 ]; then
+            echo "::error::Missing expected release assets:"
+            for pattern in "${missing[@]}"; do
+              echo "  - $pattern"
+            done
+            exit 1
+          fi
+
           ls -la
 
       - name: Extract each zip into its bundle dir
