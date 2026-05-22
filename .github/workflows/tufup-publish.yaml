@@ -1,0 +1,238 @@
+---
+name: tufup publish on release
+
+# Triggered when a draft release is published.  Downloads the 4
+# platform zip assets, repackages each into a tufup-format tar.gz,
+# signs metadata referencing the new targets with secrets.TUFUP_KEY,
+# uploads the tarballs back to the release, and pushes refreshed
+# metadata to gh-pages:tufup/metadata/.
+#
+# Companion to .github/workflows/tufup-resign.yaml (daily re-sign
+# cron) -- both share the same concurrency group and signing key.
+#
+# See docs/dev/tufup-hosting.md for the proxy + hosting context,
+# and docs/dev/tufup-key-management.md for the key plan.
+
+on:  # yamllint disable-line rule:truthy
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to bundle (e.g. 5.3.0-preview1)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Sign into the _prerelease channel variants'
+        required: false
+        type: boolean
+        default: false
+
+# Serialize with the daily re-sign cron so we don't race on
+# gh-pages pushes.
+concurrency:
+  group: tufup-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+
+      - name: Install tufup
+        run: pip install -r requirements-tufup.txt
+
+      - name: Resolve tag + prerelease flag
+        id: meta
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          EVENT_PRERELEASE: ${{ github.event.release.prerelease }}
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          DISPATCH_PRERELEASE: ${{ github.event.inputs.prerelease }}
+        run: |
+          # On release: published, use event payload.  On
+          # workflow_dispatch, use the manual inputs.
+          if [[ -n "$EVENT_TAG" ]]; then
+            tag="$EVENT_TAG"
+            prerelease="$EVENT_PRERELEASE"
+          else
+            tag="$DISPATCH_TAG"
+            prerelease="$DISPATCH_PRERELEASE"
+          fi
+          if [[ -z "$tag" ]]; then
+            echo "::error::No tag resolved from event or dispatch inputs"
+            exit 1
+          fi
+          # Strip any leading "refs/tags/" defensively.
+          tag="${tag#refs/tags/}"
+          # Version excludes any leading "v" so it matches tufup
+          # filename conventions (we tag X.Y.Z, not vX.Y.Z, but be
+          # defensive).
+          version="${tag#v}"
+          # Prerelease channel suffix.  See tufup_channel routing in
+          # docs/dev/charts-server-spec.md.
+          if [[ "$prerelease" == "true" ]]; then
+            suffix="_prerelease"
+          else
+            suffix=""
+          fi
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "channel_suffix=$suffix"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved: tag=$tag version=$version suffix='$suffix'"
+
+      - name: Download release zips
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/release-assets"
+          cd "${RUNNER_TEMP}/release-assets"
+
+          patterns=(
+              "WhatsNowPlaying-*-Linux-x86_64.zip"
+              "WhatsNowPlaying-*-macOS15-AppleSilicon.zip"
+              "WhatsNowPlaying-*-macOS15-Intel.zip"
+              "WhatsNowPlaying-*-Windows.zip"
+          )
+
+          # Pull only the 4 platform zips.  Other assets (tar.gz from
+          # prior runs, source archives, etc.) are skipped by pattern.
+          for pattern in "${patterns[@]}"; do
+            gh release download "$TAG" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --pattern "$pattern"
+          done
+
+          # Explicit post-download validation.  `gh release download`
+          # errors on a missing pattern, but the underlying error can
+          # be noisy; collect every missing pattern and report them
+          # together to make misconfigured releases obvious.
+          missing=()
+          for pattern in "${patterns[@]}"; do
+            if ! compgen -G "$pattern" > /dev/null; then
+              missing+=("$pattern")
+            fi
+          done
+          if [ "${#missing[@]}" -ne 0 ]; then
+            echo "::error::Missing expected release assets:"
+            for pattern in "${missing[@]}"; do
+              echo "  - $pattern"
+            done
+            exit 1
+          fi
+
+          ls -la
+
+      - name: Extract each zip into its bundle dir
+        env:
+          SUFFIX: ${{ steps.meta.outputs.channel_suffix }}
+        run: |
+          bash bincomponents/extract_release_zips.sh \
+              "${RUNNER_TEMP}/release-assets" \
+              "${RUNNER_TEMP}/extracted" \
+              "$SUFFIX"
+
+      - name: Restore signing key
+        env:
+          TUFUP_KEY: ${{ secrets.TUFUP_KEY }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/keystore"
+          chmod 700 "${RUNNER_TEMP}/keystore"
+          printf '%s' "$TUFUP_KEY" > "${RUNNER_TEMP}/keystore/wnp_prod_key"
+          chmod 600 "${RUNNER_TEMP}/keystore/wnp_prod_key"
+          cp bincomponents/wnp_prod_key.pub \
+             "${RUNNER_TEMP}/keystore/"
+
+      - name: Clone gh-pages metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          git clone --depth 1 --branch gh-pages \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
+              "${RUNNER_TEMP}/ghpages"
+
+          metadata_dir="${RUNNER_TEMP}/ghpages/tufup/metadata"
+          if [[ ! -d "$metadata_dir" ]]; then
+            echo "::error::gh-pages is missing tufup/metadata/."
+            echo "Hosting must be initialized first."
+            echo "See docs/dev/tufup-hosting.md."
+            exit 1
+          fi
+          for f in root.json targets.json snapshot.json timestamp.json; do
+            if [[ ! -f "$metadata_dir/$f" ]]; then
+              echo "::error::Required metadata file missing on gh-pages:"
+              echo "  tufup/metadata/$f"
+              exit 1
+            fi
+          done
+
+          mkdir -p "${RUNNER_TEMP}/tufup-repo/metadata"
+          mkdir -p "${RUNNER_TEMP}/tufup-repo/targets"
+          cp "$metadata_dir/"*.json "${RUNNER_TEMP}/tufup-repo/metadata/"
+
+      - name: Run tufup_publish.py
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          SUFFIX: ${{ steps.meta.outputs.channel_suffix }}
+        run: |
+          # Build --bundle args from the channel list so each line stays
+          # under yamllint's 80-char limit.  Channel dirs match what
+          # extract_release_zips.sh produced.
+          bundle_args=()
+          for ch in WhatsNowPlaying_macos15_arm \
+                    WhatsNowPlaying_macos15_intel \
+                    WhatsNowPlaying_windows_x86_64 \
+                    WhatsNowPlaying_linux_x86_64; do
+            full="${ch}${SUFFIX}"
+            bundle_args+=(--bundle "${full}:${RUNNER_TEMP}/extracted/${full}")
+          done
+          python tools/tufup_publish.py \
+              --version "$VERSION" \
+              --keystore "${RUNNER_TEMP}/keystore" \
+              --repo-dir "${RUNNER_TEMP}/tufup-repo" \
+              "${bundle_args[@]}"
+
+      - name: Upload tarballs to GH Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          cd "${RUNNER_TEMP}/tufup-repo/targets"
+          ls -la *.tar.gz
+          gh release upload "$TAG" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber \
+              *.tar.gz
+
+      - name: Push refreshed metadata to gh-pages
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          cp "${RUNNER_TEMP}/tufup-repo/metadata/"*.json \
+             "${RUNNER_TEMP}/ghpages/tufup/metadata/"
+          cd "${RUNNER_TEMP}/ghpages"
+          git config user.name 'github-actions[bot]'
+          git config user.email \
+              '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tufup/metadata
+          if git diff --cached --quiet; then
+            echo "No metadata change; skipping push"
+            exit 0
+          fi
+          git commit -m "tufup: publish $TAG metadata"
+          git push origin gh-pages
