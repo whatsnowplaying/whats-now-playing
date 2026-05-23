@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 """One-time tufup repository setup.
 
-Run this exactly once at the start of the spike.  It generates keys for
+Run this exactly once to bootstrap the production repo.  It generates keys for
 every TUF role and creates the initial `root.json`, `targets.json`,
 `snapshot.json`, and `timestamp.json` metadata files in REPO_DIR.
 
@@ -8,7 +9,7 @@ After running this, copy REPO_DIR/metadata/1.root.json into the WNP
 source tree so it gets bundled with the application as the trust anchor.
 
 USAGE:
-    python tools/tufup/repo_init.py
+    python tools/tufup_repo_init.py
 """
 
 import logging
@@ -20,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from tufup.repo import Repository  # noqa: E402
 
-import repo_settings  # noqa: E402
+import tufup_repo_settings as repo_settings  # noqa: E402
 
 
 def main() -> None:

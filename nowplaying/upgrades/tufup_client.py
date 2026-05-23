@@ -48,7 +48,9 @@ def _default_state_dir() -> pathlib.Path:
     Windows: %LOCALAPPDATA%/WhatsNowPlaying/tufup
     Linux:   ~/.local/share/WhatsNowPlaying/tufup
     """
-    locations = QStandardPaths.standardLocations(QStandardPaths.StandardLocation.AppLocalDataLocation)
+    locations = QStandardPaths.standardLocations(
+        QStandardPaths.StandardLocation.AppLocalDataLocation
+    )
     if not locations:
         logger.warning("QStandardPaths returned no AppLocalDataLocation; using home dir fallback")
         return pathlib.Path.home() / ".local" / "share" / "WhatsNowPlaying" / "tufup"
@@ -213,7 +215,15 @@ def _install_without_sys_exit(
             fh.write(script_text)
             script_path = fh.name
         logger.debug("tufup install (win): batch=%s", script_path)
-        subprocess.Popen([script_path], creationflags=subprocess.CREATE_NEW_CONSOLE)  # nosec: path is our own tempfile
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
+        startupinfo.wShowWindow = 0  # SW_HIDE
+        subprocess.Popen(  # nosec: path is our own tempfile
+            [script_path],
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,  # type: ignore[attr-defined]
+            startupinfo=startupinfo,
+            close_fds=True,
+        )
         return
 
     # macOS / Linux: rename running binary/bundle aside, then move new one in.

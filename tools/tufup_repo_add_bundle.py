@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Per-release tufup bundle script.
 
 Takes a PyInstaller `dist/` directory containing the freshly built WNP app
@@ -6,10 +7,10 @@ from the previous release if there is one, and signs the updated TUF
 metadata (targets/snapshot/timestamp roles).
 
 USAGE:
-    python tools/tufup/repo_add_bundle.py path/to/dist <version> <platform>
+    python tools/tufup_repo_add_bundle.py path/to/dist <version> <platform>
 
 Example:
-    python tools/tufup/repo_add_bundle.py dist/ 5.2.1 mac
+    python tools/tufup_repo_add_bundle.py dist/ 5.2.1 mac
 
 After running, REPO_DIR/{metadata,targets} is the publishable artifact set.
 Upload its entire contents to whatever HTTPS endpoint TUFUP_METADATA_URL /
@@ -24,7 +25,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from tufup.repo import Repository  # noqa: E402
 
-import repo_settings  # noqa: E402
+import tufup_repo_settings as repo_settings  # noqa: E402
 
 
 def main(argv: list[str]) -> int:
