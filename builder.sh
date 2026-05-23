@@ -239,8 +239,16 @@ cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
 rm -rf "${DISTDIR}" || true
 mv dist "${DISTDIR}"
 
+# Remove the PyInstaller COLLECT wrapper dir so the exe/app sits directly
+# under DISTDIR.  All platforms should produce the same flat layout:
+#   DISTDIR/WhatsNowPlaying.app  (macOS)
+#   DISTDIR/WhatsNowPlaying.exe  (Windows)
+#   DISTDIR/WhatsNowPlaying      (Linux)
 if [[ "${SYSTEM}" == "macosx" ]]; then
   rm -rf "${DISTDIR}"/WhatsNowPlaying || true
+else
+  mv "${DISTDIR}"/WhatsNowPlaying/* "${DISTDIR}"/
+  rmdir "${DISTDIR}"/WhatsNowPlaying || true
 fi
 
 if [[ ${SYSTEM} != "windows" ]]; then
