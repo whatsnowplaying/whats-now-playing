@@ -2,12 +2,12 @@
  "signatures": [
   {
    "keyid": "3009823a498e7d7dd5b244f5f7c3fab05d5a7f0923e141de96d0f1eaa8d2fe9e",
-   "sig": "d8647e4e9f4936d6925d38c3108cd4d3abe8ab6634314e974842213f1d647f9e861ccf33ce2b2d803f3c76404bb48196022bf622a98ae0c251e85da5c9bba90c"
+   "sig": "21c6bf2915919d2c95f35ef258572f57f6134a013ce3fefbccc94c2f5eb92ecbff77e9d5f081bbdbfee9096ab07539a8b1f930629cd06ca06995c4dfd73d400a"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-06-22T20:22:06Z",
+  "expires": "2026-06-22T20:44:35Z",
   "spec_version": "1.0.31",
   "targets": {
    "WhatsNowPlaying_linux_x86_64-5.2.1.tar.gz": {
@@ -18,9 +18,9 @@
      "user": null
     },
     "hashes": {
-     "sha256": "09695fb4ecb96f98e4b3b03350b0b0cbbe673dd5bc262e1f8d4066b454e221b6"
+     "sha256": "5ccc2524be5eadbfdf69a0557bd4bcdc465db6a0146113571fe098d28c497ef4"
     },
-    "length": 305077186
+    "length": 305069078
    },
    "WhatsNowPlaying_macos15_arm-5.2.1.tar.gz": {
     "custom": {
@@ -54,9 +54,9 @@
      "user": null
     },
     "hashes": {
-     "sha256": "f7c2418e3da5a8f8b606998d6368f7e5dcca161bf84fe9beafa5acf3d6ba4826"
+     "sha256": "88e6a322e7ff87422afd67588198cba12dc57694810fd8047b34e432e9195afa"
     },
-    "length": 310434739
+    "length": 310423642
    }
   },
   "version": 3
