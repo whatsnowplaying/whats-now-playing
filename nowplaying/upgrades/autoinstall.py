@@ -16,7 +16,7 @@ import nowplaying.upgrades.tufup_client
 logger = logging.getLogger(__name__)
 
 
-class UpdateWorker(QThread):
+class UpdateWorker(QThread):  # pylint: disable=too-few-public-methods
     """Run the synchronous tufup download+apply on a background thread.
 
     Emits `progress(downloaded, expected)` per chunk and `failed(message)`
@@ -39,7 +39,7 @@ class UpdateWorker(QThread):
         self.install_dir = install_dir
         self.channel = channel
 
-    def run(self) -> None:
+    def run(self) -> None:  # pylint: disable=missing-function-docstring
         try:
             client = nowplaying.upgrades.tufup_client.check_for_update(
                 self.install_dir, channel=self.channel
@@ -83,7 +83,7 @@ def run_auto_install(
     case — callers should still treat True as "good, anything after this
     is bonus."
     """
-    _DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000  # 5 minutes — guard against hung downloads
+    download_timeout_ms = 5 * 60 * 1000  # 5 minutes — guard against hung downloads
 
     progress = QProgressDialog("Downloading update...", None, 0, 100, parent)
     progress.setWindowTitle("Installing Update")
@@ -98,7 +98,7 @@ def run_auto_install(
     def on_progress(downloaded: int, expected: int) -> None:
         if expected > 0:
             progress.setValue(int(downloaded / expected * 100))
-        if downloaded >= expected and expected > 0:
+        if 0 < expected <= downloaded:
             progress.setLabelText("Installing update...")
 
     def on_failed(message: str) -> None:
@@ -106,7 +106,7 @@ def run_auto_install(
         progress.close()
 
     def on_timeout() -> None:
-        logger.error("Auto-install: download timed out after %ds", _DOWNLOAD_TIMEOUT_MS // 1000)
+        logger.error("Auto-install: download timed out after %ds", download_timeout_ms // 1000)
         on_failed("Download timed out — check your network connection and try again.")
         worker.terminate()
 
@@ -119,7 +119,7 @@ def run_auto_install(
     worker.finished.connect(progress.close)
     worker.finished.connect(timeout_timer.stop)
     worker.start()
-    timeout_timer.start(_DOWNLOAD_TIMEOUT_MS)
+    timeout_timer.start(download_timeout_ms)
     # Use the PySide6 .exec_() alias here — semantically identical to
     # the modal-dialog .exec() method but avoids tripping security scanners
     # that pattern-match the name as if it were shell exec.

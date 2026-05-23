@@ -5,9 +5,9 @@ task #9.
 
 ## Design
 
-| Role            | Key             | Signs                                              |
-| --------------- | --------------- | -------------------------------------------------- |
-| All four roles  | `wnp_prod_key`  | `root.json`, `targets.json`, `snapshot.json`, `timestamp.json` |
+| Role           | Key            | Signs                                                          |
+| -------------- | -------------- | -------------------------------------------------------------- |
+| All four roles | `wnp_prod_key` | `root.json`, `targets.json`, `snapshot.json`, `timestamp.json` |
 
 * **One ed25519 key** signs every role, threshold 1.
 * **Two copies**:
@@ -186,12 +186,12 @@ walk forward through `N.root.json` automatically.
 
 ## Recovery scenarios
 
-| Scenario                                  | Recovery                                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| Lost GH Actions secret                    | Restore from Bitwarden; `gh secret set TUFUP_KEY < restored_file`        |
-| Lost Bitwarden vault                      | Restore from your ZFS send/recv backup of the Vaultwarden server         |
-| Lost both (GH + Bitwarden)                | Generate a brand-new key, ship next client release with a new bundled `root.json`.  Existing installs are stranded on the old root and must manually reinstall. |
-| Suspected key compromise                  | Rotate immediately (see above), audit signed metadata for tampering      |
+| Scenario                   | Recovery                                                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lost GH Actions secret     | Restore from Bitwarden; `gh secret set TUFUP_KEY < restored_file`                                                                                              |
+| Lost Bitwarden vault       | Restore from your ZFS send/recv backup of the Vaultwarden server                                                                                               |
+| Lost both (GH + Bitwarden) | Generate a brand-new key, ship next client release with a new bundled `root.json`. Existing installs are stranded on the old root and must manually reinstall. |
+| Suspected key compromise   | Rotate immediately (see above), audit signed metadata for tampering                                                                                            |
 
 ## Config file management
 

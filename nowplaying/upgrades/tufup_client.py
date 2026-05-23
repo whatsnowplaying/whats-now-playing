@@ -32,7 +32,7 @@ import nowplaying.version  # pylint: disable=no-name-in-module, import-error
 if TYPE_CHECKING:
     from typing import Protocol
 
-    class ProgressHook(Protocol):
+    class ProgressHook(Protocol):  # pylint: disable=too-few-public-methods
         """tufup calls progress callbacks with keyword args, not positional."""
 
         def __call__(self, *, bytes_downloaded: int, bytes_expected: int) -> None: ...
@@ -177,6 +177,45 @@ start "" "{exe}"
 """
 
 
+def _win_install(
+    src_path: pathlib.Path,
+    dst_path: pathlib.Path,
+    current_version: str,
+) -> None:
+    """Launch the detached batch script that performs the Windows in-place swap.
+
+    tufup deletes its extraction dir after install() returns, so we stage the
+    new build to a temp dir we own before launching the script.
+    """
+    staging = pathlib.Path(tempfile.mkdtemp(prefix="wnp-update-"))
+    shutil.copytree(src_path, staging, dirs_exist_ok=True)
+    script_text = _WIN_BATCH_TEMPLATE.format(
+        pid=os.getpid(),
+        src_dir=str(staging),
+        dst_dir=str(dst_path),
+        version=current_version,
+        exe=str(dst_path / "WhatsNowPlaying.exe"),
+    )
+    with tempfile.NamedTemporaryFile(
+        mode="w", prefix="tufup", suffix=".bat", delete=False
+    ) as fh:
+        fh.write(script_text)
+        script_path = fh.name
+    logger.debug("tufup install (win): batch=%s", script_path)
+    startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
+    startupinfo.wShowWindow = 0  # SW_HIDE
+    _flags = (  # type: ignore[attr-defined]
+        subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    )
+    subprocess.Popen(  # nosec: path is our own tempfile  # pylint: disable=consider-using-with
+        [script_path],
+        creationflags=_flags,
+        startupinfo=startupinfo,
+        close_fds=True,
+    )
+
+
 def _install_without_sys_exit(
     src_dir: pathlib.Path | str,
     dst_dir: pathlib.Path | str,
@@ -203,33 +242,7 @@ def _install_without_sys_exit(
     current_version = nowplaying.version.__VERSION__
 
     if sys.platform == "win32":
-        # tufup deletes its extraction dir after install() returns, before
-        # the batch script gets a chance to robocopy.  Stage the new build
-        # to a temp dir we own so it survives until the batch runs.
-        staging = pathlib.Path(tempfile.mkdtemp(prefix="wnp-update-"))
-        shutil.copytree(src_path, staging, dirs_exist_ok=True)
-        script_text = _WIN_BATCH_TEMPLATE.format(
-            pid=os.getpid(),
-            src_dir=str(staging),
-            dst_dir=str(dst_path),
-            version=current_version,
-            exe=str(dst_path / "WhatsNowPlaying.exe"),
-        )
-        with tempfile.NamedTemporaryFile(
-            mode="w", prefix="tufup", suffix=".bat", delete=False
-        ) as fh:
-            fh.write(script_text)
-            script_path = fh.name
-        logger.debug("tufup install (win): batch=%s", script_path)
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
-        startupinfo.wShowWindow = 0  # SW_HIDE
-        subprocess.Popen(  # nosec: path is our own tempfile
-            [script_path],
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,  # type: ignore[attr-defined]
-            startupinfo=startupinfo,
-            close_fds=True,
-        )
+        _win_install(src_path, dst_path, current_version)
         return
 
     # macOS / Linux: rename running binary/bundle aside, then move new one in.
@@ -264,7 +277,7 @@ def _install_without_sys_exit(
     logger.debug("tufup install: moved %s -> %s", src_path, dst_path)
 
     logger.debug("tufup install: spawning %s", new_exe)
-    subprocess.Popen([str(new_exe)])  # nosec
+    subprocess.Popen([str(new_exe)])  # nosec  # pylint: disable=consider-using-with
 
 
 def download_and_apply(

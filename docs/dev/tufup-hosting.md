@@ -359,12 +359,10 @@ Before announcing auto-update to users, verify end-to-end:
 * [ ] `curl -I https://whatsnowplaying.com/tufup/targets/<known-target>`
       returns 302 to a `github.com/.../releases/download/...` URL.
 * [ ] Following that redirect downloads the expected binary.
-* [ ] A WNP build pointed at the new URLs successfully:
-      * fetches metadata
-      * validates signatures against the bundled root.json trust anchor
-      * downloads + verifies a target
-      * applies it in place (covered by task #10 — Gatekeeper / Windows
-        code-signing verification)
+* [ ] A WNP build pointed at the new URLs successfully fetches metadata,
+      validates signatures against the bundled root.json trust anchor,
+      downloads and verifies a target, and applies it in place (covered by
+      task #10 — Gatekeeper / Windows code-signing verification)
 * [ ] `timestamp.json` cache TTL is short enough that a re-signed
       version is visible to clients within ~5 min of publish.
 
