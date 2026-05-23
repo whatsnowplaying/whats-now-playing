@@ -160,8 +160,9 @@ def check_for_update(
 
 
 _WIN_BATCH_TEMPLATE = """@echo off
-:: Wait for the parent process to release file handles before touching files.
-timeout /t 5 /nobreak >nul
+:: Wait until the parent WNP process exits before touching any files.
+:: Wait-Process blocks exactly until the pid is gone; no arbitrary sleep.
+powershell -Command "Wait-Process -Id {pid} -ErrorAction SilentlyContinue"
 :: Rename the running exe aside so robocopy can place the new one at the
 :: canonical path.  The new build uses a versioned _internal-{{new_ver}}/
 :: directory baked at build time, so there is no conflict with the old
@@ -169,9 +170,8 @@ timeout /t 5 /nobreak >nul
 if exist "{dst_dir}\\WhatsNowPlaying.exe" (
     rename "{dst_dir}\\WhatsNowPlaying.exe" "WhatsNowPlaying-{version}.exe"
 )
-echo Moving app files...
-robocopy "{src_dir}" "{dst_dir}" /E /MOVE
-echo Restarting...
+robocopy "{src_dir}" "{dst_dir}" /E /MOVE /R:3 /W:2
+rd /s /q "{src_dir}" 2>nul
 start "" "{exe}"
 (goto) 2>nul & del "%~f0"
 """
@@ -203,8 +203,14 @@ def _install_without_sys_exit(
     current_version = nowplaying.version.__VERSION__
 
     if sys.platform == "win32":
+        # tufup deletes its extraction dir after install() returns, before
+        # the batch script gets a chance to robocopy.  Stage the new build
+        # to a temp dir we own so it survives until the batch runs.
+        staging = pathlib.Path(tempfile.mkdtemp(prefix="wnp-update-"))
+        shutil.copytree(src_path, staging, dirs_exist_ok=True)
         script_text = _WIN_BATCH_TEMPLATE.format(
-            src_dir=str(src_path),
+            pid=os.getpid(),
+            src_dir=str(staging),
             dst_dir=str(dst_path),
             version=current_version,
             exe=str(dst_path / "WhatsNowPlaying.exe"),
