@@ -169,6 +169,16 @@ PYTHONBINDIR=$(dirname "${PYTHONBIN}")
 
 rm -rf build dist || true
 
+# Restore the vendor/.gitkeep marker before pip install triggers
+# versioningit.  `vendoring sync` (further down) deletes it on every
+# build, leaving the tree "dirty" from versioningit's perspective on
+# any subsequent re-build of the same checkout.  A dirty version
+# string flips _is_prerelease() to True at runtime and routes the
+# upgrade check to the prerelease channel, which isn't what we want
+# for a stable release build.  Idempotent: no-op when the file is
+# already present (i.e., the CI clean-checkout case).
+git checkout nowplaying/vendor/.gitkeep 2>/dev/null || true
+
 echo "*****"
 echo "* Upgrading pip"
 echo "****"
@@ -246,3 +256,8 @@ fi
 if [[ ${SYSTEM} != "windows" ]]; then
   zip --symlinks -r "${DISTDIR}".zip "${DISTDIR}"
 fi
+
+# vendoring sync deleted this during the build; restore so the tree
+# stays clean and versioningit doesn't produce a .dirty version on
+# any subsequent build from the same checkout.
+git checkout nowplaying/vendor/.gitkeep 2>/dev/null || true

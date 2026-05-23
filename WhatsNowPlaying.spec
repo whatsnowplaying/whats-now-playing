@@ -145,6 +145,12 @@ def windows_version_file():
 
 block_cipher = None
 
+# Versioned contents directory so each build's _internal-X.Y.Z/ is unique.
+# The installer renames the old binary aside and moves the new bundle in;
+# because the new binary looks for a different _internal-{new_ver}/ there is
+# never a conflict and the old binary's directory is left intact as a fallback.
+_CONTENTS_DIR = '_internal-' + __VERSION__.replace('+', '-')
+
 executables = {
     'WhatsNowPlaying': 'wnppyi.py',
 }
@@ -157,16 +163,24 @@ for execname, execpy in executables.items():
                  datas=[('nowplaying/resources/*', 'resources/'),
                         ('nowplaying/resources/ui/*', 'resources/ui/'),
                         ('nowplaying/resources/preview/*', 'resources/preview/'),
+                        ('nowplaying/resources/tufup/*', 'resources/tufup/'),
                         ('nowplaying/templates/*', 'templates/')] +
                        _nltk_datas('punkt') +
                        _nltk_datas('punkt_tab'),
-                 hiddenimports=ALL_PLUGIN_MODULES,
+                 hiddenimports=ALL_PLUGIN_MODULES + [
+                     # tufup 0.10.0 imports setuptools.config.expand
+                     # behind a try/except that hides it from
+                     # PyInstaller's static analyzer.  Force-bundle
+                     # so client-side `import tufup` works.  Tracked
+                     # in requirements-tufup.txt -- drop once tufup
+                     # upstream widens its except clause.
+                     'setuptools.config.expand',
+                 ],
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
                  excludes=[
                      'tkinter', '_tkinter', 'Tkinter',
                      'tcl', 'tk', '_tcl', '_tk',
-                     'setuptools',
                  ],
                  win_no_prefer_redirects=False,
                  win_private_assemblies=False,
@@ -198,6 +212,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             #console=False,
+            contents_directory=_CONTENTS_DIR,
             icon=geticon(),
             codesign_identity=os.environ.get('MACOS_SIGN_IDENTITY'),
             entitlements_file='bincomponents/entitlements.plist')
@@ -238,6 +253,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             console=False,
+            contents_directory=_CONTENTS_DIR,
             version=WINVERSFILE,
             icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
@@ -263,6 +279,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             console=False,
+            contents_directory=_CONTENTS_DIR,
             icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,

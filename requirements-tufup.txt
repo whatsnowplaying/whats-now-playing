@@ -1,5 +1,14 @@
 # Pinned tufup version for CI workflows that re-sign or generate
-# TUF metadata.  Bump deliberately after testing — upstream changes
+# TUF metadata.  Bump deliberately after testing -- upstream changes
 # can affect archive-format suffix, signing semantics, and CLI
 # argument parsing.
 tufup==0.10.0
+# tufup 0.10.0's `tufup/repo/__init__.py` does an unconditional
+# `import setuptools.config.expand` wrapped in a too-narrow
+# try/except AssertionError.  When setuptools isn't installed at
+# all the missing-module import raises ModuleNotFoundError which
+# isn't caught, and `tufup.__init__` fails to load.  Bundling
+# setuptools as a runtime dep sidesteps it.  Can drop once tufup
+# upstream widens the except (or moves the import behind a feature
+# check).
+setuptools

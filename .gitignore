@@ -246,3 +246,5 @@ nowplaying/templates/*.htm
 nowplaying/templates/vendor/
 template-src/vendor/
 
+# tufup local repo config (machine-specific paths, not portable)
+.tufup-repo-config

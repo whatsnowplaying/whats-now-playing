@@ -1,0 +1,4 @@
+# Spike-only deps for the tufup auto-update branch.  Kept out of
+# requirements-run.txt until the spike graduates.  Install with:
+#   pip install -r tools/tufup/requirements.txt
+tufup==0.10.0
