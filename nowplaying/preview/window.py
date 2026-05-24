@@ -59,7 +59,7 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         self.setWindowTitle("Template Preview")
         self.resize(900, 600)
         self._setup_ui()
-        self._populate_templates()
+        self.populate_templates()
         self._load_current()
 
     # ------------------------------------------------------------------
@@ -135,7 +135,7 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         self._apply_bg(0)
         layout.addWidget(self.webview)
 
-    def _populate_templates(self) -> None:
+    def populate_templates(self) -> None:
         """Fill the combobox with .htm files from the bundled template directory."""
         templatedir = pathlib.Path(self.config.templatedir)
         templates = sorted(templatedir.glob("*.htm"))
@@ -144,11 +144,14 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         configured_name = pathlib.Path(configured).name if configured else ""
 
         self.template_combo.blockSignals(True)
+        self.template_combo.clear()
         if not templates:
             self.template_combo.addItem("(no templates found)", userData=None)
             self.template_combo.setEnabled(False)
             self.webview.setEnabled(False)
         else:
+            self.template_combo.setEnabled(True)
+            self.webview.setEnabled(True)
             for tmpl in templates:
                 self.template_combo.addItem(tmpl.name, userData=tmpl.name)
 

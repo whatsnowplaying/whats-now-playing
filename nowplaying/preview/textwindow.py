@@ -61,7 +61,7 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         self.setWindowTitle("Text Template Preview")
         self.resize(600, 300)
         self._setup_ui()
-        self._populate_templates()
+        self.populate_templates()
         self._render()
 
     # ------------------------------------------------------------------
@@ -102,7 +102,7 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         self.text_edit.setReadOnly(True)
         layout.addWidget(self.text_edit)
 
-    def _populate_templates(self) -> None:
+    def populate_templates(self) -> None:
         """Fill the combobox with matching template files."""
         templatedir = pathlib.Path(self.config.templatedir)
         templates = sorted(templatedir.glob(self.glob_pattern))
@@ -111,11 +111,14 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         configured_name = pathlib.Path(configured).name if configured else ""
 
         self.template_combo.blockSignals(True)
+        self.template_combo.clear()
         if not templates:
             self.template_combo.addItem("(no templates found)", userData=None)
             self.template_combo.setEnabled(False)
             self.text_edit.setEnabled(False)
         else:
+            self.template_combo.setEnabled(True)
+            self.text_edit.setEnabled(True)
             for tmpl in templates:
                 self.template_combo.addItem(tmpl.name, userData=tmpl.name)
 

@@ -263,6 +263,7 @@ class TwitchSettings:
             self._streamtitle_preview_window.template_selected.connect(
                 self._on_streamtitle_template_selected
             )
+        self._streamtitle_preview_window.populate_templates()
         current = pathlib.Path(self.widget.streamtitle_lineedit.text()).name
         if current:
             self._streamtitle_preview_window.select_template(current)
