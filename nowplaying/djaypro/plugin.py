@@ -53,6 +53,7 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
+import nowplaying.djaypro.locationdb
 import nowplaying.djaypro.tsaf
 import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
@@ -80,6 +81,7 @@ class _HistoryExtras:
     source: str | None = None
     deck: str | None = None
     starttime: float | None = None
+    title_id: str | None = None
 
 
 @dataclasses.dataclass
@@ -114,6 +116,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._wal_timer: threading.Timer | None = None
         self._wal_timer_lock = threading.Lock()
         self._deck_tracks: dict[str, _DeckTrack] = {}
+        self._location_db_path: pathlib.Path = nowplaying.djaypro.locationdb.default_db_path()
         # Record launch time in Core Data epoch (seconds since 2001-01-01 UTC)
         # so we can skip tracks that were already playing when WNP started.
         self._launch_time: float = (
@@ -163,6 +166,38 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "duration": None,
             "key": None,
         }
+
+    async def _maybe_rebuild_location_db(self) -> None:
+        """Rebuild the location index if the manual flag is set or it has aged out."""
+        rebuild = self.config.cparser.value(
+            "djaypro/rebuild_location_db", type=bool, defaultValue=False
+        )
+        if not rebuild and self._location_db_path.exists():
+            max_age_days = max(
+                1,
+                self.config.cparser.value(
+                    "djaypro/location_max_age_days", type=int, defaultValue=7
+                ),
+            )
+            last_rebuild = nowplaying.djaypro.locationdb.get_last_rebuild_time(
+                self._location_db_path
+            )
+            age_days = (time.time() - last_rebuild) / 86400
+            if age_days > max_age_days:
+                logging.info(
+                    "djay Pro location index is %.1f days old (max %d); rebuilding",
+                    age_days,
+                    max_age_days,
+                )
+                rebuild = True
+
+        if rebuild:
+            dbfile = self._get_db_path()
+            if dbfile:
+                await asyncio.to_thread(
+                    nowplaying.djaypro.locationdb.rebuild, dbfile, self._location_db_path
+                )
+                self.config.cparser.setValue("djaypro/rebuild_location_db", False)
 
     async def setup_watcher(self, configkey: str = "djaypro/directory"):
         """set up a custom watch on the djay Pro directory"""
@@ -247,6 +282,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         seed_bpm: str | None = None,
         seed_key: str | None = None,
         retry_filename: bool = False,
+        title_id: str | None = None,
     ) -> tuple[str | None, dict, str | None]:
         """Look up file path, analyzed data, and location ISRC from the database.
 
@@ -257,9 +293,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         retry_filename: retry the filename lookup on first miss (macOS path,
         where NowPlaying.txt fires before localMediaItemLocations is committed).
 
+        title_id: ADCMediaItemTitleID UUID from the history blob.  When present
+        a direct O(1) key lookup is tried before falling back to the side table.
+
         Returns (filename, analyzed, loc_isrc).
         """
-        filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title)
+        filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title, title_id)
 
         need_analyzed = not seed_bpm or not seed_key
         analyzed: dict = {}
@@ -277,7 +316,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             )
             time.sleep(delay)
             if retry_filename and filename is None:
-                filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title)
+                filename, track_uuid, loc_isrc = self._get_filename_from_db(
+                    artist, title, title_id
+                )
             if need_analyzed and (not analyzed.get("bpm") or not analyzed.get("key")):
                 analyzed = self._get_analyzed_data_by_uuid(track_uuid or "")
 
@@ -383,12 +424,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # historySessionItems BPM/key with mediaItemAnalyzedData when missing.
         # retry_filename=True because localMediaItemLocations is written in the
         # same second transaction as analyzedData and may not yet be present.
+        t_title_id = track_data.get("title_id")
         filename, analyzed, loc_isrc = self._supplement_from_db(
             t_artist or "",
             t_title,
             seed_bpm=track_data.get("bpm"),
             seed_key=track_data.get("key"),
             retry_filename=True,
+            title_id=t_title_id if isinstance(t_title_id, str) else None,
         )
         if filename:
             track_data["filename"] = filename
@@ -513,7 +556,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # NowPlaying.txt fires before localMediaItemLocations and
         # mediaItemAnalyzedData are committed — retry once after the delay.
-        filename, analyzed, loc_isrc = self._supplement_from_db(artist, title, retry_filename=True)
+        filename, analyzed, loc_isrc = self._supplement_from_db(
+            artist, title, retry_filename=True, title_id=extras.title_id
+        )
 
         isrc = extras.isrc if extras.isrc is not None else loc_isrc
 
@@ -644,89 +689,36 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 source = parsed.get("source")
                 deck = parsed.get("deck")
                 starttime = parsed.get("starttime")
+                title_id = parsed.get("title_id")
                 return _HistoryExtras(
                     isrc=isrc if isinstance(isrc, str) else None,
                     source=source if isinstance(source, str) else None,
                     deck=deck if isinstance(deck, str) else None,
                     starttime=starttime if isinstance(starttime, float) else None,
+                    title_id=title_id if isinstance(title_id, str) else None,
                 )
         return _HistoryExtras()
 
     def _get_filename_from_db(
-        self, artist: str, title: str
+        self, artist: str, title: str, title_id: str | None = None
     ) -> tuple[str | None, str | None, str | None]:
-        """Get filename, track UUID, and ISRC from localMediaItemLocations.
+        """Get filename, track UUID, and ISRC for a track.
 
-        Returns (filename, track_uuid, isrc).  Any value may be None.
-        The track UUID is the shared key between localMediaItemLocations
-        and mediaItemAnalyzedData, used for O(1) BPM/key lookup.
-        ISRC is returned when djay Pro has stored it in the location blob
-        (e.g. for local files that carry an embedded ISRC tag).
+        When title_id is present, tries a direct O(1) key lookup in djay's DB
+        first (the ADCMediaItemTitleID UUID is the database2 key for location
+        collections).  Falls back to the WNP-owned side-table index on miss.
         """
         dbfile = self._get_db_path()
         if not dbfile:
             return None, None, None
 
-        def query_db() -> tuple[str | None, str | None, str | None]:
-            with nowplaying.utils.sqlite.sqlite_connection(
-                str(dbfile), timeout=1, row_factory=sqlite3.Row
-            ) as connection:
-                cursor = connection.cursor()
-                return self._get_filename_for_track(cursor, artist, title)
+        if title_id:
+            filename, loc_isrc = nowplaying.djaypro.locationdb.lookup_direct(dbfile, title_id)
+            if filename is not None or loc_isrc is not None:
+                return filename, title_id, loc_isrc
 
-        try:
-            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-        except (sqlite3.OperationalError, FileNotFoundError):
-            return None, None, None
-
-    @staticmethod
-    def _get_filename_for_track(
-        cursor, artist: str, title: str
-    ) -> tuple[str | None, str | None, str | None]:
-        """Query localMediaItemLocations for file path, track UUID, and ISRC.
-
-        Returns (filename, track_uuid, isrc).  Matches on title+artist when
-        both are present; falls back to title-only when artist is absent from
-        the caller or from the stored blob (common on Windows for files that
-        have no artist tag).
-        """
-        try:
-            cursor.execute(
-                "SELECT key, data FROM database2"
-                " WHERE collection IN"
-                " ('localMediaItemLocations', 'globalMediaItemLocations')"
-            )
-
-            artist_norm = artist.strip().lower() if artist else ""
-            title_norm = title.strip().lower() if title else ""
-            if not title_norm:
-                return None, None, None
-
-            # Iterate the cursor lazily — fetchall() would load the whole library
-            # into memory before we even start comparing.
-            for row in cursor:
-                track_uuid = row[0]
-                parsed = nowplaying.djaypro.tsaf.parse_blob(row[1])
-
-                p_title = parsed.get("title")
-                p_artist = parsed.get("artist")
-                if not isinstance(p_title, str):
-                    continue
-                if p_title.strip().lower() != title_norm:
-                    continue
-                # Accept when either side has no artist; require match when both do.
-                # Treat empty/whitespace-only stored artist as absent.
-                if artist_norm and isinstance(p_artist, str) and p_artist.strip():
-                    if p_artist.strip().lower() != artist_norm:
-                        continue
-
-                isrc = parsed.get("isrc")
-                return parsed.get("filename"), track_uuid, isrc if isinstance(isrc, str) else None
-
-        except (sqlite3.Error, ValueError, KeyError) as err:
-            logging.debug("Error searching localMediaItemLocations: %s", err)
-
-        return None, None, None
+        nowplaying.djaypro.locationdb.sync(dbfile, self._location_db_path)
+        return nowplaying.djaypro.locationdb.lookup(artist, title, self._location_db_path)
 
     async def stop(self):
         """stop the watcher"""
@@ -742,6 +734,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     async def start(self):
         """setup the watcher"""
+        await self._maybe_rebuild_location_db()
         await self.setup_watcher()
 
     async def getplayingtrack(self) -> TrackMetadata:
@@ -905,12 +898,15 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("djaypro/selected_playlists", "")
         qsettings.setValue("djaypro/analyzed_data_delay", _ANALYZED_DATA_RETRY_DEFAULT)
         qsettings.setValue("djaypro/deckskip", None)
+        qsettings.setValue("djaypro/location_max_age_days", 7)
+        qsettings.setValue("djaypro/rebuild_location_db", False)
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """connect djay Pro button to filename picker"""
         self.qwidget = qwidget
         self.uihelp = uihelp
         qwidget.dir_button.clicked.connect(self.on_djaypro_dir_button)
+        qwidget.djaypro_rebuild_location_button.clicked.connect(self.on_rebuild_location_button)
 
     def load_settingsui(self, qwidget: "QWidget"):
         """draw the plugin's settings page"""
@@ -936,6 +932,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     type=float,
                 )
             )
+        )
+
+        qwidget.djaypro_location_max_age_spinbox.setValue(
+            self.config.cparser.value("djaypro/location_max_age_days", type=int, defaultValue=7)
         )
 
         deckskip = self._get_deckskip()
@@ -969,6 +969,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         delay = max(0.0, min(delay, 10.0))
         self.config.cparser.setValue("djaypro/analyzed_data_delay", delay)
 
+        self.config.cparser.setValue(
+            "djaypro/location_max_age_days",
+            qwidget.djaypro_location_max_age_spinbox.value(),
+        )
+
         deckskip = []
         if qwidget.djaypro_deck1_skip_checkbox.isChecked():
             deckskip.append("1")
@@ -979,6 +984,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if qwidget.djaypro_deck4_skip_checkbox.isChecked():
             deckskip.append("4")
         self.config.cparser.setValue("djaypro/deckskip", deckskip)
+
+    def on_rebuild_location_button(self):
+        """user clicked Rebuild Now — flag for rebuild on next poll cycle"""
+        logging.info("Manual djay Pro location index rebuild requested")
+        self.config.cparser.setValue("djaypro/rebuild_location_db", True)
 
     def on_djaypro_dir_button(self):
         """open file browser to set djay Pro directory"""
