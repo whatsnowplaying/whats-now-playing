@@ -15,6 +15,7 @@ called, which is acceptable for a live-set workflow.
 import logging
 import pathlib
 import sqlite3
+import time
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -22,6 +23,7 @@ import nowplaying.djaypro.tsaf
 import nowplaying.utils.sqlite
 
 _LOCATION_COLLECTIONS = ("localMediaItemLocations", "globalMediaItemLocations")
+_LOCATION_PLACEHOLDERS = ",".join("?" * len(_LOCATION_COLLECTIONS))
 
 _SCHEMA = [
     """CREATE TABLE IF NOT EXISTS locations (
@@ -46,6 +48,7 @@ def default_db_path() -> pathlib.Path:
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
+    conn.execute("PRAGMA journal_mode=WAL")
     for stmt in _SCHEMA:
         conn.execute(stmt)
     conn.commit()
@@ -63,14 +66,40 @@ def _set_stored_max_rowid(conn: sqlite3.Connection, rowid: int) -> None:
     )
 
 
+def _get_last_rebuild_time(conn: sqlite3.Connection) -> float:
+    row = conn.execute("SELECT value FROM sync_state WHERE key='last_rebuild'").fetchone()
+    return float(row[0]) if row else 0.0
+
+
+def _set_last_rebuild_time(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO sync_state (key, value) VALUES ('last_rebuild', ?)",
+        (str(time.time()),),
+    )
+
+
+def get_last_rebuild_time(side_db: pathlib.Path) -> float:
+    """Return the timestamp of the last full rebuild, or 0.0 if never rebuilt."""
+    if not side_db.exists():
+        return 0.0
+
+    def query() -> float:
+        with nowplaying.utils.sqlite.sqlite_connection(str(side_db), timeout=1) as conn:
+            return _get_last_rebuild_time(conn)
+
+    try:
+        return nowplaying.utils.sqlite.retry_sqlite_operation(query)
+    except (sqlite3.OperationalError, FileNotFoundError):
+        return 0.0
+
+
 def _probe_djay_max_rowid(djay_dbfile: pathlib.Path) -> int | None:
     """Return MAX(rowid) for location collections in djay's DB, or None on error."""
-    placeholders = ",".join("?" * len(_LOCATION_COLLECTIONS))
 
     def query() -> int:
         with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
             row = conn.execute(
-                f"SELECT MAX(rowid) FROM database2 WHERE collection IN ({placeholders})",
+                f"SELECT MAX(rowid) FROM database2 WHERE collection IN ({_LOCATION_PLACEHOLDERS})",
                 _LOCATION_COLLECTIONS,
             ).fetchone()
             return row[0] if row and row[0] is not None else -1
@@ -84,19 +113,20 @@ def _probe_djay_max_rowid(djay_dbfile: pathlib.Path) -> int | None:
 
 def _fetch_new_rows(
     djay_dbfile: pathlib.Path, after_rowid: int
-) -> list[tuple[str, str, str, str | None, str | None]]:
-    """Return parsed rows with rowid > after_rowid.
+) -> list[tuple[str, str, str, str | None, str | None]] | None:
+    """Return parsed rows with rowid > after_rowid, or None on DB error.
 
-    Yields tuples of (uuid, title_lower, artist_lower, filename, isrc).
+    Returns None (not empty list) when the fetch fails so callers can
+    distinguish a DB error from a genuinely empty result and avoid
+    advancing the watermark incorrectly.
     """
-    placeholders = ",".join("?" * len(_LOCATION_COLLECTIONS))
 
     def query() -> list[tuple[str, str, str, str | None, str | None]]:
         results: list[tuple[str, str, str, str | None, str | None]] = []
         with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
             cursor = conn.execute(
                 f"SELECT key, data FROM database2"
-                f" WHERE collection IN ({placeholders}) AND rowid > ?",
+                f" WHERE collection IN ({_LOCATION_PLACEHOLDERS}) AND rowid > ?",
                 _LOCATION_COLLECTIONS + (after_rowid,),
             )
             for uuid, blob in cursor:
@@ -122,7 +152,7 @@ def _fetch_new_rows(
         return nowplaying.utils.sqlite.retry_sqlite_operation(query)
     except (sqlite3.OperationalError, FileNotFoundError) as err:
         logging.debug("djaypro locationdb: could not fetch new rows: %s", err)
-        return []
+        return None
 
 
 def sync(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
@@ -146,6 +176,10 @@ def sync(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
                 return
 
             new_rows = _fetch_new_rows(djay_dbfile, our_max)
+            if new_rows is None:
+                # DB was locked during fetch — don't advance watermark so
+                # these rows are retried on the next sync call.
+                return
             if new_rows:
                 conn.executemany(
                     "INSERT OR REPLACE INTO locations"
@@ -202,12 +236,12 @@ def lookup_direct(djay_dbfile: pathlib.Path, title_id: str) -> tuple[str | None,
     between historySessionItems and the location collections.  Falls back to
     (None, None) when the track is absent or on error.
     """
-    placeholders = ",".join("?" * len(_LOCATION_COLLECTIONS))
 
     def query() -> tuple[str | None, str | None]:
         with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
             row = conn.execute(
-                f"SELECT data FROM database2 WHERE collection IN ({placeholders}) AND key = ?",
+                "SELECT data FROM database2"
+                f" WHERE collection IN ({_LOCATION_PLACEHOLDERS}) AND key = ?",
                 _LOCATION_COLLECTIONS + (title_id,),
             ).fetchone()
             if not row:
@@ -230,8 +264,26 @@ def lookup_direct(djay_dbfile: pathlib.Path, title_id: str) -> tuple[str | None,
 def rebuild(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
     """Drop and fully rebuild the location index from djay's DB.
 
-    Use when the index may be stale (e.g. files were moved in djay Pro).
+    Writes to a temp file then renames atomically so the index is never
+    absent during the rebuild. Use when the index may be stale (e.g.
+    files were moved in djay Pro).
     """
-    if side_db.exists():
-        side_db.unlink()
-    sync(djay_dbfile, side_db)
+    tmp = side_db.with_suffix(".tmp")
+    if tmp.exists():
+        tmp.unlink()
+
+    sync(djay_dbfile, tmp)
+
+    if not tmp.exists():
+        # sync() bailed early (djay DB unreachable) — leave old index intact
+        return
+
+    # Record rebuild timestamp before promoting the file
+    try:
+        with nowplaying.utils.sqlite.sqlite_connection(str(tmp)) as conn:
+            _set_last_rebuild_time(conn)
+            conn.commit()
+    except (sqlite3.OperationalError, FileNotFoundError) as err:
+        logging.debug("djaypro locationdb: could not stamp rebuild time: %s", err)
+
+    tmp.replace(side_db)

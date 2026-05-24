@@ -173,10 +173,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "djaypro/rebuild_location_db", type=bool, defaultValue=False
         )
         if not rebuild and self._location_db_path.exists():
-            max_age_days = self.config.cparser.value(
-                "djaypro/location_max_age_days", type=int, defaultValue=7
+            max_age_days = max(
+                1,
+                self.config.cparser.value(
+                    "djaypro/location_max_age_days", type=int, defaultValue=7
+                ),
             )
-            age_days = (time.time() - self._location_db_path.stat().st_mtime) / 86400
+            last_rebuild = nowplaying.djaypro.locationdb.get_last_rebuild_time(
+                self._location_db_path
+            )
+            age_days = (time.time() - last_rebuild) / 86400
             if age_days > max_age_days:
                 logging.info(
                     "djay Pro location index is %.1f days old (max %d); rebuilding",
@@ -213,8 +219,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             logging.error("djay Pro directory does not exist: %s", self.djaypro_dir)
             await asyncio.sleep(1)
             return
-
-        await self._maybe_rebuild_location_db()
 
         logging.info("Watching for changes on %s", self.djaypro_dir)
         # Watch for changes to NowPlaying.txt (macOS) or MediaLibrary.db-wal (Windows)
@@ -730,6 +734,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     async def start(self):
         """setup the watcher"""
+        await self._maybe_rebuild_location_db()
         await self.setup_watcher()
 
     async def getplayingtrack(self) -> TrackMetadata:
@@ -981,7 +986,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.config.cparser.setValue("djaypro/deckskip", deckskip)
 
     def on_rebuild_location_button(self):
-        """user clicked Rebuild Now — schedule a full location index rebuild"""
+        """user clicked Rebuild Now — flag for rebuild on next poll cycle"""
         logging.info("Manual djay Pro location index rebuild requested")
         self.config.cparser.setValue("djaypro/rebuild_location_db", True)
 
