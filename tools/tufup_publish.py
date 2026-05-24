@@ -43,7 +43,6 @@ import sys
 
 from tufup.repo import Repository, make_gztar_archive  # pylint: disable=import-error
 
-
 KEY_NAME = "wnp_prod_key"
 
 
@@ -81,7 +80,7 @@ def _write_config(repo_dir: pathlib.Path, keys_dir: pathlib.Path) -> pathlib.Pat
         "key_map": {role: [KEY_NAME] for role in roles},
         "keys_dir": str(keys_dir),
         "repo_dir": str(repo_dir),
-        "thresholds": {role: 1 for role in roles},
+        "thresholds": dict.fromkeys(roles, 1),
     }
     config_path = config_cwd / ".tufup-repo-config"
     config_path.write_text(json.dumps(config, indent=4))

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """build a new upgradetable.py"""
 
-import os
 import argparse
 import json
 import logging
+import os
 import pathlib
 import sys
 
-from nowplaying.utils.checksum import checksum, EXCLUDED_FILES
+from nowplaying.utils.checksum import EXCLUDED_FILES, checksum
 
 
 def main():  # pylint: disable=too-many-statements

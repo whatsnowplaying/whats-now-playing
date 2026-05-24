@@ -52,7 +52,7 @@ packages = [
 ]
 
 [tool.setuptools.dynamic]
-dependencies = { file = ["requirements-run.txt"] }
+dependencies = { file = ["requirements-run.txt", "requirements-tufup.txt"] }
 optional-dependencies = { binaries = {file = [
   "requirements-binaries.txt"] }, dev = { file = [
   "requirements-dev.txt"] },  docs = { file = [
