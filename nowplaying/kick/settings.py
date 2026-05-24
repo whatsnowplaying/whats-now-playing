@@ -250,6 +250,7 @@ class KickChatSettings:
                 enable_select_button=True,
             )
             self._textpreview_window.template_selected.connect(self._on_announce_template_selected)
+        self._textpreview_window.populate_templates()
         nowplaying.utils.qt.focus_window(self._textpreview_window)
 
     @Slot(str)
