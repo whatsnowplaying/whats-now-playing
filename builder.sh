@@ -246,6 +246,12 @@ mv dist "${DISTDIR}"
 #   DISTDIR/WhatsNowPlaying      (Linux)
 if [[ "${SYSTEM}" == "macosx" ]]; then
   rm -rf "${DISTDIR}"/WhatsNowPlaying || true
+elif [[ "${SYSTEM}" == "linux" ]]; then
+  # Rename COLLECT dir aside first — the Linux binary is also named
+  # "WhatsNowPlaying", so mv would refuse to overwrite the directory.
+  mv "${DISTDIR}"/WhatsNowPlaying "${DISTDIR}"/.collect
+  mv "${DISTDIR}"/.collect/* "${DISTDIR}"/
+  rmdir "${DISTDIR}"/.collect || true
 else
   mv "${DISTDIR}"/WhatsNowPlaying/* "${DISTDIR}"/
   rmdir "${DISTDIR}"/WhatsNowPlaying || true

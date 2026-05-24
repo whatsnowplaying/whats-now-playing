@@ -30,18 +30,32 @@ RUN dnf install -y \
 # them under the right SONAMEs automatically.
 RUN dnf install -y \
     alsa-lib \
+    atk \
+    cairo \
+    cups-libs \
+    fontconfig \
+    freetype \
+    gdk-pixbuf2 \
+    gtk3 \
+    libatomic \
     libdrm \
+    libX11-xcb \
+    libXcomposite \
+    libXdamage \
+    libXrandr \
+    libXrender \
+    libxcb \
+    libxkbfile \
     mesa-libEGL \
     mesa-libGL \
     nss \
     nspr \
+    pango \
     pulseaudio-libs \
     libwayland-client \
     libwayland-cursor \
     libwayland-egl \
     libwayland-server \
-    libX11-xcb \
-    libxcb \
     xcb-util \
     xcb-util-cursor \
     xcb-util-image \
