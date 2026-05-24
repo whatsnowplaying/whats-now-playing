@@ -112,6 +112,7 @@ qt_qapp_name = "testsuite"
 # usually to register additional checkers.
 load-plugins = ["pylint.extensions.no_self_use"]
 init-hook = 'import sys; sys.path.append(".")'
+generated-members = ["nowplaying.version.*"]
 ignore-paths = [
   "nowplaying/qtrc.py",
   "nowplaying/vendor",
