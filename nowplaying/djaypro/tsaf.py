@@ -134,23 +134,28 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
         nonlocal pos
         result: dict = {}
 
-        # class name (discard)
+        # class name
         if pos >= len(blob) or blob[pos] != 0x08:
             return result
         pos += 1
-        read_string()
+        class_name = read_string()
 
         # Detect obj_id: a string immediately followed by 0x05 is an
         # object identity field, not a named field.
+        #
+        # ADCMediaItemTitleID uses its obj_id as the join key into the
+        # location / analysis tables.  Capture it instead of discarding it.
         local_max: int | None = None
         if pos < len(blob) and blob[pos] == 0x08:
             save_pos = pos
             pos += 1
-            read_string()  # candidate obj_id (discard)
+            obj_id = read_string()
             if pos < len(blob) and blob[pos] == 0x05:
                 pos += 1
                 local_max = blob[pos]
                 pos += 1
+                if class_name == "ADCMediaItemTitleID" and len(obj_id) == 32:
+                    result["titleID"] = obj_id
             else:
                 pos = save_pos  # not an obj_id – rewind
 
@@ -170,7 +175,8 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                     if pos < len(blob) and blob[pos] == 0x08:
                         pos += 1
                         key = read_string()
-                        result[key] = value
+                        if key not in result:
+                            result[key] = value
                         fields_read += 1
                     continue
                 pos += 1  # end-of-object marker
@@ -275,7 +281,8 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             if pos < len(blob) and blob[pos] == 0x08:
                 pos += 1
                 key = read_string()
-                result[key] = value
+                if value is not None or key not in result:
+                    result[key] = value
                 fields_read += 1
             elif isinstance(value, list):
                 # Array of objects with no following key: merge dict items
@@ -428,6 +435,11 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | float | None]:  # pyli
             float(starttime_raw) if isinstance(starttime_raw, (int, float)) else None
         )
 
+        title_id_raw = flat.get("titleID")
+        title_id: str | None = (
+            title_id_raw if isinstance(title_id_raw, str) and len(title_id_raw) == 32 else None
+        )
+
         return {
             "artist": flat.get("artist") or None,  # type: ignore[return-value]
             "title": flat.get("title") or None,  # type: ignore[return-value]
@@ -440,6 +452,7 @@ def parse_blob(blob_data: bytes) -> dict[str, str | int | float | None]:  # pyli
             "isrc": isrc,
             "key": key,
             "starttime": starttime,
+            "title_id": title_id,
         }
     except Exception as err:  # pylint: disable=broad-exception-caught
         logging.debug("Failed to parse blob: %s", err)
