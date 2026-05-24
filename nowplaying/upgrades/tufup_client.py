@@ -196,9 +196,7 @@ def _win_install(
         version=current_version,
         exe=str(dst_path / "WhatsNowPlaying.exe"),
     )
-    with tempfile.NamedTemporaryFile(
-        mode="w", prefix="tufup", suffix=".bat", delete=False
-    ) as fh:
+    with tempfile.NamedTemporaryFile(mode="w", prefix="tufup", suffix=".bat", delete=False) as fh:
         fh.write(script_text)
         script_path = fh.name
     logger.debug("tufup install (win): batch=%s", script_path)

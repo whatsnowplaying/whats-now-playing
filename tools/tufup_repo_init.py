@@ -13,15 +13,10 @@ USAGE:
 """
 
 import logging
-import pathlib
-import sys
 
-# Allow running this script directly from the repo root.
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from tufup.repo import Repository
 
-from tufup.repo import Repository  # noqa: E402
-
-import tufup_repo_settings as repo_settings  # noqa: E402
+from nowplaying.upgrades import tufup_repo_settings as repo_settings
 
 
 def main() -> None:

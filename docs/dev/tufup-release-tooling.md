@@ -5,7 +5,7 @@ The app-side client lives in `nowplaying/upgrades/tufup_client.py`.
 
 ## What is wired up
 
-* `tools/tufup_repo_settings.py` — declarative config: key names, thresholds,
+* `nowplaying/upgrades/tufup_repo_settings.py` — declarative config: key names, thresholds,
   expiration days.  All four TUF roles currently share one key (see note below).
 * `tools/tufup_repo_init.py` — one-time setup.  Generates keys, writes initial
   root / targets / snapshot / timestamp metadata.  Run once when bootstrapping

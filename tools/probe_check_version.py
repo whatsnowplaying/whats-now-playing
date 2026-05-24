@@ -18,10 +18,10 @@ to hit a local dev instance.
 
 import json
 import sys
-from typing import Any
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Any
 
 DEFAULT_BASE_URL = "https://whatsnowplaying.com"
 
@@ -99,6 +99,7 @@ def call(endpoint: str, params: dict[str, str]) -> tuple[int, dict[str, Any] | s
 
 
 def main() -> None:
+    """Run all test cases against the check-version endpoint and print results."""
     base_url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE_URL
     endpoint = f"{base_url}/api/v1/check-version"
     print(f"Endpoint: {endpoint}")

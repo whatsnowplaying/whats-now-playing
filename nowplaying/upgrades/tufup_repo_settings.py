@@ -31,6 +31,6 @@ KEY_MAP: dict[str, list[str]] = {role: [KEY_NAME] for role in DEFAULT_KEY_MAP}
 
 ENCRYPTED_KEYS: list[str] = []
 
-THRESHOLDS: dict[str, int] = dict(root=1, targets=1, snapshot=1, timestamp=1)
+THRESHOLDS: dict[str, int] = {"root": 1, "targets": 1, "snapshot": 1, "timestamp": 1}
 
-EXPIRATION_DAYS: dict[str, int] = dict(root=365, targets=30, snapshot=7, timestamp=1)
+EXPIRATION_DAYS: dict[str, int] = {"root": 365, "targets": 30, "snapshot": 7, "timestamp": 1}

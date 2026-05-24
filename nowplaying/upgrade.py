@@ -79,7 +79,7 @@ def _writable_install_dir() -> pathlib.Path | None:
     return install_dir
 
 
-class UpgradeDialog(QDialog):
+class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     """Qt Dialog for asking the user to upgrade.
 
     Three actions: auto-install in place via tufup (frozen builds only),
