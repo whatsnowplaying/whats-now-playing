@@ -83,6 +83,10 @@ playing" information from various DJ software.
 - Qt6/PySide6 is used for the GUI framework
 - We control the UI files. No need for hasattr/getattr patterns.
 - Configuration uses Qt's QSettings with cross-platform support
+- **Every QSettings key used by a UI widget must also have a default registered
+  in the appropriate `_defaults_*()` method in `nowplaying/config.py`.** Do not
+  rely solely on `defaultValue=` at the call site — defaults() is the single
+  source of truth for fresh installs and reset-to-defaults.
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts

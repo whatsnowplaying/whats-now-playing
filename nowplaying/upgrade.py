@@ -189,18 +189,20 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
                 ):
                     # Fallback to the manual download page if tufup failed.
                     logging.info("Auto-install failed, opening download page")
-                    webbrowser.open(data["download_page_url"])
+                    if url := data.get("download_page_url"):
+                        webbrowser.open(url)
                     sys.exit(0)
                 # tufup relaunches on success; we should not get here, but
                 # exit defensively if we do.
                 sys.exit(0)
 
             if dialog.action == _UpgradeAction.VIEW_DOWNLOADS:
-                webbrowser.open(data["download_page_url"])
+                if url := data.get("download_page_url"):
+                    webbrowser.open(url)
                 logging.info("User wants to upgrade via browser; exiting")
                 sys.exit(0)
     except Exception as error:  # pylint: disable=broad-except
         logging.error(error)
 
-    myupgrade = UpgradeConfig()  # pylint: disable=unused-variable
-    myupgrade = UpgradeTemplates(bundledir=bundledir)
+    UpgradeConfig()
+    UpgradeTemplates(bundledir=bundledir)

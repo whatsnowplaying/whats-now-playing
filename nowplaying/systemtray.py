@@ -21,7 +21,9 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.apicache
+import nowplaying.upgrade
 import nowplaying.upgrades
+import nowplaying.upgrades.background
 import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
@@ -73,6 +75,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self.link_thread = None  # QThread for Twitch account linking
         self.vacuum_thread = None  # QThread for background database vacuum
+        self._prefetch_worker = None  # QThread for background update pre-fetch
         self._obs_export_dialog = None
 
         # Core initialization
@@ -287,6 +290,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Vacuum databases in the background — maintenance, not required for startup
         self._start_background_vacuum()
 
+        # Pre-fetch the next update archive in the background so the next
+        # launch can skip the download step and install immediately.
+        self._start_background_prefetch()
+
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""
         if self.startup_window:
@@ -452,6 +459,36 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.vacuum_thread = _VacuumThread()
         self.vacuum_thread.start()
+
+    def _start_background_prefetch(self) -> None:
+        """Download the next update archive silently if prefetch is enabled.
+
+        Only runs for packaged (frozen) builds with a writable install dir.
+        The worker does the HTTP API check, then downloads the tufup archive.
+        On the next launch upgrade() finds the cached archive and skips the
+        download, so Install Now is near-instant.
+        """
+        if not self.config.cparser.value(
+            "upgrades/prefetch_enabled", defaultValue=True, type=bool
+        ):
+            return
+
+        install_dir = nowplaying.upgrade._writable_install_dir()  # pylint: disable=protected-access
+        if not install_dir:
+            return
+
+        prefer_prerelease = bool(
+            self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
+        )
+        bandwidth_kbps = int(
+            self.config.cparser.value("upgrades/prefetch_bandwidth_kbps", defaultValue=0, type=int)
+        )
+        self._prefetch_worker = nowplaying.upgrades.background.PrefetchWorker(
+            install_dir=install_dir,
+            prefer_prerelease=prefer_prerelease,
+            bandwidth_kbps=bandwidth_kbps,
+        )
+        self._prefetch_worker.start()
 
     def _setup_charts_key(self) -> None:
         """Generate anonymous charts key if none exists, or ping version if key already present"""
@@ -619,9 +656,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
-        # Wait for background vacuum thread to finish before cleanup
+        # Wait for background threads to finish before cleanup
         if self.vacuum_thread and self.vacuum_thread.isRunning():
             self.vacuum_thread.wait()
+        if self._prefetch_worker and self._prefetch_worker.isRunning():
+            if not self._prefetch_worker.wait(nowplaying.upgrades.background._SHUTDOWN_TIMEOUT_MS):  # pylint: disable=protected-access
+                self._prefetch_worker.terminate()
+                self._prefetch_worker.wait()
 
         # Clean up any stray temporary OAuth2 credentials before shutdown
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)

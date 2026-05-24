@@ -108,6 +108,9 @@ def run_auto_install(
     def on_timeout() -> None:
         logger.error("Auto-install: download timed out after %ds", download_timeout_ms // 1000)
         on_failed("Download timed out — check your network connection and try again.")
+        # terminate() may leave a partial archive on disk; that is safe because
+        # tufup's find_cached_target() validates length + hash on the next launch
+        # and re-downloads from scratch if either check fails.
         worker.terminate()
 
     timeout_timer = QTimer()
