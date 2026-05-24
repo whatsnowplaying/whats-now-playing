@@ -311,6 +311,41 @@ def test_parse_blob_key_out_of_range():
     assert result["key"] is None
 
 
+def test_parse_blob_title_id_from_nested_object():
+    """parse_blob extracts titleID from an ADCMediaItemTitleID nested object.
+
+    Real historySessionItems blobs have:
+      0x2b 0x08 'ADCMediaItemTitleID' 0x00  (nested class)
+      0x08 <32-hex-uuid> 0x00              (obj_id — the join key)
+      0x05 0x02                             (nested field count = 2)
+      <2 fields consumed by nested object>
+    followed by a 0x2e null-typed 'titleID' field that must NOT stomp the UUID.
+    """
+    uuid = "a1b2c3d4e5f6789012345678901234ab"
+    header = b"TSAF" + b"\x00" * 16
+    outer = bytearray()
+    outer += b"\x08ADCHistorySessionItem\x00"  # class name (no field count — reads to EOS)
+    # artist and title fields
+    outer += b"\x08Test Artist\x00\x08artist\x00"
+    outer += b"\x08Test Track\x00\x08title\x00"
+    # nested ADCMediaItemTitleID: obj_id=UUID, 0x05 0x02 = 2 fields for nested to consume
+    outer += b"\x2b"
+    outer += b"\x08ADCMediaItemTitleID\x00"
+    outer += b"\x08" + uuid.encode() + b"\x00"
+    outer += b"\x05\x02"
+    outer += b"\x08nested1\x00\x08nf1\x00"  # 2 fields consumed by nested obj
+    outer += b"\x08nested2\x00\x08nf2\x00"
+    # 0x2e null field named 'titleID' — must not overwrite the UUID
+    outer += b"\x2e\x08titleID\x00"
+
+    blob = header + b"\x2b" + bytes(outer)
+    result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["title_id"] == uuid
+    assert result["artist"] == "Test Artist"
+    assert result["title"] == "Test Track"
+
+
 # ---------------------------------------------------------------------------
 # parse_tsaf primitive type smoke tests
 # ---------------------------------------------------------------------------
@@ -460,6 +495,7 @@ def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         plugin.djaypro_dir = tmpdir
+        plugin._location_db_path = pathlib.Path(tmpdir).joinpath("locations.db")
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
         track_uuid = "beat-artist-kick-drum-uuid"
@@ -618,6 +654,7 @@ def test_check_for_new_track_isrc_sources(  # pylint: disable=too-many-arguments
 
     with tempfile.TemporaryDirectory() as tmpdir:
         plugin.djaypro_dir = tmpdir
+        plugin._location_db_path = pathlib.Path(tmpdir).joinpath("locations.db")
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
         history_blob = _build_tsaf_blob(

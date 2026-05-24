@@ -142,6 +142,69 @@
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="location_index_layout">
+     <item>
+      <widget class="QLabel" name="location_index_label">
+       <property name="text">
+        <string>Location Index</string>
+       </property>
+       <property name="toolTip">
+        <string>WNP-owned index of file paths from the djay Pro library. Auto-rebuilt on age; rebuild manually after moving or renaming files in djay Pro.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="djaypro_rebuild_location_button">
+       <property name="text">
+        <string>Rebuild Now</string>
+       </property>
+       <property name="toolTip">
+        <string>Drop and fully rebuild the file-path index from djay Pro's library. Use after moving or renaming tracks in djay Pro.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="location_max_age_label">
+       <property name="text">
+        <string>Rebuild after (days)</string>
+       </property>
+       <property name="toolTip">
+        <string>Automatically rebuild the location index when it is older than this many days.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="djaypro_location_max_age_spinbox">
+       <property name="toolTip">
+        <string>Automatically rebuild the location index when it is older than this many days.</string>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>365</number>
+       </property>
+       <property name="value">
+        <number>7</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="location_index_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QTextBrowser" name="help_label">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -157,6 +220,7 @@ p, li { white-space: pre-wrap; }
 &lt;p&gt;djay Pro is professional DJ software by Algoriddim for macOS and Windows.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Artist Query Scope&lt;/span&gt; controls which tracks are searched for the !hasartist Twitch chat command and roulette playlist requests. Choose &lt;span style=&quot;font-weight:600;&quot;&gt;Entire Library&lt;/span&gt; to search all tracks, or &lt;span style=&quot;font-weight:600;&quot;&gt;Selected Playlists&lt;/span&gt; and enter comma-separated playlist names to limit the search. Note: Selected Playlists only finds playlists created natively in djay Pro.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Analysis Delay&lt;/span&gt; controls how long (in seconds) What&apos;s Now Playing waits after a new track starts before reading BPM, key, and file path data. djay Pro writes the track name first, then commits analysis data in a separate database transaction. The default of 0.5 seconds works for most systems. If BPM, key, or file path are consistently missing, increase this value.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Location Index&lt;/span&gt; — WNP maintains a fast index of file paths from your djay Pro library, updated automatically as you add tracks. &lt;span style=&quot;font-weight:600;&quot;&gt;Rebuild after (days)&lt;/span&gt; controls how often the index is rebuilt automatically. Click &lt;span style=&quot;font-weight:600;&quot;&gt;Rebuild Now&lt;/span&gt; to force an immediate rebuild after moving or renaming files in djay Pro.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Ignore Deck(s)&lt;/span&gt; — check any deck numbers that What&apos;s Now Playing should never report. Useful for preview decks or sampler decks that should not trigger now-playing updates.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
      </property>
