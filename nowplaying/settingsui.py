@@ -1078,6 +1078,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             )
             window.template_selected.connect(on_selected)
             setattr(self, attr, window)
+        window.populate_templates()
         nowplaying.utils.qt.focus_window(window)
 
     @Slot()
@@ -1132,6 +1133,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 config=self.config, enable_select_button=True
             )
             self._webpreview_window.template_selected.connect(self._on_webserver_template_selected)
+        self._webpreview_window.populate_templates()
         nowplaying.utils.qt.focus_window(self._webpreview_window)
 
     @Slot(str)
