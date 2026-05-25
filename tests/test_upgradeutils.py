@@ -8,6 +8,107 @@ import pytest
 import requests
 
 import nowplaying.upgrades
+from nowplaying.upgrades import Version
+
+
+# ---------------------------------------------------------------------------
+# Version comparison
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "lesser,greater",
+    [
+        # major/minor/micro ordering
+        ("1.0.0", "2.0.0"),
+        ("1.0.0", "1.1.0"),
+        ("1.0.0", "1.0.1"),
+        ("5.2.0", "5.2.1"),
+        ("5.1.9", "5.2.0"),
+        ("4.9.9", "5.0.0"),
+        # pre-release < stable (same base)
+        ("5.2.1-rc1", "5.2.1"),
+        ("5.2.1-preview1", "5.2.1"),
+        # higher pre-release number (same type)
+        ("5.2.1-rc1", "5.2.1-rc2"),
+        ("5.2.1-preview1", "5.2.1-preview2"),
+        # rc and preview are the same tier — number still orders them
+        ("5.2.1-rc1", "5.2.1-preview2"),
+        ("5.2.1-preview1", "5.2.1-rc2"),
+        # stable < dev build (same base)
+        ("5.2.1", "5.2.1+10.gf95bd3f6"),
+        # pre-release < dev build (same base)
+        ("5.2.1-rc1", "5.2.1+10.gf95bd3f6"),
+        ("5.2.1-preview1", "5.2.1+10.gf95bd3f6"),
+        # dev build commit count ordering
+        ("5.2.1+5.gabcdef0", "5.2.1+10.gf95bd3f6"),
+        # cross-version: pre of next > stable of current
+        ("5.2.1", "5.2.2-preview1"),
+        # cross-version: same pre number, different base
+        ("5.2.1-preview1", "5.2.2-preview1"),
+        # cross-version: dev build of old < pre-release of next
+        ("5.2.0+10.gf95bd3f6", "5.2.1-preview1"),
+        # cross-version: dev build of old < stable of next
+        ("5.2.0+99.gabcdef0", "5.2.1"),
+    ],
+)
+def test_version_lt(lesser, greater):
+    assert Version(lesser) < Version(greater)
+    assert not Version(greater) < Version(lesser)
+
+
+@pytest.mark.parametrize(
+    "left,right",
+    [
+        # identical stable
+        ("5.2.1", "5.2.1"),
+        # rc == preview at same number
+        ("5.2.1-rc1", "5.2.1-preview1"),
+        ("5.2.1-rc2", "5.2.1-preview2"),
+        # identical dev builds
+        ("5.2.1+10.gf95bd3f6", "5.2.1+10.gf95bd3f6"),
+    ],
+)
+def test_version_eq(left, right):
+    assert Version(left) == Version(right)
+    assert not Version(left) < Version(right)
+    assert not Version(right) < Version(left)
+
+
+def test_version_hash_equal_versions_same_hash():
+    """equal versions must have the same hash (set/dict contract)"""
+    assert hash(Version("5.2.1-rc1")) == hash(Version("5.2.1-preview1"))
+    assert hash(Version("5.2.1")) == hash(Version("5.2.1"))
+
+
+def test_version_hash_unequal_versions_differ():
+    assert hash(Version("5.2.1")) != hash(Version("5.2.1-rc1"))
+    assert hash(Version("5.2.1")) != hash(Version("5.2.1+10.gf95bd3f6"))
+
+
+def test_version_sortable():
+    """sorted() produces a consistent total ordering across all types"""
+    versions = [
+        "5.2.1+10.gf95bd3f6",
+        "5.2.1",
+        "5.2.1-preview2",
+        "5.2.1-rc1",
+        "5.2.0",
+    ]
+    result = [str(v) for v in sorted(Version(v) for v in versions)]
+    assert result == [
+        "5.2.0",
+        "5.2.1-rc1",
+        "5.2.1-preview2",
+        "5.2.1",
+        "5.2.1+10.gf95bd3f6",
+    ]
+
+
+def test_version_in_set():
+    """rc and preview at the same number are deduplicated in a set"""
+    s = {Version("5.2.1-rc1"), Version("5.2.1-preview1")}
+    assert len(s) == 1
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 
