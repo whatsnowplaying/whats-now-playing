@@ -39,7 +39,6 @@ Database Location:
 """
 
 import asyncio
-import dataclasses
 import datetime
 import logging
 import pathlib
@@ -54,7 +53,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import nowplaying.djaypro.locationdb
-import nowplaying.djaypro.tsaf
+import nowplaying.djaypro.mediadb
 import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
@@ -75,31 +74,6 @@ _ANALYZED_DATA_RETRY_DEFAULT = 0.5
 _COREDATA_EPOCH = datetime.datetime(2001, 1, 1, tzinfo=datetime.timezone.utc)
 
 
-@dataclasses.dataclass
-class _HistoryExtras:
-    isrc: str | None = None
-    source: str | None = None
-    deck: str | None = None
-    starttime: float | None = None
-    title_id: str | None = None
-
-
-@dataclasses.dataclass
-class _DeckTrack:  # pylint: disable=too-many-instance-attributes
-    """Full track state for one deck, used by mix mode selection."""
-
-    artist: str | None = None
-    title: str | None = None
-    album: str | None = None
-    duration: int | None = None
-    filename: str | None = None
-    bpm: str | None = None
-    key: str | None = None
-    isrc: str | None = None
-    source: str | None = None
-    deck: str | None = None
-
-
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for djay Pro"""
 
@@ -115,7 +89,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.djaypro_dir = ""
         self._wal_timer: threading.Timer | None = None
         self._wal_timer_lock = threading.Lock()
-        self._deck_tracks: dict[str, _DeckTrack] = {}
+        self._deck_tracks: dict[str, nowplaying.djaypro.mediadb.DeckTrack] = {}
         self._location_db_path: pathlib.Path = nowplaying.djaypro.locationdb.default_db_path()
         # Record launch time in Core Data epoch (seconds since 2001-01-01 UTC)
         # so we can skip tracks that were already playing when WNP started.
@@ -299,11 +273,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         Returns (filename, analyzed, loc_isrc).
         """
         filename, track_uuid, loc_isrc = self._get_filename_from_db(artist, title, title_id)
+        dbfile = self._get_db_path()
 
         need_analyzed = not seed_bpm or not seed_key
         analyzed: dict = {}
         if need_analyzed:
-            analyzed = self._get_analyzed_data_by_uuid(track_uuid or "")
+            analyzed = nowplaying.djaypro.mediadb.get_analyzed_data_by_uuid(
+                dbfile, track_uuid or ""
+            )
 
         needs_retry = (retry_filename and filename is None) or (
             need_analyzed and (not analyzed.get("bpm") or not analyzed.get("key"))
@@ -320,7 +297,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     artist, title, title_id
                 )
             if need_analyzed and (not analyzed.get("bpm") or not analyzed.get("key")):
-                analyzed = self._get_analyzed_data_by_uuid(track_uuid or "")
+                analyzed = nowplaying.djaypro.mediadb.get_analyzed_data_by_uuid(
+                    dbfile, track_uuid or ""
+                )
 
         return filename, analyzed, loc_isrc
 
@@ -380,7 +359,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not dbfile.exists():
             return
 
-        records = self._query_recent_history(dbfile, limit=1)
+        records = nowplaying.djaypro.mediadb.query_recent_history(dbfile, limit=1)
         if not records:
             return
 
@@ -413,7 +392,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 t_artist,
                 t_title,
             )
-            self._deck_tracks[deck_key] = _DeckTrack(
+            self._deck_tracks[deck_key] = nowplaying.djaypro.mediadb.DeckTrack(
                 artist=t_artist,
                 title=t_title,
                 deck=deck,
@@ -439,7 +418,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # Prefer history blob ISRC (streaming); fall back to location blob (local files).
         isrc_str = track_data.get("isrc") if isinstance(track_data.get("isrc"), str) else loc_isrc
 
-        new_track = _DeckTrack(
+        new_track = nowplaying.djaypro.mediadb.DeckTrack(
             artist=t_artist,
             title=t_title,
             album=track_data.get("album"),
@@ -523,7 +502,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # Get deck from historySessionItems first — needed for deckskip check
         # before doing the expensive file-path / analysis-data lookup.
-        extras = self._get_history_extras_from_db(artist, title)
+        extras = nowplaying.djaypro.mediadb.get_history_extras_from_db(
+            self._get_db_path(), artist, title
+        )
         deck_key = extras.deck or "0"
 
         deckskip = self._get_deckskip()
@@ -545,7 +526,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 artist,
                 title,
             )
-            self._deck_tracks[deck_key] = _DeckTrack(
+            self._deck_tracks[deck_key] = nowplaying.djaypro.mediadb.DeckTrack(
                 artist=artist,
                 title=title,
                 album=album,
@@ -562,7 +543,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         isrc = extras.isrc if extras.isrc is not None else loc_isrc
 
-        new_track = _DeckTrack(
+        new_track = nowplaying.djaypro.mediadb.DeckTrack(
             artist=artist,
             title=title,
             album=album,
@@ -594,110 +575,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             isrc=new_track.isrc,
             source=new_track.source,
         )
-
-    @staticmethod
-    def _query_recent_history(dbfile: pathlib.Path, limit: int = 20) -> list[dict]:
-        """Return parsed metadata dicts for the most recent historySessionItems.
-
-        Results are ordered newest-first.  Blobs that fail to parse are
-        silently skipped so callers always get a clean list of dicts.
-        """
-
-        def query_db():
-            records = []
-            with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
-                cursor = connection.cursor()
-                cursor.execute(
-                    "SELECT data FROM database2 "
-                    "WHERE collection='historySessionItems' "
-                    "ORDER BY rowid DESC LIMIT ?",
-                    (limit,),
-                )
-                for (blob,) in cursor:
-                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
-                    if parsed.get("title"):
-                        records.append(parsed)
-            return records
-
-        try:
-            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-        except (sqlite3.OperationalError, FileNotFoundError):
-            return []
-
-    def _get_analyzed_data_by_uuid(self, track_uuid: str) -> dict:
-        """Look up bpm, deck, and key from mediaItemAnalyzedData by track UUID.
-
-        Uses the database key column for an O(1) lookup rather than scanning
-        all blobs.  The track UUID is the shared key between
-        localMediaItemLocations and mediaItemAnalyzedData.
-        """
-        dbfile = self._get_db_path()
-        if not dbfile or not track_uuid:
-            return {}
-
-        def query_db() -> dict:
-            with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
-                cursor = connection.cursor()
-                cursor.execute(
-                    "SELECT data FROM database2"
-                    " WHERE collection='mediaItemAnalyzedData' AND key=?",
-                    (track_uuid,),
-                )
-                row = cursor.fetchone()
-                if not row:
-                    return {}
-                parsed = nowplaying.djaypro.tsaf.parse_blob(row[0])
-                result = {}
-                if parsed.get("bpm"):
-                    result["bpm"] = parsed["bpm"]
-                if parsed.get("deck"):
-                    result["deck"] = parsed["deck"]
-                if parsed.get("key"):
-                    result["key"] = parsed["key"]
-                return result
-
-        try:
-            return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-        except (sqlite3.OperationalError, FileNotFoundError):
-            return {}
-
-    def _get_history_extras_from_db(self, artist: str, title: str) -> _HistoryExtras:
-        """Return isrc, source, and deck for a track by scanning recent historySessionItems.
-
-        The most recently added history entry is almost always the currently
-        playing track, so we scan from the end and stop as soon as we find a
-        matching artist/title pair.  Scanning is bounded to 20 rows to keep it
-        fast even for large history tables.
-        """
-        dbfile = self._get_db_path()
-        if not dbfile:
-            return _HistoryExtras()
-
-        artist_lower = artist.strip().lower()
-        title_lower = title.strip().lower()
-
-        for parsed in self._query_recent_history(dbfile, limit=20):
-            p_artist = parsed.get("artist")
-            p_title = parsed.get("title")
-            if (
-                isinstance(p_artist, str)
-                and isinstance(p_title, str)
-                and p_artist.strip().lower() == artist_lower
-                and p_title.strip().lower() == title_lower
-            ):
-                isrc = parsed.get("isrc")
-                source = parsed.get("source")
-                deck = parsed.get("deck")
-                starttime = parsed.get("starttime")
-                title_id = parsed.get("title_id")
-                return _HistoryExtras(
-                    isrc=isrc if isinstance(isrc, str) else None,
-                    source=source if isinstance(source, str) else None,
-                    deck=deck if isinstance(deck, str) else None,
-                    starttime=starttime if isinstance(starttime, float) else None,
-                    title_id=title_id if isinstance(title_id, str) else None,
-                )
-        return _HistoryExtras()
 
     def _get_filename_from_db(
         self, artist: str, title: str, title_id: str | None = None
@@ -742,65 +619,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         await self.start()
         return self.metadata
 
-    @staticmethod
-    def _has_tracks_in_entire_library(dbfile: str, artist_name: str) -> bool:
-        """Scan mediaItemTitleIDs TSAF blobs for a case-insensitive artist match."""
-        artist_lower = artist_name.strip().lower()
-        if not artist_lower:
-            return False
-
-        with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT data FROM database2 WHERE collection='mediaItemTitleIDs'")
-            for (blob,) in cursor:
-                parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
-                raw_artist = parsed.get("artist")
-                if isinstance(raw_artist, str) and raw_artist.strip().lower() == artist_lower:
-                    return True
-        return False
-
-    @staticmethod
-    def _has_tracks_in_playlists(dbfile: str, artist_name: str, playlist_names: list[str]) -> bool:
-        """Scan mediaItemTitleIDs blobs for tracks in selected playlists.
-
-        Uses view_mediaItemPlaylistView_map and view_mediaItemPlaylistView_page
-        to restrict the search to tracks belonging to the given playlists.
-        Falls back to False (rather than the entire library) when the view
-        tables are absent, which happens when no playlists are configured.
-        """
-        artist_lower = artist_name.strip().lower()
-        if not artist_lower or not playlist_names:
-            return False
-
-        # Use a single-playlist parameterised query (no dynamic SQL) to satisfy
-        # the SQL injection scanner.  The IN clause cannot be expressed with a
-        # fixed number of placeholders, so we issue one query per playlist name
-        # instead — playlist counts are always small in practice.
-        static_sql = (
-            "SELECT d.data"
-            " FROM database2 d"
-            " JOIN view_mediaItemPlaylistView_map m"
-            "   ON CAST(m.rowid AS INTEGER) = d.rowid"
-            " JOIN view_mediaItemPlaylistView_page p"
-            "   ON p.pageKey = m.pageKey"
-            ' WHERE p."group" = ?'
-            "   AND d.collection = 'mediaItemTitleIDs'"
-        )
-        with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
-            cursor = conn.cursor()
-            for playlist_name in playlist_names:
-                try:
-                    cursor.execute(static_sql, (playlist_name,))
-                except sqlite3.OperationalError:
-                    # View tables don't exist (no playlists configured in djay Pro)
-                    return False
-                for (blob,) in cursor:
-                    parsed = nowplaying.djaypro.tsaf.parse_blob(blob)
-                    raw_artist = parsed.get("artist")
-                    if isinstance(raw_artist, str) and raw_artist.strip().lower() == artist_lower:
-                        return True
-        return False
-
     def _get_db_path(self) -> pathlib.Path | None:
         """Return the MediaLibrary.db path, or None if not found.
 
@@ -838,32 +656,19 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 if not playlist_names:
                     return False
                 return await asyncio.to_thread(
-                    self._has_tracks_in_playlists, str(dbfile), artist_name, playlist_names
+                    nowplaying.djaypro.mediadb.has_tracks_in_playlists,
+                    dbfile,
+                    artist_name,
+                    playlist_names,
                 )
 
             return await asyncio.to_thread(
-                self._has_tracks_in_entire_library, str(dbfile), artist_name
+                nowplaying.djaypro.mediadb.has_tracks_in_entire_library, dbfile, artist_name
             )
 
         except (sqlite3.OperationalError, FileNotFoundError, OSError) as err:
             logging.error("Failed to query djay Pro library for artist %s: %s", artist_name, err)
             return False
-
-    @staticmethod
-    def _get_available_playlists_sync(dbfile: str) -> list[str]:
-        """Return sorted list of playlist names from view_mediaItemPlaylistView_page."""
-        with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute(
-                    'SELECT DISTINCT "group" FROM view_mediaItemPlaylistView_page'
-                    ' WHERE "group" IS NOT NULL AND "group" != \'\''
-                    ' ORDER BY "group"'
-                )
-                return [row[0] for row in cursor.fetchall()]
-            except sqlite3.OperationalError:
-                # View table absent (no playlists configured)
-                return []
 
     async def get_available_playlists(self) -> list[str]:
         """Return sorted list of playlist names from the djay Pro library."""
@@ -871,7 +676,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not dbfile:
             return []
         try:
-            return await asyncio.to_thread(self._get_available_playlists_sync, str(dbfile))
+            return await asyncio.to_thread(
+                nowplaying.djaypro.mediadb.get_available_playlists_sync, dbfile
+            )
         except (sqlite3.OperationalError, FileNotFoundError, OSError) as err:
             logging.error("Failed to list djay Pro playlists: %s", err)
             return []
