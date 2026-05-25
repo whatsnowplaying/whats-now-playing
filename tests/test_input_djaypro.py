@@ -9,9 +9,10 @@ import tempfile
 
 import pytest
 
+import nowplaying.djaypro.mediadb
 import nowplaying.djaypro.tsaf
 import nowplaying.inputs.djaypro
-from nowplaying.djaypro.plugin import _DeckTrack
+from nowplaying.djaypro.mediadb import DeckTrack
 
 
 def _build_tsaf_blob(
@@ -321,7 +322,7 @@ def test_parse_blob_title_id_from_nested_object():
       <2 fields consumed by nested object>
     followed by a 0x2e null-typed 'titleID' field that must NOT stomp the UUID.
     """
-    uuid = "a1b2c3d4e5f6789012345678901234ab"
+    uuid = "a1b2c3d4e5f6789012345678901234ab"  # pragma: allowlist secret
     header = b"TSAF" + b"\x00" * 16
     outer = bytearray()
     outer += b"\x08ADCHistorySessionItem\x00"  # class name (no field count — reads to EOS)
@@ -420,13 +421,9 @@ def _make_db_with_collections(dbfile: pathlib.Path, blobs_by_collection: dict[st
     conn.close()
 
 
-def test_get_analyzed_data_by_uuid_returns_bpm_and_key(bootstrap):
-    """_get_analyzed_data_by_uuid returns bpm and key for a matching UUID."""
-    config = bootstrap
-    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
-
+def test_get_analyzed_data_by_uuid_returns_bpm_and_key():
+    """get_analyzed_data_by_uuid returns bpm and key for a matching UUID."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        plugin.djaypro_dir = tmpdir
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
         analyzed_blob = _build_tsaf_blob(
@@ -442,19 +439,15 @@ def test_get_analyzed_data_by_uuid_returns_bpm_and_key(bootstrap):
             dbfile, {"mediaItemAnalyzedData": [("track-uuid-1", analyzed_blob)]}
         )
 
-        result = plugin._get_analyzed_data_by_uuid("track-uuid-1")
+        result = nowplaying.djaypro.mediadb.get_analyzed_data_by_uuid(dbfile, "track-uuid-1")
 
         assert result["bpm"] == "128.0"
         assert result["key"] == "F"
 
 
-def test_get_analyzed_data_by_uuid_no_match(bootstrap):
-    """_get_analyzed_data_by_uuid returns empty dict when UUID is not found."""
-    config = bootstrap
-    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
-
+def test_get_analyzed_data_by_uuid_no_match():
+    """get_analyzed_data_by_uuid returns empty dict when UUID is not found."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        plugin.djaypro_dir = tmpdir
         dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
 
         analyzed_blob = _build_tsaf_blob(
@@ -465,21 +458,18 @@ def test_get_analyzed_data_by_uuid_no_match(bootstrap):
             dbfile, {"mediaItemAnalyzedData": [("other-uuid", analyzed_blob)]}
         )
 
-        result = plugin._get_analyzed_data_by_uuid("track-uuid-1")
+        result = nowplaying.djaypro.mediadb.get_analyzed_data_by_uuid(dbfile, "track-uuid-1")
 
         assert not result
 
 
-def test_get_analyzed_data_by_uuid_missing_db(bootstrap):
-    """_get_analyzed_data_by_uuid returns empty dict when database is absent."""
-    config = bootstrap
-    plugin = nowplaying.inputs.djaypro.Plugin(config=config)
-
+def test_get_analyzed_data_by_uuid_missing_db():
+    """get_analyzed_data_by_uuid returns empty dict when database is absent."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        plugin.djaypro_dir = tmpdir
+        dbfile = pathlib.Path(tmpdir).joinpath("MediaLibrary.db")
         # No MediaLibrary.db created
 
-        result = plugin._get_analyzed_data_by_uuid("any-uuid")
+        result = nowplaying.djaypro.mediadb.get_analyzed_data_by_uuid(dbfile, "any-uuid")
 
         assert not result
 
@@ -812,8 +802,8 @@ async def test_stop_clears_deck_tracks(bootstrap):
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
-    plugin._deck_tracks["1"] = _DeckTrack(artist="DJ", title="Track")
-    plugin._deck_tracks["2"] = _DeckTrack(artist="DJ", title="Other")
+    plugin._deck_tracks["1"] = DeckTrack(artist="DJ", title="Track")
+    plugin._deck_tracks["2"] = DeckTrack(artist="DJ", title="Other")
 
     await plugin.stop()
 
