@@ -60,4 +60,4 @@ normality==3.1.0
 # required to install
 #
 versioningit==3.3.0
-vendoring==1.2.0
+vendoring==1.4.0
