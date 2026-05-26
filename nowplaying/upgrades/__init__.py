@@ -270,7 +270,13 @@ def check_for_update(
         response = requests.get(UPDATE_CHECK_URL, params=params, timeout=10)
         response.raise_for_status()
         data: dict[str, t.Any] = response.json()
-        if data.get("update_available") and data.get("latest_version"):
+        if data.get("update_available"):
+            if not data.get("latest_version"):
+                logging.warning(
+                    "Update check: update_available=True but latest_version missing/empty; "
+                    "treating as no update (malformed API response)"
+                )
+                return None
             return data
         return None
     except Exception:  # pylint: disable=broad-except

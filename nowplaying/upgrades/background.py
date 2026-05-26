@@ -106,7 +106,7 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
                 self.prefetch_skipped.emit("No tufup channel for this platform.")
                 return
 
-            state_dir = nowplaying.upgrades.tufup_client._default_state_dir()  # pylint: disable=protected-access
+            state_dir = nowplaying.upgrades.tufup_client.get_state_dir()
             client = nowplaying.upgrades.tufup_client.build_client(
                 self.install_dir, state_dir=state_dir, channel=channel
             )

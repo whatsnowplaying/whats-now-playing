@@ -39,6 +39,15 @@ if TYPE_CHECKING:
         def __call__(self, *, bytes_downloaded: int, bytes_expected: int) -> None: ...
 
 
+def get_state_dir() -> pathlib.Path:
+    """Public accessor for the default tufup state directory.
+
+    Delegates to _default_state_dir() so callers (e.g. background.py) do not
+    need to reference a private name and force a pylint suppression.
+    """
+    return _default_state_dir()
+
+
 def _default_state_dir() -> pathlib.Path:
     """Per-platform cache directory for tufup state.
 
@@ -79,7 +88,7 @@ def mark_prefetch_complete(
     try:
         sentinel.parent.mkdir(parents=True, exist_ok=True)
         sentinel.write_text(
-            json.dumps({"version": version, "filename": filename}),
+            json.dumps({"version": version, "filename": pathlib.Path(filename).name}),
             encoding="utf-8",
         )
         logging.debug("prefetch: wrote sentinel for version %s (%s)", version, filename)
@@ -102,21 +111,32 @@ def has_cached_update(version: str, state_dir: pathlib.Path | None = None) -> bo
         data = json.loads(sentinel.read_text(encoding="utf-8"))
         if data.get("version") != version:
             return False
-        filename = data.get("filename")
-        if not filename:
+        raw = data.get("filename")
+        if not raw:
             return False
+        filename = pathlib.Path(raw).name
     except (OSError, json.JSONDecodeError):
         return False
     return (state_dir / "targets" / filename).exists()
 
 
+_ARCHIVE_SUFFIXES = (".zip", ".tar", ".tar.gz", ".tar.bz2", ".tar.xz")
+
+
+def _is_archive_file(path: pathlib.Path) -> bool:
+    """Return True if path has a known tufup archive extension."""
+    name = path.name
+    return any(name.endswith(suffix) for suffix in _ARCHIVE_SUFFIXES)
+
+
 def cleanup_stale_targets(state_dir: pathlib.Path | None = None) -> None:
-    """Delete archives in targets/ that are not the current prefetched version.
+    """Delete archive files in targets/ that are not the current prefetched version.
 
     tufup never removes old archives after install (it has a # todo comment for
     this).  Each release is ~300 MB, so three releases = ~1 GB of waste.  We
-    read the sentinel to find the current archive and delete everything else in
-    targets/ except the sentinel itself.
+    read the sentinel to find the current archive and delete only regular files
+    with known archive extensions — logs, debug artifacts, and directories are
+    left untouched.
 
     Called from upgrade() on every launch so the directory stays bounded to at
     most one archive regardless of how many versions were skipped.
@@ -126,23 +146,30 @@ def cleanup_stale_targets(state_dir: pathlib.Path | None = None) -> None:
     target_dir = state_dir / "targets"
     if not target_dir.is_dir():
         return
-    keep: set[str] = {_PREFETCH_SENTINEL}
+    keep_name: str | None = None
     sentinel = target_dir / _PREFETCH_SENTINEL
     try:
         data = json.loads(sentinel.read_text(encoding="utf-8"))
         if filename := data.get("filename"):
-            keep.add(filename)
+            keep_name = pathlib.Path(filename).name
     except (OSError, json.JSONDecodeError):
         pass
     for item in target_dir.iterdir():
-        if item.name not in keep:
-            try:
-                item.unlink()
-                logging.debug("prefetch: removed stale archive %s", item.name)
-            except OSError:
-                logging.warning(
-                    "prefetch: could not remove stale archive %s", item.name, exc_info=True
-                )
+        if not item.is_file():
+            continue
+        if item.name == _PREFETCH_SENTINEL:
+            continue
+        if not _is_archive_file(item):
+            continue
+        if keep_name and item.name == keep_name:
+            continue
+        try:
+            item.unlink()
+            logging.debug("prefetch: removed stale archive %s", item.name)
+        except OSError:
+            logging.warning(
+                "prefetch: could not remove stale archive %s", item.name, exc_info=True
+            )
 
 
 def _seed_trust_anchor(metadata_dir: pathlib.Path) -> None:
