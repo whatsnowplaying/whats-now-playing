@@ -72,7 +72,7 @@ def test_prefetch_worker_emits_skipped_when_tufup_no_update(qtbot, install_dir):
 
 
 def test_prefetch_worker_emits_complete_on_success(qtbot, install_dir):
-    """Emits prefetch_complete after a successful download."""
+    """Emits prefetch_complete after a successful download and writes sentinel."""
     worker = background.PrefetchWorker(install_dir=install_dir)
 
     fake_client = mock.MagicMock()
@@ -84,27 +84,33 @@ def test_prefetch_worker_emits_complete_on_success(qtbot, install_dir):
             return_value={"tufup_channel": "WhatsNowPlaying_test", "latest_version": "9.9.9"},
         ),
         mock.patch("nowplaying.upgrades.tufup_client.build_client", return_value=fake_client),
+        mock.patch("nowplaying.upgrades.tufup_client.mark_prefetch_complete") as mock_mark,
     ):
         with qtbot.waitSignal(worker.prefetch_complete, timeout=5000):
             worker.start()
 
     worker.wait()
     fake_client._download_updates.assert_called_once_with(progress_hook=None)
+    mock_mark.assert_called_once_with("9.9.9", mock.ANY, state_dir=mock.ANY)
 
 
 def test_prefetch_worker_emits_failed_on_exception(qtbot, install_dir):
     """Emits prefetch_failed when an unexpected exception occurs."""
     worker = background.PrefetchWorker(install_dir=install_dir)
 
-    with mock.patch(
-        "nowplaying.upgrades.check_for_update",
-        side_effect=RuntimeError("network gone"),
+    with (
+        mock.patch(
+            "nowplaying.upgrades.check_for_update",
+            side_effect=RuntimeError("network gone"),
+        ),
+        mock.patch("nowplaying.upgrades.tufup_client.mark_prefetch_complete") as mock_mark,
     ):
         with qtbot.waitSignal(worker.prefetch_failed, timeout=5000) as spy:
             worker.start()
 
     worker.wait()
     assert "network gone" in spy.args[0]
+    mock_mark.assert_not_called()
 
 
 def test_prefetch_worker_installs_throttled_fetcher(qtbot, install_dir):
@@ -120,6 +126,7 @@ def test_prefetch_worker_installs_throttled_fetcher(qtbot, install_dir):
             return_value={"tufup_channel": "WhatsNowPlaying_test", "latest_version": "9.9.9"},
         ),
         mock.patch("nowplaying.upgrades.tufup_client.build_client", return_value=fake_client),
+        mock.patch("nowplaying.upgrades.tufup_client.mark_prefetch_complete"),
     ):
         with qtbot.waitSignal(worker.prefetch_complete, timeout=5000):
             worker.start()
@@ -143,6 +150,7 @@ def test_prefetch_worker_no_throttled_fetcher_when_unlimited(qtbot, install_dir)
             return_value={"tufup_channel": "WhatsNowPlaying_test", "latest_version": "9.9.9"},
         ),
         mock.patch("nowplaying.upgrades.tufup_client.build_client", return_value=fake_client),
+        mock.patch("nowplaying.upgrades.tufup_client.mark_prefetch_complete"),
     ):
         with qtbot.waitSignal(worker.prefetch_complete, timeout=5000):
             worker.start()

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 
 import nowplaying.upgrades
 import nowplaying.upgrades.autoinstall
+import nowplaying.upgrades.tufup_client
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 from nowplaying.upgrades.config import UpgradeConfig
 from nowplaying.upgrades.platform import PlatformDetector
@@ -126,6 +127,7 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         platform_str: str | None = None,
         asset_name: str | None = None,
         asset_size_bytes: int | None = None,
+        cached: bool = False,
     ) -> None:
         """fill in the upgrade versions and message"""
         messages = [
@@ -136,11 +138,14 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         if platform_str:
             messages.append(f"Your platform: {platform_str}")
 
-        if asset_name and asset_size_bytes:
+        if asset_name and (cached or asset_size_bytes is not None):
             messages.append("")
             messages.append(f"Found: {asset_name}")
-            size_mb = asset_size_bytes / (1024 * 1024)
-            messages.append(f"Size: {size_mb:.1f} MB")
+            if cached:
+                messages.append("Ready to install — no download needed")
+            elif asset_size_bytes is not None:
+                size_mb = asset_size_bytes / (1024 * 1024)
+                messages.append(f"Size: {size_mb:.1f} MB")
 
         for msg in messages:
             message = QLabel(msg)
@@ -163,13 +168,20 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
         prefer_prerelease = bool(
             QSettings().value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
         )
+        nowplaying.upgrades.tufup_client.cleanup_stale_targets()
         if data := nowplaying.upgrades.check_for_update(
             platform_info, prefer_prerelease=prefer_prerelease
         ):
             channel = data.get("tufup_channel")
             install_dir = _writable_install_dir()
+            offer_auto_install = bool(channel and install_dir)
+            cached = offer_auto_install and nowplaying.upgrades.tufup_client.has_cached_update(
+                data["latest_version"]
+            )
+            if cached:
+                logging.debug("upgrade: update archive is pre-cached — install will skip download")
             dialog = UpgradeDialog(
-                offer_auto_install=bool(channel and install_dir),
+                offer_auto_install=offer_auto_install,
             )
             dialog.fill_it_in(
                 nowplaying.version.__VERSION__,  # pylint: disable=no-member
@@ -177,6 +189,7 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
                 platform_str=platform_str,
                 asset_name=data.get("asset_name"),
                 asset_size_bytes=data.get("asset_size_bytes"),
+                cached=cached,
             )
             # Use the PySide6 .exec_() alias here — semantically identical
             # to .exec() but avoids tripping security scanners that

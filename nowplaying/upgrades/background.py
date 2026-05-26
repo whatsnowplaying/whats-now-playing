@@ -18,8 +18,6 @@ import nowplaying.upgrades
 import nowplaying.upgrades.tufup_client
 from nowplaying.upgrades.platform import PlatformDetector
 
-logger = logging.getLogger(__name__)
-
 # Chunk size used when bandwidth throttling is active.  Smaller than tufup's
 # 400 KB default so the sleep granularity produces a smooth cap.
 _THROTTLE_CHUNK_BYTES = 8 * 1024
@@ -90,12 +88,13 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
 
     def run(self) -> None:  # pylint: disable=missing-function-docstring
         try:
+            logging.info("prefetch: checking for update")
             platform_info = PlatformDetector.get_platform_info()
             data = nowplaying.upgrades.check_for_update(
                 platform_info, prefer_prerelease=self.prefer_prerelease
             )
             if not data:
-                logger.debug("prefetch: no update available")
+                logging.debug("prefetch: no update available")
                 self.prefetch_skipped.emit("No update available.")
                 return
 
@@ -103,26 +102,35 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
             if not channel:
                 # Common during rollout: charts API sees an update but no
                 # tufup bundle exists for this platform yet.
-                logger.debug("prefetch: no tufup_channel in API response")
+                logging.debug("prefetch: no tufup_channel in API response")
                 self.prefetch_skipped.emit("No tufup channel for this platform.")
                 return
 
+            state_dir = nowplaying.upgrades.tufup_client.get_state_dir()
             client = nowplaying.upgrades.tufup_client.build_client(
-                self.install_dir, channel=channel
+                self.install_dir, state_dir=state_dir, channel=channel
             )
             if not client.check_for_updates():
                 # Possible TUF/charts API propagation race — not an error.
-                logger.debug("prefetch: tufup reports no update on channel %s", channel)
+                logging.debug("prefetch: tufup reports no update on channel %s", channel)
                 self.prefetch_skipped.emit("No update available via tufup.")
                 return
 
             if self.bandwidth_kbps > 0:
-                logger.debug("prefetch: throttling to %d KB/s", self.bandwidth_kbps)
+                logging.debug("prefetch: throttling to %d KB/s", self.bandwidth_kbps)
                 client._fetcher = _ThrottledFetcher(self.bandwidth_kbps)  # pylint: disable=protected-access
 
+            logging.info("prefetch: downloading update on channel %s", channel)
             client._download_updates(progress_hook=None)  # pylint: disable=protected-access
-            logger.info("prefetch: download complete for channel %s", channel)
+            logging.info("prefetch: download complete for channel %s", channel)
+            archive_path = client.new_archive_local_path  # pylint: disable=protected-access
+            if archive_path:
+                nowplaying.upgrades.tufup_client.mark_prefetch_complete(
+                    data["latest_version"],
+                    archive_path.name,
+                    state_dir=state_dir,
+                )
             self.prefetch_complete.emit()
         except Exception as error:  # pylint: disable=broad-except
-            logger.exception("prefetch: download failed")
+            logging.exception("prefetch: download failed")
             self.prefetch_failed.emit(str(error))

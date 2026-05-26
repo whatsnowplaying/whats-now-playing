@@ -13,8 +13,6 @@ from PySide6.QtWidgets import QProgressDialog, QWidget  # pylint: disable=no-nam
 
 import nowplaying.upgrades.tufup_client
 
-logger = logging.getLogger(__name__)
-
 
 class UpdateWorker(QThread):  # pylint: disable=too-few-public-methods
     """Run the synchronous tufup download+apply on a background thread.
@@ -106,7 +104,7 @@ def run_auto_install(
         progress.close()
 
     def on_timeout() -> None:
-        logger.error("Auto-install: download timed out after %ds", download_timeout_ms // 1000)
+        logging.error("Auto-install: download timed out after %ds", download_timeout_ms // 1000)
         on_failed("Download timed out — check your network connection and try again.")
         # terminate() may leave a partial archive on disk; that is safe because
         # tufup's find_cached_target() validates length + hash on the next launch
@@ -130,6 +128,6 @@ def run_auto_install(
     worker.wait()
 
     if failure_message:
-        logger.error("Auto-install: %s", failure_message[0])
+        logging.error("Auto-install: %s", failure_message[0])
         return False
     return True
