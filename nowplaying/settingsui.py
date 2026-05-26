@@ -472,6 +472,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets["general"].prerelease_checkbox.setChecked(
             self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
         )
+        self.widgets["general"].prefetch_checkbox.setChecked(
+            self.config.cparser.value("upgrades/prefetch_enabled", defaultValue=True, type=bool)
+        )
+        self.widgets["general"].prefetch_bandwidth_spinbox.setValue(
+            self.config.cparser.value("upgrades/prefetch_bandwidth_kbps", defaultValue=0, type=int)
+        )
 
         tray_theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
         tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
@@ -733,6 +739,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             "upgrades/prefer_prerelease",
             self.widgets["general"].prerelease_checkbox.isChecked(),
+        )
+        self.config.cparser.setValue(
+            "upgrades/prefetch_enabled",
+            self.widgets["general"].prefetch_checkbox.isChecked(),
+        )
+        self.config.cparser.setValue(
+            "upgrades/prefetch_bandwidth_kbps",
+            self.widgets["general"].prefetch_bandwidth_spinbox.value(),
         )
 
         self.config.put(

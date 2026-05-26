@@ -166,6 +166,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self._defaults_general_settings(settings)
         self._defaults_output(settings)
         self._defaults_chat_services(settings)
+        self._defaults_upgrades(settings)
         nowplaying.guessgame.settings.GuessGameSettings.defaults(settings)
         self._defaults_quirks(settings)
         self._defaults_requests(settings)
@@ -224,6 +225,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("settings/notif", self.notif)
         settings.setValue("settings/stripextras", False)
         settings.setValue("tray/icontheme", "auto")
+
+    @staticmethod
+    def _defaults_upgrades(settings: QSettings) -> None:
+        """default values for upgrade/update settings"""
+        settings.setValue("upgrades/prefer_prerelease", False)
+        settings.setValue("upgrades/prefetch_enabled", True)
+        settings.setValue("upgrades/prefetch_bandwidth_kbps", 0)
 
     def _defaults_output(self, settings: QSettings) -> None:
         """default values for output settings"""

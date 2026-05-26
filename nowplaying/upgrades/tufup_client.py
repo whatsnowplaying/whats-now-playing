@@ -264,6 +264,9 @@ def _install_without_sys_exit(
             os.rename(src, dst)
             logger.debug("tufup install: renamed %s -> %s", src, dst)
 
+    # No rollback if a move fails mid-way: the versioned-aside backup (above)
+    # is the recovery path — the user can relaunch the old binary manually.
+    # A proper atomic swap would require OS-level rename across volumes.
     for item in src_path.iterdir():
         dest = dst_path / item.name
         if dest.exists():

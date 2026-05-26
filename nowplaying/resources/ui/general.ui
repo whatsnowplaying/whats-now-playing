@@ -190,6 +190,43 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="prefetch_checkbox">
+     <property name="text">
+      <string>Download updates in the background</string>
+     </property>
+     <property name="toolTip">
+      <string>When enabled, update archives are downloaded silently while the app is running so the next launch can install without waiting for a download.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="prefetch_bandwidth_layout">
+     <item>
+      <widget class="QLabel" name="prefetch_bandwidth_label">
+       <property name="text">
+        <string>Background download limit (KB/s, 0 = unlimited)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="prefetch_bandwidth_spinbox">
+       <property name="toolTip">
+        <string>Maximum download speed for background update pre-fetch. Set to 0 for unlimited. Useful during live sets to avoid network contention.</string>
+       </property>
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>100000</number>
+       </property>
+       <property name="singleStep">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QLabel" name="logging_header_label">
      <property name="text">
       <string>**Runtime Logging**</string>
