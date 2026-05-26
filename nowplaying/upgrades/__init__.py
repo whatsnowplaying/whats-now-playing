@@ -270,7 +270,7 @@ def check_for_update(
         response = requests.get(UPDATE_CHECK_URL, params=params, timeout=10)
         response.raise_for_status()
         data: dict[str, t.Any] = response.json()
-        if data.get("update_available"):
+        if data.get("update_available") and data.get("latest_version"):
             return data
         return None
     except Exception:  # pylint: disable=broad-except

@@ -14,6 +14,7 @@ API supplies the tufup channel, and run_auto_install() in autoinstall.py
 handles the QThread worker and progress UI.
 """
 
+import json
 import logging
 import os
 import pathlib
@@ -38,9 +39,6 @@ if TYPE_CHECKING:
         def __call__(self, *, bytes_downloaded: int, bytes_expected: int) -> None: ...
 
 
-logger = logging.getLogger(__name__)
-
-
 def _default_state_dir() -> pathlib.Path:
     """Per-platform cache directory for tufup state.
 
@@ -52,9 +50,99 @@ def _default_state_dir() -> pathlib.Path:
         QStandardPaths.StandardLocation.AppLocalDataLocation
     )
     if not locations:
-        logger.warning("QStandardPaths returned no AppLocalDataLocation; using home dir fallback")
+        logging.warning("QStandardPaths returned no AppLocalDataLocation; using home dir fallback")
         return pathlib.Path.home() / ".local" / "share" / "WhatsNowPlaying" / "tufup"
     return pathlib.Path(locations[0]) / "tufup"
+
+
+# Sentinel filename written to the targets dir by mark_prefetch_complete().
+# Stores the version string that was successfully pre-fetched so that
+# has_cached_update() can confirm the cached archive is for the right version.
+_PREFETCH_SENTINEL = ".prefetch_version"
+
+
+def mark_prefetch_complete(
+    version: str,
+    filename: str,
+    state_dir: pathlib.Path | None = None,
+) -> None:
+    """Write the prefetch sentinel so has_cached_update() can detect a warm cache.
+
+    Stores version and archive filename as JSON in targets/.prefetch_version.
+    version is the charts-API latest_version string (both sides agree on it).
+    filename is the archive basename from client.new_archive_local_path.name,
+    used by has_cached_update() to confirm the specific file is still on disk.
+    """
+    if state_dir is None:
+        state_dir = _default_state_dir()
+    sentinel = state_dir / "targets" / _PREFETCH_SENTINEL
+    try:
+        sentinel.parent.mkdir(parents=True, exist_ok=True)
+        sentinel.write_text(
+            json.dumps({"version": version, "filename": filename}),
+            encoding="utf-8",
+        )
+        logging.debug("prefetch: wrote sentinel for version %s (%s)", version, filename)
+    except OSError:
+        logging.warning("prefetch: could not write sentinel file %s", sentinel, exc_info=True)
+
+
+def has_cached_update(version: str, state_dir: pathlib.Path | None = None) -> bool:
+    """Return True if the background prefetch completed for exactly `version`
+    and the specific archive file is still on disk.
+
+    Two-step check — no network calls:
+    1. Sentinel targets/.prefetch_version must record `version`.
+    2. The archive filename stored in the sentinel must exist in targets/.
+    """
+    if state_dir is None:
+        state_dir = _default_state_dir()
+    sentinel = state_dir / "targets" / _PREFETCH_SENTINEL
+    try:
+        data = json.loads(sentinel.read_text(encoding="utf-8"))
+        if data.get("version") != version:
+            return False
+        filename = data.get("filename")
+        if not filename:
+            return False
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (state_dir / "targets" / filename).exists()
+
+
+def cleanup_stale_targets(state_dir: pathlib.Path | None = None) -> None:
+    """Delete archives in targets/ that are not the current prefetched version.
+
+    tufup never removes old archives after install (it has a # todo comment for
+    this).  Each release is ~300 MB, so three releases = ~1 GB of waste.  We
+    read the sentinel to find the current archive and delete everything else in
+    targets/ except the sentinel itself.
+
+    Called from upgrade() on every launch so the directory stays bounded to at
+    most one archive regardless of how many versions were skipped.
+    """
+    if state_dir is None:
+        state_dir = _default_state_dir()
+    target_dir = state_dir / "targets"
+    if not target_dir.is_dir():
+        return
+    keep: set[str] = {_PREFETCH_SENTINEL}
+    sentinel = target_dir / _PREFETCH_SENTINEL
+    try:
+        data = json.loads(sentinel.read_text(encoding="utf-8"))
+        if filename := data.get("filename"):
+            keep.add(filename)
+    except (OSError, json.JSONDecodeError):
+        pass
+    for item in target_dir.iterdir():
+        if item.name not in keep:
+            try:
+                item.unlink()
+                logging.debug("prefetch: removed stale archive %s", item.name)
+            except OSError:
+                logging.warning(
+                    "prefetch: could not remove stale archive %s", item.name, exc_info=True
+                )
 
 
 def _seed_trust_anchor(metadata_dir: pathlib.Path) -> None:
@@ -71,10 +159,10 @@ def _seed_trust_anchor(metadata_dir: pathlib.Path) -> None:
     bundledir = pathlib.Path(nowplaying.frozen.frozen_init(None))
     src = bundledir / "resources" / "tufup" / "root.json"
     if not src.exists():
-        logger.warning("Bundled root.json not found at %s; auto-update disabled", src)
+        logging.warning("Bundled root.json not found at %s; auto-update disabled", src)
         return
     shutil.copy(src, dst)
-    logger.info("Seeded TUF trust anchor: %s -> %s", src, dst)
+    logging.info("Seeded TUF trust anchor: %s -> %s", src, dst)
 
 
 # Public HTTPS endpoints fronted by the whatsnowplaying.com FastAPI app.
@@ -149,13 +237,13 @@ def check_for_update(
     try:
         client = build_client(install_dir, channel=channel)
         if client.check_for_updates():
-            logger.info("tufup: update available on channel %s", channel)
+            logging.info("tufup: update available on channel %s", channel)
             return client
-        logger.debug("tufup: no update available on channel %s", channel)
+        logging.debug("tufup: no update available on channel %s", channel)
     except Exception:  # pylint: disable=broad-except
         # tufup raises on metadata fetch failures, network errors, signature
         # mismatches, etc.  Swallow so the live app never blocks on auto-update.
-        logger.exception("tufup: update check failed on channel %s", channel)
+        logging.exception("tufup: update check failed on channel %s", channel)
     return None
 
 
@@ -199,7 +287,7 @@ def _win_install(
     with tempfile.NamedTemporaryFile(mode="w", prefix="tufup", suffix=".bat", delete=False) as fh:
         fh.write(script_text)
         script_path = fh.name
-    logger.debug("tufup install (win): batch=%s", script_path)
+    logging.debug("tufup install (win): batch=%s", script_path)
     startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
     startupinfo.wShowWindow = 0  # SW_HIDE
@@ -262,7 +350,7 @@ def _install_without_sys_exit(
     for src, dst in renames:
         if src.exists():
             os.rename(src, dst)
-            logger.debug("tufup install: renamed %s -> %s", src, dst)
+            logging.debug("tufup install: renamed %s -> %s", src, dst)
 
     # No rollback if a move fails mid-way: the versioned-aside backup (above)
     # is the recovery path — the user can relaunch the old binary manually.
@@ -275,9 +363,9 @@ def _install_without_sys_exit(
             else:
                 dest.unlink()
         shutil.move(item, dest)
-    logger.debug("tufup install: moved %s -> %s", src_path, dst_path)
+    logging.debug("tufup install: moved %s -> %s", src_path, dst_path)
 
-    logger.debug("tufup install: spawning %s", new_exe)
+    logging.debug("tufup install: spawning %s", new_exe)
     subprocess.Popen([str(new_exe)])  # nosec  # pylint: disable=consider-using-with
 
 

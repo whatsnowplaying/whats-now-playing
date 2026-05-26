@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""Tests for nowplaying.upgrades.tufup_client."""
+"""Tests for nowplaying.upgrades.tufup_client.
+
+None of these tests use qtbot — they live in tests/ (not tests-qt/).
+QStandardPaths works because the root conftest.py calls set_qt_names()
+which creates a QCoreApplication before any test runs.
+"""
 
 import pathlib
 from unittest import mock
 
 # pylint: disable=protected-access
+
+import pytest
+
 from nowplaying.upgrades import tufup_client
 
 
@@ -111,6 +119,103 @@ def test_win_batch_template_format_substitution():
     assert "WhatsNowPlaying-5.1.0.exe" in result
     assert r"C:\install\WhatsNowPlaying.exe" in result
     assert "robocopy" in result
+
+
+# ---------------------------------------------------------------------------
+# mark_prefetch_complete / has_cached_update
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("version", ["5.2.1", "5.3.0-rc1", "6.0.0"])
+def test_has_cached_update_false_when_no_sentinel(tmp_path, version):
+    """Returns False when no sentinel file has been written."""
+    state_dir = tmp_path / "tufup"
+    assert not tufup_client.has_cached_update(version, state_dir)
+
+
+def test_has_cached_update_false_after_wrong_version_prefetched(tmp_path):
+    """Returns False when the sentinel records a different version."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("5.2.0", "WhatsNowPlaying_test-5.2.0.tar.gz", state_dir)
+    assert not tufup_client.has_cached_update("5.2.1", state_dir)
+
+
+def test_has_cached_update_true_after_correct_version_prefetched(tmp_path):
+    """Returns True when the sentinel matches and the named archive is on disk."""
+    state_dir = tmp_path / "tufup"
+    archive = "WhatsNowPlaying_test-5.2.1.tar.gz"
+    tufup_client.mark_prefetch_complete("5.2.1", archive, state_dir)
+    (state_dir / "targets" / archive).write_bytes(b"archive")
+    assert tufup_client.has_cached_update("5.2.1", state_dir)
+
+
+def test_has_cached_update_false_when_archive_evicted(tmp_path):
+    """Returns False when the sentinel is present but the named archive is gone."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("5.2.1", "WhatsNowPlaying_test-5.2.1.tar.gz", state_dir)
+    assert not tufup_client.has_cached_update("5.2.1", state_dir)
+
+
+def test_mark_prefetch_complete_creates_sentinel_file(tmp_path):
+    """Sentinel JSON records version and filename."""
+    import json  # pylint: disable=import-outside-toplevel
+
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("9.9.9", "WhatsNowPlaying_test-9.9.9.tar.gz", state_dir)
+    sentinel = state_dir / "targets" / tufup_client._PREFETCH_SENTINEL
+    assert sentinel.exists()
+    data = json.loads(sentinel.read_text(encoding="utf-8"))
+    assert data["version"] == "9.9.9"
+    assert data["filename"] == "WhatsNowPlaying_test-9.9.9.tar.gz"
+
+
+def test_mark_prefetch_complete_overwrites_stale_sentinel(tmp_path):
+    """A second prefetch for a new version updates the sentinel."""
+    state_dir = tmp_path / "tufup"
+    archive = "WhatsNowPlaying_test-5.2.1.tar.gz"
+    tufup_client.mark_prefetch_complete("5.2.0", "WhatsNowPlaying_test-5.2.0.tar.gz", state_dir)
+    tufup_client.mark_prefetch_complete("5.2.1", archive, state_dir)
+    (state_dir / "targets" / archive).write_bytes(b"archive")
+    assert tufup_client.has_cached_update("5.2.1", state_dir)
+    assert not tufup_client.has_cached_update("5.2.0", state_dir)
+
+
+# ---------------------------------------------------------------------------
+# cleanup_stale_targets
+# ---------------------------------------------------------------------------
+
+
+def test_cleanup_removes_stale_archives(tmp_path):
+    """Deletes archives that are not the current sentinel filename."""
+    state_dir = tmp_path / "tufup"
+    targets = state_dir / "targets"
+    targets.mkdir(parents=True)
+    stale = targets / "WhatsNowPlaying_test-5.2.0.tar.gz"
+    current = targets / "WhatsNowPlaying_test-5.2.1.tar.gz"
+    stale.write_bytes(b"old")
+    current.write_bytes(b"new")
+    tufup_client.mark_prefetch_complete("5.2.1", current.name, state_dir)
+    tufup_client.cleanup_stale_targets(state_dir)
+    assert not stale.exists()
+    assert current.exists()
+    assert (targets / tufup_client._PREFETCH_SENTINEL).exists()
+
+
+def test_cleanup_noop_when_no_targets_dir(tmp_path):
+    """Does not raise when the targets directory does not exist."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.cleanup_stale_targets(state_dir)
+
+
+def test_cleanup_noop_when_no_sentinel(tmp_path):
+    """Deletes all archives when there is no sentinel (no known current version)."""
+    state_dir = tmp_path / "tufup"
+    targets = state_dir / "targets"
+    targets.mkdir(parents=True)
+    orphan = targets / "WhatsNowPlaying_test-5.2.0.tar.gz"
+    orphan.write_bytes(b"old")
+    tufup_client.cleanup_stale_targets(state_dir)
+    assert not orphan.exists()
 
 
 # ---------------------------------------------------------------------------

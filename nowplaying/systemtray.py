@@ -471,10 +471,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not self.config.cparser.value(
             "upgrades/prefetch_enabled", defaultValue=True, type=bool
         ):
+            logging.debug("prefetch: disabled in settings")
             return
 
         install_dir = nowplaying.upgrade._writable_install_dir()  # pylint: disable=protected-access
         if not install_dir:
+            logging.debug("prefetch: skipped (not a packaged build or install dir not writable)")
             return
 
         prefer_prerelease = bool(
