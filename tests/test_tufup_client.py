@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""Tests for nowplaying.upgrades.tufup_client."""
+"""Tests for nowplaying.upgrades.tufup_client.
+
+None of these tests use qtbot — they live in tests/ (not tests-qt/).
+QStandardPaths works because the root conftest.py calls set_qt_names()
+which creates a QCoreApplication before any test runs.
+"""
 
 import pathlib
 from unittest import mock
 
 # pylint: disable=protected-access
+
+import pytest
+
 from nowplaying.upgrades import tufup_client
 
 
@@ -111,6 +119,50 @@ def test_win_batch_template_format_substitution():
     assert "WhatsNowPlaying-5.1.0.exe" in result
     assert r"C:\install\WhatsNowPlaying.exe" in result
     assert "robocopy" in result
+
+
+# ---------------------------------------------------------------------------
+# mark_prefetch_complete / has_cached_update
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("version", ["5.2.1", "5.3.0-rc1", "6.0.0"])
+def test_has_cached_update_false_when_no_sentinel(tmp_path, version):
+    """Returns False when no sentinel file has been written."""
+    state_dir = tmp_path / "tufup"
+    assert not tufup_client.has_cached_update(version, state_dir)
+
+
+def test_has_cached_update_false_after_wrong_version_prefetched(tmp_path):
+    """Returns False when the sentinel records a different version."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("5.2.0", state_dir)
+    assert not tufup_client.has_cached_update("5.2.1", state_dir)
+
+
+def test_has_cached_update_true_after_correct_version_prefetched(tmp_path):
+    """Returns True when the sentinel matches the requested version."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("5.2.1", state_dir)
+    assert tufup_client.has_cached_update("5.2.1", state_dir)
+
+
+def test_mark_prefetch_complete_creates_sentinel_file(tmp_path):
+    """Sentinel file is created in state_dir/targets/.prefetch_version."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("9.9.9", state_dir)
+    sentinel = state_dir / "targets" / tufup_client._PREFETCH_SENTINEL
+    assert sentinel.exists()
+    assert sentinel.read_text(encoding="utf-8").strip() == "9.9.9"
+
+
+def test_mark_prefetch_complete_overwrites_stale_sentinel(tmp_path):
+    """A second prefetch for a new version updates the sentinel."""
+    state_dir = tmp_path / "tufup"
+    tufup_client.mark_prefetch_complete("5.2.0", state_dir)
+    tufup_client.mark_prefetch_complete("5.2.1", state_dir)
+    assert tufup_client.has_cached_update("5.2.1", state_dir)
+    assert not tufup_client.has_cached_update("5.2.0", state_dir)
 
 
 # ---------------------------------------------------------------------------

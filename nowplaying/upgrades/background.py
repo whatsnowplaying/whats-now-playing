@@ -90,6 +90,7 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
 
     def run(self) -> None:  # pylint: disable=missing-function-docstring
         try:
+            logger.info("prefetch: checking for update")
             platform_info = PlatformDetector.get_platform_info()
             data = nowplaying.upgrades.check_for_update(
                 platform_info, prefer_prerelease=self.prefer_prerelease
@@ -120,8 +121,10 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
                 logger.debug("prefetch: throttling to %d KB/s", self.bandwidth_kbps)
                 client._fetcher = _ThrottledFetcher(self.bandwidth_kbps)  # pylint: disable=protected-access
 
+            logger.info("prefetch: downloading update on channel %s", channel)
             client._download_updates(progress_hook=None)  # pylint: disable=protected-access
             logger.info("prefetch: download complete for channel %s", channel)
+            nowplaying.upgrades.tufup_client.mark_prefetch_complete(data["latest_version"])
             self.prefetch_complete.emit()
         except Exception as error:  # pylint: disable=broad-except
             logger.exception("prefetch: download failed")

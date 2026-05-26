@@ -57,6 +57,46 @@ def _default_state_dir() -> pathlib.Path:
     return pathlib.Path(locations[0]) / "tufup"
 
 
+# Sentinel filename written to the targets dir by mark_prefetch_complete().
+# Stores the version string that was successfully pre-fetched so that
+# has_cached_update() can confirm the cached archive is for the right version.
+_PREFETCH_SENTINEL = ".prefetch_version"
+
+
+def mark_prefetch_complete(version: str, state_dir: pathlib.Path | None = None) -> None:
+    """Write the prefetch sentinel so has_cached_update() can detect a warm cache.
+
+    Called by PrefetchWorker after _download_updates() succeeds.  Writes the
+    charts-API version string into targets/.prefetch_version; this exact string
+    is what upgrade() receives as data["latest_version"], so both sides agree.
+    """
+    if state_dir is None:
+        state_dir = _default_state_dir()
+    sentinel = state_dir / "targets" / _PREFETCH_SENTINEL
+    try:
+        sentinel.parent.mkdir(parents=True, exist_ok=True)
+        sentinel.write_text(version, encoding="utf-8")
+        logger.debug("prefetch: wrote sentinel %s for version %s", sentinel, version)
+    except OSError:
+        logger.warning("prefetch: could not write sentinel file %s", sentinel)
+
+
+def has_cached_update(version: str, state_dir: pathlib.Path | None = None) -> bool:
+    """Return True if the background prefetch completed for exactly `version`.
+
+    Reads targets/.prefetch_version (written by mark_prefetch_complete) and
+    compares it to the version string from the charts API.  No network calls.
+    A stale sentinel (wrong version or missing file) returns False cleanly.
+    """
+    if state_dir is None:
+        state_dir = _default_state_dir()
+    sentinel = state_dir / "targets" / _PREFETCH_SENTINEL
+    try:
+        return sentinel.read_text(encoding="utf-8").strip() == version
+    except OSError:
+        return False
+
+
 def _seed_trust_anchor(metadata_dir: pathlib.Path) -> None:
     """Copy the bundled root.json into metadata_dir if it isn't there yet.
 
