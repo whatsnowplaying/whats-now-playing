@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Discord settings UI class"""
 
+from __future__ import annotations
+
 import pathlib
 from typing import TYPE_CHECKING, Any
 
