@@ -52,11 +52,11 @@ def test_plugin_defaults():
     mock_qsettings = MagicMock()
     plugin.defaults(mock_qsettings)
 
-    mock_qsettings.setValue.assert_any_call("jriver/host", None)
+    mock_qsettings.setValue.assert_any_call("jriver/host", "")
     mock_qsettings.setValue.assert_any_call("jriver/port", "52199")
-    mock_qsettings.setValue.assert_any_call("jriver/username", None)
-    mock_qsettings.setValue.assert_any_call("jriver/password", None)
-    mock_qsettings.setValue.assert_any_call("jriver/access_key", None)
+    mock_qsettings.setValue.assert_any_call("jriver/username", "")
+    mock_qsettings.setValue.assert_any_call("jriver/password", "")
+    mock_qsettings.setValue.assert_any_call("jriver/access_key", "")
 
 
 def test_plugin_mixmodes():
