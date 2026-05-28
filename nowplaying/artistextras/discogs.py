@@ -381,7 +381,7 @@ class Plugin(ArtistExtrasPlugin):
             self.config.cparser.setValue(f"discogs/{field}", func.isChecked())
 
     def defaults(self, qsettings):
-        for field in ["bio", "fanart", "thumbnails", "coverart"]:
+        for field in ["bio", "fanart", "thumbnails", "websites", "coverart"]:
             qsettings.setValue(f"discogs/{field}", False)
 
         qsettings.setValue("discogs/enabled", False)

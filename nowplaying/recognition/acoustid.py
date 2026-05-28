@@ -430,8 +430,8 @@ class Plugin(RecognitionPlugin):
 
     def defaults(self, qsettings):
         qsettings.setValue("acoustidmb/enabled", False)
-        qsettings.setValue("acoustidmb/acoustidapikey", None)
-        qsettings.setValue("acoustidmb/fpcalcexe", None)
+        qsettings.setValue("acoustidmb/acoustidapikey", "")
+        qsettings.setValue("acoustidmb/fpcalcexe", "")
 
 
 async def main():

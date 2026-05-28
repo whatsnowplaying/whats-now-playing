@@ -369,11 +369,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._last_error_log_time = 0  # Reset logging timer
 
     def defaults(self, qsettings: "QSettings") -> None:
-        qsettings.setValue("jriver/host", None)
+        qsettings.setValue("jriver/host", "")
         qsettings.setValue("jriver/port", "52199")
-        qsettings.setValue("jriver/username", None)
-        qsettings.setValue("jriver/password", None)
-        qsettings.setValue("jriver/access_key", None)
+        qsettings.setValue("jriver/username", "")
+        qsettings.setValue("jriver/password", "")
+        qsettings.setValue("jriver/access_key", "")
 
     def validmixmodes(self) -> list[str]:
         """let the UI know which modes are valid"""

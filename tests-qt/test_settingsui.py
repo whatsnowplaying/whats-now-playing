@@ -32,6 +32,9 @@ class MockSubprocesses:
     def start_twitchbot(self):
         """mock"""
 
+    def restart_discordbot(self):
+        """mock"""
+
     def stop_kickbot(self):
         """mock"""
 
@@ -61,6 +64,29 @@ class MockTray:
 
     def _link_twitch_to_charts(self):
         """mock"""
+
+
+def test_settingsui_default_save_values(bootstrap, qtbot):
+    """Fresh-install save must not write None for any key.
+
+    Catches stealth defaults: a key added to any plugin or settingsclass
+    save_settingsui()/save() but missing from defaults() causes the widget
+    to load with None and write None back to UserScope.
+    """
+    config = bootstrap
+    tray = MockTray(config)
+    settingsui = nowplaying.settingsui.SettingsUI(tray=tray)
+    qtbot.addWidget(settingsui.qtui)
+    qtbot.mouseClick(settingsui.qtui.save_button, Qt.MouseButton.LeftButton)
+
+    none_keys = [
+        k
+        for k in config.cparser.allKeys()
+        if "/" in k and config.cparser.value(k) is None
+    ]
+    assert not none_keys, (
+        f"Keys are None after default save (missing from defaults()): {none_keys}"
+    )
 
 
 def test_settingsui_cancel(bootstrap, qtbot):

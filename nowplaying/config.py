@@ -21,6 +21,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
 
 import nowplaying.artistextras
+import nowplaying.discord.settings
 import nowplaying.guessgame.settings
 import nowplaying.inputs
 import nowplaying.notifications
@@ -166,8 +167,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self._defaults_general_settings(settings)
         self._defaults_output(settings)
         self._defaults_chat_services(settings)
+        nowplaying.discord.settings.DiscordSettings.defaults(settings)
         nowplaying.guessgame.settings.GuessGameSettings.defaults(settings)
         self._defaults_quirks(settings)
+        self._defaults_trackskip(settings)
         self._defaults_requests(settings)
         self._defaults_plugins(settings)
 
@@ -214,6 +217,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         """default values for recognition"""
         settings.setValue("recognition/replacetitle", False)
         settings.setValue("recognition/replaceartist", False)
+        settings.setValue("recognition/replaceartistwebsites", False)
         settings.setValue("setlist/enabled", False)
 
     def _defaults_general_settings(self, settings: QSettings) -> None:
@@ -222,6 +226,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("settings/initialized", False)
         settings.setValue("settings/loglevel", self.loglevel)
         settings.setValue("settings/notif", self.notif)
+        settings.setValue("settings/requests", False)
         settings.setValue("settings/stripextras", False)
         settings.setValue("tray/icontheme", "auto")
 
@@ -271,10 +276,25 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def _defaults_chat_services(self, settings: QSettings) -> None:
         """default values for chat services"""
         settings.setValue("twitchbot/enabled", False)
+        settings.setValue("twitchbot/channel", "")
+        settings.setValue("twitchbot/clientid", "")
+        settings.setValue("twitchbot/secret", "")
+        settings.setValue("twitchbot/streamtitle_enabled", False)
         settings.setValue(
             "twitchbot/streamtitle", str(self.templatedir.joinpath("twitchbot_streamtitle.txt"))
         )
+        settings.setValue("twitchbot/chat", False)
+        settings.setValue("twitchbot/announce", "")
+        settings.setValue("twitchbot/commandchar", "!")
+        settings.setValue("twitchbot/announcedelay", "5")
+        settings.setValue("twitchbot/helpkeyword", "help")
+        settings.setValue("twitchbot/usereplies", False)
+        settings.setValue("twitchbot/chatrequests", False)
+        settings.setValue("twitchbot/redemptions", False)
         settings.setValue("kick/enabled", False)
+        settings.setValue("kick/channel", "")
+        settings.setValue("kick/clientid", "")
+        settings.setValue("kick/secret", "")
         settings.setValue("kick/chat", False)
         settings.setValue("kick/announce", str(self.templatedir.joinpath("kickbot_track.txt")))
         settings.setValue("kick/announcedelay", 1.0)
@@ -285,11 +305,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("quirks/pollingobserver", False)
         settings.setValue("quirks/pollinginterval", 5.0)
         settings.setValue("quirks/filesubst", False)
+        settings.setValue("quirks/filesubstin", "")
+        settings.setValue("quirks/filesubstout", "")
         settings.setValue("quirks/slashmode", "nochange")
+
+    @staticmethod
+    def _defaults_trackskip(settings: QSettings) -> None:
+        """default values for track skip filters"""
+        settings.setValue("trackskip/genre", "")
+        settings.setValue("trackskip/comment", "")
 
     @staticmethod
     def _defaults_requests(settings: QSettings) -> None:
         """default values for requests"""
+        settings.setValue("requests/fuzzythreshold", 85)
+        settings.setValue("gifwords/klipykey", "")
+
         settings.setValue("request-0/command", "request")
         settings.setValue("request-0/twitchtext", "")
         settings.setValue("request-0/type", "Generic")

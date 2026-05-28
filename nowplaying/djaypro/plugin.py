@@ -704,7 +704,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("djaypro/artist_query_scope", "entire_library")
         qsettings.setValue("djaypro/selected_playlists", "")
         qsettings.setValue("djaypro/analyzed_data_delay", _ANALYZED_DATA_RETRY_DEFAULT)
-        qsettings.setValue("djaypro/deckskip", None)
+        qsettings.setValue("djaypro/deckskip", "")
         qsettings.setValue("djaypro/location_max_age_days", 7)
         qsettings.setValue("djaypro/rebuild_location_db", False)
 
