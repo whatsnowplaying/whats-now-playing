@@ -253,8 +253,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("serato/interval", 10.0)
         qsettings.setValue("serato/local", True)
         qsettings.setValue("serato/mixmode", "newest")
-        qsettings.setValue("serato/url", None)
-        qsettings.setValue("serato/deckskip", None)
+        qsettings.setValue("serato/url", "")
+        qsettings.setValue("serato/deckskip", "")
         qsettings.setValue("serato/artist_query_scope", "entire_library")
         qsettings.setValue("serato/selected_playlists", "")
 

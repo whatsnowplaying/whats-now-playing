@@ -657,6 +657,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         qsettings.setValue("charts/enabled", True)
         qsettings.setValue("charts/charts_key", "")
         qsettings.setValue("charts/link_platform", True)
+        qsettings.setValue("charts/debug", False)
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""

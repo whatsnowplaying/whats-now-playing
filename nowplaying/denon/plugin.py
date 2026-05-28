@@ -63,7 +63,7 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def defaults(self, qsettings: "QSettings | None"):
         """Set default configuration values"""
         qsettings.setValue("denon/discovery_timeout", 5.0)
-        qsettings.setValue("denon/deckskip", None)
+        qsettings.setValue("denon/deckskip", "")
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """Connect UI elements"""

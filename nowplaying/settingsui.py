@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 import nowplaying.config
+import nowplaying.discord.settings
 import nowplaying.firstinstall
 import nowplaying.guessgame.settings
 import nowplaying.preview.textwindow
@@ -61,6 +62,16 @@ LOGGING_COMBOBOX = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "CRITICAL"]
 NOCOVER_COMBOBOX = ["None", "Fanart", "Logo", "Thumbnail"]
 TRAY_ICON_THEMES = ["auto", "light", "dark"]
 
+_SETTINGSCLASS_KEYS = [
+    "twitch",
+    "twitchchat",
+    "kick",
+    "kickchat",
+    "discordbot",
+    "requests",
+    "guessgame",
+]
+
 
 # settings UI
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
@@ -81,17 +92,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.errormessage = None
         self.widgets = {}
         self._webpreview_window: nowplaying.preview.window.WebPreviewWindow | None = None
-        self._discord_template_preview: nowplaying.preview.textwindow.TextPreviewWindow | None = (
-            None
-        )
-        self._discord_channel_template_preview: (
-            nowplaying.preview.textwindow.TextPreviewWindow | None
-        ) = None
         self.settingsclasses = {
             "twitch": nowplaying.twitch.settings.TwitchSettings(),
             "twitchchat": nowplaying.twitch.chat.TwitchChatSettings(),
             "kick": nowplaying.kick.settings.KickSettings(),
             "kickchat": nowplaying.kick.settings.KickChatSettings(),
+            "discordbot": nowplaying.discord.settings.DiscordSettings(),
             "requests": nowplaying.trackrequests.TrackRequestSettings(),
             "guessgame": nowplaying.guessgame.settings.GuessGameSettings(),
             "recognition_musicbrainz": nowplaying.musicbrainz.plugin.Plugin(config=self.config),
@@ -207,14 +213,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._setup_widgets("destroy")
         self._setup_widgets("about")
 
-        for key in [
-            "twitch",
-            "twitchchat",
-            "kick",
-            "kickchat",
-            "requests",
-            "guessgame",
-        ]:
+        for key in _SETTINGSCLASS_KEYS:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
@@ -386,49 +385,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.template_button.clicked.connect(self.on_html_template_button)
         qobject.preview_button.clicked.connect(self.on_webserver_preview_button)
 
-    def _connect_discordbot_widget(self, qobject):
-        """connect discord widget signals"""
-        qobject.template_button.clicked.connect(self.on_discordbot_template_button)
-        qobject.template_preview_button.clicked.connect(self.on_discordbot_template_preview_button)
-        qobject.channel_template_button.clicked.connect(self.on_discordbot_channel_template_button)
-        qobject.channel_template_preview_button.clicked.connect(
-            self.on_discordbot_channel_template_preview_button
-        )
-        qobject.richpresence_enable_checkbox.toggled.connect(
-            lambda checked: self._update_discordbot_fields(qobject)
-        )
-        qobject.bot_enable_checkbox.toggled.connect(
-            lambda checked: self._update_discordbot_fields(qobject)
-        )
-
-    @staticmethod
-    def _update_discordbot_fields(qobject) -> None:
-        """enable/disable discord fields based on which modes are active"""
-        rp_enabled = qobject.richpresence_enable_checkbox.isChecked()
-        bot_enabled = qobject.bot_enable_checkbox.isChecked()
-        either_enabled = rp_enabled or bot_enabled
-
-        qobject.clientid_label.setEnabled(rp_enabled)
-        qobject.clientid_lineedit.setEnabled(rp_enabled)
-
-        qobject.token_label.setEnabled(bot_enabled)
-        qobject.token_lineedit.setEnabled(bot_enabled)
-        qobject.channel_id_label.setEnabled(bot_enabled)
-        qobject.channel_id_lineedit.setEnabled(bot_enabled)
-        qobject.channel_attach_image_checkbox.setEnabled(bot_enabled)
-        qobject.channel_image_size_label.setEnabled(bot_enabled)
-        qobject.channel_image_size_spinbox.setEnabled(bot_enabled)
-        qobject.channel_template_label.setEnabled(bot_enabled)
-        qobject.channel_template_lineedit.setEnabled(bot_enabled)
-        qobject.channel_template_button.setEnabled(bot_enabled)
-        qobject.channel_template_preview_button.setEnabled(bot_enabled)
-        qobject.channel_strip_extra_lines_checkbox.setEnabled(bot_enabled)
-
-        qobject.template_label.setEnabled(either_enabled)
-        qobject.template_lineedit.setEnabled(either_enabled)
-        qobject.template_button.setEnabled(either_enabled)
-        qobject.template_preview_button.setEnabled(either_enabled)
-
     def _connect_artistextras_widget(self, qobject):
         """connect the artistextras buttons to non-built-ins"""
         qobject.clearcache_button.clicked.connect(self.on_artistextras_clearcache_button)
@@ -492,16 +448,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_win_trackskip()
         self._upd_win_webserver()
         self._upd_win_obsws()
-        self._upd_win_discordbot()
         self._upd_win_quirks()
 
-        for key in [
-            "twitch",
-            "twitchchat",
-            "kick",
-            "requests",
-            "guessgame",
-        ]:
+        for key in _SETTINGSCLASS_KEYS:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
 
     def _upd_win_artistextras(self):
@@ -631,33 +580,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value("obsws/template")
         )
 
-    def _upd_win_discordbot(self):
-        """update the discord settings to match config"""
-        widget = self.widgets["discordbot"]
-        widget.richpresence_enable_checkbox.setChecked(
-            self.config.cparser.value("discord/richpresence_enabled", type=bool)
-        )
-        widget.bot_enable_checkbox.setChecked(
-            self.config.cparser.value("discord/bot_enabled", type=bool)
-        )
-        widget.clientid_lineedit.setText(self.config.cparser.value("discord/clientid") or "")
-        widget.token_lineedit.setText(self.config.cparser.value("discord/token") or "")
-        widget.channel_id_lineedit.setText(self.config.cparser.value("discord/channel_id") or "")
-        widget.channel_attach_image_checkbox.setChecked(
-            self.config.cparser.value("discord/channel_attach_image", type=bool)
-        )
-        widget.channel_image_size_spinbox.setValue(
-            self.config.cparser.value("discord/channel_image_size", type=int) or 200
-        )
-        widget.channel_template_lineedit.setText(
-            self.config.cparser.value("discord/channel_template") or ""
-        )
-        widget.channel_strip_extra_lines_checkbox.setChecked(
-            self.config.cparser.value("discord/channel_strip_extra_lines", type=bool)
-        )
-        widget.template_lineedit.setText(self.config.cparser.value("discord/template") or "")
-        self._update_discordbot_fields(widget)
-
     def _upd_win_quirks(self):
         """update the quirks settings to match config"""
 
@@ -766,7 +688,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_webserver()
         self._upd_conf_obsws()
         self._upd_conf_quirks()
-        self._upd_conf_discordbot()
         self._upd_conf_kickbot()
 
         self._upd_conf_recognition()
@@ -779,14 +700,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _upd_conf_external_services(self):
         """Update external service configurations (Twitch, Kick, etc.)"""
-        for key in [
-            "twitch",
-            "twitchchat",
-            "kick",
-            "kickchat",
-            "requests",
-            "guessgame",
-        ]:
+        for key in _SETTINGSCLASS_KEYS:
             self.settingsclasses[key].save(self.config, self.widgets[key], self.tray.subprocesses)
 
     def _upd_conf_trackskip(self):
@@ -911,38 +825,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if oldenabled != newenabled:
             self.tray.subprocesses.restart_obsws()
 
-    def _upd_conf_discordbot(self):
-        """update the discord settings"""
-        widget = self.widgets["discordbot"]
-
-        old_bot = self.config.cparser.value("discord/bot_enabled", type=bool)
-        old_rp = self.config.cparser.value("discord/richpresence_enabled", type=bool)
-        new_bot = widget.bot_enable_checkbox.isChecked()
-        new_rp = widget.richpresence_enable_checkbox.isChecked()
-
-        self.config.cparser.setValue("discord/richpresence_enabled", new_rp)
-        self.config.cparser.setValue("discord/bot_enabled", new_bot)
-        self.config.cparser.setValue("discord/clientid", widget.clientid_lineedit.text())
-        self.config.cparser.setValue("discord/token", widget.token_lineedit.text())
-        self.config.cparser.setValue("discord/channel_id", widget.channel_id_lineedit.text())
-        self.config.cparser.setValue(
-            "discord/channel_attach_image", widget.channel_attach_image_checkbox.isChecked()
-        )
-        self.config.cparser.setValue(
-            "discord/channel_image_size", widget.channel_image_size_spinbox.value()
-        )
-        self.config.cparser.setValue(
-            "discord/channel_template", widget.channel_template_lineedit.text()
-        )
-        self.config.cparser.setValue(
-            "discord/channel_strip_extra_lines",
-            widget.channel_strip_extra_lines_checkbox.isChecked(),
-        )
-        self.config.cparser.setValue("discord/template", widget.template_lineedit.text())
-
-        if old_bot != new_bot or old_rp != new_rp:
-            self.tray.subprocesses.restart_discordbot()
-
     def _upd_conf_kickbot(self):
         """update the kickbot settings"""
 
@@ -1061,69 +943,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if api_cache_file.exists():
             logging.debug("Deleting API cache: %s", api_cache_file)
             api_cache_file.unlink()
-
-    @Slot()
-    def on_discordbot_template_button(self):
-        """discordbot presence template button clicked action"""
-        if self.uihelp:
-            self.uihelp.template_picker_lineedit(self.widgets["discordbot"].template_lineedit)
-
-    @Slot()
-    def on_discordbot_channel_template_button(self):
-        """discordbot channel template button clicked action"""
-        if self.uihelp:
-            self.uihelp.template_picker_lineedit(
-                self.widgets["discordbot"].channel_template_lineedit
-            )
-
-    def _show_discordbot_preview(
-        self,
-        attr: str,
-        config_key: str,
-        on_selected,
-    ) -> None:
-        """Create (if needed) and raise a discord text template preview window."""
-        window: nowplaying.preview.textwindow.TextPreviewWindow | None = getattr(self, attr)
-        if window is None:
-            window = nowplaying.preview.textwindow.TextPreviewWindow(
-                config=self.config,
-                config_key=config_key,
-                enable_select_button=True,
-            )
-            window.template_selected.connect(on_selected)
-            setattr(self, attr, window)
-        window.populate_templates()
-        nowplaying.utils.qt.focus_window(window)
-
-    @Slot()
-    def on_discordbot_template_preview_button(self):
-        """open or raise the discord presence template preview window"""
-        self._show_discordbot_preview(
-            "_discord_template_preview",
-            "discord/template",
-            self._on_discordbot_template_selected,
-        )
-
-    @Slot(str)
-    def _on_discordbot_template_selected(self, template_name: str) -> None:
-        self.widgets["discordbot"].template_lineedit.setText(
-            str(pathlib.Path(self.config.templatedir) / template_name)
-        )
-
-    @Slot()
-    def on_discordbot_channel_template_preview_button(self):
-        """open or raise the discord channel template preview window"""
-        self._show_discordbot_preview(
-            "_discord_channel_template_preview",
-            "discord/channel_template",
-            self._on_discordbot_channel_template_selected,
-        )
-
-    @Slot(str)
-    def _on_discordbot_channel_template_selected(self, template_name: str) -> None:
-        self.widgets["discordbot"].channel_template_lineedit.setText(
-            str(pathlib.Path(self.config.templatedir) / template_name)
-        )
 
     @Slot()
     def on_obsws_template_button(self):
@@ -1437,14 +1256,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if not self.verify_regex_filters():
             return
 
-        for key in [
-            "twitch",
-            "twitchchat",
-            "kick",
-            "kickchat",
-            "requests",
-            "guessgame",
-        ]:
+        for key in _SETTINGSCLASS_KEYS:
             try:
                 if hasattr(self.settingsclasses[key], "verify"):
                     self.settingsclasses[key].verify(self.widgets[key])
