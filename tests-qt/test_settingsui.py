@@ -80,9 +80,7 @@ def test_settingsui_default_save_values(bootstrap, qtbot):
     qtbot.mouseClick(settingsui.qtui.save_button, Qt.MouseButton.LeftButton)
 
     none_keys = [
-        k
-        for k in config.cparser.allKeys()
-        if "/" in k and config.cparser.value(k) is None
+        k for k in config.cparser.allKeys() if "/" in k and config.cparser.value(k) is None
     ]
     assert not none_keys, (
         f"Keys are None after default save (missing from defaults()): {none_keys}"
