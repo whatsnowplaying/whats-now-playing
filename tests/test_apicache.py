@@ -165,15 +165,16 @@ async def test_cache_expiration(isolated_api_cache):  # pylint: disable=redefine
 
     test_data = {"test": "data"}
 
-    # Store with very short TTL
-    await cache.put("test_provider", "Test Artist", "search", test_data, ttl_seconds=1)
+    # Store with short TTL — use 3s so int(time.time()) truncation on slow
+    # Windows CI runners (up to ~1s between put and get) doesn't cause a false miss
+    await cache.put("test_provider", "Test Artist", "search", test_data, ttl_seconds=3)
 
     # Should be available immediately
     result = await cache.get("test_provider", "Test Artist", "search")
     assert result == test_data
 
     # Wait for expiration with extra buffer for timing issues
-    await asyncio.sleep(2.5)
+    await asyncio.sleep(4.5)
 
     # Should now be expired
     result = await cache.get("test_provider", "Test Artist", "search")
