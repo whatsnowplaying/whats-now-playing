@@ -1,5 +1,43 @@
 # Changelog
 
+## Version 5.2.2 - in-progress
+
+### New Features
+
+* General settings now has a "Receive pre-release updates" checkbox. When
+    enabled, WNP will offer alpha, beta, and release-candidate builds in
+    addition to stable releases. Disabled by default.
+
+### Security
+
+* Updated zeroconf to address five CVEs (CVE-2026-48487, CVE-2026-48045,
+    CVE-2026-47184, CVE-2026-47183, CVE-2026-47180): unvalidated record
+    payloads and unbounded queues/caches that allowed LAN-local memory
+    exhaustion and denial of service via crafted mDNS packets
+* Updated dbus-fast (Linux only) to address multiple denial-of-service
+    hardening fixes: oversized message rejection, container nesting depth
+    limits, and malformed-message handling
+
+### Bug Fixes
+
+* Fixed template preview window showing a stale template list when
+    reopened after new templates were added or removed
+* Fixed several settings that could silently fall back to Qt's built-in
+    defaults instead of WNP's intended defaults when no value had ever
+    been explicitly stored (e.g. after a clean install or config reset)
+
+### djay Pro
+
+* Library lookups are now O(1) instead of a full table scan: WNP
+    maintains its own side index of djay Pro's location data, so track
+    matching stays fast even for large libraries
+
+### Platform
+
+* macOS: WNP now detects when an Intel build is running under Rosetta on
+    Apple Silicon hardware and offers the native Apple Silicon build
+    during update checks instead of another Intel build
+
 ## Version 5.2.1 - 2026-05-20
 
 ### Bug Fixes
