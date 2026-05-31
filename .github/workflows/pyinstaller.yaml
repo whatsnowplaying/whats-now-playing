@@ -67,20 +67,10 @@ jobs:
       # scoped to release-write on this repo only.
       - name: upload zip to GitHub Release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
-        env:
-          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" \
-                 --repo "$GITHUB_REPOSITORY" \
-                 --draft \
-                 --title "$TAG" \
-                 --generate-notes
-          gh release upload "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber \
-            WhatsNowPlaying-*.zip
+        uses: ./.github/actions/release-upload
+        with:
+          release_token: ${{ env.RELEASE_TOKEN }}
+          tag: ${{ github.ref_name }}
 
   pyinstaller-linux-smoke:
     needs: pyinstaller-linux
@@ -252,18 +242,8 @@ jobs:
       # scoped to release-write on this repo only.
       - name: upload zip to GitHub Release
         if: ${{ env.RELEASE_TOKEN != '' && startsWith(github.ref, 'refs/tags/') }}
-        env:
-          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        shell: bash
-        run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" \
-                 --repo "$GITHUB_REPOSITORY" \
-                 --draft \
-                 --title "$TAG" \
-                 --generate-notes
-          gh release upload "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber \
-            WhatsNowPlaying-*-Windows.zip
+        uses: ./.github/actions/release-upload
+        with:
+          release_token: ${{ env.RELEASE_TOKEN }}
+          tag: ${{ github.ref_name }}
+          zip_glob: WhatsNowPlaying-*-Windows.zip

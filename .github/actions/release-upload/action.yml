@@ -1,0 +1,38 @@
+---
+name: Upload zip to GitHub Release
+description: >
+  Create the release (as draft) if it does not already exist, then
+  upload a zip artifact.  Works on Linux, macOS, and Windows runners.
+
+inputs:
+  release_token:
+    description: PAT with release-write scope
+    required: true
+  tag:
+    description: Release tag (e.g. 5.2.2-preview1)
+    required: true
+  zip_glob:
+    description: Glob pattern for the zip file(s) to upload
+    required: false
+    default: 'WhatsNowPlaying-*.zip'
+
+runs:
+  using: composite
+  steps:
+    - name: upload zip to GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.release_token }}
+        TAG: ${{ inputs.tag }}
+        ZIP_GLOB: ${{ inputs.zip_glob }}
+      run: |
+        gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+          || gh release create "$TAG" \
+               --repo "$GITHUB_REPOSITORY" \
+               --draft \
+               --title "$TAG" \
+               --generate-notes
+        gh release upload "$TAG" \
+          --repo "$GITHUB_REPOSITORY" \
+          --clobber \
+          $ZIP_GLOB
