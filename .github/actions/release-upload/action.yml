@@ -3,6 +3,8 @@ name: Upload zip to GitHub Release
 description: >
   Create the release (as draft) if it does not already exist, then
   upload a zip artifact.  Works on Linux, macOS, and Windows runners.
+  Windows requires Git Bash to be available (shell: bash), which is
+  present on all GitHub-hosted Windows runners.
 
 inputs:
   release_token:
@@ -26,12 +28,15 @@ runs:
         TAG: ${{ inputs.tag }}
         ZIP_GLOB: ${{ inputs.zip_glob }}
       run: |
+        set -euo pipefail
         gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
           || gh release create "$TAG" \
                --repo "$GITHUB_REPOSITORY" \
                --draft \
                --title "$TAG" \
                --generate-notes
+        # ZIP_GLOB is intentionally unquoted so the shell expands it as a glob.
+        # shellcheck disable=SC2086
         gh release upload "$TAG" \
           --repo "$GITHUB_REPOSITORY" \
           --clobber \
