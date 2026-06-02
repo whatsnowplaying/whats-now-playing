@@ -9,6 +9,7 @@ import tempfile
 
 import pytest
 
+import nowplaying.djaypro.locationdb
 import nowplaying.djaypro.mediadb
 import nowplaying.djaypro.tsaf
 import nowplaying.inputs.djaypro
@@ -515,6 +516,7 @@ def test_check_for_new_track_uses_analyzed_bpm(bootstrap):
             },
         )
 
+        nowplaying.djaypro.locationdb.catchup_index(dbfile, plugin._location_db_path)
         plugin._check_for_new_track()
 
         assert plugin.metadata["artist"] == "Beat Artist"
@@ -657,6 +659,7 @@ def test_check_for_new_track_isrc_sources(  # pylint: disable=too-many-arguments
             collections["localMediaItemLocations"] = [("loc-uuid", location_blob)]
         _make_db_with_collections(dbfile, collections)
 
+        nowplaying.djaypro.locationdb.catchup_index(dbfile, plugin._location_db_path)
         plugin._check_for_new_track()
 
         assert plugin.metadata.get("artist") == artist
