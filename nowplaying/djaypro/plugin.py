@@ -169,13 +169,18 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 nowplaying.djaypro.locationdb.rebuild(dbfile, self._location_db_path)
         finally:
             self.config.cparser.setValue("djaypro/rebuild_location_db", False)
-            self._rebuilding = False
+            with self._rebuild_lock:
+                self._rebuilding = False
 
     def _do_catchup(self) -> None:
         """Thread target: index any location rows added since the last run."""
-        dbfile = self._get_db_path()
-        if dbfile:
-            nowplaying.djaypro.locationdb.catchup_index(dbfile, self._location_db_path)
+        try:
+            dbfile = self._get_db_path()
+            if dbfile:
+                nowplaying.djaypro.locationdb.catchup_index(dbfile, self._location_db_path)
+        finally:
+            with self._rebuild_lock:
+                self._rebuilding = False
 
     async def setup_watcher(self, configkey: str = "djaypro/directory"):
         """set up a custom watch on the djay Pro directory"""
@@ -248,6 +253,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         else:
             with self._rebuild_lock:
                 if not self._rebuilding:
+                    self._rebuilding = True
                     threading.Thread(target=self._do_catchup, daemon=True).start()
         self._check_for_new_track()
 
@@ -638,6 +644,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 self._rebuilding = True
                 threading.Thread(target=self._do_rebuild, daemon=True).start()
             else:
+                self._rebuilding = True
                 threading.Thread(target=self._do_catchup, daemon=True).start()
         await self.setup_watcher()
 
