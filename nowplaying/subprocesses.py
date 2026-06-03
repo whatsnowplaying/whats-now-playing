@@ -17,6 +17,16 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-modul
 import nowplaying
 import nowplaying.config
 
+PROCESS_NAMES: list[str] = [
+    "trackpoll",
+    "datacache",
+    "obsws",
+    "twitchbot",
+    "discordbot",
+    "webserver",
+    "kickbot",
+]
+
 
 class SubprocessManager:
     """manage all of the subprocesses"""
@@ -27,17 +37,7 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes: dict[str, dict[str, t.Any]] = {}
-        processlist = [
-            "trackpoll",
-            "datacache",
-            "obsws",
-            "twitchbot",
-            "discordbot",
-            "webserver",
-            "kickbot",
-        ]
-
-        for name in processlist:
+        for name in PROCESS_NAMES:
             self.processes[name] = {
                 "module": importlib.import_module(f"nowplaying.processes.{name}"),
                 "process": None,

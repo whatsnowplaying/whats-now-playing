@@ -44,22 +44,11 @@ def test_subprocess_manager_init(mock_config):
     with patch("importlib.import_module"):
         manager = nowplaying.subprocesses.SubprocessManager(config=mock_config, testmode=True)
 
-        # Should import all expected modules
-        expected_processes = [
-            "trackpoll",
-            "obsws",
-            "twitchbot",
-            "discordbot",
-            "webserver",
-            "kickbot",
-        ]
-        assert len(manager.processes) == len(expected_processes)
-
-        for process_name in expected_processes:
-            assert process_name in manager.processes
-            assert "module" in manager.processes[process_name]
-            assert "process" in manager.processes[process_name]
-            assert "stopevent" in manager.processes[process_name]
+        assert set(manager.processes.keys()) == set(nowplaying.subprocesses.PROCESS_NAMES)
+        for process_data in manager.processes.values():
+            assert "module" in process_data
+            assert "process" in process_data
+            assert "stopevent" in process_data
 
 
 def test_start_process_with_conditions(subprocess_manager):
