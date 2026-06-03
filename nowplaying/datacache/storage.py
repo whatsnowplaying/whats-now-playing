@@ -33,12 +33,7 @@ _schema_lock = asyncio.Lock()
 
 
 def _generate_cache_key(identifier: str, data_type: str, provider: str, url: str) -> str:
-    """
-    Generate a stable cache key for WebSocket interface compatibility.
-
-    Similar to imagecache cache keys but based on URL hash to ensure uniqueness.
-    """
-    # Create a hash from url to ensure uniqueness while keeping it stable
+    """Generate a stable cache key for WebSocket interface compatibility."""
     url_hash = hashlib.sha256(url.encode()).hexdigest()[:8]
     return f"{identifier}_{data_type}_{provider}_{url_hash}"
 
@@ -360,6 +355,38 @@ class DataStorage:
             logging.error("Failed to retrieve cached data for cachekey %s: %s", cachekey, error)
             return None
 
+    async def _load_random_blob(
+        self, row: tuple[Any, ...], identifier: str, data_type: str
+    ) -> tuple[Any, dict, str] | None:
+        """Load blob data for a random-image row, deleting orphaned DB rows on FileNotFoundError."""
+        data_value, file_path_str, metadata_json, url = row
+        if file_path_str:
+            full_path = self.database_path.parent / file_path_str
+            try:
+                async with aiofiles.open(full_path, "rb") as fh:
+                    data = await fh.read()
+            except FileNotFoundError:
+                logging.warning(
+                    "Blob file missing for %s/%s, deleting orphaned row", identifier, data_type
+                )
+
+                async def _do_delete_identifier() -> None:
+                    async with aiosqlite.connect(
+                        str(self.database_path), timeout=30.0
+                    ) as connection:
+                        await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
+                        await connection.commit()
+
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_identifier)
+                return None
+        else:
+            try:
+                data = orjson.loads(data_value)
+            except orjson.JSONDecodeError:
+                data = data_value
+        metadata = orjson.loads(metadata_json) if metadata_json else {}
+        return data, metadata, url
+
     @overload
     async def retrieve_by_identifier(
         self,
@@ -445,8 +472,8 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    # random query returns (data_value, file_path_str, metadata_json, url) → url at index 3
-                    # non-random query returns (metadata_json, url) → url at index 1
+                    # random: (data_value, file_path, metadata, url) → url at col 3
+                    # non-random: (metadata, url) → url at col 1
                     url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
@@ -465,39 +492,7 @@ class DataStorage:
                 return None if random else []
 
             if random:
-                data_value, file_path_str, metadata_json, url = rows[0]
-                if file_path_str:
-                    full_path = self.database_path.parent / file_path_str
-                    try:
-                        async with aiofiles.open(full_path, "rb") as fh:
-                            data = await fh.read()
-                    except FileNotFoundError:
-                        logging.warning(
-                            "Blob file missing for %s/%s, deleting orphaned row",
-                            identifier,
-                            data_type,
-                        )
-
-                        async def _do_delete_identifier() -> None:
-                            async with aiosqlite.connect(
-                                str(self.database_path), timeout=30.0
-                            ) as connection:
-                                await connection.execute(
-                                    "DELETE FROM cached_data WHERE url = ?", (url,)
-                                )
-                                await connection.commit()
-
-                        await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-                            _do_delete_identifier
-                        )
-                        return None
-                else:
-                    try:
-                        data = orjson.loads(data_value)
-                    except orjson.JSONDecodeError:
-                        data = data_value
-                metadata = orjson.loads(metadata_json) if metadata_json else {}
-                return data, metadata, url
+                return await self._load_random_blob(rows[0], identifier, data_type)
 
             return [
                 (orjson.loads(metadata_json) if metadata_json else {}, url)
@@ -738,31 +733,53 @@ class DataStorage:
 
         try:
             now = time.time()
-            count = 0
-            file_paths: list[str] = []
+            expired_rows: list[tuple[str, str | None]] = []
 
-            async def _do_cleanup() -> None:
-                nonlocal count, file_paths
+            async def _do_fetch() -> None:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
-                        "SELECT file_path FROM cached_data"
-                        " WHERE expires_at <= ? AND file_path IS NOT NULL",
+                        "SELECT url, file_path FROM cached_data WHERE expires_at <= ?",
                         (now,),
                     )
-                    file_paths = [row[0] for row in await cursor.fetchall()]
+                    expired_rows.extend((row[0], row[1]) for row in await cursor.fetchall())
+
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_fetch)
+
+            # Unlink blobs before deleting rows: a failed unlink leaves the row
+            # intact so the next maintenance cycle can retry. FileNotFoundError
+            # is safe — the file is already gone so the row can be deleted.
+            urls_to_delete: list[str] = []
+            for url, file_path in expired_rows:
+                if file_path:
+                    try:
+                        (self.database_path.parent / file_path).unlink()
+                        urls_to_delete.append(url)
+                    except FileNotFoundError:
+                        urls_to_delete.append(url)
+                    except OSError:
+                        logging.warning(
+                            "Failed to unlink blob %s; row kept for next cleanup", file_path
+                        )
+                else:
+                    urls_to_delete.append(url)
+
+            if not urls_to_delete:
+                return 0
+
+            count = 0
+            placeholders = ",".join("?" * len(urls_to_delete))
+
+            async def _do_delete() -> None:
+                nonlocal count
+                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
-                        "DELETE FROM cached_data WHERE expires_at <= ?",
-                        (now,),
+                        f"DELETE FROM cached_data WHERE url IN ({placeholders})",
+                        urls_to_delete,
                     )
                     await connection.commit()
                     count = cursor.rowcount
 
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_cleanup)
-
-            for fp in file_paths:
-                with contextlib.suppress(OSError):
-                    (self.database_path.parent / fp).unlink()
-
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete)
             return count
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -821,15 +838,7 @@ class DataStorage:
 
 
 def get_datacache_path(cache_dir: Path | None = None) -> Path:
-    """
-    Get the datacache database path using Qt standard cache location.
-
-    Args:
-        cache_dir: Optional custom cache directory. If None, uses Qt standard cache location.
-
-    Returns:
-        Path to the datacache database file
-    """
+    """Return the datacache database path, defaulting to Qt standard cache location."""
     if cache_dir:
         base_dir = Path(cache_dir)
     else:
@@ -842,15 +851,7 @@ def get_datacache_path(cache_dir: Path | None = None) -> Path:
 
 
 def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
-    """
-    Run datacache maintenance at system startup (sync version).
-
-    Args:
-        cache_dir: Optional custom cache directory. If None, uses Qt standard cache location.
-
-    Returns:
-        Dictionary with maintenance statistics
-    """
+    """Run datacache maintenance at system startup (sync version)."""
     database_path = get_datacache_path(cache_dir)
 
     stats = {
