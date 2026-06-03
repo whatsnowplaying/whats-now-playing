@@ -190,7 +190,10 @@ class DataCacheClient:
                     return data, metadata or {}
                 if response.status_code == 429:
                     # Rate limit - wait and retry
-                    retry_after = int(response.headers.get("Retry-After", "60"))
+                    try:
+                        retry_after = int(response.headers.get("Retry-After", "60"))
+                    except ValueError:
+                        retry_after = 60
                     logging.warning(
                         "Rate limited by %s, waiting %d seconds", provider, retry_after
                     )

@@ -244,7 +244,20 @@ class DataStorage:
                     async with aiofiles.open(full_path, "rb") as fh:
                         data = await fh.read()
                 except FileNotFoundError:
-                    logging.warning("Blob file missing for cached URL %s, dropping record", url)
+                    logging.warning(
+                        "Blob file missing for cached URL %s, deleting orphaned row", url
+                    )
+
+                    async def _do_delete_url() -> None:
+                        async with aiosqlite.connect(
+                            str(self.database_path), timeout=30.0
+                        ) as connection:
+                            await connection.execute(
+                                "DELETE FROM cached_data WHERE url = ?", (url,)
+                            )
+                            await connection.commit()
+
+                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_url)
                     return None
             else:
                 try:
@@ -319,7 +332,20 @@ class DataStorage:
                     async with aiofiles.open(full_path, "rb") as fh:
                         data = await fh.read()
                 except FileNotFoundError:
-                    logging.warning("Blob file missing for cachekey %s, dropping record", cachekey)
+                    logging.warning(
+                        "Blob file missing for cachekey %s, deleting orphaned row", cachekey
+                    )
+
+                    async def _do_delete_cachekey() -> None:
+                        async with aiosqlite.connect(
+                            str(self.database_path), timeout=30.0
+                        ) as connection:
+                            await connection.execute(
+                                "DELETE FROM cached_data WHERE cachekey = ?", (cachekey,)
+                            )
+                            await connection.commit()
+
+                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_cachekey)
                     return None
             else:
                 try:
@@ -419,7 +445,9 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    url_col = 2 if random else 1
+                    # random query returns (data_value, file_path_str, metadata_json, url) → url at index 3
+                    # non-random query returns (metadata_json, url) → url at index 1
+                    url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
                             """
@@ -445,7 +473,22 @@ class DataStorage:
                             data = await fh.read()
                     except FileNotFoundError:
                         logging.warning(
-                            "Blob file missing for %s/%s, dropping record", identifier, data_type
+                            "Blob file missing for %s/%s, deleting orphaned row",
+                            identifier,
+                            data_type,
+                        )
+
+                        async def _do_delete_identifier() -> None:
+                            async with aiosqlite.connect(
+                                str(self.database_path), timeout=30.0
+                            ) as connection:
+                                await connection.execute(
+                                    "DELETE FROM cached_data WHERE url = ?", (url,)
+                                )
+                                await connection.commit()
+
+                        await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                            _do_delete_identifier
                         )
                         return None
                 else:
@@ -547,7 +590,9 @@ class DataStorage:
         try:
             # Generate unique request ID
             params_str = orjson.dumps(params, option=orjson.OPT_SORT_KEYS).decode()
-            request_id = f"{provider}:{request_key}:{hash(params_str)}"
+            request_id = (
+                f"{provider}:{request_key}:{hashlib.sha256(params_str.encode()).hexdigest()[:16]}"
+            )
             now = time.time()
             queued = False
 
