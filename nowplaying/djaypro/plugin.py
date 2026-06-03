@@ -91,6 +91,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._wal_timer_lock = threading.Lock()
         self._deck_tracks: dict[str, nowplaying.djaypro.mediadb.DeckTrack] = {}
         self._location_db_path: pathlib.Path = nowplaying.djaypro.locationdb.default_db_path()
+        self._started: bool = False
+        self._index_initialized: bool = False
+        self._rebuilding: bool = False
+        self._rebuild_lock: threading.Lock = threading.Lock()
         # Record launch time in Core Data epoch (seconds since 2001-01-01 UTC)
         # so we can skip tracks that were already playing when WNP started.
         self._launch_time: float = (
@@ -141,37 +145,42 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "key": None,
         }
 
-    async def _maybe_rebuild_location_db(self) -> None:
-        """Rebuild the location index if the manual flag is set or it has aged out."""
-        rebuild = self.config.cparser.value(
-            "djaypro/rebuild_location_db", type=bool, defaultValue=False
+    def _check_rebuild_age(self) -> None:
+        """Set the rebuild flag in QSettings if the index has aged out."""
+        max_age_days = max(
+            1,
+            self.config.cparser.value("djaypro/location_max_age_days", type=int, defaultValue=7),
         )
-        if not rebuild and self._location_db_path.exists():
-            max_age_days = max(
-                1,
-                self.config.cparser.value(
-                    "djaypro/location_max_age_days", type=int, defaultValue=7
-                ),
+        last_rebuild = nowplaying.djaypro.locationdb.get_last_rebuild_time(self._location_db_path)
+        age_days = (time.time() - last_rebuild) / 86400
+        if age_days > max_age_days:
+            logging.info(
+                "djay Pro location index is %.1f days old (max %d); scheduling rebuild",
+                age_days,
+                max_age_days,
             )
-            last_rebuild = nowplaying.djaypro.locationdb.get_last_rebuild_time(
-                self._location_db_path
-            )
-            age_days = (time.time() - last_rebuild) / 86400
-            if age_days > max_age_days:
-                logging.info(
-                    "djay Pro location index is %.1f days old (max %d); rebuilding",
-                    age_days,
-                    max_age_days,
-                )
-                rebuild = True
+            self.config.cparser.setValue("djaypro/rebuild_location_db", True)
 
-        if rebuild:
+    def _do_rebuild(self) -> None:
+        """Thread target: full atomic rebuild of the location index."""
+        try:
             dbfile = self._get_db_path()
             if dbfile:
-                await asyncio.to_thread(
-                    nowplaying.djaypro.locationdb.rebuild, dbfile, self._location_db_path
-                )
-                self.config.cparser.setValue("djaypro/rebuild_location_db", False)
+                nowplaying.djaypro.locationdb.rebuild(dbfile, self._location_db_path)
+        finally:
+            self.config.cparser.setValue("djaypro/rebuild_location_db", False)
+            with self._rebuild_lock:
+                self._rebuilding = False
+
+    def _do_catchup(self) -> None:
+        """Thread target: index any location rows added since the last run."""
+        try:
+            dbfile = self._get_db_path()
+            if dbfile:
+                nowplaying.djaypro.locationdb.catchup_index(dbfile, self._location_db_path)
+        finally:
+            with self._rebuild_lock:
+                self._rebuilding = False
 
     async def setup_watcher(self, configkey: str = "djaypro/directory"):
         """set up a custom watch on the djay Pro directory"""
@@ -232,10 +241,20 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self._wal_timer.daemon = True
             self._wal_timer.start()
 
-    def _wal_timer_fired(self):
+    def _wal_timer_fired(self) -> None:
         """Called by the debounce timer; clears the timer reference then checks."""
         with self._wal_timer_lock:
             self._wal_timer = None
+        if self.config.cparser.value("djaypro/rebuild_location_db", type=bool, defaultValue=False):
+            with self._rebuild_lock:
+                if not self._rebuilding:
+                    self._rebuilding = True
+                    threading.Thread(target=self._do_rebuild, daemon=True).start()
+        else:
+            with self._rebuild_lock:
+                if not self._rebuilding:
+                    self._rebuilding = True
+                    threading.Thread(target=self._do_catchup, daemon=True).start()
         self._check_for_new_track()
 
     def _get_deckskip(self) -> list[str]:
@@ -594,7 +613,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             if filename is not None or loc_isrc is not None:
                 return filename, title_id, loc_isrc
 
-        nowplaying.djaypro.locationdb.sync(dbfile, self._location_db_path)
         return nowplaying.djaypro.locationdb.lookup(artist, title, self._location_db_path)
 
     async def stop(self):
@@ -608,10 +626,26 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.observer.join()
             self.observer = None
         self._deck_tracks.clear()
+        self._started = False
+        self._rebuilding = False
 
-    async def start(self):
+    async def start(self) -> None:
         """setup the watcher"""
-        await self._maybe_rebuild_location_db()
+        if self._started:
+            await self.setup_watcher()
+            return
+        self._started = True
+        if not self._index_initialized:
+            self._index_initialized = True
+            self._check_rebuild_age()
+            if self.config.cparser.value(
+                "djaypro/rebuild_location_db", type=bool, defaultValue=False
+            ):
+                self._rebuilding = True
+                threading.Thread(target=self._do_rebuild, daemon=True).start()
+            else:
+                self._rebuilding = True
+                threading.Thread(target=self._do_catchup, daemon=True).start()
         await self.setup_watcher()
 
     async def getplayingtrack(self) -> TrackMetadata:

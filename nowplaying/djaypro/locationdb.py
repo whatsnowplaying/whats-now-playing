@@ -155,11 +155,11 @@ def _fetch_new_rows(
         return None
 
 
-def sync(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
-    """Sync new location rows from djay Pro's DB into the WNP-owned index.
+def catchup_index(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
+    """Index any location rows added to djay Pro's DB since the last run.
 
-    Only processes rows newer than the last sync, so the steady-state cost
-    is a single MAX(rowid) probe when the library has not changed.
+    Steady-state cost is a single MAX(rowid) probe; only opens djay's DB
+    a second time when new rows are actually present.
     """
     djay_max = _probe_djay_max_rowid(djay_dbfile)
     if djay_max is None:
@@ -272,7 +272,7 @@ def rebuild(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
     if tmp.exists():
         tmp.unlink()
 
-    sync(djay_dbfile, tmp)
+    catchup_index(djay_dbfile, tmp)
 
     if not tmp.exists():
         # sync() bailed early (djay DB unreachable) — leave old index intact
