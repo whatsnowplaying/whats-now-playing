@@ -9,7 +9,7 @@ import pytest
 from aiohttp import ClientResponseError
 from utils_artistextras import configureplugins, configuresettings, run_cache_consistency_test
 
-import nowplaying.apicache  # pylint: disable=import-error
+import nowplaying.datacache  # pylint: disable=import-error
 import nowplaying.wikiclient  # pylint: disable=import-error
 
 
@@ -677,14 +677,14 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
     plugin = plugins["wikimedia"]
 
     # Mock the cache to return corrupted data
-    original_cached_fetch = nowplaying.apicache.cached_fetch
+    original_cached_fetch = nowplaying.datacache.cached_fetch
 
     async def mock_corrupted_cache(*args, **kwargs):  # pylint: disable=unused-argument
         # Return corrupted data that would break normal processing
         return {"corrupted": "data", "invalid": True, "type": "wikipage"}
 
     # Test with corrupted cache
-    nowplaying.apicache.cached_fetch = mock_corrupted_cache
+    nowplaying.datacache.cached_fetch = mock_corrupted_cache
 
     try:
         # Should handle corrupted cache gracefully
@@ -703,7 +703,7 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
 
     finally:
         # Restore original cache function
-        nowplaying.apicache.cached_fetch = original_cached_fetch
+        nowplaying.datacache.cached_fetch = original_cached_fetch
 
 
 @pytest.mark.asyncio
@@ -766,198 +766,163 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_api_call_count(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
     """test that wikimedia plugin makes only one API call when cache is used"""
 
-    # Use isolated cache for this test to ensure clean state
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    config = bootstrap
+    configuresettings("wikimedia", config.cparser)
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins["wikimedia"]
+
+    # Test with a known entity (Nine Inch Nails)
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "imagecacheartist": "nineinchnails",
+        "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
+    }
+
+    # Mock the actual Wikipedia API call to count calls.  This test
+    # verifies that the datacache layer short-circuits the second
+    # download_async; it is not testing Wikipedia's response.  Using a
+    # synthetic WikiPage (instead of delegating to the real network call)
+    # keeps the test deterministic when Wikipedia is rate-limiting CI.
+    original_get_page = nowplaying.wikiclient.get_page_async
+    api_call_count = 0
+
+    async def mock_get_page_async(*args, **kwargs):  # pylint: disable=unused-argument
+        nonlocal api_call_count
+        api_call_count += 1
+        logging.debug("Mock Wikipedia API call #%d", api_call_count)
+        page = nowplaying.wikiclient.WikiPage(entity="Q11647", lang="en")
+        page.data = {
+            "claims": {},
+            "description": "American industrial rock band",
+        }
+        return page
+
+    # Replace the method with our mock
+    nowplaying.wikiclient.get_page_async = mock_get_page_async
 
     try:
-        config = bootstrap
-        configuresettings("wikimedia", config.cparser)
-        imagecaches, plugins = configureplugins(config)
+        # First call - should hit API and cache result
+        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
 
-        plugin = plugins["wikimedia"]
+        # Verify one API call was made
+        assert api_call_count == 1, (
+            f"Expected 1 API call after first download, got {api_call_count}"
+        )
 
-        # Test with a known entity (Nine Inch Nails)
-        metadata = {
-            "artist": "Nine Inch Nails",
-            "imagecacheartist": "nineinchnails",
-            "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
-        }
+        # Second call - should use cached result, no additional API call
+        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
 
-        # Mock the actual Wikipedia API call to count calls.  This test
-        # verifies that the apicache layer short-circuits the second
-        # download_async; it is not testing Wikipedia's response.  Using a
-        # synthetic WikiPage (instead of delegating to the real network call)
-        # keeps the test deterministic when Wikipedia is rate-limiting CI.
-        original_get_page = nowplaying.wikiclient.get_page_async
-        api_call_count = 0
+        # Verify still only one API call was made (cache hit)
+        assert api_call_count == 1, (
+            f"Expected 1 API call after second download (cache hit), got {api_call_count}"
+        )
 
-        async def mock_get_page_async(*args, **kwargs):  # pylint: disable=unused-argument
-            nonlocal api_call_count
-            api_call_count += 1
-            logging.debug("Mock Wikipedia API call #%d", api_call_count)
-            page = nowplaying.wikiclient.WikiPage(entity="Q11647", lang="en")
-            page.data = {
-                "claims": {},
-                "description": "American industrial rock band",
-            }
-            return page
-
-        # Replace the method with our mock
-        nowplaying.wikiclient.get_page_async = mock_get_page_async
-
-        try:
-            # First call - should hit API and cache result
-            result1 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["wikimedia"]
+        # Both results should be consistent
+        assert (result1 is None) == (result2 is None)
+        if result1:  # Only test if we got data back
+            logging.info("Wikimedia API cache verified: 1 API call for 2 downloads")
+            assert result1 == result2
+        else:
+            logging.info(
+                "Wikimedia API cache test completed - cache working regardless of data found"
             )
 
-            # Verify one API call was made
-            assert api_call_count == 1, (
-                f"Expected 1 API call after first download, got {api_call_count}"
-            )
-
-            # Second call - should use cached result, no additional API call
-            result2 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["wikimedia"]
-            )
-
-            # Verify still only one API call was made (cache hit)
-            assert api_call_count == 1, (
-                f"Expected 1 API call after second download (cache hit), got {api_call_count}"
-            )
-
-            # Both results should be consistent
-            assert (result1 is None) == (result2 is None)
-            if result1:  # Only test if we got data back
-                logging.info("Wikimedia API cache verified: 1 API call for 2 downloads")
-                assert result1 == result2
-            else:
-                logging.info(
-                    "Wikimedia API cache test completed - cache working regardless of data found"
-                )
-
-        finally:
-            # Restore the original method
-            nowplaying.wikiclient.get_page_async = original_get_page
     finally:
-        # Restore original cache
-        nowplaying.apicache.set_cache_instance(original_cache)
+        # Restore the original method
+        nowplaying.wikiclient.get_page_async = original_get_page
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_failure_cache(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
     """test that wikimedia plugin handles cache failures gracefully"""
 
-    # Use isolated cache for this test to ensure clean state
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    config = bootstrap
+    configuresettings("wikimedia", config.cparser)
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins["wikimedia"]
+
+    # Test with a known entity
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "imagecacheartist": "nineinchnails",
+        "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
+    }
+
+    # Mock the Wikipedia API to simulate failures then success
+    original_get_page = nowplaying.wikiclient.get_page_async
+    api_call_count = 0
+
+    async def mock_get_page_with_failure(*args, **kwargs):  # pylint: disable=unused-argument
+        nonlocal api_call_count
+        api_call_count += 1
+        logging.debug("Mock Wikipedia API call #%d", api_call_count)
+
+        if api_call_count == 1:
+            # First call: simulate API failure
+            logging.debug("Simulating Wikipedia API failure on first call")
+            return None
+        # Second call: simulate successful response
+        logging.debug("Simulating successful Wikipedia API response on second call")
+
+        # Return a minimal WikiPage-like object
+        class MockWikiPage:  # pylint: disable=too-few-public-methods
+            """Mock WikiPage for testing."""
+
+            def __init__(self):
+                """Initialize mock WikiPage."""
+                self.entity = "Q11647"
+                self.lang = "en"
+                self.data = {
+                    "extract": "Nine Inch Nails is an American industrial rock band.",
+                    "claims": {},  # Add claims field expected by the plugin
+                }
+                self._images = []
+
+            def images(self, fields=None):  # pylint: disable=unused-argument
+                """Return images for compatibility."""
+                return self._images
+
+            @staticmethod
+            def some_method():
+                """Add method to meet pylint requirement."""
+                return True
+
+        return MockWikiPage()
+
+    # Replace the method with our mock
+    nowplaying.wikiclient.get_page_async = mock_get_page_with_failure
 
     try:
-        config = bootstrap
-        configuresettings("wikimedia", config.cparser)
-        imagecaches, plugins = configureplugins(config)
+        # First call - API fails, should return empty dict and NOT cache the failure
+        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
 
-        plugin = plugins["wikimedia"]
+        assert api_call_count == 1, (
+            f"Expected 1 API call after first download, got {api_call_count}"
+        )
+        assert result1 == {}, "Expected empty dict result from failed Wikipedia API call"
 
-        # Test with a known entity
-        metadata = {
-            "artist": "Nine Inch Nails",
-            "imagecacheartist": "nineinchnails",
-            "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
-        }
+        # Second call - should retry (failure not cached) and succeed
+        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
 
-        # Mock the Wikipedia API to simulate failures then success
-        original_get_page = nowplaying.wikiclient.get_page_async
-        api_call_count = 0
+        assert api_call_count == 2, (
+            f"Expected 2 API calls after second download (retry after failure), "
+            f"got {api_call_count}"
+        )
+        assert result2 is not None, "Expected successful result from second Wikipedia API call"
 
-        async def mock_get_page_with_failure(*args, **kwargs):  # pylint: disable=unused-argument
-            nonlocal api_call_count
-            api_call_count += 1
-            logging.debug("Mock Wikipedia API call #%d", api_call_count)
+        # Third call - should use cached success result, no additional API call
+        result3 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
 
-            if api_call_count == 1:
-                # First call: simulate API failure
-                logging.debug("Simulating Wikipedia API failure on first call")
-                return None
-            # Second call: simulate successful response
-            logging.debug("Simulating successful Wikipedia API response on second call")
+        assert api_call_count == 2, (
+            f"Expected 2 API calls after third download (cache hit), got {api_call_count}"
+        )
+        assert result2 == result3
+        logging.info("Wikimedia cache failure test passed - failures not cached, successes are")
 
-            # Return a minimal WikiPage-like object
-            class MockWikiPage:  # pylint: disable=too-few-public-methods
-                """Mock WikiPage for testing."""
-
-                def __init__(self):
-                    """Initialize mock WikiPage."""
-                    self.entity = "Q11647"
-                    self.lang = "en"
-                    self.data = {
-                        "extract": "Nine Inch Nails is an American industrial rock band.",
-                        "claims": {},  # Add claims field expected by the plugin
-                    }
-                    self._images = []
-
-                def images(self, fields=None):  # pylint: disable=unused-argument
-                    """Return images for compatibility."""
-                    return self._images
-
-                @staticmethod
-                def some_method():
-                    """Add method to meet pylint requirement."""
-                    return True
-
-            return MockWikiPage()
-
-        # Replace the method with our mock
-        nowplaying.wikiclient.get_page_async = mock_get_page_with_failure
-
-        try:
-            # First call - API fails, should return None and NOT cache the failure
-            result1 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["wikimedia"]
-            )
-
-            # Verify one API call was made and result is empty dict (failure)
-            assert api_call_count == 1, (
-                f"Expected 1 API call after first download, got {api_call_count}"
-            )
-            assert result1 == {}, "Expected empty dict result from failed Wikipedia API call"
-
-            # Second call - should retry (not use cached failure) and succeed
-            result2 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["wikimedia"]
-            )
-
-            # Verify second API call was made (failure wasn't cached)
-            assert api_call_count == 2, (
-                f"Expected 2 API calls after second download (retry after failure), "
-                f"got {api_call_count}"
-            )
-
-            # Should get valid result from successful second call
-            assert result2 is not None, "Expected successful result from second Wikipedia API call"
-
-            # Third call - should use cached success result, no additional API call
-            result3 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["wikimedia"]
-            )
-
-            # Verify still only two API calls (third used cached success)
-            assert api_call_count == 2, (
-                f"Expected 2 API calls after third download (cache hit), got {api_call_count}"
-            )
-            # Results should be consistent for successful calls
-            assert result2 == result3
-            logging.info(
-                "Wikimedia cache failure test passed - failures not cached, successes are"
-            )
-
-        finally:
-            # Restore the original method
-            nowplaying.wikiclient.get_page_async = original_get_page
     finally:
-        # Restore original cache
-        nowplaying.apicache.set_cache_instance(original_cache)
+        nowplaying.wikiclient.get_page_async = original_get_page

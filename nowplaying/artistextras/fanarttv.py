@@ -7,7 +7,7 @@ import logging.handlers
 
 import aiohttp
 
-import nowplaying.apicache
+import nowplaying.datacache
 import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
 from nowplaying.types import TrackMetadata
@@ -61,12 +61,12 @@ class Plugin(ArtistExtrasPlugin):
         async def fetch_func() -> dict[str, str] | None:
             return await self._fetch_async(apikey, artistid)
 
-        return await nowplaying.apicache.cached_fetch(
+        return await nowplaying.datacache.cached_fetch(
             provider="fanarttv",
             artist_name=artist_name,
             endpoint=f"music/{artistid}",  # Use the API endpoint path
             fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
+            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
         )
 
     async def download_async(self, metadata: TrackMetadata | None = None, imagecache=None):

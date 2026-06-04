@@ -5,7 +5,7 @@ import logging
 
 import aiohttp
 
-import nowplaying.apicache
+import nowplaying.datacache
 import nowplaying.wikiclient
 from nowplaying.artistextras import ArtistExtrasPlugin
 
@@ -52,7 +52,7 @@ class Plugin(ArtistExtrasPlugin):
                     max_images=5,  # Limit for performance during live shows
                 )
             except (aiohttp.ClientError, TimeoutError) as err:
-                # Returning None tells apicache to skip caching, so a transient
+                # Returning None tells cached_fetch to skip caching, so a transient
                 # wikidata failure (e.g. 429) does not poison the entry.  Only
                 # network/HTTP errors are caught here so genuine bugs in our
                 # own parsing logic still surface instead of being treated as
@@ -70,12 +70,12 @@ class Plugin(ArtistExtrasPlugin):
                 }
             return None
 
-        cached_result = await nowplaying.apicache.cached_fetch(
+        cached_result = await nowplaying.datacache.cached_fetch(
             provider="wikimedia",
             artist_name=artist_name,
             endpoint=f"{entity}_{lang}",  # Unique per entity + language combination
             fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
+            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
         )
 
         # Reconstruct WikiPage object from cached JSON data if needed

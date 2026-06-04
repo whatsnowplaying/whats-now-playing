@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-import nowplaying.apicache
+import nowplaying.datacache
 import nowplaying.artistextras
 import nowplaying.config
 import nowplaying.utils
@@ -98,12 +98,12 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return await self._fetch_async(apikey, api)
 
         try:
-            return await nowplaying.apicache.cached_fetch(
+            return await nowplaying.datacache.cached_fetch(
                 provider="theaudiodb",
                 artist_name=artist_name,
                 endpoint=api,  # Use full API string so MBID is part of the cache key
                 fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from apicache.py
+                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
             )
         except RateLimitException:
             # Don't cache rate limit responses - return None without caching
@@ -345,7 +345,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         async def fetch_func():
             return artist_data  # Already have the data, just cache it
 
-        return await nowplaying.apicache.cached_fetch(
+        return await nowplaying.datacache.cached_fetch(
             provider="theaudiodb",
             artist_name=artist_name,
             endpoint=f"artist_{artist_data['idArtist']}",

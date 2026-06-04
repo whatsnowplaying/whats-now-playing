@@ -3,7 +3,7 @@
 
 import logging
 
-import nowplaying.apicache
+import nowplaying.datacache
 import nowplaying.discogsclient
 import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
@@ -78,12 +78,12 @@ class Plugin(ArtistExtrasPlugin):
             return result
 
         try:
-            cached_result = await nowplaying.apicache.cached_fetch(
+            cached_result = await nowplaying.datacache.cached_fetch(
                 provider="discogs",
                 artist_name=artist_name,
                 endpoint=f"search_{search_type}_{album_title}",
                 fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from apicache.py
+                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.error(
@@ -135,12 +135,12 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         try:
-            cached_result = await nowplaying.apicache.cached_fetch(
+            cached_result = await nowplaying.datacache.cached_fetch(
                 provider="discogs",
                 artist_name=artist_name,
                 endpoint=f"artist_{artist_id}",
                 fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from apicache.py
+                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.error(
