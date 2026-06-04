@@ -82,12 +82,17 @@ class MigrationManager:
                             # Migrate to new cache
                             # Create identifier from URL for new API
                             identifier = f"legacy_api_{abs(hash(url)) % 1000000}"
+                            raw = (
+                                response_data.encode()
+                                if isinstance(response_data, str)
+                                else response_data
+                            )
                             success = await self.storage.store(
                                 url=url,
                                 identifier=identifier,
                                 data_type=data_type,
                                 provider=provider,
-                                data_value=response_data,
+                                data_value=raw,
                                 ttl_seconds=ttl_seconds,
                                 metadata={
                                     "migrated_from": "apicache",

@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 
 import httpx
+import orjson
 import pytest
 import pytest_asyncio
 import respx
@@ -265,7 +266,8 @@ async def test_api_response_caching_integration(temp_datacache):  # pylint: disa
 
         assert result is not None
         data, metadata = result
-        assert data == test_bio_data
+        assert isinstance(data, bytes)
+        assert orjson.loads(data) == test_bio_data
         assert metadata["language"] == "en"
         assert metadata["source"] == "test_api"
 
@@ -412,7 +414,7 @@ async def test_fill_queue_respects_maxcount(temp_datacache):  # pylint: disable=
 
     # Drain the pending queue without making HTTP calls — count items directly
     queue_depth = 0
-    while await temp_datacache.client.storage.get_next_request() is not None:
+    while await temp_datacache.client.queue.get_next_request() is not None:
         queue_depth += 1
     assert queue_depth == 2
 

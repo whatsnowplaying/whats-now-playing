@@ -10,6 +10,7 @@ from pathlib import Path
 
 import aiosqlite
 import httpx
+import orjson
 import pytest
 import pytest_asyncio
 import respx
@@ -85,7 +86,7 @@ async def test_get_or_fetch_immediate_false_queues_request(temp_client):  # pyli
     assert result is None
 
     # Should have queued the request
-    request = await temp_client.storage.get_next_request()
+    request = await temp_client.queue.get_next_request()
     assert request is not None
     assert request["request_key"] == "fetch_url"
     assert request["params"]["url"] == test_url
@@ -164,7 +165,7 @@ async def test_queue_url_fetch(temp_client):  # pylint: disable=redefined-outer-
     assert success is True
 
     # Verify request was queued
-    request = await temp_client.storage.get_next_request()
+    request = await temp_client.queue.get_next_request()
     assert request is not None
     assert request["priority"] == 1
     assert request["params"]["url"] == "https://example.com/queue.jpg"
@@ -195,7 +196,8 @@ async def test_fetch_and_store_json_response(temp_client):  # pylint: disable=re
 
         assert result is not None
         data, _metadata = result
-        assert data == test_data
+        assert isinstance(data, bytes)
+        assert orjson.loads(data) == test_data
 
         # Verify stored in cache
         cached = await temp_client.storage.retrieve_by_url("https://api.example.com/test.json")
@@ -304,7 +306,7 @@ async def test_process_queue_single_request(temp_client):  # pylint: disable=red
     url = "https://example.com/process.jpg"
     expected_data = b"processed_data"
 
-    await temp_client.storage.queue_request(
+    await temp_client.queue.queue_request(
         provider="test",
         request_key="fetch_url",
         params={
@@ -360,7 +362,7 @@ async def test_process_queue_fetch_and_store_exception(  # pylint: disable=redef
 
     monkeypatch.setattr(temp_client, "_fetch_and_store", _boom)
 
-    await temp_client.storage.queue_request(
+    await temp_client.queue.queue_request(
         provider="test",
         request_key="fetch_url",
         params={
@@ -398,7 +400,7 @@ async def test_process_queue_fetch_and_store_exception(  # pylint: disable=redef
 async def test_process_queue_unknown_request_key(temp_client):  # pylint: disable=redefined-outer-name
     """Test processing request with unknown request key"""
     # Queue request with unknown key
-    await temp_client.storage.queue_request(
+    await temp_client.queue.queue_request(
         provider="test",
         request_key="unknown_operation",
         params={"test": "data"},
@@ -501,7 +503,7 @@ async def test_process_queue_all_failed_drains_queue(temp_client):  # pylint: di
         "https://example.com/fail3.jpg",
     ]
     for url in urls:
-        await temp_client.storage.queue_request(
+        await temp_client.queue.queue_request(
             provider="test",
             request_key="fetch_url",
             params={
@@ -527,7 +529,7 @@ async def test_process_queue_all_failed_drains_queue(temp_client):  # pylint: di
     assert stats["succeeded"] == 0
 
     # Queue should be empty — all items were marked failed
-    next_request = await temp_client.storage.get_next_request()
+    next_request = await temp_client.queue.get_next_request()
     assert next_request is None
 
 

@@ -2,7 +2,7 @@
 Unit tests for datacache storage layer.
 
 Tests the core URL-based storage functionality, database schema,
-randomimage support, and multiprocess queue operations.
+and randomimage support.
 """
 
 import asyncio
@@ -10,6 +10,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import orjson
 import pytest
 import pytest_asyncio
 
@@ -69,21 +70,29 @@ def test_maintenance_cleanup_expired():
         nowplaying.datacache.storage.run_datacache_maintenance(temp_path)
 
         now = int(time.time())
+        # Write blob files so cleanup_expired can unlink them
+        blobs_dir = temp_path / "blobs"
+        blobs_dir.mkdir()
+        expired_blob = blobs_dir / "expired.bin"
+        valid_blob = blobs_dir / "valid.bin"
+        expired_blob.write_bytes(b"expired_data")
+        valid_blob.write_bytes(b"valid_data")
+
         with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
             conn.execute(
                 """
                 INSERT INTO cached_data
-                (url, cache_key, identifier, data_type, provider, data_value, metadata,
+                (url, cachekey, identifier, data_type, provider, file_path, metadata,
                  created_at, expires_at, last_accessed, data_size)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     "https://example.com/expired.jpg",
-                    "test_thumbnail_test_expired",
+                    "uuid-expired",
                     "test",
                     "thumbnail",
                     "test",
-                    b"expired_data",
+                    "blobs/expired.bin",
                     "{}",
                     now - 3600,
                     now - 1800,  # Expired 30 minutes ago
@@ -94,17 +103,17 @@ def test_maintenance_cleanup_expired():
             conn.execute(
                 """
                 INSERT INTO cached_data
-                (url, cache_key, identifier, data_type, provider, data_value, metadata,
+                (url, cachekey, identifier, data_type, provider, file_path, metadata,
                  created_at, expires_at, last_accessed, data_size)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     "https://example.com/valid.jpg",
-                    "test_thumbnail_test_valid",
+                    "uuid-valid",
                     "test",
                     "thumbnail",
                     "test",
-                    b"valid_data",
+                    "blobs/valid.bin",
                     "{}",
                     now,
                     now + 3600,
@@ -351,7 +360,7 @@ async def test_ttl_expiration(temp_storage):  # pylint: disable=redefined-outer-
 
 @pytest.mark.asyncio
 async def test_data_serialization_json(temp_storage):  # pylint: disable=redefined-outer-name
-    """Test JSON data serialization"""
+    """Test JSON stored as bytes; callers decode"""
     url = "https://example.com/json"
     test_data = {"key": "value", "list": [1, 2, 3]}
 
@@ -360,7 +369,7 @@ async def test_data_serialization_json(temp_storage):  # pylint: disable=redefin
         identifier="json_test",
         data_type="api_data",
         provider="test",
-        data_value=test_data,
+        data_value=orjson.dumps(test_data),
         ttl_seconds=3600,
     )
     assert success is True
@@ -368,7 +377,7 @@ async def test_data_serialization_json(temp_storage):  # pylint: disable=redefin
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
     data, _metadata = result
-    assert data == test_data
+    assert orjson.loads(data) == test_data
 
 
 @pytest.mark.asyncio
@@ -391,88 +400,6 @@ async def test_data_serialization_binary(temp_storage):  # pylint: disable=redef
     assert result is not None
     data, _metadata = result
     assert data == test_data
-
-
-@pytest.mark.asyncio
-async def test_queue_request(temp_storage):  # pylint: disable=redefined-outer-name
-    """Test request queuing functionality"""
-    # Queue a request
-    success = await temp_storage.queue_request(
-        provider="test_provider",
-        request_key="fetch_url",
-        params={"url": "https://example.com/test.jpg", "timeout": 30},
-        priority=1,  # immediate
-    )
-    assert success is True
-
-    # Queue duplicate request (should return False)
-    success = await temp_storage.queue_request(
-        provider="test_provider",
-        request_key="fetch_url",
-        params={"url": "https://example.com/test.jpg", "timeout": 30},
-        priority=1,
-    )
-    assert success is False
-
-
-@pytest.mark.asyncio
-async def test_get_next_request_priority_order(temp_storage):  # pylint: disable=redefined-outer-name
-    """Test request retrieval respects priority order"""
-    # Queue batch request first
-    await temp_storage.queue_request(
-        provider="test",
-        request_key="fetch_url",
-        params={"url": "https://example.com/batch.jpg"},
-        priority=2,  # batch
-    )
-
-    # Queue immediate request second
-    await temp_storage.queue_request(
-        provider="test",
-        request_key="fetch_url",
-        params={"url": "https://example.com/immediate.jpg"},
-        priority=1,  # immediate
-    )
-
-    # Should get immediate priority first
-    request = await temp_storage.get_next_request()
-    assert request is not None
-    assert request["priority"] == 1
-    assert "immediate.jpg" in request["params"]["url"]
-
-    # Should get batch priority next
-    request = await temp_storage.get_next_request()
-    assert request is not None
-    assert request["priority"] == 2
-    assert "batch.jpg" in request["params"]["url"]
-
-    # No more requests
-    request = await temp_storage.get_next_request()
-    assert request is None
-
-
-@pytest.mark.asyncio
-async def test_complete_request(temp_storage):  # pylint: disable=redefined-outer-name
-    """Test request completion"""
-    # Queue and get a request
-    await temp_storage.queue_request(
-        provider="test",
-        request_key="test_request",
-        params={"test": "data"},
-        priority=1,
-    )
-
-    request = await temp_storage.get_next_request()
-    assert request is not None
-    request_id = request["request_id"]
-
-    # Complete successfully
-    success = await temp_storage.complete_request(request_id, success=True)
-    assert success is True
-
-    # Should no longer be available
-    next_request = await temp_storage.get_next_request()
-    assert next_request is None
 
 
 @pytest.mark.asyncio

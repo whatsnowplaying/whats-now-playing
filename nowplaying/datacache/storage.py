@@ -1,14 +1,4 @@
-"""
-Generic storage layer for datacache module.
-
-Provides unified storage for different data types:
-- JSON/structured data
-- Binary data (images, etc.)
-- Metadata and cache control information
-
-Built on aiosqlite for async operations and better performance.
-Uses URL-based keys following imagecache pattern for randomimage support.
-"""
+"""Generic async storage layer for datacache: JSON, binary blobs, and metadata with TTL."""
 
 import asyncio
 import contextlib
@@ -32,12 +22,6 @@ import nowplaying.utils.sqlite
 _schema_lock = asyncio.Lock()
 
 
-def _generate_cache_key(identifier: str, data_type: str, provider: str, url: str) -> str:
-    """Generate a stable cache key for WebSocket interface compatibility."""
-    url_hash = hashlib.sha256(url.encode()).hexdigest()[:8]
-    return f"{identifier}_{data_type}_{provider}_{url_hash}"
-
-
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
     """
     Get the filesystem path for storing a binary blob.
@@ -52,13 +36,7 @@ def _get_blob_path(cache_dir: Path, url: str) -> Path:
 
 
 class DataStorage:
-    """
-    Async storage layer for cached data.
-
-    Handles all data types uniformly with proper TTL management
-    and automatic expired item cleanup. Uses URL-based primary keys
-    following imagecache pattern.
-    """
+    """Async storage layer for cached data with TTL management and URL-based primary keys."""
 
     def __init__(self, database_path: Path | None = None):
         self.database_path = get_datacache_path(database_path)
@@ -75,10 +53,9 @@ class DataStorage:
                 self._initialized = True
 
     async def _create_schema(self) -> None:
-        """Create the database schema using sync method with lock"""
+        """Create the database schema without blocking the event loop."""
         async with _schema_lock:
-            # Use the sync schema creation to avoid duplication
-            _ensure_datacache_schema(self.database_path)
+            await asyncio.to_thread(_ensure_datacache_schema, self.database_path)
 
     async def store(  # pylint: disable=too-many-arguments,too-many-locals
         self,
@@ -86,71 +63,42 @@ class DataStorage:
         identifier: str,
         data_type: str,
         provider: str,
-        data_value: Any,
+        data_value: bytes,
         ttl_seconds: int,
         metadata: dict | None = None,
     ) -> bool:
-        """
-        Store data in the cache.
-
-        Args:
-            url: Source URL (primary key, handles deduplication)
-            identifier: Artist identifier (for randomimage lookups)
-            data_type: Type of data (thumbnail, logo, banner, etc.)
-            provider: Provider name (theaudiodb, discogs, etc.)
-            data_value: The actual data (will be serialized appropriately)
-            ttl_seconds: Time to live in seconds
-            metadata: Optional metadata about the cached item
-
-        Returns:
-            True if stored successfully, False otherwise
-        """
+        """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps)."""
         await self.initialize()
+
+        blob_path = _get_blob_path(self.database_path.parent, url)
+        blob_written = False
 
         try:
             now = time.time()
             expires_at = now + ttl_seconds
             metadata_json = orjson.dumps(metadata).decode() if metadata else None
-            cache_key = _generate_cache_key(identifier, data_type, provider, url)
             new_cachekey = str(uuid.uuid4())
-            data_size = len(data_value) if isinstance(data_value, bytes) else 0
 
-            # Binary data goes to disk; structured data stays in SQLite
-            file_path_str: str | None = None
-            serialized_data: bytes | None = None
-
-            if isinstance(data_value, bytes):
-                blob_path = _get_blob_path(self.database_path.parent, url)
-                blob_path.parent.mkdir(parents=True, exist_ok=True)
-                async with aiofiles.open(blob_path, "wb") as fh:
-                    await fh.write(data_value)
-                file_path_str = str(blob_path.relative_to(self.database_path.parent))
-            elif isinstance(data_value, (dict, list)):
-                # orjson returns bytes; handles nested bytes as base64 automatically
-                serialized_data = orjson.dumps(data_value)
-                data_size = len(serialized_data)  # type: ignore[arg-type]
-            elif isinstance(data_value, str):
-                serialized_data = data_value.encode("utf-8")
-                data_size = len(serialized_data)
-            else:
-                serialized_data = orjson.dumps(data_value)
-                data_size = len(serialized_data)  # type: ignore[arg-type]
+            blob_path.parent.mkdir(parents=True, exist_ok=True)
+            async with aiofiles.open(blob_path, "wb") as fh:
+                await fh.write(data_value)
+            blob_written = True
+            file_path_str = str(blob_path.relative_to(self.database_path.parent))
+            data_size = len(data_value)
 
             async def _do_store() -> None:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     await connection.execute(
                         """
                         INSERT INTO cached_data
-                        (url, cachekey, cache_key, identifier, data_type, provider,
-                         data_value, file_path, metadata,
+                        (url, cachekey, identifier, data_type, provider,
+                         file_path, metadata,
                          created_at, expires_at, last_accessed, data_size)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(url) DO UPDATE SET
-                          cache_key = excluded.cache_key,
                           identifier = excluded.identifier,
                           data_type = excluded.data_type,
                           provider = excluded.provider,
-                          data_value = excluded.data_value,
                           file_path = excluded.file_path,
                           metadata = excluded.metadata,
                           expires_at = excluded.expires_at,
@@ -160,11 +108,9 @@ class DataStorage:
                         (
                             url,
                             new_cachekey,
-                            cache_key,
                             identifier,
                             data_type,
                             provider,
-                            serialized_data,
                             file_path_str,
                             metadata_json,
                             now,
@@ -180,6 +126,9 @@ class DataStorage:
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to store cached data for URL %s: %s", url, error)
+            if blob_written:
+                with contextlib.suppress(OSError):
+                    blob_path.unlink()
             return False
 
     async def retrieve_by_url(self, url: str) -> tuple[Any, dict] | None:
@@ -203,7 +152,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata
+                        SELECT file_path, metadata
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -231,34 +180,24 @@ class DataStorage:
             if result is None:
                 return None
 
-            data_value, file_path_str, metadata_json = result  # pylint: disable=unpacking-non-sequence
+            file_path_str, metadata_json = result  # pylint: disable=unpacking-non-sequence
 
-            if file_path_str:
-                full_path = self.database_path.parent / file_path_str
-                try:
-                    async with aiofiles.open(full_path, "rb") as fh:
-                        data = await fh.read()
-                except FileNotFoundError:
-                    logging.warning(
-                        "Blob file missing for cached URL %s, deleting orphaned row", url
-                    )
+            full_path = self.database_path.parent / file_path_str
+            try:
+                async with aiofiles.open(full_path, "rb") as fh:
+                    data = await fh.read()
+            except FileNotFoundError:
+                logging.warning("Blob file missing for cached URL %s, deleting orphaned row", url)
 
-                    async def _do_delete_url() -> None:
-                        async with aiosqlite.connect(
-                            str(self.database_path), timeout=30.0
-                        ) as connection:
-                            await connection.execute(
-                                "DELETE FROM cached_data WHERE url = ?", (url,)
-                            )
-                            await connection.commit()
+                async def _do_delete_url() -> None:
+                    async with aiosqlite.connect(
+                        str(self.database_path), timeout=30.0
+                    ) as connection:
+                        await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
+                        await connection.commit()
 
-                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_url)
-                    return None
-            else:
-                try:
-                    data = orjson.loads(data_value)
-                except orjson.JSONDecodeError:
-                    data = data_value
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_url)
+                return None
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return data, metadata
@@ -292,7 +231,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata, url
+                        SELECT file_path, metadata, url
                         FROM cached_data
                         WHERE cachekey = ? AND expires_at > ?
                         """,
@@ -319,34 +258,28 @@ class DataStorage:
             if result is None:
                 return None
 
-            data_value, file_path_str, metadata_json, url = result  # pylint: disable=unpacking-non-sequence
+            file_path_str, metadata_json, url = result  # pylint: disable=unpacking-non-sequence
 
-            if file_path_str:
-                full_path = self.database_path.parent / file_path_str
-                try:
-                    async with aiofiles.open(full_path, "rb") as fh:
-                        data = await fh.read()
-                except FileNotFoundError:
-                    logging.warning(
-                        "Blob file missing for cachekey %s, deleting orphaned row", cachekey
-                    )
+            full_path = self.database_path.parent / file_path_str
+            try:
+                async with aiofiles.open(full_path, "rb") as fh:
+                    data = await fh.read()
+            except FileNotFoundError:
+                logging.warning(
+                    "Blob file missing for cachekey %s, deleting orphaned row", cachekey
+                )
 
-                    async def _do_delete_cachekey() -> None:
-                        async with aiosqlite.connect(
-                            str(self.database_path), timeout=30.0
-                        ) as connection:
-                            await connection.execute(
-                                "DELETE FROM cached_data WHERE cachekey = ?", (cachekey,)
-                            )
-                            await connection.commit()
+                async def _do_delete_cachekey() -> None:
+                    async with aiosqlite.connect(
+                        str(self.database_path), timeout=30.0
+                    ) as connection:
+                        await connection.execute(
+                            "DELETE FROM cached_data WHERE cachekey = ?", (cachekey,)
+                        )
+                        await connection.commit()
 
-                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_cachekey)
-                    return None
-            else:
-                try:
-                    data = orjson.loads(data_value)
-                except orjson.JSONDecodeError:
-                    data = data_value
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_cachekey)
+                return None
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return data, metadata, url
@@ -359,31 +292,23 @@ class DataStorage:
         self, row: tuple[Any, ...], identifier: str, data_type: str
     ) -> tuple[Any, dict, str] | None:
         """Load blob data for a random-image row, deleting orphaned DB rows on FileNotFoundError."""
-        data_value, file_path_str, metadata_json, url = row
-        if file_path_str:
-            full_path = self.database_path.parent / file_path_str
-            try:
-                async with aiofiles.open(full_path, "rb") as fh:
-                    data = await fh.read()
-            except FileNotFoundError:
-                logging.warning(
-                    "Blob file missing for %s/%s, deleting orphaned row", identifier, data_type
-                )
+        file_path_str, metadata_json, url = row
+        full_path = self.database_path.parent / file_path_str
+        try:
+            async with aiofiles.open(full_path, "rb") as fh:
+                data = await fh.read()
+        except FileNotFoundError:
+            logging.warning(
+                "Blob file missing for %s/%s, deleting orphaned row", identifier, data_type
+            )
 
-                async def _do_delete_identifier() -> None:
-                    async with aiosqlite.connect(
-                        str(self.database_path), timeout=30.0
-                    ) as connection:
-                        await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
-                        await connection.commit()
+            async def _do_delete_identifier() -> None:
+                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
+                    await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
+                    await connection.commit()
 
-                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_identifier)
-                return None
-        else:
-            try:
-                data = orjson.loads(data_value)
-            except orjson.JSONDecodeError:
-                data = data_value
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_identifier)
+            return None
         metadata = orjson.loads(metadata_json) if metadata_json else {}
         return data, metadata, url
 
@@ -435,8 +360,7 @@ class DataStorage:
                 nonlocal rows
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     if random:
-                        # Fetch full blob info for the single random item we're about to use
-                        select_cols = "data_value, file_path, metadata, url"
+                        select_cols = "file_path, metadata, url"
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
@@ -472,9 +396,9 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    # random: (data_value, file_path, metadata, url) → url at col 3
+                    # random: (file_path, metadata, url) → url at col 2
                     # non-random: (metadata, url) → url at col 1
-                    url_col = 3 if random else 1
+                    url_col = 2 if random else 1
                     for row in rows:
                         await connection.execute(
                             """
@@ -561,172 +485,6 @@ class DataStorage:
             logging.error("Failed to get cache keys for %s/%s: %s", identifier, data_type, error)
             return []
 
-    async def queue_request(
-        self,
-        provider: str,
-        request_key: str,
-        params: dict[str, Any],
-        priority: int = 2,  # 1=immediate, 2=batch
-    ) -> bool:
-        """
-        Add a request to the database-backed queue.
-
-        Args:
-            provider: Provider name (theaudiodb, discogs, etc.)
-            request_key: Type of request (artist_lookup, image_fetch, etc.)
-            params: Request parameters
-            priority: Request priority (1=immediate, 2=batch)
-
-        Returns:
-            True if queued successfully, False otherwise
-        """
-        await self.initialize()
-
-        try:
-            # Generate unique request ID
-            params_str = orjson.dumps(params, option=orjson.OPT_SORT_KEYS).decode()
-            request_id = (
-                f"{provider}:{request_key}:{hashlib.sha256(params_str.encode()).hexdigest()[:16]}"
-            )
-            now = time.time()
-            queued = False
-
-            async def _do_queue() -> None:
-                nonlocal queued
-                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                    # Check if request already exists
-                    cursor = await connection.execute(
-                        "SELECT request_id FROM pending_requests WHERE request_id = ?",
-                        (request_id,),
-                    )
-                    if await cursor.fetchone():
-                        logging.debug("Request already queued: %s", request_id)
-                        return
-
-                    # Insert new request
-                    await connection.execute(
-                        """
-                        INSERT INTO pending_requests
-                        (request_id, provider, request_key, params, priority, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        (request_id, provider, request_key, params_str, priority, now),
-                    )
-                    await connection.commit()
-                    queued = True
-                    logging.debug("Request queued: %s", request_id)
-
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_queue)
-            return queued
-
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to queue request: %s", error)
-            return False
-
-    async def get_next_request(self, provider: str | None = None) -> dict[str, Any] | None:
-        """
-        Get the next pending request from the database queue.
-
-        Args:
-            provider: Optional provider filter
-
-        Returns:
-            Request dictionary or None if no requests available
-        """
-        await self.initialize()
-
-        try:
-            result: dict[str, Any] | None = None
-
-            async def _do_get_next() -> None:
-                nonlocal result
-                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                    if provider:
-                        query = """
-                            SELECT request_id, provider, request_key, params, priority, created_at
-                            FROM pending_requests
-                            WHERE status = 'pending' AND provider = ?
-                            ORDER BY priority ASC, created_at ASC
-                            LIMIT 1
-                        """
-                        cursor = await connection.execute(query, (provider,))
-                    else:
-                        query = """
-                            SELECT request_id, provider, request_key, params, priority, created_at
-                            FROM pending_requests
-                            WHERE status = 'pending'
-                            ORDER BY priority ASC, created_at ASC
-                            LIMIT 1
-                        """
-                        cursor = await connection.execute(query)
-
-                    row = await cursor.fetchone()
-                    if not row:
-                        return
-
-                    req_id, req_provider, req_key, params_str, req_priority, created_at = row
-
-                    # Mark as processing
-                    await connection.execute(
-                        """
-                        UPDATE pending_requests
-                        SET status = 'processing', attempts = attempts + 1, last_attempt = ?
-                        WHERE request_id = ?
-                        """,
-                        (time.time(), req_id),
-                    )
-                    await connection.commit()
-
-                    result = {
-                        "request_id": req_id,
-                        "provider": req_provider,
-                        "request_key": req_key,
-                        "params": orjson.loads(params_str),
-                        "priority": req_priority,
-                        "created_at": created_at,
-                    }
-
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_next)
-            return result
-
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to get next request: %s", error)
-            return None
-
-    async def complete_request(self, request_id: str, success: bool = True) -> bool:
-        """
-        Mark a request as completed or failed.
-
-        Args:
-            request_id: ID of the request to complete
-            success: Whether the request succeeded
-
-        Returns:
-            True if updated successfully
-        """
-        await self.initialize()
-
-        try:
-            status = "completed" if success else "failed"
-            updated = False
-
-            async def _do_complete() -> None:
-                nonlocal updated
-                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                    cursor = await connection.execute(
-                        "UPDATE pending_requests SET status = ? WHERE request_id = ?",
-                        (status, request_id),
-                    )
-                    await connection.commit()
-                    updated = cursor.rowcount > 0
-
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_complete)
-            return updated
-
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to complete request %s: %s", request_id, error)
-            return False
-
     async def cleanup_expired(self) -> int:
         """Remove expired entries. Returns number of items cleaned up."""
         await self.initialize()
@@ -798,7 +556,7 @@ class DataStorage:
         """
         await self.initialize()
 
-        stats = {"expired_cleaned": 0, "vacuum_performed": False, "errors": 0}
+        stats = {"expired_cleaned": 0, "vacuum_performed": 0, "errors": 0}
 
         try:
             # Clean up expired entries
@@ -810,7 +568,7 @@ class DataStorage:
 
             # Vacuum database to reclaim space
             await self.vacuum()
-            stats["vacuum_performed"] = True
+            stats["vacuum_performed"] = 1
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Database maintenance failed: %s", error)
@@ -858,7 +616,7 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
         "expired_cleaned": 0,
         "requests_cleaned": 0,
         "requests_recovered": 0,
-        "vacuum_performed": False,
+        "vacuum_performed": 0,
         "errors": 0,
     }
 
@@ -869,17 +627,39 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
         now = time.time()
         one_day_ago = now - (24 * 3600)
 
-        def _do_maintenance() -> tuple[int, int, int, list[str]]:
+        def _do_maintenance() -> tuple[int, int, int]:
             with nowplaying.utils.sqlite.sqlite_connection(str(database_path)) as conn:
                 rows = conn.execute(
-                    "SELECT file_path FROM cached_data"
+                    "SELECT url, file_path FROM cached_data"
                     " WHERE expires_at <= ? AND file_path IS NOT NULL",
                     (now,),
                 ).fetchall()
-                fps = [row[0] for row in rows]
 
-                cursor = conn.execute("DELETE FROM cached_data WHERE expires_at <= ?", (now,))
-                expired = cursor.rowcount
+                # Unlink blobs before deleting rows so a failed unlink leaves the
+                # row intact for the next maintenance cycle to retry.
+                urls_to_delete: list[str] = []
+                for url, fp in rows:
+                    try:
+                        (database_path.parent / fp).unlink()
+                        urls_to_delete.append(url)
+                    except FileNotFoundError:
+                        urls_to_delete.append(url)
+                    except OSError:
+                        logging.warning("Failed to unlink blob %s; row kept for next cleanup", fp)
+
+                if urls_to_delete:
+                    placeholders = ",".join("?" * len(urls_to_delete))
+                    conn.execute(
+                        f"DELETE FROM cached_data WHERE url IN ({placeholders})",
+                        urls_to_delete,
+                    )
+
+                # Also delete rows with no blob that are expired
+                cursor = conn.execute(
+                    "DELETE FROM cached_data WHERE expires_at <= ? AND file_path IS NULL",
+                    (now,),
+                )
+                expired = len(urls_to_delete) + cursor.rowcount
 
                 cursor = conn.execute(
                     "DELETE FROM pending_requests WHERE status IN ('completed', 'failed') "
@@ -895,7 +675,7 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
                 )
                 recovered = cursor.rowcount
 
-                return expired, requests_cleaned, recovered, fps
+                return expired, requests_cleaned, recovered
 
         def _do_vacuum() -> None:
             # VACUUM must run outside a transaction — use isolation_level=None (autocommit)
@@ -904,17 +684,14 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
             ) as conn:
                 conn.execute("VACUUM")
 
-        expired_count, requests_count, recovered_count, file_paths = (
+        expired_count, requests_count, recovered_count = (
             nowplaying.utils.sqlite.retry_sqlite_operation(_do_maintenance)
         )
-        for fp in file_paths:
-            with contextlib.suppress(OSError):
-                (database_path.parent / fp).unlink()
         nowplaying.utils.sqlite.retry_sqlite_operation(_do_vacuum)
         stats["expired_cleaned"] = expired_count
         stats["requests_cleaned"] = requests_count
         stats["requests_recovered"] = recovered_count
-        stats["vacuum_performed"] = True
+        stats["vacuum_performed"] = 1
 
         if stats["expired_cleaned"] > 0:
             logging.info("Cleaned up %d expired datacache entries", stats["expired_cleaned"])
@@ -947,13 +724,11 @@ def _ensure_datacache_schema(database_path: Path) -> None:
             schema_sql = """
             CREATE TABLE IF NOT EXISTS cached_data (
                 url TEXT PRIMARY KEY,        -- Natural key, handles URL deduplication
-                cachekey TEXT UNIQUE,        -- Opaque UUID for external callers (like diskcache keys)
-                cache_key TEXT NOT NULL,     -- Stable hash-based key for internal use
+                cachekey TEXT UNIQUE,        -- Opaque UUID for WebSocket/external callers
                 identifier TEXT NOT NULL,    -- Artist name (e.g., "daft_punk")
                 data_type TEXT NOT NULL,     -- "thumbnail", "logo", "banner", etc.
                 provider TEXT NOT NULL,      -- "theaudiodb", "discogs", etc.
-                data_value BLOB,            -- Structured data (JSON, text); NULL if file_path set
-                file_path TEXT,             -- Relative path for binary blobs; NULL if data_value set
+                file_path TEXT NOT NULL,     -- Relative path to blob file
                 metadata TEXT,              -- JSON metadata about the cached item
                 created_at REAL NOT NULL,
                 expires_at REAL NOT NULL,
@@ -976,7 +751,6 @@ def _ensure_datacache_schema(database_path: Path) -> None:
 
             CREATE INDEX IF NOT EXISTS idx_identifier_type ON cached_data(identifier, data_type);
             CREATE INDEX IF NOT EXISTS idx_cachekey ON cached_data(cachekey);
-            CREATE INDEX IF NOT EXISTS idx_cache_key ON cached_data(cache_key);
             CREATE INDEX IF NOT EXISTS idx_provider ON cached_data(provider);
             CREATE INDEX IF NOT EXISTS idx_expires_at ON cached_data(expires_at);
             CREATE INDEX IF NOT EXISTS idx_last_accessed ON cached_data(last_accessed);

@@ -55,6 +55,7 @@ from pathlib import Path
 
 # Core components
 from .client import DataCacheClient, get_client
+from .pending import RequestQueue
 from .providers import (
     APIProvider,
     DataCacheProviders,
@@ -76,6 +77,7 @@ __all__ = [
     # Low-level components (for advanced use cases)
     "DataCacheClient",  # Core client with get_or_fetch
     "DataStorage",  # Direct storage layer access
+    "RequestQueue",  # Database-backed pending request queue
     "RateLimiter",  # Rate limiting primitives
     "RateLimiterManager",  # Rate limiter management
     # Utility functions
@@ -126,79 +128,3 @@ def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
         Dictionary with maintenance statistics
     """
     return run_datacache_maintenance(cache_dir)
-
-
-# Example integration patterns for artist extras plugins:
-#
-# Pattern 1: Simple immediate fetching
-# async def download_async(self, metadata, imagecache=None):
-#     providers = get_providers()
-#     await providers.initialize()
-#
-#     artist_name = metadata.get("artist", "")
-#     identifier = artist_name.lower().replace(" ", "_")
-#
-#     # Fetch bio immediately
-#     bio_result = await providers.api.cache_artist_bio(
-#         url=f"https://api.provider.com/{artist_name}/bio",
-#         artist_identifier=identifier,
-#         provider="provider_name",
-#         immediate=True
-#     )
-#
-#     if bio_result:
-#         bio_data, _ = bio_result
-#         metadata["artistlongbio"] = bio_data.get("text", "")
-#
-#     return metadata
-#
-# Pattern 2: Mixed immediate + background queuing
-# async def download_async(self, metadata, imagecache=None):
-#     providers = get_providers()
-#     await providers.initialize()
-#
-#     artist_name = metadata.get("artist", "")
-#     identifier = artist_name.lower().replace(" ", "_")
-#
-#     # Fetch critical data immediately
-#     bio_result = await providers.api.cache_artist_bio(
-#         url=f"https://api.provider.com/{artist_name}/bio",
-#         artist_identifier=identifier,
-#         provider="provider_name",
-#         immediate=True
-#     )
-#
-#     # Queue images for background (doesn't block track polling)
-#     image_urls = get_image_urls(artist_name)
-#     for url in image_urls:
-#         await providers.images.cache_artist_thumbnail(
-#             url=url,
-#             artist_identifier=identifier,
-#             provider="provider_name",
-#             immediate=False  # Background queue
-#         )
-#
-#     return metadata
-#
-# Pattern 3: Using randomimage functionality
-# def get_artist_image(artist_name, image_type):
-#     """Get random artist image (sync wrapper for UI)"""
-#     import asyncio
-#
-#     async def _get_image():
-#         providers = get_providers()
-#         await providers.initialize()
-#
-#         identifier = artist_name.lower().replace(" ", "_")
-#         result = await providers.images.get_random_image(
-#             artist_identifier=identifier,
-#             image_type=image_type
-#         )
-#         return result[0] if result else None
-#
-#     try:
-#         loop = asyncio.get_event_loop()
-#         return loop.run_until_complete(_get_image())
-#     except RuntimeError:
-#         # No event loop running, create new one
-#         return asyncio.run(_get_image())

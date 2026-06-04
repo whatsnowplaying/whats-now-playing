@@ -16,6 +16,7 @@ import ssl
 import httpx
 import truststore
 
+from .pending import RequestQueue
 from .queue import RateLimiterManager
 from .storage import DataStorage
 
@@ -33,6 +34,7 @@ class DataCacheClient:
 
     def __init__(self, cache_dir: Path | None = None):
         self.storage = DataStorage(cache_dir)
+        self.queue = RequestQueue(cache_dir)
         self.rate_limiters = RateLimiterManager()
         self._initialized = False
         self._session: httpx.AsyncClient | None = None
@@ -46,12 +48,14 @@ class DataCacheClient:
             if self._initialized:
                 return
             await self.storage.initialize()
+            await self.queue.initialize()
             ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             self._session = httpx.AsyncClient(http2=True, verify=ssl_ctx)
             self._initialized = True
 
     async def close(self) -> None:
         """Close the client and cleanup resources"""
+        self._initialized = False
         if self._session:
             await self._session.aclose()
             self._session = None
@@ -96,7 +100,7 @@ class DataCacheClient:
 
         if not immediate:
             # Queue for background processing
-            await self.storage.queue_request(
+            await self.queue.queue_request(
                 provider=provider,
                 request_key="fetch_url",
                 params={
@@ -141,6 +145,9 @@ class DataCacheClient:
 
         Handles rate limiting and retries automatically.
         """
+        if not self._session:
+            raise RuntimeError("DataCacheClient not initialized - call initialize() first")
+
         # Apply rate limiting
         rate_limiter = self.rate_limiters.get_limiter(provider)
         if not await rate_limiter.acquire():
@@ -148,9 +155,6 @@ class DataCacheClient:
                 "Rate limit acquire timed out for provider %s, dropping request", provider
             )
             return None
-
-        if not self._session:
-            raise RuntimeError("DataCacheClient not initialized - call initialize() first")
 
         # Default TTL based on provider and data type
         if ttl_seconds is None:
@@ -162,15 +166,7 @@ class DataCacheClient:
                 # self._session is guaranteed non-None after the check above
                 response = await self._session.get(url, timeout=httpx.Timeout(timeout))
                 if response.status_code == 200:
-                    # Determine data format based on content type
-                    content_type = response.headers.get("content-type", "").lower()
-
-                    if content_type.startswith("application/json"):
-                        data = response.json()
-                    elif content_type.startswith(("image/", "audio/", "video/")):
-                        data = response.content  # Binary data
-                    else:
-                        data = response.text  # Text data
+                    data = response.content  # callers decode (e.g. orjson.loads) as needed
 
                     # Store in cache
                     success = await self.storage.store(
@@ -188,10 +184,9 @@ class DataCacheClient:
                     else:
                         logging.warning("Failed to cache data from URL: %s", url)
                     return data, metadata or {}
-                if response.status_code == 429:
-                    # Rate limit - wait and retry
+                if response.status_code == 429 and attempt < retries:
                     try:
-                        retry_after = int(response.headers.get("Retry-After", "60"))
+                        retry_after = max(1, int(response.headers.get("Retry-After", "60")))
                     except ValueError:
                         retry_after = 60
                     logging.warning(
@@ -346,7 +341,7 @@ class DataCacheClient:
             True if queued successfully
         """
         await self.initialize()
-        return await self.storage.queue_request(
+        return await self.queue.queue_request(
             provider=provider,
             request_key="fetch_url",
             params={
@@ -400,12 +395,12 @@ class DataCacheClient:
                     logging.warning("Unknown request key: %s", request["request_key"])
                     success = False
 
-                await self.storage.complete_request(request_id, success=success)
+                await self.queue.complete_request(request_id, success=success)
                 return success
 
             except Exception as error:  # pylint: disable=broad-except
                 logging.error("Error processing request %s: %s", request_id, error)
-                await self.storage.complete_request(request_id, success=False)
+                await self.queue.complete_request(request_id, success=False)
                 return False
 
         stats: dict[str, Any] = {"processed": 0, "succeeded": 0, "failed": 0}
@@ -415,7 +410,7 @@ class DataCacheClient:
         while True:
             chunk: list[dict[str, Any]] = []
             for _ in range(max_concurrent):
-                request = await self.storage.get_next_request(provider)
+                request = await self.queue.get_next_request(provider)
                 if not request:
                     break
                 chunk.append(request)
