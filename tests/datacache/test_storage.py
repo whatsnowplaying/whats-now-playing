@@ -403,6 +403,49 @@ async def test_data_serialization_binary(temp_storage):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
+async def test_inline_vs_file_threshold(temp_storage):  # pylint: disable=redefined-outer-name
+    """Small content stored inline in DB; large content written to a blob file"""
+    small_data = b"x" * 100
+    large_data = b"x" * (16 * 1024 + 1)
+
+    await temp_storage.store(
+        url="https://example.com/small",
+        identifier="test",
+        data_type="api",
+        provider="test",
+        data_value=small_data,
+        ttl_seconds=3600,
+    )
+    await temp_storage.store(
+        url="https://example.com/large",
+        identifier="test",
+        data_type="image",
+        provider="test",
+        data_value=large_data,
+        ttl_seconds=3600,
+    )
+
+    db_path = temp_storage.database_path
+    with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
+        small_row = conn.execute(
+            "SELECT data_value, file_path FROM cached_data WHERE url = ?",
+            ("https://example.com/small",),
+        ).fetchone()
+        large_row = conn.execute(
+            "SELECT data_value, file_path FROM cached_data WHERE url = ?",
+            ("https://example.com/large",),
+        ).fetchone()
+
+    assert small_row[0] is not None and small_row[1] is None, "small content should be inline"
+    assert large_row[0] is None and large_row[1] is not None, "large content should be a file"
+
+    small_result = await temp_storage.retrieve_by_url("https://example.com/small")
+    large_result = await temp_storage.retrieve_by_url("https://example.com/large")
+    assert small_result is not None and small_result[0] == small_data
+    assert large_result is not None and large_result[0] == large_data
+
+
+@pytest.mark.asyncio
 async def test_cleanup_expired(temp_storage):  # pylint: disable=redefined-outer-name
     """Test cleanup of expired entries"""
     # Store expired item

@@ -21,6 +21,10 @@ import nowplaying.utils.sqlite
 # Module-level lock for schema operations
 _schema_lock = asyncio.Lock()
 
+# Content ≤ this threshold is stored inline in the DB; larger content goes to a blob file.
+# Production data shows API responses are consistently < 30 KB, images consistently > 16 KB.
+_INLINE_THRESHOLD = 16 * 1024
+
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
     """
@@ -70,7 +74,7 @@ class DataStorage:
         """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps)."""
         await self.initialize()
 
-        blob_path = _get_blob_path(self.database_path.parent, url)
+        blob_path: Path | None = None
         blob_written = False
 
         try:
@@ -78,13 +82,19 @@ class DataStorage:
             expires_at = now + ttl_seconds
             metadata_json = orjson.dumps(metadata).decode() if metadata else None
             new_cachekey = str(uuid.uuid4())
-
-            blob_path.parent.mkdir(parents=True, exist_ok=True)
-            async with aiofiles.open(blob_path, "wb") as fh:
-                await fh.write(data_value)
-            blob_written = True
-            file_path_str = str(blob_path.relative_to(self.database_path.parent))
             data_size = len(data_value)
+
+            if data_size <= _INLINE_THRESHOLD:
+                inline_data: bytes | None = data_value
+                file_path_str: str | None = None
+            else:
+                blob_path = _get_blob_path(self.database_path.parent, url)
+                blob_path.parent.mkdir(parents=True, exist_ok=True)
+                async with aiofiles.open(blob_path, "wb") as fh:
+                    await fh.write(data_value)
+                blob_written = True
+                inline_data = None
+                file_path_str = str(blob_path.relative_to(self.database_path.parent))
 
             async def _do_store() -> None:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
@@ -92,13 +102,14 @@ class DataStorage:
                         """
                         INSERT INTO cached_data
                         (url, cachekey, identifier, data_type, provider,
-                         file_path, metadata,
+                         data_value, file_path, metadata,
                          created_at, expires_at, last_accessed, data_size)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(url) DO UPDATE SET
                           identifier = excluded.identifier,
                           data_type = excluded.data_type,
                           provider = excluded.provider,
+                          data_value = excluded.data_value,
                           file_path = excluded.file_path,
                           metadata = excluded.metadata,
                           expires_at = excluded.expires_at,
@@ -111,6 +122,7 @@ class DataStorage:
                             identifier,
                             data_type,
                             provider,
+                            inline_data,
                             file_path_str,
                             metadata_json,
                             now,
@@ -126,7 +138,7 @@ class DataStorage:
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to store cached data for URL %s: %s", url, error)
-            if blob_written:
+            if blob_written and blob_path:
                 with contextlib.suppress(OSError):
                     blob_path.unlink()
             return False
@@ -152,7 +164,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT file_path, metadata
+                        SELECT data_value, file_path, metadata
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -180,24 +192,31 @@ class DataStorage:
             if result is None:
                 return None
 
-            file_path_str, metadata_json = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json = result  # pylint: disable=unpacking-non-sequence
 
-            full_path = self.database_path.parent / file_path_str
-            try:
-                async with aiofiles.open(full_path, "rb") as fh:
-                    data = await fh.read()
-            except FileNotFoundError:
-                logging.warning("Blob file missing for cached URL %s, deleting orphaned row", url)
+            if file_path_str:
+                full_path = self.database_path.parent / file_path_str
+                try:
+                    async with aiofiles.open(full_path, "rb") as fh:
+                        data = await fh.read()
+                except FileNotFoundError:
+                    logging.warning(
+                        "Blob file missing for cached URL %s, deleting orphaned row", url
+                    )
 
-                async def _do_delete_url() -> None:
-                    async with aiosqlite.connect(
-                        str(self.database_path), timeout=30.0
-                    ) as connection:
-                        await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
-                        await connection.commit()
+                    async def _do_delete_url() -> None:
+                        async with aiosqlite.connect(
+                            str(self.database_path), timeout=30.0
+                        ) as connection:
+                            await connection.execute(
+                                "DELETE FROM cached_data WHERE url = ?", (url,)
+                            )
+                            await connection.commit()
 
-                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_url)
-                return None
+                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_url)
+                    return None
+            else:
+                data = bytes(data_value)
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return data, metadata
@@ -231,7 +250,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT file_path, metadata, url
+                        SELECT data_value, file_path, metadata, url
                         FROM cached_data
                         WHERE cachekey = ? AND expires_at > ?
                         """,
@@ -258,28 +277,31 @@ class DataStorage:
             if result is None:
                 return None
 
-            file_path_str, metadata_json, url = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json, url = result  # pylint: disable=unpacking-non-sequence
 
-            full_path = self.database_path.parent / file_path_str
-            try:
-                async with aiofiles.open(full_path, "rb") as fh:
-                    data = await fh.read()
-            except FileNotFoundError:
-                logging.warning(
-                    "Blob file missing for cachekey %s, deleting orphaned row", cachekey
-                )
+            if file_path_str:
+                full_path = self.database_path.parent / file_path_str
+                try:
+                    async with aiofiles.open(full_path, "rb") as fh:
+                        data = await fh.read()
+                except FileNotFoundError:
+                    logging.warning(
+                        "Blob file missing for cachekey %s, deleting orphaned row", cachekey
+                    )
 
-                async def _do_delete_cachekey() -> None:
-                    async with aiosqlite.connect(
-                        str(self.database_path), timeout=30.0
-                    ) as connection:
-                        await connection.execute(
-                            "DELETE FROM cached_data WHERE cachekey = ?", (cachekey,)
-                        )
-                        await connection.commit()
+                    async def _do_delete_cachekey() -> None:
+                        async with aiosqlite.connect(
+                            str(self.database_path), timeout=30.0
+                        ) as connection:
+                            await connection.execute(
+                                "DELETE FROM cached_data WHERE cachekey = ?", (cachekey,)
+                            )
+                            await connection.commit()
 
-                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_cachekey)
-                return None
+                    await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_cachekey)
+                    return None
+            else:
+                data = bytes(data_value)
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return data, metadata, url
@@ -291,24 +313,29 @@ class DataStorage:
     async def _load_random_blob(
         self, row: tuple[Any, ...], identifier: str, data_type: str
     ) -> tuple[Any, dict, str] | None:
-        """Load blob data for a random-image row, deleting orphaned DB rows on FileNotFoundError."""
-        file_path_str, metadata_json, url = row
-        full_path = self.database_path.parent / file_path_str
-        try:
-            async with aiofiles.open(full_path, "rb") as fh:
-                data = await fh.read()
-        except FileNotFoundError:
-            logging.warning(
-                "Blob file missing for %s/%s, deleting orphaned row", identifier, data_type
-            )
+        """Load data for a random row, deleting orphaned DB rows on FileNotFoundError."""
+        data_value, file_path_str, metadata_json, url = row
+        if file_path_str:
+            full_path = self.database_path.parent / file_path_str
+            try:
+                async with aiofiles.open(full_path, "rb") as fh:
+                    data = await fh.read()
+            except FileNotFoundError:
+                logging.warning(
+                    "Blob file missing for %s/%s, deleting orphaned row", identifier, data_type
+                )
 
-            async def _do_delete_identifier() -> None:
-                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                    await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
-                    await connection.commit()
+                async def _do_delete_identifier() -> None:
+                    async with aiosqlite.connect(
+                        str(self.database_path), timeout=30.0
+                    ) as connection:
+                        await connection.execute("DELETE FROM cached_data WHERE url = ?", (url,))
+                        await connection.commit()
 
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_identifier)
-            return None
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_delete_identifier)
+                return None
+        else:
+            data = bytes(data_value)
         metadata = orjson.loads(metadata_json) if metadata_json else {}
         return data, metadata, url
 
@@ -360,7 +387,7 @@ class DataStorage:
                 nonlocal rows
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     if random:
-                        select_cols = "file_path, metadata, url"
+                        select_cols = "data_value, file_path, metadata, url"
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
@@ -396,9 +423,9 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    # random: (file_path, metadata, url) → url at col 2
+                    # random: (data_value, file_path, metadata, url) → url at col 3
                     # non-random: (metadata, url) → url at col 1
-                    url_col = 2 if random else 1
+                    url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
                             """
@@ -728,13 +755,15 @@ def _ensure_datacache_schema(database_path: Path) -> None:
                 identifier TEXT NOT NULL,    -- Artist name (e.g., "daft_punk")
                 data_type TEXT NOT NULL,     -- "thumbnail", "logo", "banner", etc.
                 provider TEXT NOT NULL,      -- "theaudiodb", "discogs", etc.
-                file_path TEXT NOT NULL,     -- Relative path to blob file
+                data_value BLOB,            -- Inline storage for content ≤ 16 KB
+                file_path TEXT,             -- Blob file path for content > 16 KB
                 metadata TEXT,              -- JSON metadata about the cached item
                 created_at REAL NOT NULL,
                 expires_at REAL NOT NULL,
                 access_count INTEGER DEFAULT 1,
                 last_accessed REAL NOT NULL,
-                data_size INTEGER NOT NULL
+                data_size INTEGER NOT NULL,
+                CHECK (data_value IS NOT NULL OR file_path IS NOT NULL)
             );
 
             CREATE TABLE IF NOT EXISTS pending_requests (
