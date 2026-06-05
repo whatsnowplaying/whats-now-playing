@@ -42,6 +42,7 @@ __all__ = [
     "run_datacache_maintenance",  # Cleanup function for system startup
     "cached_fetch",  # Drop-in replacement for apicache.cached_fetch
     "set_shared_storage",  # Test isolation helper
+    "reset_shared_storage",  # Reset singleton after DB move/delete
 ]
 
 # Module-level convenience functions
@@ -123,6 +124,17 @@ def set_shared_storage(storage: DataStorage | None) -> None:
     """Replace the module-level storage singleton. Used by tests for isolation."""
     global _shared_storage  # pylint: disable=global-statement
     _shared_storage = storage
+
+
+def reset_shared_storage() -> None:
+    """Reset the module-level storage singleton to None.
+
+    Call this after moving or deleting the underlying database file so the next
+    access creates a fresh DataStorage pointing at the new location rather than
+    trying to use the stale pre-move path.
+    """
+    global _shared_storage  # pylint: disable=global-statement
+    _shared_storage = None
 
 
 async def cached_fetch(

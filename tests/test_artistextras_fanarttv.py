@@ -14,7 +14,6 @@ from utils_artistextras import (
     skip_no_fanarttv_key,
 )
 
-import nowplaying.datacache
 
 
 def _setup_fanarttv_plugin(bootstrap):

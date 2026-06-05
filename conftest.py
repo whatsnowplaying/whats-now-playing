@@ -105,7 +105,7 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
 # don't stick around
 #
 @pytest.fixture(autouse=True, scope="function")
-def clear_old_testsuite():
+def clear_old_testsuite():  # pylint: disable=too-many-statements
     """clear out old testsuite configs"""
     if sys.platform == "win32":
         qsettingsformat = QSettings.IniFormat
@@ -153,11 +153,10 @@ def clear_old_testsuite():
         # misses that exhaust the Discogs/etc rate limit across tests).
         if temp_datacache and temp_datacache.exists():
             shutil.move(str(temp_datacache), str(datacache_dir))
-        # Reset the in-memory singleton so the next test reconnects to the
-        # restored database rather than the stale pre-move path.
+        # Reset singleton so the next test reconnects to the restored database.
         global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
         _SHARED_DATACACHE_INSTANCE = None
-        nowplaying.datacache.set_shared_storage(None)
+        nowplaying.datacache.reset_shared_storage()
 
     config = QSettings(
         qsettingsformat,
@@ -244,12 +243,20 @@ async def isolated_datacache_storage():
             await storage.close()
 
 
+
+
 _SHARED_DATACACHE_INSTANCE = None
 
 
 @pytest_asyncio.fixture(scope="function")
 async def shared_datacache_storage():
-    """Shared DataStorage for artistextras tests to avoid redundant fetches."""
+    """Shared DataStorage for artistextras tests to avoid redundant fetches.
+
+    scope="function" is required by pytest-asyncio's function-scoped event loop.
+    The module-level singleton makes this a session singleton in practice.
+    No explicit close() needed: DataStorage uses connection-per-operation with
+    no persistent handle to release.
+    """
     global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
     if _SHARED_DATACACHE_INSTANCE is None:
         _SHARED_DATACACHE_INSTANCE = nowplaying.datacache.DataStorage()
