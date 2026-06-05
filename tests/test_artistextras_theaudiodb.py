@@ -6,7 +6,7 @@ import logging
 import time
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 from utils_artistextras import (
     FakeImageCache,
     configureplugins,
@@ -282,7 +282,7 @@ async def test_theaudiodb_429_rate_limit_handling(bootstrap):
     # Reset rate limit state
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         # Mock 429 response
         mockr.get(
             f"{TADB_BASE_URL}/search.php?s=test",
@@ -312,7 +312,7 @@ async def test_theaudiodb_429_cooldown_expiry(bootstrap):
     # Set rate limit in the past (expired)
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = time.time() - 1
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         # Mock successful response after cooldown
         mockr.get(
             f"{TADB_BASE_URL}/search.php?s=test",
@@ -334,7 +334,7 @@ async def test_theaudiodb_other_http_errors(bootstrap):
     # Reset rate limit state
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         # Mock 404 response
         mockr.get(
             f"{TADB_BASE_URL}/search.php?s=notfound",
@@ -361,7 +361,7 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_api_cache):  # pyli
         # Reset rate limit state
         nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             # Mock 429 response
             mockr.get(
                 f"{TADB_BASE_URL}/search.php?s=test",
@@ -444,7 +444,7 @@ async def test_theaudiodb_coverart_queued(bootstrap, isolated_api_cache):  # pyl
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
             result = await plugin.download_async(
@@ -474,7 +474,7 @@ async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_api_cache):  #
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE_HQ)
             result = await plugin.download_async(
@@ -503,7 +503,7 @@ async def test_theaudiodb_coverart_disabled(bootstrap, isolated_api_cache):  # p
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", False)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             result = await plugin.download_async(
                 {
@@ -532,7 +532,7 @@ async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             result = await plugin.download_async(
                 {
@@ -560,7 +560,7 @@ async def test_theaudiodb_coverart_no_album(bootstrap, isolated_api_cache):  # p
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             result = await plugin.download_async(
                 {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -583,7 +583,7 @@ async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_api_cache
         plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
         bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
             mockr.get(NIN_ALBUM_URL, payload={"album": None})
             result = await plugin.download_async(

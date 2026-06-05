@@ -5,7 +5,7 @@ import os
 import urllib.parse
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 from utils_artistextras import FakeImageCache, configuresettings, skip_no_lastfm_key
 
 import nowplaying.apicache
@@ -136,7 +136,7 @@ async def test_lastfm_bio_and_website(bootstrap):
     """successful fetch returns bio and website"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
 
         result = await plugin.download_async(
@@ -155,7 +155,7 @@ async def test_lastfm_bio_stripped(bootstrap):
     """Last.fm attribution is stripped from bio"""
     plugin, _ = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -172,7 +172,7 @@ async def test_lastfm_bio_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/bio", False)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -190,7 +190,7 @@ async def test_lastfm_websites_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -207,7 +207,7 @@ async def test_lastfm_existing_bio_not_overwritten(bootstrap):
     """does not overwrite existing artistlongbio"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {
@@ -229,7 +229,7 @@ async def test_lastfm_api_error(bootstrap):
     """Last.fm API error response returns None"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(
             XYZ_URL,
             payload={"error": 6, "message": "Artist not found"},
@@ -251,7 +251,7 @@ async def test_lastfm_http_error(bootstrap, isolated_api_cache):  # pylint: disa
     nowplaying.apicache.set_cache_instance(isolated_api_cache)
 
     try:
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_URL, status=503)
             result = await plugin.download_async(
                 {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -270,7 +270,7 @@ async def test_lastfm_both_disabled_returns_none(bootstrap):
     bootstrap.cparser.setValue("lastfm/bio", False)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -309,7 +309,7 @@ async def test_lastfm_lang_returned(bootstrap, isolated_api_cache):  # pylint: d
             }
         }
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(de_url, payload=de_response)
             result = await plugin.download_async(
                 {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -341,7 +341,7 @@ async def test_lastfm_lang_fallback_to_en(bootstrap, isolated_api_cache):  # pyl
             }
         }
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(ko_url, payload=ko_response)
             mockr.get(en_url, payload=NIN_RESPONSE)
             result = await plugin.download_async(
@@ -374,7 +374,7 @@ async def test_lastfm_lang_no_fallback(bootstrap, isolated_api_cache):  # pylint
             }
         }
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(ko_url, payload=ko_response)
             result = await plugin.download_async(
                 {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -480,7 +480,7 @@ async def test_lastfm_coverart_queued(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
         result = await plugin.download_async(
@@ -504,7 +504,7 @@ async def test_lastfm_coverart_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", False)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {
@@ -525,7 +525,7 @@ async def test_lastfm_coverart_skipped_when_coverimageraw_present(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {
@@ -548,7 +548,7 @@ async def test_lastfm_coverart_no_album(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -569,7 +569,7 @@ async def test_lastfm_coverart_album_api_error(bootstrap, isolated_api_cache):  
         plugin, imagecache = _setup_plugin(bootstrap)
         bootstrap.cparser.setValue("lastfm/coverart", True)
 
-        with aioresponses() as mockr:
+        async with aiointercept(mock_external_urls=True) as mockr:
             mockr.get(NIN_URL, payload=NIN_RESPONSE)
             mockr.get(NIN_ALBUM_URL, payload={"error": 6, "message": "Album not found"})
             result = await plugin.download_async(
@@ -596,7 +596,7 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):
     album_mbid = "12345678-1234-1234-1234-123456789abc"
     mbid_url = _album_mbid_url(album_mbid)
 
-    with aioresponses() as mockr:
+    async with aiointercept(mock_external_urls=True) as mockr:
         mockr.get(NIN_URL, payload=NIN_RESPONSE)
         mockr.get(mbid_url, payload=NIN_ALBUM_RESPONSE)
         result = await plugin.download_async(

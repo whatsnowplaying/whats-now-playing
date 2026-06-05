@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 import nowplaying.notifications.remote
 
@@ -45,7 +45,7 @@ async def test_remote_plugin_no_secret(remote_plugin):  # pylint: disable=redefi
 
     metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
 
         await remote_plugin.notify_track_change(metadata)
@@ -69,7 +69,7 @@ async def test_remote_plugin_with_secret(remote_plugin):  # pylint: disable=rede
 
     metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 456})
 
         await remote_plugin.notify_track_change(metadata)
@@ -92,7 +92,7 @@ async def test_remote_plugin_auth_failure(remote_plugin):  # pylint: disable=red
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post(
             "http://localhost:8899/v1/remoteinput", status=403, payload={"error": "Invalid secret"}
         )
@@ -112,7 +112,7 @@ async def test_remote_plugin_server_error(remote_plugin):  # pylint: disable=red
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post(
             "http://localhost:8899/v1/remoteinput",
             status=500,
@@ -149,7 +149,7 @@ async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=red
         "discordguild": "My Discord Server",  # Should be kept
     }
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
 
         await remote_plugin.notify_track_change(metadata)
@@ -694,7 +694,7 @@ async def test_remote_sets_charts_submitted_flag_when_charts_enabled(
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
         await remote_plugin.notify_track_change(metadata)
 
@@ -715,7 +715,7 @@ async def test_remote_omits_charts_submitted_flag_when_charts_disabled(
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
         await remote_plugin.notify_track_change(metadata)
 

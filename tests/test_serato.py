@@ -10,7 +10,7 @@ import tempfile
 import unittest.mock
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 import nowplaying.inputs.serato
 import nowplaying.utils.sqlite
@@ -553,7 +553,7 @@ async def test_streaming_track_artwork(bootstrap, serato_master_db):  # pylint: 
 
         fake_image = b"\x89PNG\r\n\x1a\n"  # PNG magic bytes
 
-        with aioresponses() as mock_resp:
+        async with aiointercept(mock_external_urls=True) as mock_resp:
             mock_resp.get(artwork_url, status=200, body=fake_image)
 
             try:
@@ -601,7 +601,7 @@ async def test_streaming_track_is_video(bootstrap, serato_master_db):  # pylint:
         plugin.setmixmode("newest")
         await plugin.start()
 
-        with aioresponses() as mock_resp:
+        async with aiointercept(mock_external_urls=True) as mock_resp:
             mock_resp.get("https://example.com/artwork.jpg", status=200, body=b"\x89PNG\r\n\x1a\n")
 
             try:

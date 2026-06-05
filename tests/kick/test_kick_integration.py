@@ -6,7 +6,8 @@ import pathlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aioresponses import aioresponses
+import pytest_asyncio
+from aiointercept import aiointercept
 
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
@@ -61,10 +62,10 @@ def mock_chat_with_oauth(kick_integration_config):  # pylint: disable=redefined-
     return chat, stopevent
 
 
-@pytest.fixture
-def mock_aiohttp_success():
-    """Fixture that mocks successful aiohttp responses using aioresponses."""
-    with aioresponses() as mock:
+@pytest_asyncio.fixture
+async def mock_aiohttp_success():
+    """Fixture that mocks successful aiohttp responses using aiointercept."""
+    async with aiointercept(mock_external_urls=True) as mock:
         # Setup default success responses for common endpoints (repeat=True for multiple calls)
         mock.post(
             "https://api.kick.com/public/v1/chat",
@@ -75,10 +76,10 @@ def mock_aiohttp_success():
         yield mock
 
 
-@pytest.fixture
-def mock_responses():
-    """Fixture that provides aioresponses for mocking HTTP calls."""
-    with aioresponses() as mock:
+@pytest_asyncio.fixture
+async def mock_responses():
+    """Fixture that provides aiointercept for mocking HTTP calls."""
+    async with aiointercept(mock_external_urls=True) as mock:
         yield mock
 
 
@@ -298,8 +299,8 @@ async def test_error_handling_scenarios(  # pylint: disable=redefined-outer-name
         oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
         oauth.code_verifier = "test_verifier"
 
-        # Use aioresponses to mock network error
-        with aioresponses() as mock:
+        # Use aiointercept to mock network error
+        async with aiointercept(mock_external_urls=True) as mock:
             mock.post(f"{OAUTH_HOST}/oauth/token", exception=Exception("Network error"))
 
             if expected_behavior == "raises_exception":
@@ -408,8 +409,8 @@ async def test_malformed_api_responses(kick_integration_config):  # pylint: disa
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
     oauth.code_verifier = "test_verifier"
 
-    # Test malformed JSON response using aioresponses
-    with aioresponses() as mock:
+    # Test malformed JSON response using aiointercept
+    async with aiointercept(mock_external_urls=True) as mock:
         mock.post(f"{OAUTH_HOST}/oauth/token", status=200, body="invalid json content")
 
         with pytest.raises(Exception):
@@ -429,8 +430,8 @@ async def test_network_timeouts(kick_integration_config):  # pylint: disable=red
     mock_oauth.get_stored_tokens.return_value = ("valid_token", "refresh_token")
     chat.oauth = mock_oauth
 
-    # Test timeout during message sending using aioresponses
-    with aioresponses() as mock:
+    # Test timeout during message sending using aiointercept
+    async with aiointercept(mock_external_urls=True) as mock:
         mock.post(
             "https://api.kick.com/public/v1/chat",
             exception=TimeoutError("Request timed out"),

@@ -98,7 +98,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     return True
                 logging.error("JRiver server returned status %d", response.status)
                 return False
-        except aiohttp.ClientConnectorError:
+        except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError):
             if self._should_log_error():
                 logging.debug("JRiver is not running or not accessible at %s", self.base_url)
             return False
@@ -133,7 +133,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     return True
                 logging.error("No token received from JRiver server")
                 return False
-        except aiohttp.ClientConnectorError:
+        except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError):
             if self._should_log_error():
                 logging.debug(
                     "JRiver is not running or not accessible at %s for auth", self.base_url
@@ -176,7 +176,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     logging.error("JRiver API returned status %d", response.status)
                     return None
                 return await response.text()
-        except aiohttp.ClientConnectorError:
+        except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError):
             if not self._connection_failed:
                 if self._should_log_error():
                     logging.debug("JRiver is not running or not accessible at %s", self.base_url)
@@ -338,7 +338,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     return None
                 response_text = await response.text()
                 return self._extract_filename_from_xml(response_text, filekey)
-        except aiohttp.ClientConnectorError:
+        except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError):
             if not self._connection_failed:
                 if self._should_log_error():
                     logging.debug(

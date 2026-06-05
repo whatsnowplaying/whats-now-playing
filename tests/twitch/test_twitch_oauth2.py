@@ -6,8 +6,10 @@ import base64
 import hashlib
 from unittest.mock import patch
 
+import aiohttp
 import pytest
-from aioresponses import aioresponses
+import pytest_asyncio
+from aiointercept import aiointercept
 
 import nowplaying.twitch.oauth2  # pylint: disable=import-error,no-name-in-module
 from nowplaying.twitch.constants import API_HOST, OAUTH_HOST
@@ -37,10 +39,10 @@ def oauth_with_pkce(configured_oauth):  # pylint: disable=redefined-outer-name
     return oauth
 
 
-@pytest.fixture
-def mock_responses():
-    """Fixture that provides aioresponses for mocking HTTP calls."""
-    with aioresponses() as mock:
+@pytest_asyncio.fixture
+async def mock_responses():
+    """Fixture that provides aiointercept for mocking HTTP calls."""
+    async with aiointercept(mock_external_urls=True) as mock:
         yield mock
 
 
@@ -468,9 +470,9 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
     oauth = oauth_with_pkce
 
     # Mock a timeout by using an exception
-    mock_responses.post(f"{OAUTH_HOST}/oauth2/token", exception=TimeoutError("Request timed out"))
+    mock_responses.post(f"{OAUTH_HOST}/oauth2/token", exception=True)
 
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises((asyncio.TimeoutError, aiohttp.ClientConnectionError)):
         await oauth.exchange_code_for_token("test_code", oauth.state)
 
 

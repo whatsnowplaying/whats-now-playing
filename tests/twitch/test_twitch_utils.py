@@ -5,7 +5,7 @@ import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
@@ -349,7 +349,7 @@ async def test_cache_token_del(bootstrap):
         assert bootstrap.cparser.value("twitchbot/refreshtoken") is None
 
 
-# User image retrieval tests using aioresponses
+# User image retrieval tests using aiointercept
 @pytest.mark.asyncio
 async def test_get_user_image_success():
     """Test successful user image retrieval."""
@@ -358,7 +358,7 @@ async def test_get_user_image_success():
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         # Mock user data response
         mock_resp.get(
             "https://api.twitch.tv/helix/users?login=test_user",
@@ -383,7 +383,7 @@ async def test_get_user_image_no_user():
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "https://api.twitch.tv/helix/users?login=nonexistent_user",
             payload={"data": []},  # No user found
@@ -401,7 +401,7 @@ async def test_get_user_image_error():
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "https://api.twitch.tv/helix/users?login=test_user",
             exception=Exception("Network error"),

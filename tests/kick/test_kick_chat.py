@@ -7,7 +7,7 @@ import pathlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 import nowplaying.kick.chat  # pylint: disable=no-name-in-module
 import nowplaying.kick.constants
@@ -81,7 +81,7 @@ async def test_kickchat_send_message_success(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock successful API response
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post(
             "https://api.kick.com/public/v1/chat",
             status=200,
@@ -122,7 +122,7 @@ async def test_kickchat_send_message_api_error(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock failed API response
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post(
             "https://api.kick.com/public/v1/chat",
             status=400,
@@ -149,7 +149,7 @@ async def test_kickchat_send_message_token_expired(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock 401 response (token expired)
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.post(
             "https://api.kick.com/public/v1/chat", status=401, payload={"message": "Unauthorized"}
         )
