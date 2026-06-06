@@ -15,7 +15,6 @@ from utils_artistextras import (
 )
 
 
-
 def _setup_fanarttv_plugin(bootstrap):
     """Set up FanartTV plugin for testing"""
     config = bootstrap

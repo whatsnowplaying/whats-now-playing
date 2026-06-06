@@ -539,8 +539,8 @@ async def test_rate_limiter_integration(temp_client):  # pylint: disable=redefin
     # Get rate limiter for test provider
     rate_limiter = temp_client.rate_limiters.get_limiter("test")
 
-    # Should have tokens available initially
-    assert rate_limiter.available_tokens() > 0
+    tokens_before = rate_limiter.available_tokens()
+    assert tokens_before > 0
 
     with respx.mock() as mock_responses:
         mock_responses.get("https://example.com/ratelimit_test.txt").mock(
@@ -562,5 +562,6 @@ async def test_rate_limiter_integration(temp_client):  # pylint: disable=redefin
         )
 
         assert result is not None
-        # Rate limiter should have consumed a token
-        assert rate_limiter.available_tokens() < rate_limiter.capacity
+        # Rate limiter must have been acquired: tokens_before - tokens_after >= 1
+        # (tokens may have partially refilled on slow runners, so check net consumption)
+        assert tokens_before - rate_limiter.tokens >= 1.0
