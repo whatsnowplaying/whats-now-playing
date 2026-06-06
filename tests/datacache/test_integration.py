@@ -272,6 +272,39 @@ async def test_api_response_caching_integration(temp_datacache):  # pylint: disa
         assert metadata["source"] == "test_api"
 
 
+@pytest.mark.asyncio
+async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_storage):  # pylint: disable=unused-argument
+    """cached_fetch must round-trip dicts containing bytes values via base64 sentinel."""
+    test_data = {"text": "hello", "raw": b"\x00\x01\x02binary"}
+    call_count = 0
+
+    async def fetch_func():
+        nonlocal call_count
+        call_count += 1
+        return test_data
+
+    result1 = await nowplaying.datacache.cached_fetch(
+        provider="test",
+        artist_name="testartist",
+        endpoint="bytes_test",
+        fetch_func=fetch_func,
+    )
+    assert result1 == test_data
+    assert isinstance(result1["raw"], bytes)
+    assert call_count == 1
+
+    # Second call must be a cache hit — fetch_func not invoked again
+    result2 = await nowplaying.datacache.cached_fetch(
+        provider="test",
+        artist_name="testartist",
+        endpoint="bytes_test",
+        fetch_func=fetch_func,
+    )
+    assert result2 == test_data
+    assert isinstance(result2["raw"], bytes)
+    assert call_count == 1, "cache hit should not call fetch_func again"
+
+
 def test_maintenance_integration():
     """Test maintenance functions work with real database"""
     with tempfile.TemporaryDirectory() as temp_dir:

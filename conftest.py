@@ -22,6 +22,7 @@ from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.datacache
 
 # if sys.platform == 'darwin':
 #     import psutil
@@ -104,7 +105,7 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
 # don't stick around
 #
 @pytest.fixture(autouse=True, scope="function")
-def clear_old_testsuite():
+def clear_old_testsuite():  # pylint: disable=too-many-statements
     """clear out old testsuite configs"""
     if sys.platform == "win32":
         qsettingsformat = QSettings.IniFormat
@@ -141,14 +142,21 @@ def clear_old_testsuite():
         logging.info("Removing %s", cachedir)
         shutil.rmtree(cachedir)
 
+        # Always recreate cachedir — other tests depend on it existing even if empty
+        cachedir.mkdir(parents=True, exist_ok=True)
+
         # Restore api_cache directory
         if temp_api_cache and temp_api_cache.exists():
-            cachedir.mkdir(parents=True, exist_ok=True)
             shutil.move(str(temp_api_cache), str(api_cache_dir))
 
-        # Discard datacache (not preserved between tests)
+        # Restore datacache directory (preserved like api_cache to avoid cache
+        # misses that exhaust the Discogs/etc rate limit across tests).
         if temp_datacache and temp_datacache.exists():
-            shutil.rmtree(temp_datacache, ignore_errors=True)
+            shutil.move(str(temp_datacache), str(datacache_dir))
+        # Reset singleton so the next test reconnects to the restored database.
+        global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
+        _SHARED_DATACACHE_INSTANCE = None
+        nowplaying.datacache.reset_shared_storage()
 
     config = QSettings(
         qsettingsformat,
@@ -218,6 +226,58 @@ async def shared_api_cache():
         await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
 
     yield _SHARED_CACHE_INSTANCE
+
+
+@pytest_asyncio.fixture
+async def isolated_datacache_storage():
+    """Fresh DataStorage per test for verifying cache hit/miss behaviour."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        storage = nowplaying.datacache.DataStorage(pathlib.Path(temp_dir))
+        await storage.initialize()
+        original = nowplaying.datacache._shared_storage  # pylint: disable=protected-access
+        nowplaying.datacache.set_shared_storage(storage)
+        try:
+            yield storage
+        finally:
+            nowplaying.datacache.set_shared_storage(original)
+            await storage.close()
+
+
+_SHARED_DATACACHE_INSTANCE = None
+
+
+@pytest_asyncio.fixture(scope="function")
+async def shared_datacache_storage():
+    """Shared DataStorage for artistextras tests to avoid redundant fetches.
+
+    scope="function" is required by pytest-asyncio's function-scoped event loop.
+    The module-level singleton makes this a session singleton in practice.
+    No explicit close() needed: DataStorage uses connection-per-operation with
+    no persistent handle to release.
+    """
+    global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
+    if _SHARED_DATACACHE_INSTANCE is None:
+        _SHARED_DATACACHE_INSTANCE = nowplaying.datacache.DataStorage()
+        await _SHARED_DATACACHE_INSTANCE.initialize()
+    yield _SHARED_DATACACHE_INSTANCE
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def auto_shared_datacache_for_artistextras(request, shared_datacache_storage):  # pylint: disable=redefined-outer-name
+    """Mirror of auto_shared_api_cache_for_artistextras for the datacache layer."""
+    test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
+    test_manages_own_cache = (
+        "shared_datacache_storage" in request.fixturenames
+        or "isolated_datacache_storage" in request.fixturenames
+    )
+    if (
+        any(module in request.module.__name__ for module in test_modules)
+        and not test_manages_own_cache
+    ):
+        nowplaying.datacache.set_shared_storage(shared_datacache_storage)
+        yield
+    else:
+        yield
 
 
 @pytest_asyncio.fixture(autouse=True)

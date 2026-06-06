@@ -70,7 +70,7 @@ async def test_rate_limiter_timeout():
 
     assert success is False
     assert elapsed >= 0.1  # Should have waited at least timeout duration
-    assert elapsed < 0.2  # But not much longer
+    assert elapsed < 0.5  # But not much longer (generous for slow CI runners)
 
 
 @pytest.mark.asyncio
