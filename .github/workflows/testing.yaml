@@ -82,15 +82,6 @@ jobs:
             .coverage*
             coverage.xml
       #       htmlcov
-      # - name: codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     fail_ci_if_error: true  # optional (default = false)
-      #     files: ./coverage.xml  # optional
-      #     flags: unittests  # optional
-      #     name: codecov-mac11  # optional
-      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
-      #     verbose: true  # optional (default = false)
 
 
   testing-win:
@@ -153,16 +144,6 @@ jobs:
             .coverage.*
             htmlcov
             coverage.xml
-      # - name: codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     fail_ci_if_error: true  # optional (default = false)
-      #     files: ./coverage.xml  # optional
-      #     flags: unittests  # optional
-      #     name: codecov-windows  # optional
-      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
-      #     verbose: true  # optional (default = false)
-
 
   testing-linux:
     runs-on: ubuntu-latest
@@ -255,16 +236,6 @@ jobs:
             .coverage.*
             htmlcov
             coverage.xml
-      # - name: codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     fail_ci_if_error: true  # optional (default = false)
-      #     files: ./coverage.xml  # optional
-      #     flags: unittests  # optional
-      #     name: codecov-linux-${{matrix.python}}  # optional
-      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
-      #     verbose: true  # optional (default = false)
-
 
   merge:
     if: always()
@@ -326,14 +297,3 @@ jobs:
             .coverage
             htmlcov
             coverage.xml
-      - name: codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage.xml
-          flags: unittests  # optional
-          name: codecov-umbrella  # optional
-          token: ${{ secrets.CODECOV_TOKEN }}  # required
-          verbose: true  # optional (default = false)
