@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 name: tufup publish on release
 
 # Triggered when a draft release is published.  Downloads the 4
