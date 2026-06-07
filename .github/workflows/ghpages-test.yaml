@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 name: website-test
 
 # Test that documentation builds successfully on all pushes
