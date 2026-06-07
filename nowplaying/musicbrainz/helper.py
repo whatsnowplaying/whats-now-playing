@@ -8,22 +8,75 @@ import os
 import sys
 from typing import Any, NamedTuple
 
+import orjson
 from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
     RateLimitError,
-    WNPCacheAdapter,
+    ResponseError,
     extract_artist_urls,
 )
 from wnpmb.client._base import RetrySettings
 from wnpmb.normalization import normalize
 
-import nowplaying.apicache
 import nowplaying.bootstrap
+import nowplaying.datacache
 import nowplaying.config
 import nowplaying.utils.metadata
 
 logger = logging.getLogger(__name__)
+
+_MB_TTL = 7 * 24 * 3600
+
+
+class _WNPDatacacheAdapter:
+    """Adapts nowplaying.datacache.DataStorage to the wnpmb MusicBrainzCache protocol.
+
+    Replaces WNPCacheAdapter (which wrapped apicache) so that MusicBrainz data
+    is stored in the unified datacache rather than the old APIResponseCache.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def _url(provider: str, cache_key: str) -> str:
+        """Build the synthetic datacache URL for a wnpmb cache entry."""
+        return f"wnpmb://{provider}/{cache_key}"
+
+    async def get(self, provider: str, cache_key: str) -> Any | None:
+        """Return cached data for (provider, cache_key), or None on miss/expiry."""
+        storage = nowplaying.datacache.get_shared_storage()
+        cached = await storage.retrieve_by_url(self._url(provider, cache_key))
+        if cached is None:
+            return None
+        data, _ = cached
+        try:
+            return orjson.loads(data)
+        except orjson.JSONDecodeError:
+            return None
+
+    async def set(  # pylint: disable=too-many-arguments
+        self,
+        provider: str,
+        cache_key: str,
+        data: Any,
+        ttl: int,
+        url: str | None = None,  # pylint: disable=unused-argument
+    ) -> None:
+        """Store data for (provider, cache_key) with the given TTL."""
+        storage = nowplaying.datacache.get_shared_storage()
+        try:
+            await storage.store(
+                url=self._url(provider, cache_key),
+                identifier=cache_key,
+                data_type="musicbrainz",
+                provider=provider,
+                data_value=orjson.dumps(data),
+                ttl_seconds=ttl,
+            )
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.warning("datacache store failed for wnpmb %s/%s: %s", provider, cache_key, err)
 
 
 class _RecordingLookup(NamedTuple):
@@ -87,7 +140,7 @@ class MusicBrainzHelper:
                 or "wnp@effectivemachines.com"
             )
             self.mb_client.set_useragent(emailaddress)
-            self.mb_client.cache_service = WNPCacheAdapter(nowplaying.apicache.get_cache())
+            self.mb_client.cache_service = _WNPDatacacheAdapter()
             self.emailaddressset = True
 
     async def _lastditchrid(self, metadata) -> _RecordingLookup:
@@ -251,12 +304,13 @@ class MusicBrainzHelper:
         async def fetch_func():
             return await self._recordingid_uncached(recordingid, track_data=track_data)
 
-        data = await nowplaying.apicache.cached_fetch(
+        data = await nowplaying.datacache.cached_fetch(
             provider="musicbrainz",
             artist_name="recording",
             endpoint=f"recording/{recordingid}",
             fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,
+            ttl_seconds=_MB_TTL,
+            negative_ttl=5 * 60,  # 5 min for "not in MB" — matches wnpmb not_found TTL
         )
         if data and data.get("musicbrainzartistid"):
             # artistwebsites is config-dependent (which URLs to inject depends on
@@ -283,7 +337,7 @@ class MusicBrainzHelper:
     async def _fetch_cover_art(self, release_id: str | None, rg_id: str | None) -> bytes | None:
         """Fetch front cover art from CAA, trying release then release-group.
 
-        Results are cached per entity in their own apicache entries so that
+        Results are cached per entity in their own datacache entries so that
         a successful fetch is reused on subsequent plays without re-hitting
         CAA.  Failed fetches are NOT cached so they are retried next time.
         """
@@ -303,16 +357,26 @@ class MusicBrainzHelper:
                                 entity_id,
                             )
                             return {"coverimageraw": raw}
+                    return None
+                except ResponseError as err:
+                    if "404" in str(err):
+                        # No cover art exists for this release — stable negative result
+                        logger.debug("CAA 404 for %s/%s", entity_type, entity_id)
+                        return {}
+                    # Timeout, connection error, 5xx — transient, do not cache
+                    logger.debug("CAA transient error for %s/%s: %s", entity_type, entity_id, err)
+                    return None
                 except Exception:  # pylint: disable=broad-except
-                    logger.debug("CAA cover art fetch failed for %s/%s", entity_type, entity_id)
-                return None
+                    logger.debug("CAA unexpected error for %s/%s", entity_type, entity_id)
+                    return None
 
-            result = await nowplaying.apicache.cached_fetch(
+            result = await nowplaying.datacache.cached_fetch(
                 provider="musicbrainz_caa",
                 artist_name=entity_type,
                 endpoint=f"front/{entity_id}",
                 fetch_func=_do_fetch,
-                ttl_seconds=7 * 24 * 60 * 60,
+                ttl_seconds=_MB_TTL,
+                negative_ttl=24 * 3600,  # 24h for "no cover art" — art may be added later
             )
             if result and isinstance(result.get("coverimageraw"), bytes):
                 return result["coverimageraw"]

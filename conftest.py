@@ -185,6 +185,18 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
     reboot_macosx_prefs()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def run_datacache_maintenance_once():
+    """Run datacache maintenance once per session to clean up expired entries.
+
+    Without this, stale entries (e.g. empty-dict negative results from previous
+    sessions) accumulate indefinitely since the test suite never calls systemtray's
+    startup maintenance path.
+    """
+    nowplaying.datacache.run_maintenance()
+    yield
+
+
 @pytest.fixture(autouse=True)
 def mock_first_install_dialog():
     """Globally mock the first-install dialog to prevent it from blocking tests."""
@@ -241,6 +253,28 @@ async def isolated_datacache_storage():
         finally:
             nowplaying.datacache.set_shared_storage(original)
             await storage.close()
+
+
+@pytest_asyncio.fixture
+async def isolated_datacache_client():
+    """Fresh DataCacheClient per test with isolated storage.
+
+    Patches nowplaying.datacache.get_client so that plugins calling get_client()
+    receive a client backed by a temporary directory rather than the real cache.
+    Also swaps the shared storage singleton so cached_fetch() is isolated too.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = pathlib.Path(temp_dir)
+        client = nowplaying.datacache.DataCacheClient(temp_path)
+        await client.initialize()
+        original_storage = nowplaying.datacache._shared_storage  # pylint: disable=protected-access
+        nowplaying.datacache.set_shared_storage(client.storage)
+        with unittest.mock.patch("nowplaying.datacache.get_client", return_value=client):
+            try:
+                yield client
+            finally:
+                nowplaying.datacache.set_shared_storage(original_storage)
+                await client.close()
 
 
 _SHARED_DATACACHE_INSTANCE = None

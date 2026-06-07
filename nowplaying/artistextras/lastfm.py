@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """support for last.fm artist metadata"""
 
-import asyncio
 import logging
 import re
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
+import httpx
+import orjson
 
-import nowplaying.apicache
 import nowplaying.artistextras
 import nowplaying.config
+import nowplaying.datacache
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -32,94 +32,62 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self.displayname: str = "Last.fm"
         self.priority: int = 60
 
-    async def _fetch_album_async(
-        self, apikey: str, artist: str, album: str, album_mbid: str | None = None
-    ) -> dict | None:
-        """Fetch album.getinfo from Last.fm API"""
-        if album_mbid:
-            url = (
-                f"{self.API_URL}?method=album.getinfo"
-                f"&mbid={urllib.parse.quote(album_mbid)}"
-                f"&api_key={apikey}"
-                f"&format=json&autocorrect=1"
-            )
-        else:
-            url = (
-                f"{self.API_URL}?method=album.getinfo"
-                f"&artist={urllib.parse.quote(artist)}"
-                f"&album={urllib.parse.quote(album)}"
-                f"&api_key={apikey}"
-                f"&format=json&autocorrect=1"
-            )
-        delay = self.calculate_delay()
+    async def _get_json(self, url: str) -> dict | None:
+        """Fetch a Last.fm API URL and return the parsed JSON, or None on error."""
+        safe_url = re.sub(r"(api_key=)[^&]+", r"\1<redacted>", url)
         try:
-            connector = nowplaying.utils.create_http_connector()
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=delay),
-                ) as response:
-                    if response.status != 200:
-                        logging.warning(
-                            "Last.fm album HTTP error %s for %s/%s", response.status, artist, album
-                        )
-                        return None
-                    data = await response.json()
-                    if "error" in data:
-                        logging.debug(
-                            "Last.fm album: %s for %s/%s", data.get("message"), artist, album
-                        )
-                        return None
-                    return data
-        except (asyncio.TimeoutError, aiohttp.ClientError):
-            logging.error("Last.fm album fetch hit timeout for %s/%s", artist, album)
+            async with httpx.AsyncClient(timeout=self.calculate_delay()) as client:
+                response = await client.get(url)
+            if response.status_code == 404:
+                logging.debug("Last.fm 404 for %s — artist/album not found", safe_url)
+                return {}  # stable negative: cache with negative_ttl
+            if response.status_code != 200:
+                logging.warning("Last.fm HTTP %d for %s", response.status_code, safe_url)
+                return None
+            data = orjson.loads(response.content)
+            if "error" in data:
+                logging.debug("Last.fm API error: %s", data.get("message"))
+                return None
+            return data
+        except httpx.TimeoutException:
+            logging.error("Last.fm fetch timeout: %s", safe_url)
             return None
         except Exception:  # pragma: no cover pylint: disable=broad-except
-            logging.exception("Last.fm album fetch hit unexpected error for %s/%s", artist, album)
+            logging.exception("Last.fm fetch unexpected error: %s", safe_url)
             return None
 
-    async def _fetch_async(
+    def _album_url(
+        self, apikey: str, artist: str, album: str, album_mbid: str | None = None
+    ) -> str:
+        """Build a Last.fm album.getinfo URL."""
+        if album_mbid:
+            return (
+                f"{self.API_URL}?method=album.getinfo"
+                f"&mbid={urllib.parse.quote(album_mbid)}"
+                f"&api_key={apikey}&format=json&autocorrect=1"
+            )
+        return (
+            f"{self.API_URL}?method=album.getinfo"
+            f"&artist={urllib.parse.quote(artist)}"
+            f"&album={urllib.parse.quote(album)}"
+            f"&api_key={apikey}&format=json&autocorrect=1"
+        )
+
+    def _artist_url(
         self, apikey: str, artist: str, mbid: str | None = None, lang: str = "en"
-    ) -> dict | None:
-        """Fetch artist.getinfo from Last.fm API"""
+    ) -> str:
+        """Build a Last.fm artist.getinfo URL."""
         if mbid:
-            url = (
+            return (
                 f"{self.API_URL}?method=artist.getinfo"
                 f"&mbid={urllib.parse.quote(mbid)}"
-                f"&api_key={apikey}"
-                f"&format=json&autocorrect=1"
-                f"&lang={lang}"
+                f"&api_key={apikey}&format=json&autocorrect=1&lang={lang}"
             )
-        else:
-            url = (
-                f"{self.API_URL}?method=artist.getinfo"
-                f"&artist={urllib.parse.quote(artist)}"
-                f"&api_key={apikey}"
-                f"&format=json&autocorrect=1"
-                f"&lang={lang}"
-            )
-        delay = self.calculate_delay()
-        try:
-            connector = nowplaying.utils.create_http_connector()
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=delay),
-                ) as response:
-                    if response.status != 200:
-                        logging.error("Last.fm HTTP error %s for %s", response.status, artist)
-                        return None
-                    data = await response.json()
-                    if "error" in data:
-                        logging.info("Last.fm: %s for %s", data.get("message"), artist)
-                        return None
-                    return data
-        except (asyncio.TimeoutError, aiohttp.ClientError):
-            logging.error("Last.fm _fetch_async hit timeout for %s", artist)
-            return None
-        except Exception:  # pragma: no cover pylint: disable=broad-except
-            logging.exception("Last.fm async hit unexpected error for %s", artist)
-            return None
+        return (
+            f"{self.API_URL}?method=artist.getinfo"
+            f"&artist={urllib.parse.quote(artist)}"
+            f"&api_key={apikey}&format=json&autocorrect=1&lang={lang}"
+        )
 
     @staticmethod
     def _clean_bio(raw: str) -> str:
@@ -152,14 +120,15 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             if album_mbid
             else (f"{urllib.parse.quote(artist)}/{urllib.parse.quote(album)}")
         )
-        album_data = await nowplaying.apicache.cached_fetch(
+        album_data = await nowplaying.datacache.cached_fetch(
             provider="lastfm",
             artist_name=artist,
             endpoint=f"album.getinfo/{cache_id}",
-            fetch_func=lambda: self._fetch_album_async(
-                apikey, artist, album, album_mbid=album_mbid
+            fetch_func=lambda: self._get_json(
+                self._album_url(apikey, artist, album, album_mbid=album_mbid)
             ),
             ttl_seconds=None,
+            negative_ttl=24 * 3600,  # 24h: artist/album not in Last.fm
         )
         images = ((album_data or {}).get("album") or {}).get("image") or []
         cover_url = next(
@@ -189,15 +158,16 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         lang = (self.config.cparser.value("lastfm/bio_lang") or "en").lower()
 
         async def fetch_func():
-            return await self._fetch_async(apikey, artist, mbid=mbid, lang=lang)
+            return await self._get_json(self._artist_url(apikey, artist, mbid=mbid, lang=lang))
 
         cache_id = mbid if mbid else urllib.parse.quote(artist)
-        data = await nowplaying.apicache.cached_fetch(
+        data = await nowplaying.datacache.cached_fetch(
             provider="lastfm",
             artist_name=artist,
             endpoint=f"artist.getinfo/{lang}/{cache_id}",
             fetch_func=fetch_func,
             ttl_seconds=None,
+            negative_ttl=24 * 3600,  # 24h: artist/album not in Last.fm
         )
         if not data:
             return None
@@ -217,11 +187,13 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 and lang != "en"
                 and self.config.cparser.value("lastfm/bio_lang_en_fallback", type=bool)
             ):
-                data = await nowplaying.apicache.cached_fetch(
+                data = await nowplaying.datacache.cached_fetch(
                     provider="lastfm",
                     artist_name=artist,
                     endpoint=f"artist.getinfo/en/{cache_id}",
-                    fetch_func=lambda: self._fetch_async(apikey, artist, mbid=mbid, lang="en"),
+                    fetch_func=lambda: self._get_json(
+                        self._artist_url(apikey, artist, mbid=mbid, lang="en")
+                    ),
                     ttl_seconds=None,
                 )
                 raw_bio = ((data or {}).get("artist") or {}).get("bio", {}).get("content") or ""

@@ -130,10 +130,10 @@ def test_rate_limiter_manager_default_rates():
     assert discogs_limiter.rate == 2.0  # 2 req/sec for Discogs
 
     fanarttv_limiter = manager.get_limiter("fanarttv")
-    assert fanarttv_limiter.rate == 2.0  # 2 req/sec for FanartTV
+    assert fanarttv_limiter.rate == 0.5  # 0.5 req/sec — FanartTV free tier: 30 req/min
 
     theaudiodb_limiter = manager.get_limiter("theaudiodb")
-    assert theaudiodb_limiter.rate == 1.0  # 1 req/sec for TheAudioDB
+    assert theaudiodb_limiter.rate == 0.5  # 0.5 req/sec — TheAudioDB free tier: 30 req/min
 
     wikimedia_limiter = manager.get_limiter("wikimedia")
     assert wikimedia_limiter.rate == 10.0  # 10 req/sec for Wikimedia

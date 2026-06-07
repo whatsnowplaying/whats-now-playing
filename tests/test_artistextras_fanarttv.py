@@ -3,14 +3,14 @@
 
 import os
 
+import httpx
 import pytest
+import respx
 from utils_artistextras import (
     FakeImageCache,
     configureplugins,
     configuresettings,
-    run_api_call_count_test,
     run_cache_consistency_test,
-    run_failure_cache_test,
     skip_no_fanarttv_key,
 )
 
@@ -50,38 +50,49 @@ async def test_fanarttv_apicache_usage(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_call_count(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
-    """test that fanarttv plugin makes only one API call when cache is used"""
+async def test_fanarttv_apicache_api_call_count(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """test that fanarttv makes only one HTTP call when the cache is warm"""
     plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
+    mbid = "b7ffd2af-418f-4be2-bdd1-22f8b48613da"
+    url = f"http://webservice.fanart.tv/v3/music/{mbid}"
+    mock_payload = {"name": "Nine Inch Nails"}
 
-    await run_api_call_count_test(
-        plugin=plugin,
-        test_metadata=_get_test_metadata(),
-        mock_method_name="_fetch_async",
-        imagecache=imagecache,
-    )
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(return_value=httpx.Response(200, json=mock_payload))
+        await plugin.download_async(_get_test_metadata().copy(), imagecache=imagecache)
+        first_count = mock_http.calls.call_count
+        assert first_count >= 1
+
+        await plugin.download_async(_get_test_metadata().copy(), imagecache=imagecache)
+        assert mock_http.calls.call_count == first_count, "Second call should hit cache"
 
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
-    """test that fanarttv plugin doesn't cache failed API calls"""
+async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """test that fanarttv doesn't cache failed API calls; second call retries"""
     plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
-
-    # Use test metadata with invalid MBID to trigger failure
-    test_metadata = {
+    mbid = "invalid-mbid-that-will-fail"
+    url = f"http://webservice.fanart.tv/v3/music/{mbid}"
+    metadata = {
         "album": "Test Album",
         "artist": "Test Artist",
         "imagecacheartist": "testartist",
-        "musicbrainzartistid": ["invalid-mbid-that-will-fail"],  # Invalid MBID
+        "musicbrainzartistid": [mbid],
     }
 
-    await run_failure_cache_test(
-        plugin=plugin,
-        test_metadata=test_metadata,
-        mock_method_name="_fetch_async",
-        imagecache=imagecache,
-    )
+    # First call: 500 (transient server error) → not cached → returns None
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(side_effect=lambda _r: httpx.Response(500))
+        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        assert result1 is None
+
+    # Second call: success → should reach API (transient failure was not cached)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(return_value=httpx.Response(200, json={"name": "Test Artist"}))
+        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        assert mock_http.calls.call_count >= 1, "Transient failure must not have been cached"
+        _ = result2
 
 
 @pytest.mark.asyncio

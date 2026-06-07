@@ -8,6 +8,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
+from httpx import Headers as CacheHeaders  # re-exported so callers don't import httpx directly
+
 import orjson
 
 # Core components
@@ -43,6 +45,8 @@ __all__ = [
     "cached_fetch",  # Drop-in replacement for apicache.cached_fetch
     "set_shared_storage",  # Test isolation helper
     "reset_shared_storage",  # Reset singleton after DB move/delete
+    "get_shared_storage",  # Access the storage singleton directly
+    "CacheHeaders",  # httpx.Headers re-export — use for get_or_fetch() headers param
 ]
 
 # Module-level convenience functions
@@ -126,6 +130,11 @@ def set_shared_storage(storage: DataStorage | None) -> None:
     _shared_storage = storage
 
 
+def get_shared_storage() -> DataStorage:
+    """Return the module-level storage singleton, creating it if needed."""
+    return _get_shared_storage()
+
+
 def reset_shared_storage() -> None:
     """Reset the module-level storage singleton to None.
 
@@ -137,18 +146,23 @@ def reset_shared_storage() -> None:
     _shared_storage = None
 
 
-async def cached_fetch(
+async def cached_fetch(  # pylint: disable=too-many-arguments
     provider: str,
     artist_name: str,
     endpoint: str,
     fetch_func: Callable[[], Awaitable[Any]],
     ttl_seconds: int | None = None,
+    negative_ttl: int | None = None,
 ) -> Any | None:
     """Drop-in replacement for apicache.cached_fetch using datacache storage.
 
     Checks the local cache first; calls fetch_func() on a miss and stores the
     result. Returns None without caching when fetch_func() returns None so
     transient API failures (429, 5xx, timeout) do not poison the cache.
+
+    negative_ttl: TTL for falsy-but-not-None results (e.g. {} meaning "not found
+    in the upstream API").  When set, empty results are cached with this shorter
+    TTL rather than the full ttl_seconds.  When None, falsy results are not cached.
     """
     storage = _get_shared_storage()
     normalized = artist_name.lower().strip()
@@ -166,21 +180,26 @@ async def cached_fetch(
 
     logging.debug("Cache MISS for %s:%s:%s", provider, artist_name, endpoint)
     fresh = await fetch_func()
-    if fresh is not None:
+    if fresh:
         store_ttl = (
             ttl_seconds
             if ttl_seconds is not None
             else _PROVIDER_TTL.get(provider, _PROVIDER_TTL["default"])
         )
-        try:
-            await storage.store(
-                url=url,
-                identifier=normalized,
-                data_type="api_response",
-                provider=provider,
-                data_value=orjson.dumps(fresh, default=_serialize_default),
-                ttl_seconds=store_ttl,
-            )
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            logging.warning("datacache store failed for %s: %s", url, err)
+    elif fresh is not None and negative_ttl is not None:
+        # Falsy-but-not-None result (e.g. {} = not found) — cache with shorter TTL
+        store_ttl = negative_ttl
+    else:
+        return fresh  # None = transient failure, do not cache
+    try:
+        await storage.store(
+            url=url,
+            identifier=normalized,
+            data_type="api_response",
+            provider=provider,
+            data_value=orjson.dumps(fresh, default=_serialize_default),
+            ttl_seconds=store_ttl,
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning("datacache store failed for %s: %s", url, err)
     return fresh

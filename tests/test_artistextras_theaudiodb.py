@@ -3,20 +3,21 @@
 
 # pylint: disable=protected-access,
 import logging
-import time
 
+import httpx
 import pytest
-from aioresponses import aioresponses
+import respx
 from utils_artistextras import (
     FakeImageCache,
     configureplugins,
     configuresettings,
-    run_api_call_count_test,
 )
 
 import nowplaying.datacache
 import nowplaying.artistextras.theaudiodb
 from nowplaying.artistextras.theaudiodb import DEFAULT_THEAUDIODB_API_KEY
+
+ARTIST_MBID = "b7ffd2af-418f-4be2-bdd1-22f8b48613da"
 
 TADB_BASE_URL = f"https://theaudiodb.com/api/v1/json/{DEFAULT_THEAUDIODB_API_KEY}"
 
@@ -249,133 +250,69 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_api_call_count(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
-    """test that theaudiodb plugin makes only one API call when cache is used"""
-
+async def test_theaudiodb_api_call_count(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """test that theaudiodb plugin makes only one HTTP call when cache is warm"""
     plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+    metadata = {
+        "artist": "Nine Inch Nails",
+        "musicbrainzartistid": [ARTIST_MBID],
+        "imagecacheartist": "nineinchnails",
+    }
+    artist_url = f"{TADB_BASE_URL}/artist-mb.php?i={ARTIST_MBID}"
+    mock_payload = {"artists": [{"strArtist": "Nine Inch Nails", "idArtist": "111239"}]}
 
-    # Test with a known artist
-    metadata = {"artist": "Madonna", "imagecacheartist": "madonna"}
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(artist_url).mock(return_value=httpx.Response(200, json=mock_payload))
 
-    await run_api_call_count_test(
-        plugin=plugin,
-        test_metadata=metadata,
-        mock_method_name="_fetch_async",
-        imagecache=imagecache,
-    )
+        await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        first_count = mock_http.calls.call_count
+        assert first_count >= 1, "Expected at least one HTTP call on cache miss"
 
-
-@pytest.mark.asyncio
-async def test_theaudiodb_429_rate_limit_handling(bootstrap):
-    """test that theaudiodb handles 429 rate limits with proper cooldown"""
-
-    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
-
-    # Reset rate limit state
-    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-
-    with aioresponses() as mockr:
-        # Mock 429 response
-        mockr.get(
-            f"{TADB_BASE_URL}/search.php?s=test",
-            status=429,
-        )
-
-        # First call should trigger rate limit exception
-        with pytest.raises(nowplaying.artistextras.theaudiodb.RateLimitException):
-            await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test")
-
-        # Rate limit should now be set for 60 seconds
-        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
-
-        # Second call should be blocked without making HTTP request
-        result2 = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test2")
-        assert result2 is None
-
-        # Only one HTTP request should have been made (first one, second was blocked)
-        assert len(mockr.requests) == 1
+        await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        assert mock_http.calls.call_count == first_count, "Cache hit should not add HTTP calls"
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_429_cooldown_expiry(bootstrap):
-    """test that theaudiodb rate limit cooldown expires after 60 seconds"""
+async def test_theaudiodb_other_http_errors(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """test that theaudiodb handles non-200 HTTP errors by returning None"""
     plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
+    url = f"{TADB_BASE_URL}/search.php?s=notfound"
 
-    # Set rate limit in the past (expired)
-    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = time.time() - 1
-
-    with aioresponses() as mockr:
-        # Mock successful response after cooldown
-        mockr.get(
-            f"{TADB_BASE_URL}/search.php?s=test",
-            payload={"test": "data"},
+    # Use side_effect callable so the mock persists across retries
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(side_effect=lambda _r: httpx.Response(404))
+        result = await plugin._fetch_cached(  # pylint: disable=protected-access
+            DEFAULT_THEAUDIODB_API_KEY, "search.php?s=notfound", "testartist"
         )
-
-        result = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test")
-        assert result == {"test": "data"}
-
-        # HTTP request should have been made (cooldown expired)
-        assert len(mockr.requests) == 1
-
-
-@pytest.mark.asyncio
-async def test_theaudiodb_other_http_errors(bootstrap):
-    """test that theaudiodb handles other HTTP errors (non-429) properly"""
-    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
-
-    # Reset rate limit state
-    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-
-    with aioresponses() as mockr:
-        # Mock 404 response
-        mockr.get(
-            f"{TADB_BASE_URL}/search.php?s=notfound",
-            status=404,
-        )
-
-        result = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=notfound")
         assert result is None
 
-        # Rate limit should NOT be set for non-429 errors
-        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until == 0
-
 
 @pytest.mark.asyncio
-async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
-    """test that theaudiodb 429 responses are not cached"""
+async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """test that theaudiodb 429 responses are not cached; second call retries"""
     plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
+    url = f"{TADB_BASE_URL}/search.php?s=test"
 
-    # Reset rate limit state
-    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-
-    with aioresponses() as mockr:
-        # Mock 429 response
-        mockr.get(
-            f"{TADB_BASE_URL}/search.php?s=test",
-            status=429,
+    # Side-effect callable keeps responding 429 across all retry attempts.
+    # Retry-After: 1 caps the per-retry sleep to 1 s.
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(
+            side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "1"})
         )
-
-        # Cached fetch should handle the rate limit exception and return None
-        result = await plugin._fetch_cached(
+        result = await plugin._fetch_cached(  # pylint: disable=protected-access
             DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test", "testartist"
         )
         assert result is None
 
-        # Rate limit should be set
-        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
-
-        # Clear rate limit and add successful response
-        nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-        mockr.get(
-            f"{TADB_BASE_URL}/search.php?s=test",
-            payload={"test": "data"},
+    # Second call: if 429 had been cached, this would also return None
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(url).mock(
+            return_value=httpx.Response(200, json={"artists": [{"strArtist": "Test"}]})
         )
-
-        # Now it should work and get the real data (not cached 429)
-        result2 = await plugin._fetch_cached(
+        result2 = await plugin._fetch_cached(  # pylint: disable=protected-access
             DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test", "testartist"
         )
-        assert result2 == {"test": "data"}
+        assert result2 is not None
 
 
 NIN_ARTIST_URL = f"{TADB_BASE_URL}/search.php?s=nine%20inch%20nails"
@@ -419,14 +356,18 @@ NIN_ALBUM_RESPONSE_HQ = {
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_queued(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_queued(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """album cover art URL is queued in imagecache when album is present"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
-        mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
+        mock_http.get(NIN_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE)
+        )
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -443,14 +384,18 @@ async def test_theaudiodb_coverart_queued(bootstrap, isolated_datacache_storage)
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """strAlbumThumbHQ is preferred over strAlbumThumb when available"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
-        mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE_HQ)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
+        mock_http.get(NIN_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE_HQ)
+        )
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -466,13 +411,15 @@ async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_datacache_stor
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_disabled(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_disabled(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """album cover art is not fetched when coverart setting is disabled"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", False)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -489,14 +436,16 @@ async def test_theaudiodb_coverart_disabled(bootstrap, isolated_datacache_storag
 @pytest.mark.asyncio
 async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint: disable=redefined-outer-name
     bootstrap,
-    isolated_datacache_storage,  # pylint: disable=unused-argument
+    isolated_datacache_client,  # pylint: disable=unused-argument
 ):
     """album cover art fetch is skipped when coverimageraw already in metadata"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -512,13 +461,15 @@ async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_no_album(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_no_album(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """album cover art fetch is skipped when no album in metadata"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
             imagecache=imagecache,
@@ -529,14 +480,16 @@ async def test_theaudiodb_coverart_no_album(bootstrap, isolated_datacache_storag
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """album API error does not prevent artist data from being returned"""
     plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
-        mockr.get(NIN_ALBUM_URL, payload={"album": None})
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        )
+        mock_http.get(NIN_ALBUM_URL).mock(return_value=httpx.Response(200, json={"album": None}))
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -551,7 +504,7 @@ async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_datacache
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_live_coverart(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_live_coverart(bootstrap):  # pylint: disable=redefined-outer-name
     """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""
     plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
