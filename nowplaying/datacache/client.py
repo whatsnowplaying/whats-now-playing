@@ -7,7 +7,7 @@ without dealing with low-level storage details.
 
 import asyncio
 import logging
-import time
+import random
 from pathlib import Path
 from typing import Any
 
@@ -15,10 +15,26 @@ import ssl
 
 import httpx
 import truststore
+from httpx import Headers as CacheHeaders
 
 from .pending import RequestQueue
 from .queue import RateLimiterManager
 from .storage import DataStorage
+
+_PROVIDER_TTL_DEFAULTS: dict[str, int] = {
+    "theaudiodb": 7 * 24 * 3600,
+    "discogs": 7 * 24 * 3600,
+    "fanarttv": 30 * 24 * 3600,
+    "wikimedia": 7 * 24 * 3600,
+    "musicbrainz": 30 * 24 * 3600,
+}
+_IMAGE_DATA_TYPES: frozenset[str] = frozenset({"thumbnail", "logo", "banner", "fanart"})
+_DEFAULT_TTL = 7 * 24 * 3600
+
+
+def _backoff(attempt: int) -> float:
+    """Exponential backoff with random jitter."""
+    return (2**attempt) + random.uniform(0, 1.0)
 
 
 class DataCacheClient:
@@ -50,7 +66,7 @@ class DataCacheClient:
             await self.storage.initialize()
             await self.queue.initialize()
             ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self._session = httpx.AsyncClient(http2=True, verify=ssl_ctx)
+            self._session = httpx.AsyncClient(http2=True, verify=ssl_ctx, follow_redirects=True)
             self._initialized = True
 
     async def close(self) -> None:
@@ -72,6 +88,8 @@ class DataCacheClient:
         ttl_seconds: int | None = None,
         immediate: bool = True,
         metadata: dict | None = None,
+        headers: CacheHeaders | None = None,
+        negative_ttl: int | None = None,
     ) -> tuple[Any, dict] | None:
         """
         Get data from cache, or fetch from URL if not cached.
@@ -127,7 +145,33 @@ class DataCacheClient:
             retries=retries,
             ttl_seconds=ttl_seconds,
             metadata=metadata,
+            headers=headers,
+            negative_ttl=negative_ttl,
         )
+
+    async def _cache_negative(  # pylint: disable=too-many-arguments
+        self,
+        url: str,
+        identifier: str,
+        data_type: str,
+        provider: str,
+        ttl: int,
+        metadata: dict | None,
+    ) -> None:
+        """Store b'{}' with a short TTL for a definitive 404 (not found) response."""
+        logging.debug("HTTP 404 for %s — caching negative result", url)
+        try:
+            await self.storage.store(
+                url=url,
+                identifier=identifier,
+                data_type=data_type,
+                provider=provider,
+                data_value=b"{}",
+                ttl_seconds=ttl,
+                metadata=metadata,
+            )
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.warning("Failed to cache 404 for %s: %s", url, err)
 
     async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches
         self,
@@ -139,6 +183,8 @@ class DataCacheClient:
         retries: int,
         ttl_seconds: int | None,
         metadata: dict | None,
+        headers: CacheHeaders | None = None,
+        negative_ttl: int | None = None,
     ) -> tuple[Any, dict] | None:
         """
         Fetch data from URL and store in cache.
@@ -164,7 +210,9 @@ class DataCacheClient:
         for attempt in range(retries + 1):
             try:
                 # self._session is guaranteed non-None after the check above
-                response = await self._session.get(url, timeout=httpx.Timeout(timeout))
+                response = await self._session.get(
+                    url, timeout=httpx.Timeout(timeout), headers=headers
+                )
                 if response.status_code == 200:
                     data = response.content  # callers decode (e.g. orjson.loads) as needed
 
@@ -193,24 +241,33 @@ class DataCacheClient:
                         "Rate limited by %s, waiting %d seconds", provider, retry_after
                     )
                     await asyncio.sleep(retry_after)
+                    # Re-acquire token after sleeping so local limiter stays in
+                    # sync with the server's actual rate-limit window.
+                    if not await rate_limiter.acquire():
+                        return None
                     continue
 
+                if response.status_code == 404 and negative_ttl is not None:
+                    await self._cache_negative(
+                        url, identifier, data_type, provider, negative_ttl, metadata
+                    )
+                    return None
                 logging.warning("HTTP %d error fetching %s", response.status_code, url)
                 if attempt < retries:
-                    wait_time = (2**attempt) + (time.time() % 1)  # Exponential backoff with jitter
+                    wait_time = _backoff(attempt)
                     await asyncio.sleep(wait_time)
                     continue
-                return None
+                break
 
             except httpx.TimeoutException:
                 logging.warning(
                     "Timeout fetching URL (attempt %d/%d): %s", attempt + 1, retries + 1, url
                 )
                 if attempt < retries:
-                    wait_time = (2**attempt) + (time.time() % 1)
+                    wait_time = _backoff(attempt)
                     await asyncio.sleep(wait_time)
                     continue
-                return None
+                break
 
             except Exception as error:  # pylint: disable=broad-except
                 logging.error(
@@ -221,30 +278,18 @@ class DataCacheClient:
                     error,
                 )
                 if attempt < retries:
-                    wait_time = (2**attempt) + (time.time() % 1)
+                    wait_time = _backoff(attempt)
                     await asyncio.sleep(wait_time)
                     continue
-                return None
+                break
 
         return None
 
-    def _get_default_ttl(self, provider: str, data_type: str) -> int:  # pylint: disable=no-self-use
-        """Get default TTL based on provider and data type"""
-        # Provider-specific defaults (in seconds)
-        provider_defaults = {
-            "theaudiodb": 7 * 24 * 3600,  # 1 week
-            "discogs": 7 * 24 * 3600,  # 1 week
-            "fanarttv": 30 * 24 * 3600,  # 1 month
-            "wikimedia": 7 * 24 * 3600,  # 1 week
-            "musicbrainz": 30 * 24 * 3600,  # 1 month
-        }
-
-        # Data type modifiers
-        if data_type in {"thumbnail", "logo", "banner", "fanart"}:
-            # Images change less frequently
-            return provider_defaults.get(provider, 7 * 24 * 3600) * 2
-        # Text data may update more frequently
-        return provider_defaults.get(provider, 7 * 24 * 3600)
+    @staticmethod
+    def _get_default_ttl(provider: str, data_type: str) -> int:
+        """Get default TTL based on provider and data type."""
+        base = _PROVIDER_TTL_DEFAULTS.get(provider, _DEFAULT_TTL)
+        return base * 2 if data_type in _IMAGE_DATA_TYPES else base
 
     async def get_random_image(
         self,

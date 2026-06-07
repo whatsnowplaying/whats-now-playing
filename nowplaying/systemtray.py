@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QSystemTrayIcon,
 )
 
-import nowplaying.apicache
 import nowplaying.upgrade
 import nowplaying.upgrades
 import nowplaying.upgrades.background
@@ -49,10 +48,6 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
     def run(self) -> None:  # pylint: disable=no-self-use
         """Run vacuum and maintenance operations on all databases."""
         logging.debug("Starting background database vacuum")
-        try:
-            nowplaying.apicache.APIResponseCache.vacuum_database_file()
-        except (sqlite3.Error, OSError) as error:
-            logging.error("Error vacuuming API cache: %s", error)
         try:
             nowplaying.guessgame.GuessGame.vacuum_database()
         except (sqlite3.Error, OSError) as error:

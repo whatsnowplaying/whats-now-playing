@@ -5,13 +5,14 @@ import logging
 import logging.config
 import logging.handlers
 
-import aiohttp
+import orjson
 
 import nowplaying.datacache
-import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
 from nowplaying.types import TrackMetadata
 from nowplaying.config import ConfigFile
+
+_FANARTTV_TTL = 7 * 24 * 3600  # 7 days
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -23,67 +24,39 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "fanart.tv"
         self.priority = 50
 
-    async def _fetch_async(self, apikey: str, artistid: str) -> dict[str, str] | None:
-        delay = self.calculate_delay()
-
-        try:
-            baseurl = f"http://webservice.fanart.tv/v3/music/{artistid}"
-            logging.debug("fanarttv async: calling %s", baseurl)
-            connector = nowplaying.utils.create_http_connector()
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(
-                    f"{baseurl}?api_key={apikey}", timeout=aiohttp.ClientTimeout(total=delay)
-                ) as response:
-                    # Only 200 and 404 are cache-worthy.  A 404 means "artist
-                    # not in the database", which is a legitimate negative
-                    # result that should be remembered.  Everything else —
-                    # 429, 5xx, plus credential/config errors like 400/401/403
-                    # — should be retried on the next play rather than baked
-                    # into a 7-day cache entry.
-                    if response.status not in (200, 404):
-                        logging.warning(
-                            "fanart.tv HTTP %d for artistid %s; not caching",
-                            response.status,
-                            artistid,
-                        )
-                        return None
-                    return await response.json()
-        except TimeoutError:
-            logging.error("fantart.tv async timeout getting artistid %s", artistid)
-            return None
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error("fanart.tv async: %s", error)
-            return None
-
-    async def _fetch_cached(self, apikey, artistid, artist_name) -> dict[str, str] | None:
-        """Cached version of _fetch for better performance."""
-
-        async def fetch_func() -> dict[str, str] | None:
-            return await self._fetch_async(apikey, artistid)
-
-        return await nowplaying.datacache.cached_fetch(
-            provider="fanarttv",
-            artist_name=artist_name,
-            endpoint=f"music/{artistid}",  # Use the API endpoint path
-            fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
-        )
-
     async def download_async(self, metadata: TrackMetadata | None = None, imagecache=None):
         """async download the extra data"""
 
-        # Validate inputs
         if not self._validate_inputs(metadata, imagecache):
             return None
 
         apikey = self.config.cparser.value("fanarttv/apikey")
-        # Process each MusicBrainz artist ID
+        datacache_client = nowplaying.datacache.get_client()
+
         for artistid in metadata["musicbrainzartistid"]:
-            artist_data = await self._fetch_cached(apikey, artistid, metadata.get("artist", ""))
+            url = f"http://webservice.fanart.tv/v3/music/{artistid}"
+            result = await datacache_client.get_or_fetch(
+                url=url,
+                identifier=metadata.get("imagecacheartist", artistid),
+                data_type="artist",
+                provider="fanarttv",
+                timeout=self.calculate_delay(),
+                retries=3,
+                ttl_seconds=_FANARTTV_TTL,
+                headers=nowplaying.datacache.CacheHeaders({"client-key": apikey}),
+                negative_ttl=24 * 3600,  # 24h: artist not in FanartTV DB
+            )
+            if result is None:
+                return None
+            data, _ = result
+            try:
+                artist_data = orjson.loads(data)
+            except orjson.JSONDecodeError:
+                return None
             if not artist_data or artist_data.get("status") == "error":
-                return None  # Match original behavior - fail on first error
+                return None
             self._process_artist_images(artist_data, metadata, imagecache)
-            break  # Success with first valid artist, no need to continue
+            break
 
         return metadata
 

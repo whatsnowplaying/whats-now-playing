@@ -82,6 +82,11 @@ playing" information from various DJ software.
 
 - Qt6/PySide6 is used for the GUI framework
 - We control the UI files. No need for hasattr/getattr patterns.
+- **Avoid getattr/setattr for code we own.** All plugins and internal modules are
+  self-contained — use direct attribute access and method calls instead. String-based
+  getattr() is fragile: it breaks silently when methods are renamed or removed (e.g.
+  test helpers using `getattr(plugin, "_fetch_async")` broke when `_fetch_async` was
+  removed during a migration). Prefer direct calls or respx/unittest.mock patches.
 - Configuration uses Qt's QSettings with cross-platform support
 - **Every QSettings key used by a UI widget must also have a default registered
   in the appropriate `_defaults_*()` method in `nowplaying/config.py`.** Do not

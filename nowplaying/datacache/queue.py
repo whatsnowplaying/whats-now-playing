@@ -86,12 +86,12 @@ class RateLimiterManager:
     rate_limiters: dict[str, RateLimiter] = field(default_factory=dict)
     _default_rates: dict[str, float] = field(
         default_factory=lambda: {
-            "musicbrainz": 1.0,  # 1 request per second
-            "discogs": 2.0,  # 2 requests per second
-            "fanarttv": 2.0,  # 2 requests per second
-            "theaudiodb": 1.0,  # 1 request per second
-            "wikimedia": 10.0,  # 10 requests per second
-            "images": 5.0,  # 5 requests per second
+            "musicbrainz": 1.0,  # MusicBrainz: 1 req/sec
+            "discogs": 2.0,  # Discogs: ~60 req/min authenticated
+            "fanarttv": 0.5,  # FanartTV free: 30 req/min
+            "theaudiodb": 0.5,  # TheAudioDB free: 30 req/min
+            "wikimedia": 10.0,  # Wikimedia: generous
+            "images": 5.0,  # Image fetches: internal
         }
     )
 

@@ -2,11 +2,10 @@
 """start of support of theaudiodb"""
 
 import logging
-import time
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
+import orjson
 
 import nowplaying.datacache
 import nowplaying.artistextras
@@ -17,11 +16,8 @@ from nowplaying.types import TrackMetadata
 # Public free-tier API key (30 requests/minute). Single source of truth for
 # defaults() and the 5.1.0 upgrade migration.
 DEFAULT_THEAUDIODB_API_KEY = "123"
-
-
-class RateLimitException(Exception):
-    """Exception raised when API rate limit is hit - should not be cached"""
-
+_THEAUDIODB_BASE = "https://theaudiodb.com/api/v1/json"
+_THEAUDIODB_TTL = 7 * 24 * 3600  # 7 days
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
@@ -30,9 +26,6 @@ if TYPE_CHECKING:
 
 class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
     """handler for TheAudioDB"""
-
-    # Class variable to track rate limit across all instances
-    _rate_limit_until: float = 0
 
     def __init__(
         self, config: nowplaying.config.ConfigFile | None = None, qsettings: "QSettings" = None
@@ -48,65 +41,26 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         htmlfilter.feed(text)
         return htmlfilter.text
 
-    async def _fetch_async(self, apikey: str, api: str) -> TrackMetadata | None:
-        # Check if we're still in rate limit cooldown period
-        current_time = time.time()
-        if current_time < Plugin._rate_limit_until:
-            remaining = int(Plugin._rate_limit_until - current_time)
-            logging.warning(
-                "TheAudioDB rate limit active - skipping request for %s (waiting %d more seconds)",
-                api,
-                remaining,
-            )
-            return None
-
-        delay = self.calculate_delay()
-        try:
-            logging.debug("Fetching async %s", api)
-            connector = nowplaying.utils.create_http_connector()
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(
-                    f"https://theaudiodb.com/api/v1/json/{apikey}/{api}",
-                    timeout=aiohttp.ClientTimeout(total=delay),
-                ) as response:
-                    if response.status == 429:
-                        # Rate limit exceeded - set 60 second cooldown
-                        Plugin._rate_limit_until = time.time() + 60
-                        logging.warning(
-                            "TheAudioDB rate limit exceeded; blocking requests for 60 seconds"
-                        )
-                        raise RateLimitException(f"Rate limit exceeded for {api}")
-                    if response.status != 200:
-                        # Other HTTP errors - log and return None
-                        logging.error("TheAudioDB HTTP error %s for %s", response.status, api)
-                        return None
-                    return await response.json()
-        except TimeoutError:
-            logging.error("TheAudioDB _fetch_async hit timeout on %s", api)
-            return None
-        except RateLimitException:
-            # Re-raise rate limit exceptions so they don't get cached
-            raise
-        except Exception:  # pragma: no cover pylint: disable=broad-except
-            logging.exception("TheAudioDB async hit unexpected error for %s", api)
-            return None
-
     async def _fetch_cached(self, apikey: str, api: str, artist_name: str) -> TrackMetadata | None:
-        """Cached version of _fetch for better performance."""
-
-        async def fetch_func():
-            return await self._fetch_async(apikey, api)
-
+        """Fetch and cache a TheAudioDB API response via DataCacheClient."""
+        url = f"{_THEAUDIODB_BASE}/{apikey}/{api}"
+        logging.debug("Fetching async %s", api)
+        result = await nowplaying.datacache.get_client().get_or_fetch(
+            url=url,
+            identifier=artist_name,
+            data_type="api_response",
+            provider="theaudiodb",
+            timeout=self.calculate_delay(),
+            retries=3,
+            ttl_seconds=_THEAUDIODB_TTL,
+            negative_ttl=24 * 3600,  # 24h: artist/album not in TheAudioDB
+        )
+        if result is None:
+            return None
+        data, _ = result
         try:
-            return await nowplaying.datacache.cached_fetch(
-                provider="theaudiodb",
-                artist_name=artist_name,
-                endpoint=api,  # Use full API string so MBID is part of the cache key
-                fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
-            )
-        except RateLimitException:
-            # Don't cache rate limit responses - return None without caching
+            return orjson.loads(data)
+        except orjson.JSONDecodeError:
             return None
 
     def _check_artist(self, artdata: dict[str, Any]) -> bool:
@@ -350,7 +304,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"artist_{artist_data['idArtist']}",
             fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
+            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
         )
 
     async def download_async(  # pylint: disable=too-many-branches

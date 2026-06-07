@@ -15,7 +15,6 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
-import nowplaying.apicache
 import nowplaying.artistextras.theaudiodb
 import nowplaying.trackrequests
 import nowplaying.utils.config_json
@@ -300,6 +299,9 @@ class UpgradeConfig:
         if oldversion < Version("5.2.1"):
             self._upgrade_to_5_2_1()
 
+        if oldversion < Version("5.3.0"):
+            self._upgrade_to_5_3_0()
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -532,9 +534,26 @@ class UpgradeConfig:
 
         The vacuum pass that follows on startup reclaims the freed disk pages.
         """
-        nowplaying.apicache.APIResponseCache.purge_providers(
-            ["musicbrainz", "musicbrainz_caa", "wikimedia", "discogs"]
-        )
+        # apicache was replaced by datacache in 5.3.0; nothing to purge.
+        # The apicache database file is deleted by _upgrade_to_5_3_0.
+
+    @staticmethod
+    def _upgrade_to_5_3_0() -> None:
+        """Upgrade to 5.3.0 — delete the old apicache database.
+
+        apicache was replaced by datacache in 5.3.0.  The old api_responses.db
+        is no longer read or written, so remove it to reclaim disk space.
+        """
+        try:
+            cache_dir = pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
+            )
+            api_cache_db = cache_dir / "api_cache" / "api_responses.db"
+            if api_cache_db.exists():
+                api_cache_db.unlink()
+                logging.info("Upgrade to 5.3.0: removed old apicache database %s", api_cache_db)
+        except OSError as error:
+            logging.warning("Upgrade to 5.3.0: could not remove apicache database: %s", error)
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:

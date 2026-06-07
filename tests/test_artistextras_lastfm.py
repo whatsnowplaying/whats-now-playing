@@ -4,12 +4,13 @@
 import os
 import urllib.parse
 
+import httpx
 import pytest
-from aioresponses import aioresponses
+import respx
 from utils_artistextras import FakeImageCache, configuresettings, skip_no_lastfm_key
 
-import nowplaying.apicache
 import nowplaying.artistextras.lastfm
+import nowplaying.datacache
 
 LASTFM_BASE_URL = "https://ws.audioscrobbler.com/2.0/"
 TEST_APIKEY = "testapikey123"  # pragma: allowlist secret
@@ -136,8 +137,8 @@ async def test_lastfm_bio_and_website(bootstrap):
     """successful fetch returns bio and website"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
 
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
@@ -155,8 +156,8 @@ async def test_lastfm_bio_stripped(bootstrap):
     """Last.fm attribution is stripped from bio"""
     plugin, _ = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
         )
@@ -172,8 +173,8 @@ async def test_lastfm_bio_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/bio", False)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
             imagecache=imagecache,
@@ -190,8 +191,8 @@ async def test_lastfm_websites_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
             imagecache=imagecache,
@@ -207,8 +208,8 @@ async def test_lastfm_existing_bio_not_overwritten(bootstrap):
     """does not overwrite existing artistlongbio"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -229,10 +230,9 @@ async def test_lastfm_api_error(bootstrap):
     """Last.fm API error response returns None"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    with aioresponses() as mockr:
-        mockr.get(
-            XYZ_URL,
-            payload={"error": 6, "message": "Artist not found"},
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(XYZ_URL).mock(
+            return_value=httpx.Response(200, json={"error": 6, "message": "Artist not found"})
         )
         result = await plugin.download_async(
             {"artist": "XYZ Nonexistent Artist XYZ", "imagecacheartist": "xyz"},
@@ -243,24 +243,18 @@ async def test_lastfm_api_error(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_lastfm_http_error(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_http_error(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """HTTP error returns None without raising"""
     plugin, imagecache = _setup_plugin(bootstrap)
 
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(side_effect=lambda _r: httpx.Response(503))
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+            imagecache=imagecache,
+        )
 
-    try:
-        with aioresponses() as mockr:
-            mockr.get(NIN_URL, status=503)
-            result = await plugin.download_async(
-                {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-                imagecache=imagecache,
-            )
-
-        assert result is None
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -270,8 +264,8 @@ async def test_lastfm_both_disabled_returns_none(bootstrap):
     bootstrap.cparser.setValue("lastfm/bio", False)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
             imagecache=imagecache,
@@ -289,104 +283,86 @@ def test_lastfm_providerinfo(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_lastfm_lang_returned(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_lang_returned(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """non-English lang is requested and bio uses that language"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_plugin(bootstrap, lang="de")
+    de_url = _artist_url("Nine Inch Nails", lang="de")
 
-    try:
-        plugin, imagecache = _setup_plugin(bootstrap, lang="de")
-        de_url = _artist_url("Nine Inch Nails", lang="de")
-
-        de_response = {
-            "artist": {
-                "name": "Nine Inch Nails",
-                "url": "https://www.last.fm/music/Nine+Inch+Nails",
-                "bio": {
-                    "content": "Nine Inch Nails"
-                    " ist eine US-amerikanische Industrialrock-Band."  # codespell:ignore
-                },
-            }
+    de_response = {
+        "artist": {
+            "name": "Nine Inch Nails",
+            "url": "https://www.last.fm/music/Nine+Inch+Nails",
+            "bio": {
+                "content": "Nine Inch Nails"
+                " ist eine US-amerikanische Industrialrock-Band."  # codespell:ignore
+            },
         }
+    }
 
-        with aioresponses() as mockr:
-            mockr.get(de_url, payload=de_response)
-            result = await plugin.download_async(
-                {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-                imagecache=imagecache,
-            )
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(de_url).mock(return_value=httpx.Response(200, json=de_response))
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+            imagecache=imagecache,
+        )
 
-        assert result is not None
-        assert "Industrialrock" in result["artistlongbio"]
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result is not None
+    assert "Industrialrock" in result["artistlongbio"]
 
 
 @pytest.mark.asyncio
-async def test_lastfm_lang_fallback_to_en(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_lang_fallback_to_en(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """empty bio in requested lang falls back to English when enabled"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_plugin(bootstrap, lang="ko", en_fallback=True)
+    ko_url = _artist_url("Nine Inch Nails", lang="ko")
+    en_url = _artist_url("Nine Inch Nails", lang="en")
 
-    try:
-        plugin, imagecache = _setup_plugin(bootstrap, lang="ko", en_fallback=True)
-        ko_url = _artist_url("Nine Inch Nails", lang="ko")
-        en_url = _artist_url("Nine Inch Nails", lang="en")
-
-        ko_response = {
-            "artist": {
-                "name": "Nine Inch Nails",
-                "url": "https://www.last.fm/music/Nine+Inch+Nails",
-                "bio": {"content": ""},  # no Korean bio
-            }
+    ko_response = {
+        "artist": {
+            "name": "Nine Inch Nails",
+            "url": "https://www.last.fm/music/Nine+Inch+Nails",
+            "bio": {"content": ""},  # no Korean bio
         }
+    }
 
-        with aioresponses() as mockr:
-            mockr.get(ko_url, payload=ko_response)
-            mockr.get(en_url, payload=NIN_RESPONSE)
-            result = await plugin.download_async(
-                {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-                imagecache=imagecache,
-            )
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(ko_url).mock(return_value=httpx.Response(200, json=ko_response))
+        mock_http.get(en_url).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+            imagecache=imagecache,
+        )
 
-        assert result is not None
-        assert result["artistlongbio"]
-        assert "Nine Inch Nails" in result["artistlongbio"]
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result is not None
+    assert result["artistlongbio"]
+    assert "Nine Inch Nails" in result["artistlongbio"]
 
 
 @pytest.mark.asyncio
-async def test_lastfm_lang_no_fallback(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_lang_no_fallback(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """empty bio in requested lang returns no bio when fallback is disabled"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_plugin(bootstrap, lang="ko", en_fallback=False)
+    ko_url = _artist_url("Nine Inch Nails", lang="ko")
 
-    try:
-        plugin, imagecache = _setup_plugin(bootstrap, lang="ko", en_fallback=False)
-        ko_url = _artist_url("Nine Inch Nails", lang="ko")
-
-        ko_response = {
-            "artist": {
-                "name": "Nine Inch Nails",
-                "url": "https://www.last.fm/music/Nine+Inch+Nails",
-                "bio": {"content": ""},
-            }
+    ko_response = {
+        "artist": {
+            "name": "Nine Inch Nails",
+            "url": "https://www.last.fm/music/Nine+Inch+Nails",
+            "bio": {"content": ""},
         }
+    }
 
-        with aioresponses() as mockr:
-            mockr.get(ko_url, payload=ko_response)
-            result = await plugin.download_async(
-                {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-                imagecache=imagecache,
-            )
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(ko_url).mock(return_value=httpx.Response(200, json=ko_response))
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+            imagecache=imagecache,
+        )
 
-        # website should still be returned even with no bio
-        assert result is not None
-        assert "artistlongbio" not in result
-        assert result["artistwebsites"]
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    # website should still be returned even with no bio
+    assert result is not None
+    assert "artistlongbio" not in result
+    assert result["artistwebsites"]
 
 
 def _setup_live_plugin(bootstrap, lang: str = "en", en_fallback: bool = True):
@@ -421,21 +397,15 @@ async def test_lastfm_live_bio_and_website(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_lastfm_key
-async def test_lastfm_live_cache_consistency(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_live_cache_consistency(bootstrap):
     """live: two calls return identical data (cache hit on second)"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_live_plugin(bootstrap)
+    metadata = {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"}
 
-    try:
-        plugin, imagecache = _setup_live_plugin(bootstrap)
-        metadata = {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"}
+    result1 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
+    result2 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
 
-        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
-        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
-
-        assert result1 == result2
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result1 == result2
 
 
 @pytest.mark.asyncio
@@ -456,22 +426,16 @@ async def test_lastfm_live_unknown_artist(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_lastfm_key
-async def test_lastfm_live_lang_fallback(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_live_lang_fallback(bootstrap):
     """live: Korean lang with EN fallback returns English bio for NIN (no Korean bio exists)"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_live_plugin(bootstrap, lang="ko", en_fallback=True)
+    result = await plugin.download_async(
+        {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+        imagecache=imagecache,
+    )
 
-    try:
-        plugin, imagecache = _setup_live_plugin(bootstrap, lang="ko", en_fallback=True)
-        result = await plugin.download_async(
-            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-            imagecache=imagecache,
-        )
-
-        assert result is not None
-        assert result.get("artistlongbio"), "Expected English fallback bio"
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result is not None
+    assert result.get("artistlongbio"), "Expected English fallback bio"
 
 
 @pytest.mark.asyncio
@@ -480,9 +444,11 @@ async def test_lastfm_coverart_queued(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
-        mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        mock_http.get(NIN_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE)
+        )
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -504,8 +470,8 @@ async def test_lastfm_coverart_disabled(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", False)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -525,8 +491,8 @@ async def test_lastfm_coverart_skipped_when_coverimageraw_present(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -548,8 +514,8 @@ async def test_lastfm_coverart_no_album(bootstrap):
     plugin, imagecache = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
             imagecache=imagecache,
@@ -560,32 +526,28 @@ async def test_lastfm_coverart_no_album(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_lastfm_coverart_album_api_error(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_coverart_album_api_error(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """album API error does not prevent artist data from being returned"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    try:
-        plugin, imagecache = _setup_plugin(bootstrap)
-        bootstrap.cparser.setValue("lastfm/coverart", True)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        mock_http.get(NIN_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json={"error": 6, "message": "Album not found"})
+        )
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+            },
+            imagecache=imagecache,
+        )
 
-        with aioresponses() as mockr:
-            mockr.get(NIN_URL, payload=NIN_RESPONSE)
-            mockr.get(NIN_ALBUM_URL, payload={"error": 6, "message": "Album not found"})
-            result = await plugin.download_async(
-                {
-                    "artist": "Nine Inch Nails",
-                    "album": "The Downward Spiral",
-                    "imagecacheartist": "nineinchnails",
-                },
-                imagecache=imagecache,
-            )
-
-        assert result is not None
-        assert result.get("artistlongbio") or result.get("artistwebsites")
-        assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    assert result is not None
+    assert result.get("artistlongbio") or result.get("artistwebsites")
+    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
 
 
 @pytest.mark.asyncio
@@ -596,9 +558,9 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):
     album_mbid = "12345678-1234-1234-1234-123456789abc"
     mbid_url = _album_mbid_url(album_mbid)
 
-    with aioresponses() as mockr:
-        mockr.get(NIN_URL, payload=NIN_RESPONSE)
-        mockr.get(mbid_url, payload=NIN_ALBUM_RESPONSE)
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        mock_http.get(mbid_url).mock(return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE))
         result = await plugin.download_async(
             {
                 "artist": "Nine Inch Nails",
@@ -617,26 +579,20 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_lastfm_key
-async def test_lastfm_live_coverart(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+async def test_lastfm_live_coverart(bootstrap):
     """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+    plugin, imagecache = _setup_live_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
+    result = await plugin.download_async(
+        {
+            "artist": "Nine Inch Nails",
+            "album": "The Downward Spiral",
+            "imagecacheartist": "nineinchnails",
+        },
+        imagecache=imagecache,
+    )
 
-    try:
-        plugin, imagecache = _setup_live_plugin(bootstrap)
-        bootstrap.cparser.setValue("lastfm/coverart", True)
-        result = await plugin.download_async(
-            {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
-            },
-            imagecache=imagecache,
-        )
-
-        identifier = "Nine Inch Nails_The Downward Spiral"
-        assert result is not None
-        assert identifier in imagecache.urls, "Expected cover art to be queued"
-        assert imagecache.urls[identifier].get("front_cover"), "Expected front_cover URL list"
-    finally:
-        nowplaying.apicache.set_cache_instance(original_cache)
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert result is not None
+    assert identifier in imagecache.urls, "Expected cover art to be queued"
+    assert imagecache.urls[identifier].get("front_cover"), "Expected front_cover URL list"
