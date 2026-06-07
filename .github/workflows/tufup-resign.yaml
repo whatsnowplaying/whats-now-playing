@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 name: tufup daily resign
 
 # Re-signs TUF metadata daily so timestamp.json (24h expiry),
