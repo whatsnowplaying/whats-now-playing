@@ -195,10 +195,9 @@ async def test_store_and_retrieve_by_url(temp_storage):  # pylint: disable=redef
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
 
-    data, retrieved_metadata = result
-    assert data == test_data
-    assert retrieved_metadata["width"] == 100
-    assert retrieved_metadata["height"] == 200
+    assert result.data == test_data
+    assert result.metadata["width"] == 100
+    assert result.metadata["height"] == 200
 
 
 @pytest.mark.asyncio
@@ -229,8 +228,7 @@ async def test_store_duplicate_url(temp_storage):  # pylint: disable=redefined-o
     # Should retrieve the second version
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, _metadata = result
-    assert data == b"data_v2"
+    assert result.data == b"data_v2"
 
 
 @pytest.mark.asyncio
@@ -253,20 +251,19 @@ async def test_retrieve_by_identifier_multiple_images(temp_storage):  # pylint: 
             ttl_seconds=3600,
         )
 
-    # Get all thumbnails — random=False returns (metadata, url) without loading blobs
+    # Get all thumbnails — random=False returns CachedEntry list without loading blobs
     results = await temp_storage.retrieve_by_identifier(
         identifier="test_artist", data_type="thumbnail", random=False
     )
     assert isinstance(results, list)
     assert len(results) == 3
 
-    for _metadata, url in results:
-        assert url in urls
+    for entry in results:
+        assert entry.url in urls
         # Fetch the blob separately to verify data integrity
-        cached = await temp_storage.retrieve_by_url(url)
+        cached = await temp_storage.retrieve_by_url(entry.url)
         assert cached is not None
-        data, _ = cached
-        assert data.startswith(b"image_data_")
+        assert cached.data.startswith(b"image_data_")
 
 
 @pytest.mark.asyncio
@@ -289,10 +286,9 @@ async def test_retrieve_by_identifier_random(temp_storage):  # pylint: disable=r
     random_result = await temp_storage.retrieve_by_identifier(
         identifier="random_artist", data_type="thumbnail", random=True
     )
-    assert isinstance(random_result, tuple)
-    data, _metadata, url = random_result
-    assert data.startswith(b"random_data_")
-    assert url in urls
+    assert random_result is not None
+    assert random_result.data.startswith(b"random_data_")
+    assert random_result.url in urls
 
 
 @pytest.mark.asyncio
@@ -317,18 +313,15 @@ async def test_retrieve_by_identifier_with_provider_filter(temp_storage):  # pyl
         ttl_seconds=3600,
     )
 
-    # Filter by provider — random=False returns (metadata, url) without loading blobs
+    # Filter by provider — random=False returns CachedEntry list without loading blobs
     results = await temp_storage.retrieve_by_identifier(
         identifier="filter_artist", data_type="thumbnail", provider="theaudiodb", random=False
     )
     assert len(results) == 1
-    _metadata, url = results[0]
-    assert url == "https://theaudiodb.com/image1.jpg"
-    cached = await temp_storage.retrieve_by_url(url)
+    assert results[0].url == "https://theaudiodb.com/image1.jpg"
+    cached = await temp_storage.retrieve_by_url(results[0].url)
     assert cached is not None
-    data, _ = cached
-    assert data == b"audiodb_image"
-    assert url == "https://theaudiodb.com/image1.jpg"
+    assert cached.data == b"audiodb_image"
 
 
 @pytest.mark.asyncio
@@ -376,8 +369,7 @@ async def test_data_serialization_json(temp_storage):  # pylint: disable=redefin
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, _metadata = result
-    assert orjson.loads(data) == test_data
+    assert orjson.loads(result.data) == test_data
 
 
 @pytest.mark.asyncio
@@ -398,8 +390,7 @@ async def test_data_serialization_binary(temp_storage):  # pylint: disable=redef
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, _metadata = result
-    assert data == test_data
+    assert result.data == test_data
 
 
 @pytest.mark.asyncio
@@ -441,8 +432,8 @@ async def test_inline_vs_file_threshold(temp_storage):  # pylint: disable=redefi
 
     small_result = await temp_storage.retrieve_by_url("https://example.com/small")
     large_result = await temp_storage.retrieve_by_url("https://example.com/large")
-    assert small_result is not None and small_result[0] == small_data
-    assert large_result is not None and large_result[0] == large_data
+    assert small_result is not None and small_result.data == small_data
+    assert large_result is not None and large_result.data == large_data
 
 
 @pytest.mark.asyncio
@@ -503,9 +494,8 @@ async def test_cachekey_roundtrip(temp_storage):  # pylint: disable=redefined-ou
 
     result = await temp_storage.retrieve_by_cachekey(cachekeys[0])
     assert result is not None
-    data, _metadata, retrieved_url = result
-    assert data == test_data
-    assert retrieved_url == url
+    assert result.data == test_data
+    assert result.url == url
 
 
 @pytest.mark.asyncio
@@ -547,8 +537,7 @@ async def test_cachekey_preserved_on_refetch(temp_storage):  # pylint: disable=r
     # But the stored bytes should be the new version
     result = await temp_storage.retrieve_by_cachekey(cachekeys_v1[0])
     assert result is not None
-    data, _metadata, _url = result
-    assert data == b"v2"
+    assert result.data == b"v2"
 
 
 @pytest.mark.asyncio
@@ -620,8 +609,7 @@ async def test_concurrent_access():
             for i, storage in enumerate(storages):
                 result = await storage.retrieve_by_url(f"https://example.com/concurrent_{i}.jpg")
                 assert result is not None
-                data, _metadata = result
-                assert data == f"data_{i}".encode()
+                assert result.data == f"data_{i}".encode()
 
         finally:
             # Cleanup

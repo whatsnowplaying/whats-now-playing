@@ -60,9 +60,8 @@ async def test_full_image_caching_workflow(temp_datacache):  # pylint: disable=r
         )
 
         assert result is not None
-        data, metadata = result
-        assert data == test_image_data
-        assert metadata["source"] == "integration_test"
+        assert result.data == test_image_data
+        assert result.metadata["source"] == "integration_test"
 
 
 @pytest.mark.asyncio
@@ -99,9 +98,8 @@ async def test_randomimage_functionality_integration(temp_datacache):  # pylint:
         )
 
         assert random_result is not None
-        data, _metadata, url = random_result
-        assert data.startswith(b"image_data_")
-        assert url in image_urls
+        assert random_result.data.startswith(b"image_data_")
+        assert random_result.url in image_urls
 
         # Get cache keys
         cache_keys = await temp_datacache.images.get_cache_keys_for_identifier(
@@ -179,8 +177,7 @@ async def test_cache_hit_avoids_http_request(temp_datacache):  # pylint: disable
     )
 
     assert result2 is not None
-    data, _metadata = result2
-    assert data == test_data
+    assert result2.data == test_data
 
 
 @pytest.mark.asyncio
@@ -265,15 +262,14 @@ async def test_api_response_caching_integration(temp_datacache):  # pylint: disa
         )
 
         assert result is not None
-        data, metadata = result
-        assert isinstance(data, bytes)
-        assert orjson.loads(data) == test_bio_data
-        assert metadata["language"] == "en"
-        assert metadata["source"] == "test_api"
+        assert isinstance(result.data, bytes)
+        assert orjson.loads(result.data) == test_bio_data
+        assert result.metadata["language"] == "en"
+        assert result.metadata["source"] == "test_api"
 
 
 @pytest.mark.asyncio
-async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_storage):  # pylint: disable=unused-argument
+async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument
     """cached_fetch must round-trip dicts containing bytes values via base64 sentinel."""
     test_data = {"text": "hello", "raw": b"\x00\x01\x02binary"}
     call_count = 0
@@ -361,8 +357,7 @@ async def test_concurrent_storage_operations(temp_datacache):  # pylint: disable
         # All should succeed
         for result in results:
             assert result is not None
-            data, _metadata = result
-            assert data.startswith(b"concurrent_data_")
+            assert result.data.startswith(b"concurrent_data_")
 
 
 def test_module_level_convenience_functions():
@@ -509,9 +504,8 @@ async def test_live_immediate_fetch(temp_datacache):  # pylint: disable=redefine
     )
 
     assert result is not None
-    data, _metadata = result
-    assert isinstance(data, bytes)
-    assert len(data) > 0
+    assert isinstance(result.data, bytes)
+    assert len(result.data) > 0
 
     # Cache hit — no network call needed
     result2 = await temp_datacache.images.cache_artist_fanart(
@@ -521,8 +515,7 @@ async def test_live_immediate_fetch(temp_datacache):  # pylint: disable=redefine
         immediate=True,
     )
     assert result2 is not None
-    data2, _metadata2 = result2
-    assert data2 == data
+    assert result2.data == result.data
 
 
 @pytest.mark.live

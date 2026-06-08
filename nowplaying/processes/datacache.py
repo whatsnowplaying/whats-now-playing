@@ -5,6 +5,10 @@ DataCache background worker process.
 Drains the pending_requests queue: fetches URLs, stores blobs, retries
 on failure.  Runs as a peer subprocess alongside trackpoll and webserver,
 managed by SubprocessManager.  Shutdown is signalled via stopevent.
+
+Uses a watchdog DBWatcher on the pending_requests database file so new
+queue entries wake the worker immediately rather than waiting up to 30 s.
+Falls back to 1-second polling when the watcher sees no activity.
 """
 
 import asyncio
@@ -16,6 +20,7 @@ from pathlib import Path
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache.client
+import nowplaying.db
 import nowplaying.frozen
 import nowplaying.utils
 
@@ -30,26 +35,37 @@ async def _run(
     await client.initialize()
     logging.info("DataCache worker started")
 
-    consecutive_empty = 0
+    # Watch the pending_requests database for writes so new image downloads
+    # queued by trackpoll wake the worker immediately instead of sleeping up to 30 s.
+    db_path = str(client.queue.database_path)
+    watcher = nowplaying.db.DBWatcher(db_path)
+    watcher.start()
+    last_watcher_time = watcher.updatetime
 
     try:
         while not nowplaying.utils.safe_stopevent_check(stopevent):
             stats = await client.process_queue(max_concurrent=max_concurrent)
 
             if stats["processed"] == 0:
-                consecutive_empty += 1
-                sleep_time = min(1.0 * (2 ** min(consecutive_empty - 1, 4)), 30.0)
-                await asyncio.sleep(sleep_time)
+                # Poll in 0.1 s slices up to 1 s, breaking early on DB write.
+                for _ in range(10):
+                    await asyncio.sleep(0.1)
+                    if watcher.updatetime != last_watcher_time:
+                        break
+                    if nowplaying.utils.safe_stopevent_check(stopevent):
+                        break
+                last_watcher_time = watcher.updatetime
             else:
-                consecutive_empty = 0
                 logging.debug(
                     "DataCache processed batch: %d processed, %d succeeded, %d failed",
                     stats["processed"],
                     stats["succeeded"],
                     stats["failed"],
                 )
+                last_watcher_time = watcher.updatetime
                 await asyncio.sleep(0.1)
     finally:
+        watcher.stop()
         await client.close()
         logging.info("DataCache worker stopped")
 

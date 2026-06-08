@@ -145,7 +145,7 @@ class Plugin(ArtistExtrasPlugin):
         return page
 
     async def download_async(  # pylint: disable=too-many-branches,too-many-locals
-        self, metadata=None, imagecache: "nowplaying.imagecache.ImageCache" = None
+        self, metadata=None
     ):
         """async download content"""
 
@@ -201,38 +201,32 @@ class Plugin(ArtistExtrasPlugin):
                     mymeta["artistwebsites"].append(
                         f"https://discogs.com/artist/{page.data['claims'].get('P1953')[0]}"
                     )
-                mymeta["artistfanarturls"] = []
                 thumbs = []
+                fanart_urls = []
                 if page.images():
-                    gotonefanart = False
                     for image in page.images(["kind", "url"]):
                         if (
                             image.get("url")
                             and image["kind"] in ["wikidata-image", "parse-image"]
                             and self.config.cparser.value("wikimedia/fanart", type=bool)
                         ):
-                            mymeta["artistfanarturls"].append(image["url"])
-                            if not gotonefanart and imagecache:
-                                gotonefanart = True
-                                self.queue_artist_image(
-                                    metadata["imagecacheartist"],
-                                    "artistfanart",
-                                    [image["url"]],
-                                    imagecache,
-                                )
+                            fanart_urls.append(image["url"])
                         elif image["kind"] == "query-thumbnail":
                             thumbs.append(image["url"])
+                if fanart_urls:
+                    await self.queue_artist_image(
+                        metadata["imagecacheartist"],
+                        "artistfanart",
+                        fanart_urls,
+                        provider="wikimedia",
+                    )
 
-                if (
-                    imagecache
-                    and thumbs
-                    and self.config.cparser.value("wikimedia/thumbnails", type=bool)
-                ):
-                    self.queue_artist_image(
+                if thumbs and self.config.cparser.value("wikimedia/thumbnails", type=bool):
+                    await self.queue_artist_image(
                         metadata["imagecacheartist"],
                         "artistthumbnail",
                         thumbs,
-                        imagecache,
+                        provider="wikimedia",
                     )
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Async metadata breaks wikimedia (%s): %s", err, metadata)
@@ -243,7 +237,7 @@ class Plugin(ArtistExtrasPlugin):
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
-        return ["artistlongbio", "wikimedia-artistfanarturls", "artistwebsites"]
+        return ["artistlongbio", "artistwebsites"]
 
     def load_settingsui(self, qwidget):
         """draw the plugin's settings page"""

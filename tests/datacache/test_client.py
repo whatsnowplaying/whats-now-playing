@@ -65,8 +65,7 @@ async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined
     )
 
     assert result is not None
-    data, _metadata = result
-    assert data == test_data
+    assert result.data == test_data
 
 
 @pytest.mark.asyncio
@@ -115,8 +114,7 @@ async def test_get_random_image(temp_client):  # pylint: disable=redefined-outer
     )
 
     assert result is not None
-    data, _metadata, url = result
-    assert data.startswith(b"random_data_")
+    assert result.data.startswith(b"random_data_")
 
 
 @pytest.mark.asyncio
@@ -195,9 +193,8 @@ async def test_fetch_and_store_json_response(temp_client):  # pylint: disable=re
         )
 
         assert result is not None
-        data, _metadata = result
-        assert isinstance(data, bytes)
-        assert orjson.loads(data) == test_data
+        assert isinstance(result.data, bytes)
+        assert orjson.loads(result.data) == test_data
 
         # Verify stored in cache
         cached = await temp_client.storage.retrieve_by_url("https://api.example.com/test.json")
@@ -228,8 +225,7 @@ async def test_fetch_and_store_binary_response(temp_client):  # pylint: disable=
         )
 
         assert result is not None
-        data, _metadata = result
-        assert data == test_data
+        assert result.data == test_data
 
 
 @pytest.mark.asyncio
@@ -337,8 +333,7 @@ async def test_process_queue_single_request(temp_client):  # pylint: disable=red
     # Verify data was actually stored in the cache
     cached = await temp_client.storage.retrieve_by_url(url)
     assert cached is not None
-    data, _metadata = cached
-    assert data == expected_data
+    assert cached.data == expected_data
 
 
 @pytest.mark.asyncio
@@ -484,14 +479,12 @@ async def test_5xx_retry_then_success_stores_item(temp_client):  # pylint: disab
         )
 
     assert result is not None
-    data, _metadata = result
-    assert data == good_data
+    assert result.data == good_data
     assert attempts == 2
 
     cached = await temp_client.storage.retrieve_by_url(url)
     assert cached is not None
-    cached_data, _ = cached
-    assert cached_data == good_data
+    assert cached.data == good_data
 
 
 @pytest.mark.asyncio

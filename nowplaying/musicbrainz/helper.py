@@ -46,13 +46,12 @@ class _WNPDatacacheAdapter:
 
     async def get(self, provider: str, cache_key: str) -> Any | None:
         """Return cached data for (provider, cache_key), or None on miss/expiry."""
-        storage = nowplaying.datacache.get_shared_storage()
+        storage = nowplaying.datacache.get_client().storage
         cached = await storage.retrieve_by_url(self._url(provider, cache_key))
         if cached is None:
             return None
-        data, _ = cached
         try:
-            return orjson.loads(data)
+            return orjson.loads(cached.data)
         except orjson.JSONDecodeError:
             return None
 
@@ -65,7 +64,7 @@ class _WNPDatacacheAdapter:
         url: str | None = None,  # pylint: disable=unused-argument
     ) -> None:
         """Store data for (provider, cache_key) with the given TTL."""
-        storage = nowplaying.datacache.get_shared_storage()
+        storage = nowplaying.datacache.get_client().storage
         try:
             await storage.store(
                 url=self._url(provider, cache_key),
@@ -74,6 +73,7 @@ class _WNPDatacacheAdapter:
                 provider=provider,
                 data_value=orjson.dumps(data),
                 ttl_seconds=ttl,
+                status_code=200,
             )
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.warning("datacache store failed for wnpmb %s/%s: %s", provider, cache_key, err)

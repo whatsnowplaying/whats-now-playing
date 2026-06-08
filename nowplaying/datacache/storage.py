@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import dataclasses
 import hashlib
 import logging
 import sqlite3
@@ -11,12 +12,25 @@ from pathlib import Path
 from typing import Any, Literal, overload
 
 import orjson
+import puremagic
 
 import aiofiles
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.utils.sqlite
+
+
+@dataclasses.dataclass
+class CachedEntry:
+    """Result returned by all DataStorage retrieve methods."""
+
+    data: bytes
+    metadata: dict
+    status_code: int
+    mime_type: str | None
+    url: str | None = None  # populated by retrieve_by_cachekey and retrieve_by_identifier
+
 
 # Module-level lock for schema operations
 _schema_lock = asyncio.Lock()
@@ -61,7 +75,7 @@ class DataStorage:
         async with _schema_lock:
             await asyncio.to_thread(_ensure_datacache_schema, self.database_path)
 
-    async def store(  # pylint: disable=too-many-arguments,too-many-locals
+    async def store(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
         self,
         url: str,
         identifier: str,
@@ -70,6 +84,7 @@ class DataStorage:
         data_value: bytes,
         ttl_seconds: int,
         metadata: dict | None = None,
+        status_code: int = 200,
     ) -> bool:
         """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps)."""
         await self.initialize()
@@ -83,6 +98,11 @@ class DataStorage:
             metadata_json = orjson.dumps(metadata).decode() if metadata else None
             new_cachekey = str(uuid.uuid4())
             data_size = len(data_value)
+
+            try:
+                mime_type: str | None = puremagic.from_string(data_value, mime=True)
+            except Exception:  # pylint: disable=broad-exception-caught
+                mime_type = None
 
             if data_size <= _INLINE_THRESHOLD:
                 inline_data: bytes | None = data_value
@@ -103,8 +123,9 @@ class DataStorage:
                         INSERT INTO cached_data
                         (url, cachekey, identifier, data_type, provider,
                          data_value, file_path, metadata,
-                         created_at, expires_at, last_accessed, data_size)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         created_at, expires_at, last_accessed, data_size,
+                         status_code, mime_type)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(url) DO UPDATE SET
                           identifier = excluded.identifier,
                           data_type = excluded.data_type,
@@ -114,7 +135,9 @@ class DataStorage:
                           metadata = excluded.metadata,
                           expires_at = excluded.expires_at,
                           last_accessed = excluded.last_accessed,
-                          data_size = excluded.data_size
+                          data_size = excluded.data_size,
+                          status_code = excluded.status_code,
+                          mime_type = excluded.mime_type
                         """,
                         (
                             url,
@@ -129,6 +152,8 @@ class DataStorage:
                             expires_at,
                             now,
                             data_size,
+                            status_code,
+                            mime_type,
                         ),
                     )
                     await connection.commit()
@@ -143,7 +168,7 @@ class DataStorage:
                     blob_path.unlink()
             return False
 
-    async def retrieve_by_url(self, url: str) -> tuple[Any, dict] | None:
+    async def retrieve_by_url(self, url: str) -> "CachedEntry | None":  # pylint: disable=too-many-locals
         """
         Retrieve data from cache by URL.
 
@@ -151,7 +176,7 @@ class DataStorage:
             url: Source URL to retrieve
 
         Returns:
-            Tuple of (data, metadata) if found and not expired, None otherwise
+            CachedEntry if found and not expired, None otherwise
         """
         await self.initialize()
 
@@ -164,7 +189,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata
+                        SELECT data_value, file_path, metadata, status_code, mime_type
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -176,14 +201,15 @@ class DataStorage:
 
                     result = tuple(row)
 
-                    # Update access statistics
+                    # Lazy access_count update: only write if not updated in last 5 min.
+                    # Reduces WAL pressure when OBS polls every few seconds.
                     await connection.execute(
                         """
                         UPDATE cached_data
                         SET access_count = access_count + 1, last_accessed = ?
-                        WHERE url = ?
+                        WHERE url = ? AND last_accessed < ?
                         """,
-                        (now, url),
+                        (now, url, now - 300),
                     )
                     await connection.commit()
 
@@ -192,7 +218,7 @@ class DataStorage:
             if result is None:
                 return None
 
-            data_value, file_path_str, metadata_json = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json, status_code, mime_type = result  # pylint: disable=unpacking-non-sequence
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str
@@ -219,13 +245,15 @@ class DataStorage:
                 data = bytes(data_value)
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
-            return data, metadata
+            return CachedEntry(
+                data=data, metadata=metadata, status_code=status_code, mime_type=mime_type
+            )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to retrieve cached data for URL %s: %s", url, error)
             return None
 
-    async def retrieve_by_cachekey(self, cachekey: str) -> tuple[Any, dict, str] | None:
+    async def retrieve_by_cachekey(self, cachekey: str) -> "CachedEntry | None":  # pylint: disable=too-many-locals
         """
         Retrieve data by opaque cachekey UUID.
 
@@ -237,7 +265,7 @@ class DataStorage:
             cachekey: UUID string returned by get_cache_keys_for_identifier
 
         Returns:
-            Tuple of (data, metadata, url) if found and not expired, None otherwise
+            CachedEntry if found and not expired, None otherwise (url field populated)
         """
         await self.initialize()
 
@@ -250,7 +278,7 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata, url
+                        SELECT data_value, file_path, metadata, url, status_code, mime_type
                         FROM cached_data
                         WHERE cachekey = ? AND expires_at > ?
                         """,
@@ -266,9 +294,9 @@ class DataStorage:
                         """
                         UPDATE cached_data
                         SET access_count = access_count + 1, last_accessed = ?
-                        WHERE cachekey = ?
+                        WHERE cachekey = ? AND last_accessed < ?
                         """,
-                        (now, cachekey),
+                        (now, cachekey, now - 300),
                     )
                     await connection.commit()
 
@@ -277,7 +305,7 @@ class DataStorage:
             if result is None:
                 return None
 
-            data_value, file_path_str, metadata_json, url = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json, url, status_code, mime_type = result  # pylint: disable=unpacking-non-sequence
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str
@@ -304,7 +332,9 @@ class DataStorage:
                 data = bytes(data_value)
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
-            return data, metadata, url
+            return CachedEntry(
+                data=data, metadata=metadata, status_code=status_code, mime_type=mime_type, url=url
+            )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to retrieve cached data for cachekey %s: %s", cachekey, error)
@@ -312,9 +342,9 @@ class DataStorage:
 
     async def _load_random_blob(
         self, row: tuple[Any, ...], identifier: str, data_type: str
-    ) -> tuple[Any, dict, str] | None:
+    ) -> "CachedEntry | None":
         """Load data for a random row, deleting orphaned DB rows on FileNotFoundError."""
-        data_value, file_path_str, metadata_json, url = row
+        data_value, file_path_str, metadata_json, url, status_code, mime_type = row
         if file_path_str:
             full_path = self.database_path.parent / file_path_str
             try:
@@ -337,7 +367,9 @@ class DataStorage:
         else:
             data = bytes(data_value)
         metadata = orjson.loads(metadata_json) if metadata_json else {}
-        return data, metadata, url
+        return CachedEntry(
+            data=data, metadata=metadata, status_code=status_code, mime_type=mime_type, url=url
+        )
 
     @overload
     async def retrieve_by_identifier(
@@ -346,7 +378,7 @@ class DataStorage:
         data_type: str,
         provider: str | None = ...,
         random: Literal[True] = ...,
-    ) -> tuple[Any, dict, str] | None: ...
+    ) -> "CachedEntry | None": ...
 
     @overload
     async def retrieve_by_identifier(
@@ -355,11 +387,11 @@ class DataStorage:
         data_type: str,
         provider: str | None = ...,
         random: Literal[False] = ...,
-    ) -> list[tuple[dict, str]]: ...
+    ) -> "list[CachedEntry]": ...
 
     async def retrieve_by_identifier(  # pylint: disable=too-many-locals
         self, identifier: str, data_type: str, provider: str | None = None, random: bool = False
-    ) -> list[tuple[dict, str]] | tuple[Any, dict, str] | None:
+    ) -> "list[CachedEntry] | CachedEntry | None":
         """
         Retrieve data from cache by identifier and data type.
 
@@ -370,12 +402,12 @@ class DataStorage:
             data_type: Type of data (thumbnail, logo, etc.)
             provider: Optional provider filter
             random: If True, fetch one random item including its blob data;
-                    if False, return (metadata, url) pairs without loading blobs
+                    if False, return CachedEntry list without loading blobs
                     (call retrieve_by_url for the specific blob you need)
 
         Returns:
-            If random=True: Single tuple of (data, metadata, url) or None
-            If random=False: List of (metadata, url) pairs — no blob data loaded
+            If random=True: Single CachedEntry or None
+            If random=False: List of CachedEntry (data=b"", blobs not loaded)
         """
         await self.initialize()
 
@@ -387,11 +419,13 @@ class DataStorage:
                 nonlocal rows
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     if random:
-                        select_cols = "data_value, file_path, metadata, url"
+                        select_cols = (
+                            "data_value, file_path, metadata, url, status_code, mime_type"
+                        )
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
-                        select_cols = "metadata, url"
+                        select_cols = "metadata, url, status_code, mime_type"
                         order_limit = ""
 
                     if provider:
@@ -400,6 +434,7 @@ class DataStorage:
                             FROM cached_data
                             WHERE identifier = ? AND data_type = ?
                               AND provider = ? AND expires_at > ?
+                              AND status_code = 200
                         """
                         params = (identifier, data_type, provider, now)
                     else:
@@ -407,6 +442,7 @@ class DataStorage:
                             SELECT {select_cols}
                             FROM cached_data
                             WHERE identifier = ? AND data_type = ? AND expires_at > ?
+                              AND status_code = 200
                         """
                         params = (identifier, data_type, now)
 
@@ -423,17 +459,17 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    # random: (data_value, file_path, metadata, url) → url at col 3
-                    # non-random: (metadata, url) → url at col 1
+                    # random row: (data_value, file_path, metadata, url, status_code, mime_type)
+                    # non-random row: (metadata, url, status_code, mime_type)
                     url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
                             """
                             UPDATE cached_data
                             SET access_count = access_count + 1, last_accessed = ?
-                            WHERE url = ?
+                            WHERE url = ? AND last_accessed < ?
                             """,
-                            (now, row[url_col]),
+                            (now, row[url_col], now - 300),
                         )
                     await connection.commit()
 
@@ -446,8 +482,14 @@ class DataStorage:
                 return await self._load_random_blob(rows[0], identifier, data_type)
 
             return [
-                (orjson.loads(metadata_json) if metadata_json else {}, url)
-                for metadata_json, url in rows
+                CachedEntry(
+                    data=b"",
+                    metadata=orjson.loads(metadata_json) if metadata_json else {},
+                    status_code=status_code,
+                    mime_type=mime_type,
+                    url=url,
+                )
+                for metadata_json, url, status_code, mime_type in rows
             ]
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -571,6 +613,97 @@ class DataStorage:
             logging.error("Failed to cleanup expired cache entries: %s", error)
             return 0
 
+    async def evict_lfu(self, size_limit_bytes: int = 2 * 1024 * 1024 * 1024) -> int:  # pylint: disable=too-many-locals
+        """Evict image entries by Least Frequently Used until total size is under the limit.
+
+        Only image data_types are considered for eviction; API response entries (tiny,
+        infrequently re-fetched) are left alone. Blob files are deleted before their
+        DB rows to avoid orphaned files on partial failure.
+
+        Args:
+            size_limit_bytes: Maximum total size for image entries (default 2 GB).
+
+        Returns:
+            Number of entries evicted.
+        """
+        await self.initialize()
+
+        image_types = (
+            "artistthumbnail",
+            "artistlogo",
+            "artistbanner",
+            "artistfanart",
+            "front_cover",
+        )
+        placeholders = ",".join("?" * len(image_types))
+
+        total_size: int = 0
+        evict_candidates: list[tuple[str, str | None, int]] = []  # (url, file_path, data_size)
+        evicted = 0
+
+        async def _do_check() -> None:
+            nonlocal total_size, evict_candidates
+            async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
+                cursor = await connection.execute(
+                    f"SELECT SUM(data_size) FROM cached_data WHERE data_type IN ({placeholders})",
+                    image_types,
+                )
+                row = await cursor.fetchone()
+                total_size = row[0] if row and row[0] else 0
+                if total_size <= size_limit_bytes:
+                    return
+                cursor = await connection.execute(
+                    f"""
+                    SELECT url, file_path, data_size FROM cached_data
+                    WHERE data_type IN ({placeholders})
+                    ORDER BY access_count ASC, last_accessed ASC
+                    """,
+                    image_types,
+                )
+                evict_candidates = [(r[0], r[1], r[2] or 0) for r in await cursor.fetchall()]
+
+        await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_check)
+
+        if total_size <= size_limit_bytes:
+            return 0
+
+        urls_to_delete: list[str] = []
+        remaining = total_size
+        for url, file_path, entry_size in evict_candidates:
+            if remaining <= size_limit_bytes:
+                break
+            if file_path:
+                try:
+                    (self.database_path.parent / file_path).unlink()
+                except (FileNotFoundError, OSError) as err:
+                    if not isinstance(err, FileNotFoundError):
+                        logging.warning("LFU evict: could not delete blob %s: %s", file_path, err)
+                        continue
+            urls_to_delete.append(url)
+            remaining -= entry_size
+
+        if not urls_to_delete:
+            return 0
+
+        batch_placeholders = ",".join("?" * len(urls_to_delete))
+
+        async def _do_evict() -> None:
+            nonlocal evicted
+            async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
+                cursor = await connection.execute(
+                    f"DELETE FROM cached_data WHERE url IN ({batch_placeholders})",
+                    urls_to_delete,
+                )
+                await connection.commit()
+                evicted = cursor.rowcount
+
+        await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_evict)
+        if evicted:
+            logging.info(
+                "LFU eviction: removed %d image entries to stay under size limit", evicted
+            )
+        return evicted
+
     async def maintenance(self) -> dict[str, int]:
         """
         Perform database maintenance operations.
@@ -583,7 +716,7 @@ class DataStorage:
         """
         await self.initialize()
 
-        stats = {"expired_cleaned": 0, "vacuum_performed": 0, "errors": 0}
+        stats = {"expired_cleaned": 0, "lfu_evicted": 0, "vacuum_performed": 0, "errors": 0}
 
         try:
             # Clean up expired entries
@@ -592,6 +725,10 @@ class DataStorage:
 
             if expired_count > 0:
                 logging.info("Cleaned up %d expired cache entries", expired_count)
+
+            # LFU eviction to stay under size limit
+            evicted = await self.evict_lfu()
+            stats["lfu_evicted"] = evicted
 
             # Vacuum database to reclaim space
             await self.vacuum()
@@ -763,13 +900,15 @@ def _ensure_datacache_schema(database_path: Path) -> None:
                 access_count INTEGER DEFAULT 1,
                 last_accessed REAL NOT NULL,
                 data_size INTEGER NOT NULL,
-                CHECK (data_value IS NOT NULL OR file_path IS NOT NULL)
+                status_code INTEGER NOT NULL DEFAULT 200,
+                mime_type TEXT              -- MIME type detected by puremagic, NULL for non-binary
             );
 
             CREATE TABLE IF NOT EXISTS pending_requests (
                 request_id TEXT PRIMARY KEY,
                 provider TEXT NOT NULL,
                 request_key TEXT NOT NULL,
+                data_type TEXT NOT NULL DEFAULT '',
                 params TEXT NOT NULL,  -- JSON encoded parameters
                 priority INTEGER NOT NULL,  -- 1=immediate, 2=batch
                 created_at INTEGER NOT NULL,
@@ -783,11 +922,13 @@ def _ensure_datacache_schema(database_path: Path) -> None:
             CREATE INDEX IF NOT EXISTS idx_provider ON cached_data(provider);
             CREATE INDEX IF NOT EXISTS idx_expires_at ON cached_data(expires_at);
             CREATE INDEX IF NOT EXISTS idx_last_accessed ON cached_data(last_accessed);
+            CREATE INDEX IF NOT EXISTS idx_status_code ON cached_data(status_code);
 
             CREATE INDEX IF NOT EXISTS idx_pending_provider ON pending_requests(provider);
             CREATE INDEX IF NOT EXISTS idx_pending_priority ON pending_requests(priority);
             CREATE INDEX IF NOT EXISTS idx_pending_status ON pending_requests(status);
             CREATE INDEX IF NOT EXISTS idx_pending_created ON pending_requests(created_at);
+            CREATE INDEX IF NOT EXISTS idx_pending_type ON pending_requests(priority, data_type, status);
             """
 
             conn.executescript(schema_sql)

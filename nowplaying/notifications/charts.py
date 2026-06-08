@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
-    import nowplaying.imagecache
 
 
 def generate_anonymous_key(
@@ -104,15 +103,12 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             self._queue_lock = asyncio.Lock()
         return self._queue_lock
 
-    async def notify_track_change(
-        self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
-    ) -> None:
+    async def notify_track_change(self, metadata: TrackMetadata) -> None:
         """
         Send track metadata to charts server when a new track becomes live
 
         Args:
             metadata: Track metadata including artist, title, etc.
-            imagecache: Optional imagecache instance (unused by charts output)
         """
 
         # get a fresh config
@@ -194,7 +190,6 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             "comments",
             "comment",
             "coverurl",
-            "artistfanarturls",
             "fpcalcfingerprint",
             "fpcalcduration",
         ]

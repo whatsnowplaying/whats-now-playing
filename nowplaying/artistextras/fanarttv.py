@@ -24,10 +24,10 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "fanart.tv"
         self.priority = 50
 
-    async def download_async(self, metadata: TrackMetadata | None = None, imagecache=None):
+    async def download_async(self, metadata: TrackMetadata | None = None):
         """async download the extra data"""
 
-        if not self._validate_inputs(metadata, imagecache):
+        if not self._validate_inputs(metadata):
             return None
 
         apikey = self.config.cparser.value("fanarttv/apikey")
@@ -47,20 +47,21 @@ class Plugin(ArtistExtrasPlugin):
                 negative_ttl=24 * 3600,  # 24h: artist not in FanartTV DB
             )
             if result is None:
-                return None
-            data, _ = result
+                continue
             try:
-                artist_data = orjson.loads(data)
+                artist_data = orjson.loads(result.data)
             except orjson.JSONDecodeError:
-                return None
+                continue
             if not artist_data or artist_data.get("status") == "error":
-                return None
-            self._process_artist_images(artist_data, metadata, imagecache)
+                continue
+            await self._process_artist_images(artist_data, metadata)
             break
+        else:
+            return None
 
         return metadata
 
-    def _validate_inputs(self, metadata: TrackMetadata, imagecache):
+    def _validate_inputs(self, metadata: TrackMetadata):
         """Validate required inputs for fanart download."""
         apikey = self.config.cparser.value("fanarttv/apikey")
         if not apikey or not self.config.cparser.value("fanarttv/enabled", type=bool):
@@ -77,22 +78,18 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug("skipping: MBID-only but no imagecacheartist")
             return False
 
-        if not imagecache:
-            logging.debug("imagecache is dead?")
-            return False
-
         if not metadata.get("musicbrainzartistid"):
             return False
 
         logging.debug("got musicbrainzartistid: %s", metadata["musicbrainzartistid"])
         return True
 
-    def _process_artist_images(
-        self, artist_data: dict[str, str] | None, metadata: TrackMetadata | None, imagecache
+    async def _process_artist_images(
+        self, artist_data: dict[str, str] | None, metadata: TrackMetadata | None
     ):
         """Process and queue artist images from FanartTV data."""
 
-        if not metadata or not artist_data or not imagecache:
+        if not metadata or not artist_data:
             return
 
         identifier = metadata.get("imagecacheartist")
@@ -100,34 +97,32 @@ class Plugin(ArtistExtrasPlugin):
         if artist_data.get("musicbanner") and self.config.cparser.value(
             "fanarttv/banners", type=bool
         ):
-            self._queue_images(artist_data["musicbanner"], identifier, "artistbanner", imagecache)
+            await self._queue_images(artist_data["musicbanner"], identifier, "artistbanner")
 
         # Process logos (prefer HD, fallback to regular)
         if self.config.cparser.value("fanarttv/logos", type=bool):
             if logo_data := artist_data.get("hdmusiclogo") or artist_data.get("musiclogo"):
-                self._queue_images(logo_data, identifier, "artistlogo", imagecache)
+                await self._queue_images(logo_data, identifier, "artistlogo")
 
         # Process thumbnails
         if artist_data.get("artistthumb") and self.config.cparser.value(
             "fanarttv/thumbnails", type=bool
         ):
-            self._queue_images(
-                artist_data["artistthumb"], identifier, "artistthumbnail", imagecache
-            )
+            await self._queue_images(artist_data["artistthumb"], identifier, "artistthumbnail")
 
         # Process fanart backgrounds
         if self.config.cparser.value("fanarttv/fanart", type=bool) and artist_data.get(
             "artistbackground"
         ):
-            self._process_fanart_backgrounds(
-                artist_data["artistbackground"], metadata, identifier, imagecache
+            await self._process_fanart_backgrounds(
+                artist_data["artistbackground"], metadata, identifier
             )
 
         # Process album cover art — already in the response, keyed by album MBID
         if self.config.cparser.value("fanarttv/coverart", type=bool):
-            self._process_album_cover(artist_data, metadata, imagecache)
+            await self._process_album_cover(artist_data, metadata)
 
-    def _process_album_cover(self, artist_data: dict, metadata: TrackMetadata, imagecache) -> None:
+    async def _process_album_cover(self, artist_data: dict, metadata: TrackMetadata) -> None:
         """Queue album cover art from the albums section of the FanartTV response."""
         album_mbid = metadata.get("musicbrainzreleasegroupid")
         artist = metadata.get("artist")
@@ -142,32 +137,24 @@ class Plugin(ArtistExtrasPlugin):
         sorted_covers = sorted(covers, key=lambda x: x.get("likes", 0), reverse=True)
         if url := sorted_covers[0].get("url"):
             logging.debug("fanarttv: queuing album cover for %s - %s", artist, album)
-            self.queue_front_cover(artist, album, url, imagecache)
+            await self.queue_front_cover(artist, album, url, provider="fanarttv")
 
-    def _queue_images(self, image_list, identifier, image_type, imagecache):
+    async def _queue_images(self, image_list, identifier, image_type):
         """Queue images sorted by popularity (likes)."""
         sorted_images = sorted(image_list, key=lambda x: x.get("likes", 0), reverse=True)
         urls = [img["url"] for img in sorted_images]
-        self.queue_artist_image(identifier, image_type, urls, imagecache)
+        await self.queue_artist_image(identifier, image_type, urls, provider="fanarttv")
 
-    def _process_fanart_backgrounds(
-        self, backgrounds, metadata: TrackMetadata | None, identifier, imagecache
+    async def _process_fanart_backgrounds(
+        self, backgrounds, metadata: TrackMetadata | None, identifier
     ):
         """Process fanart backgrounds and collect URLs."""
 
-        if not metadata:
+        if not metadata or not backgrounds:
             return
-
-        if not metadata.get("artistfanarturls"):
-            metadata["artistfanarturls"] = []
-        # Queue first image for display
-        if backgrounds:
-            self.queue_artist_image(
-                identifier, "artistfanart", [backgrounds[0]["url"]], imagecache
-            )
-            # Collect all URLs for reference
-            for background in backgrounds:
-                metadata["artistfanarturls"].append(background["url"])
+        await self.queue_artist_image(
+            identifier, "artistfanart", [b["url"] for b in backgrounds], provider="fanarttv"
+        )
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
@@ -176,7 +163,6 @@ class Plugin(ArtistExtrasPlugin):
             "artistlogoraw",
             "artistthumbnailraw",
             "coverimageraw",
-            "fanarttv-artistfanarturls",
         ]
 
     def connect_settingsui(self, qwidget, uihelp):

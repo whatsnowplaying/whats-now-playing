@@ -60,7 +60,6 @@ class TrackMetadata(TypedDict, total=False):
     artistlongbio: str
     artistshortbio: str
     artistwebsites: list[str]
-    artistfanarturls: list[str]
     artistfanartraw: bytes
     artistbannerraw: bytes
     artistlogoraw: bytes

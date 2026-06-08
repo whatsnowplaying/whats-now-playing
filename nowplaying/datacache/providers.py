@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import DataCacheClient
+from .storage import CachedEntry
 
 
 class ImageProvider:
@@ -32,7 +33,7 @@ class ImageProvider:
         provider: str,
         immediate: bool = True,
         metadata: dict | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache an artist thumbnail image.
 
@@ -44,7 +45,7 @@ class ImageProvider:
             metadata: Optional image metadata
 
         Returns:
-            Tuple of (image_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_or_fetch(
             url=url,
@@ -65,7 +66,7 @@ class ImageProvider:
         provider: str,
         immediate: bool = True,
         metadata: dict | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache an artist logo image.
 
@@ -77,7 +78,7 @@ class ImageProvider:
             metadata: Optional image metadata
 
         Returns:
-            Tuple of (image_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_or_fetch(
             url=url,
@@ -98,7 +99,7 @@ class ImageProvider:
         provider: str,
         immediate: bool = True,
         metadata: dict | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache an artist banner image.
 
@@ -110,7 +111,7 @@ class ImageProvider:
             metadata: Optional image metadata
 
         Returns:
-            Tuple of (image_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_or_fetch(
             url=url,
@@ -131,7 +132,7 @@ class ImageProvider:
         provider: str,
         immediate: bool = True,
         metadata: dict | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache an artist fanart image.
 
@@ -143,7 +144,7 @@ class ImageProvider:
             metadata: Optional image metadata
 
         Returns:
-            Tuple of (image_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_or_fetch(
             url=url,
@@ -159,11 +160,9 @@ class ImageProvider:
 
     async def get_random_image(
         self, artist_identifier: str, image_type: str, provider: str | None = None
-    ) -> tuple[Any, dict, str] | None:
+    ) -> CachedEntry | None:
         """
         Get a random image for an artist and type.
-
-        This supports the randomimage() functionality.
 
         Args:
             artist_identifier: Artist identifier
@@ -171,7 +170,7 @@ class ImageProvider:
             provider: Optional provider filter
 
         Returns:
-            Tuple of (image_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_random_image(
             identifier=artist_identifier, data_type=image_type, provider=provider
@@ -242,9 +241,8 @@ class ImageProvider:
         """
         result = await self.get_random_image(artist_identifier, image_type, provider)
         if result:
-            image_data, _metadata, _url = result
-            if isinstance(image_data, bytes):
-                return image_data
+            if isinstance(result.data, bytes):
+                return result.data
         return None
 
     async def get_cache_keys_for_identifier(
@@ -292,7 +290,7 @@ class APIProvider:
         metadata: dict | None = None,
         timeout: float | None = None,
         ttl_seconds: int | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache a generic API response.
 
@@ -307,7 +305,7 @@ class APIProvider:
             ttl_seconds: Custom TTL (uses default if None)
 
         Returns:
-            Tuple of (api_data, metadata) or None
+            CachedEntry or None
         """
         return await self.client.get_or_fetch(
             url=url,
@@ -329,7 +327,7 @@ class APIProvider:
         language: str = "en",
         immediate: bool = True,
         metadata: dict | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Cache artist biography data.
 
@@ -342,7 +340,7 @@ class APIProvider:
             metadata: Optional bio metadata
 
         Returns:
-            Tuple of (bio_data, metadata) or None
+            CachedEntry or None
         """
         bio_metadata = {"language": language}
         if metadata:

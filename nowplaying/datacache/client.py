@@ -8,6 +8,7 @@ without dealing with low-level storage details.
 import asyncio
 import logging
 import random
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,9 +18,11 @@ import httpx
 import truststore
 from httpx import Headers as CacheHeaders
 
+import nowplaying.version  # pylint: disable=no-name-in-module,import-error
+
 from .pending import RequestQueue
 from .queue import RateLimiterManager
-from .storage import DataStorage
+from .storage import CachedEntry, DataStorage
 
 _PROVIDER_TTL_DEFAULTS: dict[str, int] = {
     "theaudiodb": 7 * 24 * 3600,
@@ -27,8 +30,17 @@ _PROVIDER_TTL_DEFAULTS: dict[str, int] = {
     "fanarttv": 30 * 24 * 3600,
     "wikimedia": 7 * 24 * 3600,
     "musicbrainz": 30 * 24 * 3600,
+    "lastfm": 7 * 24 * 3600,
 }
-_IMAGE_DATA_TYPES: frozenset[str] = frozenset({"thumbnail", "logo", "banner", "fanart"})
+_IMAGE_DATA_TYPES: frozenset[str] = frozenset(
+    {
+        "artistthumbnail",
+        "artistlogo",
+        "artistbanner",
+        "artistfanart",
+        "front_cover",
+    }
+)
 _DEFAULT_TTL = 7 * 24 * 3600
 
 
@@ -55,6 +67,7 @@ class DataCacheClient:
         self._initialized = False
         self._session: httpx.AsyncClient | None = None
         self._init_lock = asyncio.Lock()
+        self._retry_after_until: dict[str, float] = {}
 
     async def initialize(self) -> None:
         """Initialize the client and underlying storage (concurrency-safe)."""
@@ -66,7 +79,17 @@ class DataCacheClient:
             await self.storage.initialize()
             await self.queue.initialize()
             ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self._session = httpx.AsyncClient(http2=True, verify=ssl_ctx, follow_redirects=True)
+            self._session = httpx.AsyncClient(
+                http2=True,
+                verify=ssl_ctx,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": (
+                        f"WhatIsNowPlaying/{nowplaying.version.__VERSION__} "  # pylint: disable=no-member
+                        "(https://github.com/whatsnowplaying/whats-now-playing)"
+                    )
+                },
+            )
             self._initialized = True
 
     async def close(self) -> None:
@@ -90,7 +113,8 @@ class DataCacheClient:
         metadata: dict | None = None,
         headers: CacheHeaders | None = None,
         negative_ttl: int | None = None,
-    ) -> tuple[Any, dict] | None:
+        queue_priority: int = 2,
+    ) -> CachedEntry | None:
         """
         Get data from cache, or fetch from URL if not cached.
 
@@ -106,13 +130,18 @@ class DataCacheClient:
             metadata: Optional metadata to store with cached item
 
         Returns:
-            Tuple of (data, metadata) if found/fetched, None if failed
+            CachedEntry if found/fetched, None if failed or queued
         """
         await self.initialize()
 
         # Try to retrieve from cache first
         cached_result = await self.storage.retrieve_by_url(url)
         if cached_result:
+            if cached_result.status_code != 200:
+                logging.debug(
+                    "Cache hit (negative, status=%d) for URL: %s", cached_result.status_code, url
+                )
+                return None
             logging.debug("Cache hit for URL: %s", url)
             return cached_result
 
@@ -130,7 +159,7 @@ class DataCacheClient:
                     "ttl_seconds": ttl_seconds,
                     "metadata": metadata,
                 },
-                priority=2,  # batch priority
+                priority=queue_priority,
             )
             logging.debug("Queued background fetch for URL: %s", url)
             return None
@@ -158,7 +187,7 @@ class DataCacheClient:
         ttl: int,
         metadata: dict | None,
     ) -> None:
-        """Store b'{}' with a short TTL for a definitive 404 (not found) response."""
+        """Store b'' with status_code=404 and a short TTL for a definitive 404 response."""
         logging.debug("HTTP 404 for %s — caching negative result", url)
         try:
             await self.storage.store(
@@ -166,14 +195,24 @@ class DataCacheClient:
                 identifier=identifier,
                 data_type=data_type,
                 provider=provider,
-                data_value=b"{}",
+                data_value=b"",
                 ttl_seconds=ttl,
                 metadata=metadata,
+                status_code=404,
             )
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to cache 404 for %s: %s", url, err)
 
-    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches
+    def _in_cooldown(self, provider: str) -> bool:
+        """Return True if provider is still in a server-side 429 back-off window."""
+        until = self._retry_after_until.get(provider, 0.0)
+        if time.monotonic() < until:
+            remaining = int(until - time.monotonic())
+            logging.warning("Provider %s in 429 cooldown, %ds remaining", provider, remaining)
+            return True
+        return False
+
+    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches,too-many-statements
         self,
         url: str,
         identifier: str,
@@ -185,7 +224,7 @@ class DataCacheClient:
         metadata: dict | None,
         headers: CacheHeaders | None = None,
         negative_ttl: int | None = None,
-    ) -> tuple[Any, dict] | None:
+    ) -> CachedEntry | None:
         """
         Fetch data from URL and store in cache.
 
@@ -193,6 +232,10 @@ class DataCacheClient:
         """
         if not self._session:
             raise RuntimeError("DataCacheClient not initialized - call initialize() first")
+
+        # Honour server-side 429 cooldown recorded from a previous call
+        if self._in_cooldown(provider):
+            return None
 
         # Apply rate limiting
         rate_limiter = self.rate_limiters.get_limiter(provider)
@@ -225,27 +268,41 @@ class DataCacheClient:
                         data_value=data,
                         ttl_seconds=ttl_seconds,
                         metadata=metadata,
+                        status_code=200,
                     )
 
                     if success:
                         logging.debug("Cached data from URL: %s", url)
                     else:
                         logging.warning("Failed to cache data from URL: %s", url)
-                    return data, metadata or {}
-                if response.status_code == 429 and attempt < retries:
+                    return CachedEntry(
+                        data=data,
+                        metadata=metadata or {},
+                        status_code=200,
+                        mime_type=None,
+                        url=url,
+                    )
+                if response.status_code == 429:
                     try:
                         retry_after = max(1, int(response.headers.get("Retry-After", "60")))
                     except ValueError:
                         retry_after = 60
+                    # Record cooldown so the next get_or_fetch call skips immediately
+                    self._retry_after_until[provider] = time.monotonic() + retry_after
+                    if attempt < retries:
+                        logging.warning(
+                            "Rate limited by %s, waiting %d seconds", provider, retry_after
+                        )
+                        await asyncio.sleep(retry_after)
+                        # Re-acquire token after sleeping so local limiter stays in
+                        # sync with the server's actual rate-limit window.
+                        if not await rate_limiter.acquire():
+                            return None
+                        continue
                     logging.warning(
-                        "Rate limited by %s, waiting %d seconds", provider, retry_after
+                        "Rate limited by %s on final attempt, cooldown %ds", provider, retry_after
                     )
-                    await asyncio.sleep(retry_after)
-                    # Re-acquire token after sleeping so local limiter stays in
-                    # sync with the server's actual rate-limit window.
-                    if not await rate_limiter.acquire():
-                        return None
-                    continue
+                    break
 
                 if response.status_code == 404 and negative_ttl is not None:
                     await self._cache_negative(
@@ -296,7 +353,7 @@ class DataCacheClient:
         identifier: str,
         data_type: str,
         provider: str | None = None,
-    ) -> tuple[Any, dict, str] | None:
+    ) -> CachedEntry | None:
         """
         Get a random image for an identifier and type.
 
@@ -308,7 +365,7 @@ class DataCacheClient:
             provider: Optional provider filter
 
         Returns:
-            Tuple of (image_data, metadata, url) if found, None otherwise
+            CachedEntry if found, None otherwise
         """
         await self.initialize()
         return await self.storage.retrieve_by_identifier(
@@ -340,7 +397,7 @@ class DataCacheClient:
             identifier=identifier, data_type=data_type, provider=provider
         )
 
-    async def find_by_cachekey(self, cachekey: str) -> tuple[Any, dict, str] | None:
+    async def find_by_cachekey(self, cachekey: str) -> CachedEntry | None:
         """
         Retrieve cached data by its opaque UUID cachekey.
 
@@ -351,7 +408,7 @@ class DataCacheClient:
             cachekey: UUID string from get_cache_keys_for_identifier
 
         Returns:
-            Tuple of (data, metadata, url) if found and not expired, None otherwise
+            CachedEntry if found and not expired, None otherwise
         """
         await self.initialize()
         return await self.storage.retrieve_by_cachekey(cachekey)
@@ -450,15 +507,20 @@ class DataCacheClient:
 
         stats: dict[str, Any] = {"processed": 0, "succeeded": 0, "failed": 0}
 
-        # Pull and process in chunks of max_concurrent so we never hold the entire
-        # queue in memory at once (important for large libraries doing a full re-cache).
+        # Pull round-robin batches (one per data_type at the current priority tier,
+        # then fill remaining slots) so banners/logos/thumbnails all get one
+        # download before any type gets its second.
         while True:
-            chunk: list[dict[str, Any]] = []
-            for _ in range(max_concurrent):
-                request = await self.queue.get_next_request(provider)
-                if not request:
-                    break
-                chunk.append(request)
+            if provider:
+                # Provider-filtered path uses the old single-item query.
+                chunk: list[dict[str, Any]] = []
+                for _ in range(max_concurrent):
+                    request = await self.queue.get_next_request(provider)
+                    if not request:
+                        break
+                    chunk.append(request)
+            else:
+                chunk = await self.queue.get_next_batch(max_concurrent)
 
             if not chunk:
                 break

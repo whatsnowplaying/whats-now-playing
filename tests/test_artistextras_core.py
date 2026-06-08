@@ -5,7 +5,7 @@ import logging
 import os
 
 import pytest
-from utils_artistextras import configureplugins, configuresettings
+from utils_artistextras import configureplugins, configuresettings, datacache_has_pending
 
 PLUGINS = ["wikimedia"]
 
@@ -39,17 +39,16 @@ def getconfiguredplugin(bootstrap):
 @pytest.mark.asyncio
 async def test_disabled(bootstrap):
     """test disabled"""
-    imagecaches, plugins = configureplugins(bootstrap)
+    plugins = configureplugins(bootstrap)
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
-        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async()
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 def test_providerinfo(bootstrap):  # pylint: disable=redefined-outer-name
     """test providerinfo"""
-    imagecaches, plugins = configureplugins(bootstrap)  # pylint: disable=unused-variable
+    plugins = configureplugins(bootstrap)
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
         data = plugins[pluginname].providerinfo()
@@ -60,31 +59,29 @@ def test_providerinfo(bootstrap):  # pylint: disable=redefined-outer-name
 async def test_noapikey(bootstrap):  # pylint: disable=redefined-outer-name
     """test disabled"""
     config = bootstrap
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
     for pluginname in PLUGINS:
         config.cparser.setValue(f"{pluginname}/enabled", True)
         logging.debug("Testing %s", pluginname)
-        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async()
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
 async def test_nodata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """test disabled"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
-        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async()
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
 async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """noimagecache"""
 
-    imagecaches, plugins = getconfiguredplugin  # pylint: disable=unused-variable
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
         data = await plugins[pluginname].download_async(
@@ -93,7 +90,6 @@ async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-o
                 "artist": "Nine Inch Nails",
                 "imagecacheartist": "nineinchnails",
             },
-            imagecache=None,
         )
         if pluginname in ["discogs", "theaudiodb"]:
             assert data["artistwebsites"]
@@ -105,44 +101,47 @@ async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-o
 @pytest.mark.asyncio
 async def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """missing all artist data"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
-        data = await plugins[pluginname].download_async(
-            {"title": "title"}, imagecache=imagecaches[pluginname]
-        )
+        data = await plugins[pluginname].download_async({"title": "title"})
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
-async def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_missingmbid(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """artist"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
         data = await plugins[pluginname].download_async(
             {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-            imagecache=imagecaches[pluginname],
         )
         if pluginname == "theaudiodb":
-            assert data["artistfanarturls"]
             assert data["artistlongbio"]
             assert data["artistwebsites"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistbanner"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistlogo"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistthumbnail"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistfanart"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistbanner"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistlogo"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistthumbnail"
+            )
         else:
             assert not data
-            assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
-async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_featuring1(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """artist"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -153,25 +152,34 @@ async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-out
                 "album": "Art Angels",
                 "imagecacheartist": "grimesfeatjanellemonae",
             },
-            imagecache=imagecaches[pluginname],
         )
         if pluginname == "discogs":
-            assert data["artistfanarturls"]
             assert data["artistlongbio"]
             assert data["artistwebsites"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "grimesfeatjanellemonae", "artistfanart"
+            )
         elif pluginname == "theaudiodb":
-            assert data["artistfanarturls"]
             assert data["artistlongbio"]
             assert data["artistwebsites"]
-            assert imagecaches[pluginname].urls["grimesfeatjanellemonae"]["artistbanner"]
-            assert imagecaches[pluginname].urls["grimesfeatjanellemonae"]["artistlogo"]
-            assert imagecaches[pluginname].urls["grimesfeatjanellemonae"]["artistthumbnail"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "grimesfeatjanellemonae", "artistfanart"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "grimesfeatjanellemonae", "artistbanner"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "grimesfeatjanellemonae", "artistlogo"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "grimesfeatjanellemonae", "artistthumbnail"
+            )
 
 
 @pytest.mark.asyncio
-async def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_featuring2(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """artist"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -182,18 +190,19 @@ async def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-out
                 "album": "Irregular Revisions",
                 "imagecacheartist": "morisblakfeatgrabyourface",
             },
-            imagecache=imagecaches[pluginname],
         )
         if pluginname == "discogs":
-            assert data["artistfanarturls"]
             assert data["artistlongbio"]
             assert data["artistwebsites"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "morisblakfeatgrabyourface", "artistfanart"
+            )
 
 
 @pytest.mark.asyncio
 async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -203,16 +212,14 @@ async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-
                 "imagecacheartist": "nonexistentartistxyz",
                 "musicbrainzartistid": ["xyz"],
             },
-            imagecache=imagecaches[pluginname],
         )
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
 async def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -220,16 +227,14 @@ async def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer
             {
                 "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
             },
-            imagecache=imagecaches[pluginname],
         )
         assert not data
-        assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
-async def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_artist_and_mbid(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """badmbid"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -239,25 +244,31 @@ async def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefine
                 "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
                 "imagecacheartist": "nineinchnails",
             },
-            imagecache=imagecaches[pluginname],
         )
         if pluginname == "theaudiodb":
             assert data["artistlongbio"]
             assert data["artistwebsites"]
         if pluginname in ["fanarttv", "theaudiodb"]:
-            assert data["artistfanarturls"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistbanner"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistlogo"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistthumbnail"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistfanart"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistbanner"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistlogo"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistthumbnail"
+            )
         else:
             assert not data
-            assert not imagecaches[pluginname].urls
 
 
 @pytest.mark.asyncio
-async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_all(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """badmbid"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
         metadata = {
@@ -268,23 +279,28 @@ async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         }
         if pluginname == "wikimedia":
             metadata["artistwebsites"] = ["https://www.wikidata.org/wiki/Q11647"]
-        data = await plugins[pluginname].download_async(
-            metadata, imagecache=imagecaches[pluginname]
-        )
+        data = await plugins[pluginname].download_async(metadata)
         if pluginname in ["discogs", "theaudiodb"]:
             assert data["artistlongbio"]
             assert data["artistwebsites"]
+        if pluginname in ["fanarttv", "theaudiodb", "discogs", "wikimedia"]:
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistfanart"
+            )
         if pluginname in ["fanarttv", "theaudiodb"]:
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistbanner"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistlogo"]
-        assert data["artistfanarturls"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistbanner"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistlogo"
+            )
 
 
 @pytest.mark.xfail(reason="Non-deterministic at the moment")
 @pytest.mark.asyncio
-async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+async def test_theall(getconfiguredplugin, isolated_datacache_client):  # pylint: disable=redefined-outer-name
     """badmbid"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -296,23 +312,29 @@ async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-n
         }
         if pluginname == "wikimedia":
             metadata["artistwebsites"] = ["https://www.wikidata.org/wiki/Q11647"]
-        data = await plugins[pluginname].download_async(
-            metadata, imagecache=imagecaches[pluginname]
-        )
+        data = await plugins[pluginname].download_async(metadata)
         if pluginname in ["discogs", "theaudiodb"]:
             assert data["artistlongbio"]
             assert data["artistwebsites"]
         if pluginname in ["fanarttv", "theaudiodb"]:
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistbanner"]
-            assert imagecaches[pluginname].urls["nineinchnails"]["artistlogo"]
-        assert data["artistfanarturls"]
-        assert imagecaches[pluginname].urls["nineinchnails"]["artistthumbnail"]
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistfanart"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistbanner"
+            )
+            assert await datacache_has_pending(
+                isolated_datacache_client, "nineinchnails", "artistlogo"
+            )
+        assert await datacache_has_pending(
+            isolated_datacache_client, "nineinchnails", "artistthumbnail"
+        )
 
 
 @pytest.mark.asyncio
 async def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """discogs"""
-    imagecaches, plugins = getconfiguredplugin
+    plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug("Testing %s", pluginname)
 
@@ -322,7 +344,5 @@ async def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer
                 "artist": "The XYZ fake artist XYZ",
                 "musicbrainzartistid": ["xyz"],
             },
-            imagecache=imagecaches[pluginname],
         )
         assert not data
-        assert not imagecaches[pluginname].urls

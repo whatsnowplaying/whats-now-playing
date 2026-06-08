@@ -395,34 +395,6 @@ async def test_trackpoll_cache_warmed(trackpollbootstrap):  # pylint: disable=re
         await trackpoll.stop()
 
 
-@pytest.mark.asyncio
-async def test_trackpoll_start_artistfanartpool(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    """test artist fanart pool startup"""
-    config = trackpollbootstrap
-    config.cparser.setValue("artistextras/enabled", False)
-    config.cparser.sync()
-
-    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
-        stopevent=threading.Event(), config=config, testmode=True
-    )
-
-    try:
-        # Set up metadata with fanart URLs
-        trackpoll.currentmeta = {
-            "artist": "Test Artist",
-            "artistfanarturls": ["http://example.com/fanart1.jpg"],
-        }
-
-        # Test that _start_artistfanartpool returns early when disabled
-        trackpoll._start_artistfanartpool()  # pylint: disable=protected-access
-
-        # Verify fanart URLs are still present (not deleted because feature disabled)
-        assert "artistfanarturls" in trackpoll.currentmeta
-
-    finally:
-        await trackpoll.stop()
-
-
 @pytest.mark.parametrize(
     "fill_duration,configured_delay,expected",
     [
@@ -473,94 +445,110 @@ def trackpoll_testmode(bootstrap):  # pylint: disable=redefined-outer-name
         tp.loop.close()
 
 
-def test_artfallbacks_front_cover_from_imagecache(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
-    """front_cover in imagecache is used before falling back to artist images"""
+@pytest.mark.asyncio
+async def test_artfallbacks_front_cover_from_imagecache(
+    bootstrap, trackpoll_testmode, isolated_datacache_client
+):  # pylint: disable=redefined-outer-name,unused-argument
+    """front_cover in datacache is used before falling back to artist images"""
     tptest = trackpoll_testmode
-    cover_bytes = b"fake_cover"
-    mock_ic = unittest.mock.MagicMock()
-    mock_ic.random_image_fetch.side_effect = lambda identifier, imagetype: (
-        cover_bytes if imagetype == "front_cover" else None
+    cover_bytes = b"fake_cover_png"
+    # Pre-populate via client.storage — _artfallbacks uses get_client().storage
+    # _artfallbacks builds identifier as normalize(artist)_normalize(album)
+    await isolated_datacache_client.storage.store(
+        url="embedded://artist_album/provided_0",
+        identifier="artist_album",
+        data_type="front_cover",
+        provider="embedded",
+        data_value=cover_bytes,
+        ttl_seconds=86400,
     )
-    tptest.imagecache = mock_ic
     tptest.currentmeta = {"artist": "Artist", "album": "Album"}
     bootstrap.cparser.setValue("artistextras/nocoverfallback", "fanart")
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert tptest.currentmeta.get("coverimageraw") == cover_bytes
-    mock_ic.random_image_fetch.assert_any_call(identifier="Artist_Album", imagetype="front_cover")
 
 
-def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
+@pytest.mark.asyncio
+async def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
     bootstrap,
     trackpoll_testmode,  # pylint: disable=redefined-outer-name
+    isolated_datacache_client,  # pylint: disable=unused-argument
 ):
-    """artist fallback image used when imagecache has no front_cover"""
+    """artist fallback image used when datacache has no front_cover"""
     tptest = trackpoll_testmode
-    fanart_bytes = b"fake_fanart"
-    mock_ic = unittest.mock.MagicMock()
-    mock_ic.random_image_fetch.side_effect = lambda identifier, imagetype: (
-        fanart_bytes if imagetype == "artistfanart" else None
+    fanart_bytes = b"fake_fanart_png"
+    # Pre-populate via client.storage — _artfallbacks uses get_client().storage
+    await isolated_datacache_client.storage.store(
+        url="http://example.com/fanart.jpg",
+        identifier="artist",
+        data_type="artistfanart",
+        provider="theaudiodb",
+        data_value=fanart_bytes,
+        ttl_seconds=86400,
     )
-    tptest.imagecache = mock_ic
-    tptest.currentmeta = {"artist": "Artist", "album": "Album", "imagecacheartist": "Artist"}
+    tptest.currentmeta = {"artist": "Artist", "album": "Album", "imagecacheartist": "artist"}
     bootstrap.cparser.setValue("artistextras/nocoverfallback", "fanart")
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert tptest.currentmeta.get("coverimageraw") == fanart_bytes
 
 
-def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_none(
+@pytest.mark.asyncio
+async def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_none(
     bootstrap,
     trackpoll_testmode,  # pylint: disable=redefined-outer-name
+    isolated_datacache_client,  # pylint: disable=unused-argument
 ):
     """coverimageraw stays empty when nocoverfallback is 'none'"""
     tptest = trackpoll_testmode
-    mock_ic = unittest.mock.MagicMock()
-    mock_ic.random_image_fetch.return_value = None
-    tptest.imagecache = mock_ic
     tptest.currentmeta = {"artist": "Artist", "album": "Album", "imagecacheartist": "Artist"}
     bootstrap.cparser.setValue("artistextras/nocoverfallback", "none")
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert not tptest.currentmeta.get("coverimageraw")
 
 
-def test_artfallbacks_cover_used_as_logo_fallback(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_artfallbacks_cover_used_as_logo_fallback(
+    bootstrap, trackpoll_testmode, isolated_datacache_client
+):  # pylint: disable=redefined-outer-name,unused-argument
     """existing coverimageraw is copied to artistlogoraw when coverfornologos enabled"""
     tptest = trackpoll_testmode
-    tptest.imagecache = None
     cover_bytes = b"fake_cover"
     tptest.currentmeta = {"coverimageraw": cover_bytes}
     bootstrap.cparser.setValue("artistextras/coverfornologos", True)
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert tptest.currentmeta.get("artistlogoraw") == cover_bytes
 
 
-def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_artfallbacks_cover_used_as_thumbnail_fallback(
+    bootstrap, trackpoll_testmode, isolated_datacache_client
+):  # pylint: disable=redefined-outer-name,unused-argument
     """existing coverimageraw is copied to artistthumbnailraw when coverfornothumbs enabled"""
     tptest = trackpoll_testmode
-    tptest.imagecache = None
     cover_bytes = b"fake_cover"
     tptest.currentmeta = {"coverimageraw": cover_bytes}
     bootstrap.cparser.setValue("artistextras/coverfornothumbs", True)
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert tptest.currentmeta.get("artistthumbnailraw") == cover_bytes
 
 
-def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_artfallbacks_preexisting_cover_not_overwritten(
+    bootstrap, trackpoll_testmode, isolated_datacache_client
+):  # pylint: disable=redefined-outer-name,unused-argument
     """coverimageraw already in metadata is never replaced"""
     tptest = trackpoll_testmode
     original = b"original_cover"
-    mock_ic = unittest.mock.MagicMock()
-    mock_ic.random_image_fetch.return_value = b"should_not_be_used"
-    tptest.imagecache = mock_ic
     tptest.currentmeta = {
         "artist": "Artist",
         "album": "Album",
@@ -569,10 +557,9 @@ def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_tes
     }
     bootstrap.cparser.setValue("artistextras/nocoverfallback", "fanart")
 
-    tptest._artfallbacks()  # pylint: disable=protected-access
+    await tptest._artfallbacks()  # pylint: disable=protected-access
 
     assert tptest.currentmeta.get("coverimageraw") == original
-    mock_ic.random_image_fetch.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

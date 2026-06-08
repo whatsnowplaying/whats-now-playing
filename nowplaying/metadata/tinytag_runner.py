@@ -7,7 +7,6 @@ import contextlib
 import json
 import logging
 import pathlib
-from typing import TYPE_CHECKING
 
 import puremagic
 
@@ -20,9 +19,6 @@ VIDEO_EXTENSIONS = frozenset(
     [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".vob", ".ogv"]
 )
 AUDIO_CONTAINER_EXCLUSIONS = frozenset([".m4a", ".f4a"])
-
-if TYPE_CHECKING:
-    import nowplaying.imagecache
 
 
 def _date_calc(datedata: dict[str, str]) -> str | None:
@@ -57,8 +53,7 @@ def _date_calc(datedata: dict[str, str]) -> str | None:
 class TinyTagRunner:  # pylint: disable=too-few-public-methods
     """tinytag manager"""
 
-    def __init__(self, imagecache: "nowplaying.imagecache.ImageCache | None" = None):
-        self.imagecache: nowplaying.imagecache.ImageCache | None = imagecache
+    def __init__(self):
         self.metadata: TrackMetadata = {}
         self.datedata: dict[str, str] = {}
 
@@ -396,24 +391,3 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
     def _images(self, images: tinytag.Images) -> None:
         if "coverimageraw" not in self.metadata and images.front_cover:
             self.metadata["coverimageraw"] = images.front_cover.data
-
-        if self.metadata.get("album") and self.metadata.get("artist") and self.imagecache:
-            identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
-
-            # Get all images using as_dict() for tinytag 2.1.1 compatibility
-            images_dict = images.as_dict()
-
-            # Process all cover images (tinytag 2.1.1 stores multiple covers under 'cover' key)
-            all_covers = images_dict.get("cover", [])
-            if not all_covers and images_dict.get("front_cover"):
-                # Fallback to front_cover if no cover images found
-                all_covers = images_dict.get("front_cover", [])
-
-            for index, cover in enumerate(all_covers):
-                logging.debug("Placing audiofile_tt%s front cover", index)
-                _ = self.imagecache.put_db_cachekey(
-                    identifier=identifier,
-                    srclocation=f"{identifier}_audiofile_tt{index}",
-                    imagetype="front_cover",
-                    content=cover.data,
-                )
