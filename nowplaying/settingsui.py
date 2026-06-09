@@ -11,6 +11,7 @@ import logging
 import os
 import pathlib
 import re
+import shutil
 from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
@@ -933,10 +934,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         cache_base = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
         )
-        datacache_file = cache_base / "datacache" / "datacache.sqlite"
-        if datacache_file.exists():
-            logging.debug("Deleting datacache: %s", datacache_file)
-            datacache_file.unlink()
+        datacache_dir = cache_base / "datacache"
+        if datacache_dir.exists():
+            logging.debug("Deleting datacache directory: %s", datacache_dir)
+            shutil.rmtree(datacache_dir, ignore_errors=True)
 
     @Slot()
     def on_obsws_template_button(self):

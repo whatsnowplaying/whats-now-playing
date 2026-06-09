@@ -679,10 +679,11 @@ class DataStorage:
             if file_path:
                 try:
                     (self.database_path.parent / file_path).unlink()
-                except (FileNotFoundError, OSError) as err:
-                    if not isinstance(err, FileNotFoundError):
-                        logging.warning("LFU evict: could not delete blob %s: %s", file_path, err)
-                        continue
+                except FileNotFoundError:
+                    pass  # blob already gone; still remove the orphaned DB row
+                except OSError as err:
+                    logging.warning("LFU evict: could not delete blob %s: %s", file_path, err)
+                    continue  # keep both blob and row; retry next maintenance cycle
             urls_to_delete.append(url)
             remaining -= entry_size
 

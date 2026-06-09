@@ -216,18 +216,31 @@ class RequestQueue:
 
                     # If we have room, fill with remaining items at any priority.
                     if len(rows) < limit:
-                        placeholders = ",".join("?" * len(ids)) if ids else "''"
-                        extra_cursor = await connection.execute(
-                            f"""
-                            SELECT request_id, provider, request_key, params, priority, created_at
-                            FROM pending_requests
-                            WHERE status = 'pending'
-                              AND request_id NOT IN ({placeholders})
-                            ORDER BY priority ASC, created_at DESC
-                            LIMIT ?
-                            """,
-                            (*ids, limit - len(rows)),
-                        )
+                        if ids:
+                            placeholders = ",".join("?" * len(ids))
+                            extra_cursor = await connection.execute(
+                                f"""
+                                SELECT request_id, provider, request_key, params, priority, created_at
+                                FROM pending_requests
+                                WHERE status = 'pending'
+                                  AND request_id NOT IN ({placeholders})
+                                ORDER BY priority ASC, created_at DESC
+                                LIMIT ?
+                                """,
+                                (*ids, limit - len(rows)),
+                            )
+                        else:
+                            extra_cursor = await connection.execute(
+                                """
+                                SELECT request_id, provider, request_key,
+                                       params, priority, created_at
+                                FROM pending_requests
+                                WHERE status = 'pending'
+                                ORDER BY priority ASC, created_at DESC
+                                LIMIT ?
+                                """,
+                                (limit,),
+                            )
                         rows = list(rows) + list(await extra_cursor.fetchall())
                         ids = [r[0] for r in rows]
 

@@ -196,6 +196,7 @@ async def test_store_and_retrieve_by_url(temp_storage):  # pylint: disable=redef
     assert result is not None
 
     assert result.data == test_data
+    assert result.status_code == 200
     assert result.metadata["width"] == 100
     assert result.metadata["height"] == 200
 
@@ -260,10 +261,49 @@ async def test_retrieve_by_identifier_multiple_images(temp_storage):  # pylint: 
 
     for entry in results:
         assert entry.url in urls
+        assert entry.status_code == 200
         # Fetch the blob separately to verify data integrity
         cached = await temp_storage.retrieve_by_url(entry.url)
         assert cached is not None
+        assert cached.status_code == 200
         assert cached.data.startswith(b"image_data_")
+
+
+@pytest.mark.asyncio
+async def test_retrieve_by_identifier_filters_non_200(temp_storage):  # pylint: disable=redefined-outer-name
+    """retrieve_by_identifier never returns entries with status_code != 200."""
+    await temp_storage.store(
+        url="https://example.com/ok.jpg",
+        identifier="filter_artist",
+        data_type="thumbnail",
+        provider="test",
+        data_value=b"ok_image",
+        ttl_seconds=3600,
+        status_code=200,
+    )
+    await temp_storage.store(
+        url="https://example.com/not_found.jpg",
+        identifier="filter_artist",
+        data_type="thumbnail",
+        provider="test",
+        data_value=b"",
+        ttl_seconds=3600,
+        status_code=404,
+    )
+
+    results = await temp_storage.retrieve_by_identifier(
+        identifier="filter_artist", data_type="thumbnail", random=False
+    )
+    assert all(e.status_code == 200 for e in results)
+    assert all(e.url != "https://example.com/not_found.jpg" for e in results)
+
+    for _ in range(10):
+        entry = await temp_storage.retrieve_by_identifier(
+            identifier="filter_artist", data_type="thumbnail", random=True
+        )
+        if entry is not None:
+            assert entry.status_code == 200
+            assert entry.url != "https://example.com/not_found.jpg"
 
 
 @pytest.mark.asyncio
