@@ -39,6 +39,16 @@ _schema_lock = asyncio.Lock()
 # Production data shows API responses are consistently < 30 KB, images consistently > 16 KB.
 _INLINE_THRESHOLD = 16 * 1024
 
+# Canonical set of image data_types — shared between evict_lfu(), client._IMAGE_DATA_TYPES,
+# and queue priority logic so all three stay in sync as types evolve.
+IMAGE_DATA_TYPES: frozenset[str] = frozenset({
+    "artistthumbnail",
+    "artistlogo",
+    "artistbanner",
+    "artistfanart",
+    "front_cover",
+})
+
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
     """
@@ -628,13 +638,7 @@ class DataStorage:
         """
         await self.initialize()
 
-        image_types = (
-            "artistthumbnail",
-            "artistlogo",
-            "artistbanner",
-            "artistfanart",
-            "front_cover",
-        )
+        image_types = tuple(sorted(IMAGE_DATA_TYPES))
         placeholders = ",".join("?" * len(image_types))
 
         total_size: int = 0

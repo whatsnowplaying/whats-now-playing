@@ -252,6 +252,60 @@ async def test_lastfm_http_error(bootstrap, isolated_datacache_client):  # pylin
 
 
 @pytest.mark.asyncio
+async def test_lastfm_429_sets_cooldown(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """429 response sets provider cooldown; second call skips network"""
+    plugin = _setup_plugin(bootstrap)
+
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(
+            side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "60"})
+        )
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+        )
+
+    assert result is None
+    assert isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+
+    # Second call during cooldown must not touch the network
+    with respx.mock(assert_all_called=False) as mock_http2:
+        mock_http2.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        result2 = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+        )
+    assert result2 is None
+    assert not mock_http2.calls  # network was not hit
+
+
+@pytest.mark.asyncio
+async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+    """After cooldown expires the next call hits the network again"""
+    plugin = _setup_plugin(bootstrap)
+
+    with respx.mock(assert_all_called=False) as mock_http:
+        mock_http.get(NIN_URL).mock(
+            side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "60"})
+        )
+        await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+        )
+
+    assert isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+
+    # Force cooldown to expire
+    isolated_datacache_client._retry_after_until["lastfm"] = 0.0  # pylint: disable=protected-access
+
+    with respx.mock(assert_all_called=False) as mock_http2:
+        mock_http2.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+        )
+
+    assert result is not None
+    assert mock_http2.calls  # network was hit after cooldown expired
+
+
+@pytest.mark.asyncio
 async def test_lastfm_both_disabled_returns_none(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """both bio and websites disabled returns None"""
     plugin = _setup_plugin(bootstrap)

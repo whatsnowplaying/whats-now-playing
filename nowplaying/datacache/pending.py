@@ -181,17 +181,32 @@ class RequestQueue:
                 nonlocal results
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     # One item per data_type at the current minimum priority.
+                    # Explicit subquery picks the latest row per data_type unambiguously.
                     cursor = await connection.execute(
                         """
-                        SELECT request_id, provider, request_key, params, priority, created_at
-                        FROM pending_requests
-                        WHERE status = 'pending'
-                          AND priority = (
-                              SELECT MIN(priority) FROM pending_requests WHERE status = 'pending'
+                        SELECT pr.request_id, pr.provider, pr.request_key,
+                               pr.params, pr.priority, pr.created_at
+                        FROM pending_requests pr
+                        INNER JOIN (
+                            SELECT data_type, MAX(created_at) AS max_created_at
+                            FROM pending_requests
+                            WHERE status = 'pending'
+                              AND priority = (
+                                  SELECT MIN(priority)
+                                  FROM pending_requests
+                                  WHERE status = 'pending'
+                              )
+                            GROUP BY data_type
+                        ) latest
+                          ON pr.data_type = latest.data_type
+                         AND pr.created_at = latest.max_created_at
+                        WHERE pr.status = 'pending'
+                          AND pr.priority = (
+                              SELECT MIN(priority)
+                              FROM pending_requests
+                              WHERE status = 'pending'
                           )
-                        GROUP BY data_type
-                        HAVING created_at = MAX(created_at)
-                        ORDER BY created_at DESC
+                        ORDER BY pr.created_at DESC
                         LIMIT ?
                         """,
                         (limit,),

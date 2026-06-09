@@ -22,7 +22,7 @@ import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 from .pending import RequestQueue
 from .queue import RateLimiterManager
-from .storage import CachedEntry, DataStorage
+from .storage import IMAGE_DATA_TYPES, CachedEntry, DataStorage
 
 _PROVIDER_TTL_DEFAULTS: dict[str, int] = {
     "theaudiodb": 7 * 24 * 3600,
@@ -32,15 +32,7 @@ _PROVIDER_TTL_DEFAULTS: dict[str, int] = {
     "musicbrainz": 30 * 24 * 3600,
     "lastfm": 7 * 24 * 3600,
 }
-_IMAGE_DATA_TYPES: frozenset[str] = frozenset(
-    {
-        "artistthumbnail",
-        "artistlogo",
-        "artistbanner",
-        "artistfanart",
-        "front_cover",
-    }
-)
+_IMAGE_DATA_TYPES = IMAGE_DATA_TYPES  # re-exported from storage for TTL doubling logic
 _DEFAULT_TTL = 7 * 24 * 3600
 
 
