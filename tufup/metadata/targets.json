@@ -2,12 +2,12 @@
  "signatures": [
   {
    "keyid": "3009823a498e7d7dd5b244f5f7c3fab05d5a7f0923e141de96d0f1eaa8d2fe9e",
-   "sig": "42cc62b7bc1b182c21c50eb19a568df7e532bbd4544b0645ca6a772706466b920591109589df9a7a14c58e389817ccf2d82bc9cc466fb5123df994399d821103"
+   "sig": "071ac2b6a569ac82d96247928e1579a7422c1135faa2c1c30eb8421156a3f515a1e2d08ab9990df15813b3677b37e75ff8dfdcfca56e140ebcc3b49da1c5ea01"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-07-09T09:34:45Z",
+  "expires": "2026-07-09T18:26:02Z",
   "spec_version": "1.0.31",
   "targets": {
    "WhatsNowPlaying_linux_x86_64-5.2.1.tar.gz": {
@@ -34,6 +34,18 @@
     },
     "length": 311559824
    },
+   "WhatsNowPlaying_linux_x86_64_prerelease-5.2.2-preview2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "6cf5ab7170e1a469ea8e2ff39f19426de15344938b6a546b918747d8549ae4bf"
+    },
+    "length": 311561420
+   },
    "WhatsNowPlaying_macos15_arm-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
@@ -57,6 +69,18 @@
      "sha256": "bf3c8f51d215bfd1be15a6f1d6bc382b1e54d85a9bb4ed7d2a4c2ea60ac6acf3"
     },
     "length": 267519151
+   },
+   "WhatsNowPlaying_macos15_arm_prerelease-5.2.2-preview2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "38f90985b6cac48af0ea3c1b4ecf779d9ba25bd8e2dce111a91db8dfaab550ac"
+    },
+    "length": 267525481
    },
    "WhatsNowPlaying_macos15_intel-5.2.1.tar.gz": {
     "custom": {
@@ -82,6 +106,18 @@
     },
     "length": 288478817
    },
+   "WhatsNowPlaying_macos15_intel_prerelease-5.2.2-preview2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "c9cdb8d2fae07779955c2973eb245da66c2b55ef01120cc8d620e01e269de331"
+    },
+    "length": 288471876
+   },
    "WhatsNowPlaying_windows_x86_64-5.2.1.tar.gz": {
     "custom": {
      "tufup": {
@@ -105,8 +141,20 @@
      "sha256": "df182579bb2da4fd2a7a86c50c94f7286adbc7606628a36a7fc6fd3fc78f1134"
     },
     "length": 310389371
+   },
+   "WhatsNowPlaying_windows_x86_64_prerelease-5.2.2-preview2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "87c93452a97252261a481f36c09112b4f0ad5b744f2280bd96380bf43dc5fda8"
+    },
+    "length": 310394060
    }
   },
-  "version": 21
+  "version": 22
  }
 }
