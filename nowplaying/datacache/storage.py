@@ -41,13 +41,15 @@ _INLINE_THRESHOLD = 16 * 1024
 
 # Canonical set of image data_types — shared between evict_lfu(), client._IMAGE_DATA_TYPES,
 # and queue priority logic so all three stay in sync as types evolve.
-IMAGE_DATA_TYPES: frozenset[str] = frozenset({
-    "artistthumbnail",
-    "artistlogo",
-    "artistbanner",
-    "artistfanart",
-    "front_cover",
-})
+IMAGE_DATA_TYPES: frozenset[str] = frozenset(
+    {
+        "artistthumbnail",
+        "artistlogo",
+        "artistbanner",
+        "artistfanart",
+        "front_cover",
+    }
+)
 
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
