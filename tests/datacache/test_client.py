@@ -6,6 +6,7 @@ rate limiting, and integration with storage.
 """
 
 import tempfile
+import unittest.mock
 from pathlib import Path
 
 import aiosqlite
@@ -15,6 +16,7 @@ import pytest
 import pytest_asyncio
 import respx
 
+import nowplaying.datacache
 import nowplaying.datacache.client
 import nowplaying.utils.sqlite
 
@@ -65,8 +67,7 @@ async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined
     )
 
     assert result is not None
-    data, _metadata = result
-    assert data == test_data
+    assert result.data == test_data
 
 
 @pytest.mark.asyncio
@@ -115,8 +116,7 @@ async def test_get_random_image(temp_client):  # pylint: disable=redefined-outer
     )
 
     assert result is not None
-    data, _metadata, url = result
-    assert data.startswith(b"random_data_")
+    assert result.data.startswith(b"random_data_")
 
 
 @pytest.mark.asyncio
@@ -195,9 +195,8 @@ async def test_fetch_and_store_json_response(temp_client):  # pylint: disable=re
         )
 
         assert result is not None
-        data, _metadata = result
-        assert isinstance(data, bytes)
-        assert orjson.loads(data) == test_data
+        assert isinstance(result.data, bytes)
+        assert orjson.loads(result.data) == test_data
 
         # Verify stored in cache
         cached = await temp_client.storage.retrieve_by_url("https://api.example.com/test.json")
@@ -228,8 +227,7 @@ async def test_fetch_and_store_binary_response(temp_client):  # pylint: disable=
         )
 
         assert result is not None
-        data, _metadata = result
-        assert data == test_data
+        assert result.data == test_data
 
 
 @pytest.mark.asyncio
@@ -337,8 +335,7 @@ async def test_process_queue_single_request(temp_client):  # pylint: disable=red
     # Verify data was actually stored in the cache
     cached = await temp_client.storage.retrieve_by_url(url)
     assert cached is not None
-    data, _metadata = cached
-    assert data == expected_data
+    assert cached.data == expected_data
 
 
 @pytest.mark.asyncio
@@ -484,14 +481,12 @@ async def test_5xx_retry_then_success_stores_item(temp_client):  # pylint: disab
         )
 
     assert result is not None
-    data, _metadata = result
-    assert data == good_data
+    assert result.data == good_data
     assert attempts == 2
 
     cached = await temp_client.storage.retrieve_by_url(url)
     assert cached is not None
-    cached_data, _ = cached
-    assert cached_data == good_data
+    assert cached.data == good_data
 
 
 @pytest.mark.asyncio
@@ -565,3 +560,37 @@ async def test_rate_limiter_integration(temp_client):  # pylint: disable=redefin
         # Rate limiter must have been acquired: tokens_before - tokens_after >= 1
         # (tokens may have partially refilled on slow runners, so check net consumption)
         assert tokens_before - rate_limiter.tokens >= 1.0
+
+
+@pytest.mark.asyncio
+async def test_negative_ttl_caches_404_and_suppresses_retry(
+    temp_client,  # pylint: disable=redefined-outer-name
+):
+    """cached_fetch with negative_ttl stores a 404 sentinel and suppresses the second call."""
+    call_count = 0
+
+    async def fetch_once():
+        nonlocal call_count
+        call_count += 1
+        return {}  # falsy-but-not-None = "not found" from the upstream API
+
+    with unittest.mock.patch("nowplaying.datacache.get_client", return_value=temp_client):
+        result1 = await nowplaying.datacache.cached_fetch(
+            provider="testprovider",
+            artist_name="WNP Mock Artist",
+            endpoint="search",
+            fetch_func=fetch_once,
+            negative_ttl=300,
+        )
+        assert result1 == {}
+        assert call_count == 1, "fetch_func must be called on first (cache miss)"
+
+        result2 = await nowplaying.datacache.cached_fetch(
+            provider="testprovider",
+            artist_name="WNP Mock Artist",
+            endpoint="search",
+            fetch_func=fetch_once,
+            negative_ttl=300,
+        )
+        assert result2 is None, "negative cache hit should suppress retry and return None"
+        assert call_count == 1, "fetch_func must NOT be called again on negative cache hit"

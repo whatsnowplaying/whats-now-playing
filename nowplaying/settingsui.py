@@ -11,6 +11,7 @@ import logging
 import os
 import pathlib
 import re
+import shutil
 from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
@@ -927,22 +928,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.tray.fresh_start_quit()
 
     @Slot()
-    def on_artistextras_clearcache_button(self):
+    @staticmethod
+    def on_artistextras_clearcache_button():
         """clear the cache button was pushed"""
-        if cachedbfile := self.config.cparser.value("artistextras/cachedbfile"):
-            cachedbfilepath = pathlib.Path(cachedbfile)
-            if cachedbfilepath.exists() and "imagecache" in str(cachedbfile):
-                logging.debug("Deleting image cache: %s", cachedbfilepath)
-                cachedbfilepath.unlink()
-
-        # Clear API cache
-        api_cache_dir = pathlib.Path(
+        cache_base = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
-        ).joinpath("api_cache")
-        api_cache_file = api_cache_dir / "api_responses.db"
-        if api_cache_file.exists():
-            logging.debug("Deleting API cache: %s", api_cache_file)
-            api_cache_file.unlink()
+        )
+        datacache_dir = cache_base / "datacache"
+        if datacache_dir.exists():
+            logging.debug("Deleting datacache directory: %s", datacache_dir)
+            shutil.rmtree(datacache_dir, ignore_errors=True)
 
     @Slot()
     def on_obsws_template_button(self):

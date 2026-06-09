@@ -13,6 +13,7 @@ import pytest
 import pytest_asyncio
 
 import nowplaying.datacache.providers
+from nowplaying.datacache.storage import CachedEntry
 
 
 @pytest_asyncio.fixture
@@ -93,7 +94,12 @@ async def test_image_cache_artist_types(  # pylint: disable=too-many-arguments,t
 ):
     """Test caching different artist image types"""
     with patch.object(temp_providers.client, "get_or_fetch") as mock_fetch:
-        mock_fetch.return_value = (expected_data, return_metadata)
+        mock_fetch.return_value = CachedEntry(
+            data=expected_data,
+            metadata=return_metadata,
+            status_code=200,
+            mime_type=None,
+        )
 
         # Get the method dynamically
         cache_method = getattr(temp_providers.images, method_name)
@@ -107,8 +113,7 @@ async def test_image_cache_artist_types(  # pylint: disable=too-many-arguments,t
         )
 
         assert result is not None
-        data, _metadata = result
-        assert data == expected_data
+        assert result.data == expected_data
 
         # Verify correct parameters were passed to client
         call_args = mock_fetch.call_args
@@ -123,10 +128,12 @@ async def test_image_cache_artist_types(  # pylint: disable=too-many-arguments,t
 async def test_image_get_random_image(temp_providers):  # pylint: disable=redefined-outer-name
     """Test getting random image"""
     with patch.object(temp_providers.client, "get_random_image") as mock_random:
-        mock_random.return_value = (
-            b"random_image",
-            {"type": "thumbnail"},
-            "https://example.com/1.jpg",
+        mock_random.return_value = CachedEntry(
+            data=b"random_image",
+            metadata={"type": "thumbnail"},
+            status_code=200,
+            mime_type=None,
+            url="https://example.com/1.jpg",
         )
 
         result = await temp_providers.images.get_random_image(
@@ -134,8 +141,7 @@ async def test_image_get_random_image(temp_providers):  # pylint: disable=redefi
         )
 
         assert result is not None
-        data, _metadata, _url = result
-        assert data == b"random_image"
+        assert result.data == b"random_image"
 
         mock_random.assert_called_once_with(
             identifier="random_artist", data_type="thumbnail", provider="test"
@@ -166,7 +172,12 @@ async def test_api_cache_api_response(temp_providers):  # pylint: disable=redefi
     test_data = {"name": "Test Artist", "bio": "Artist biography"}
 
     with patch.object(temp_providers.client, "get_or_fetch") as mock_fetch:
-        mock_fetch.return_value = (test_data, {"cached_at": "2023-01-01"})
+        mock_fetch.return_value = CachedEntry(
+            data=test_data,
+            metadata={"cached_at": "2023-01-01"},
+            status_code=200,
+            mime_type=None,
+        )
 
         result = await temp_providers.api.cache_api_response(
             url=test_url,
@@ -180,8 +191,7 @@ async def test_api_cache_api_response(temp_providers):  # pylint: disable=redefi
         )
 
         assert result is not None
-        data, _metadata = result
-        assert data == test_data
+        assert result.data == test_data
 
         call_args = mock_fetch.call_args
         assert call_args[1]["url"] == test_url
@@ -196,7 +206,12 @@ async def test_api_cache_artist_bio(temp_providers):  # pylint: disable=redefine
     test_url = "https://api.example.com/bio/artist"
 
     with patch.object(temp_providers.api, "cache_api_response") as mock_cache:
-        mock_cache.return_value = ({"biography": "Artist bio text"}, {"lang": "en"})
+        mock_cache.return_value = CachedEntry(
+            data={"biography": "Artist bio text"},
+            metadata={"lang": "en"},
+            status_code=200,
+            mime_type=None,
+        )
 
         result = await temp_providers.api.cache_artist_bio(
             url=test_url,

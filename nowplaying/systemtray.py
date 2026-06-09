@@ -675,6 +675,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Wait for background threads to finish before cleanup
         self._wait_for_vacuum_thread()
+        self.vacuum_thread = None
         if self._prefetch_worker and self._prefetch_worker.isRunning():
             if not self._prefetch_worker.wait(nowplaying.upgrades.background._SHUTDOWN_TIMEOUT_MS):  # pylint: disable=protected-access
                 self._prefetch_worker.terminate()

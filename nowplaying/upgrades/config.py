@@ -539,10 +539,10 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_3_0() -> None:
-        """Upgrade to 5.3.0 — delete the old apicache database.
+        """Upgrade to 5.3.0 — delete the old apicache and imagecache directories.
 
-        apicache was replaced by datacache in 5.3.0.  The old api_responses.db
-        is no longer read or written, so remove it to reclaim disk space.
+        Both apicache and imagecache were replaced by datacache in 5.3.0.
+        Remove the old directories to reclaim disk space.
         """
         try:
             cache_dir = pathlib.Path(
@@ -552,8 +552,14 @@ class UpgradeConfig:
             if api_cache_db.exists():
                 api_cache_db.unlink()
                 logging.info("Upgrade to 5.3.0: removed old apicache database %s", api_cache_db)
+            imagecache_dir = cache_dir / "imagecache"
+            if imagecache_dir.exists():
+                shutil.rmtree(imagecache_dir)
+                logging.info(
+                    "Upgrade to 5.3.0: removed old imagecache directory %s", imagecache_dir
+                )
         except OSError as error:
-            logging.warning("Upgrade to 5.3.0: could not remove apicache database: %s", error)
+            logging.warning("Upgrade to 5.3.0: could not remove old cache files: %s", error)
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:

@@ -22,7 +22,7 @@ from .providers import (
     get_providers,
 )
 from .queue import RateLimiter, RateLimiterManager
-from .storage import DataStorage, get_datacache_path, run_datacache_maintenance
+from .storage import CachedEntry, DataStorage, get_datacache_path, run_datacache_maintenance
 
 # Public API - these are the main interfaces artist extras plugins should use
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "APIProvider",  # Generic API response caching
     # Low-level components (for advanced use cases)
     "DataCacheClient",  # Core client with get_or_fetch
+    "CachedEntry",  # Result dataclass from retrieve methods
     "DataStorage",  # Direct storage layer access
     "RequestQueue",  # Database-backed pending request queue
     "RateLimiter",  # Rate limiting primitives
@@ -164,15 +165,17 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
     in the upstream API").  When set, empty results are cached with this shorter
     TTL rather than the full ttl_seconds.  When None, falsy results are not cached.
     """
-    storage = _get_shared_storage()
+    storage = get_client().storage
     normalized = artist_name.lower().strip()
     url = f"apicache://{provider}/{normalized}/{endpoint}"
 
     cached = await storage.retrieve_by_url(url)
     if cached is not None:
-        data, _ = cached
+        if cached.status_code != 200:
+            logging.debug("Cache HIT (negative) for %s:%s:%s", provider, artist_name, endpoint)
+            return None
         try:
-            result = _deserialize_bytes(orjson.loads(data))
+            result = _deserialize_bytes(orjson.loads(cached.data))
             logging.debug("Cache HIT for %s:%s:%s", provider, artist_name, endpoint)
             return result
         except orjson.JSONDecodeError:
@@ -192,6 +195,9 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
     else:
         return fresh  # None = transient failure, do not cache
     try:
+        # Negative results (empty/falsy from API) are stored with status_code=404
+        # so the retrieval guard (status_code != 200) correctly suppresses retries.
+        effective_status = 200 if fresh else 404
         await storage.store(
             url=url,
             identifier=normalized,
@@ -199,6 +205,7 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
             provider=provider,
             data_value=orjson.dumps(fresh, default=_serialize_default),
             ttl_seconds=store_ttl,
+            status_code=effective_status,
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
         logging.warning("datacache store failed for %s: %s", url, err)

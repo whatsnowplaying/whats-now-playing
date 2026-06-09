@@ -9,6 +9,8 @@ artistextras plugins, particularly around API caching functionality.
 import logging
 import os
 
+import aiosqlite
+import orjson
 import pytest
 
 # Shared pytest.mark.skipif decorators for API key requirements
@@ -33,23 +35,43 @@ skip_no_lastfm_key = pytest.mark.skipif(
 )
 
 
-class FakeImageCache:  # pylint: disable=too-few-public-methods
-    """A fake ImageCache that just keeps track of urls"""
+async def datacache_pending_urls(client) -> list[str]:
+    """Return all URLs currently pending in the datacache queue without consuming them."""
+    db_path = client.storage.database_path
+    async with aiosqlite.connect(str(db_path)) as conn:
+        cursor = await conn.execute("SELECT params FROM pending_requests WHERE status = 'pending'")
+        rows = await cursor.fetchall()
+    return [orjson.loads(row[0]).get("url", "") for row in rows]
 
-    def __init__(self):
-        self.urls = {}
 
-    def fill_queue(
-        self,
-        config=None,  # pylint: disable=unused-argument
-        identifier: str = None,
-        imagetype: str = None,
-        srclocationlist: list[str] = None,
-    ):
-        """Just keep track of what was picked"""
-        if not self.urls.get(identifier):
-            self.urls[identifier] = {}
-        self.urls[identifier][imagetype] = srclocationlist
+async def datacache_has_pending(client, identifier: str, data_type: str) -> bool:
+    """Return True if the pending queue has at least one entry for identifier+data_type.
+
+    Use in tests to verify a specific image type was queued for a given artist
+    without downloading or consuming queue entries.
+    """
+    db_path = client.storage.database_path
+    async with aiosqlite.connect(str(db_path)) as conn:
+        cursor = await conn.execute("SELECT params FROM pending_requests WHERE status = 'pending'")
+        rows = await cursor.fetchall()
+    for row in rows:
+        params = orjson.loads(row[0])
+        if params.get("identifier") == identifier and params.get("data_type") == data_type:
+            return True
+    return False
+
+
+async def datacache_image_available(client, identifier: str, data_type: str) -> bool:
+    """Return True if an image is either queued for download or already cached.
+
+    Use instead of datacache_has_pending when subsequent runs may serve the image
+    from cache (HIT) rather than re-queuing it. Both states mean the plugin correctly
+    handled the image.
+    """
+    if await datacache_has_pending(client, identifier, data_type):
+        return True
+    result = await client.get_random_image(identifier=identifier, data_type=data_type)
+    return result is not None
 
 
 def configureplugins(config):
@@ -61,14 +83,10 @@ def configureplugins(config):
         plugins.append("fanarttv")
     plugins.append("theaudiodb")
 
-    imagecaches = {}
-    plugin_objects = {}
-    for pluginname in plugins:
-        imagecaches[pluginname] = FakeImageCache()
-        plugin_objects[pluginname] = config.pluginobjs["artistextras"][
-            f"nowplaying.artistextras.{pluginname}"
-        ]
-    return imagecaches, plugin_objects
+    return {
+        pluginname: config.pluginobjs["artistextras"][f"nowplaying.artistextras.{pluginname}"]
+        for pluginname in plugins
+    }
 
 
 def configuresettings(pluginname, cparser):
@@ -87,14 +105,13 @@ def configuresettings(pluginname, cparser):
 
 
 # Cache testing helpers
-async def run_cache_consistency_test(plugin, test_metadata, imagecache=None, success_message=""):
+async def run_cache_consistency_test(plugin, test_metadata, success_message=""):
     """
     Generic cache consistency test helper.
 
     Args:
         plugin: The plugin instance to test
         test_metadata: Metadata dict to use for testing
-        imagecache: Image cache to use (optional)
         success_message: Message to log on successful cache verification
 
     Returns:
@@ -102,10 +119,10 @@ async def run_cache_consistency_test(plugin, test_metadata, imagecache=None, suc
     """
 
     # First call - should hit API and cache result
-    result1 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+    result1 = await plugin.download_async(test_metadata.copy())
 
     # Second call - should use cached result
-    result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+    result2 = await plugin.download_async(test_metadata.copy())
 
     # Both results should be consistent (either both None or both have data)
     assert (result1 is None) == (result2 is None)
@@ -119,7 +136,7 @@ async def run_cache_consistency_test(plugin, test_metadata, imagecache=None, suc
     return result1, result2
 
 
-async def run_api_call_count_test(plugin, test_metadata, mock_method_name, imagecache=None):
+async def run_api_call_count_test(plugin, test_metadata, mock_method_name):
     """
     Generic API call count test helper with mocking.
 
@@ -127,7 +144,6 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
         plugin: The plugin instance to test
         test_metadata: Metadata dict to use for testing
         mock_method_name: Name of the plugin method to mock (e.g., '_fetch_async')
-        imagecache: Image cache to use (optional)
 
     Returns:
         api_call_count: Number of API calls made
@@ -149,7 +165,7 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
 
     try:
         # First call - should hit API and cache result
-        result1 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+        result1 = await plugin.download_async(test_metadata.copy())
 
         # Verify one API call was made
         assert api_call_count == 1, (
@@ -157,7 +173,7 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
         )
 
         # Second call - should use cached result, no additional API call
-        result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+        result2 = await plugin.download_async(test_metadata.copy())
 
         # Verify still only one API call was made (cache hit)
         assert api_call_count == 1, (
@@ -180,7 +196,7 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
     return api_call_count
 
 
-async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagecache=None):
+async def run_failure_cache_test(plugin, test_metadata, mock_method_name):
     """
     Generic API failure cache behavior test helper.
 
@@ -190,7 +206,6 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
         plugin: The plugin instance to test
         test_metadata: Metadata dict to use for testing
         mock_method_name: Name of the plugin method to mock
-        imagecache: Image cache to use (optional)
     """
 
     # Mock the internal API method to simulate failures then success
@@ -221,7 +236,7 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
 
     try:
         # First call - API fails, should return None and NOT cache the failure
-        result1 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+        result1 = await plugin.download_async(test_metadata.copy())
 
         # Verify one API call was made and result is None (failure)
         assert api_call_count == 1, (
@@ -230,7 +245,7 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
         assert result1 is None, "Expected None result from failed API call"
 
         # Second call - should retry API (not use cached failure), API succeeds this time
-        result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+        result2 = await plugin.download_async(test_metadata.copy())
 
         # Verify second API call was made (failure wasn't cached)
         assert api_call_count == 2, (
@@ -238,7 +253,7 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
         )
 
         # Third call - should use cached success result, no additional API call
-        result3 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
+        result3 = await plugin.download_async(test_metadata.copy())
 
         # Verify still only two API calls (success result was cached)
         assert api_call_count == 2, (

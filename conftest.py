@@ -12,17 +12,16 @@ import tracemalloc
 import unittest.mock
 
 import pytest
-import pytest_asyncio
 from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
     QCoreApplication,
     QSettings,
     QStandardPaths,
 )
 
-import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache
+import nowplaying.utils.sqlite
 
 # if sys.platform == 'darwin':
 #     import psutil
@@ -30,6 +29,23 @@ import nowplaying.datacache
 
 # Enable tracemalloc to track resource allocations
 tracemalloc.start()
+
+_PYTEST_LOCKFILE = pathlib.Path(tempfile.gettempdir()) / "pytest-wnp.lock"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def enforce_single_pytest_instance():
+    """Fail immediately if another pytest session is already running."""
+    if _PYTEST_LOCKFILE.exists():
+        raise RuntimeError(
+            f"\n\nAnother pytest session is already running (lockfile: {_PYTEST_LOCKFILE}).\n"
+            "NEVER run more than one pytest at a time.\n"
+            "If no pytest is actually running, delete the lockfile and retry.\n"
+        )
+    _PYTEST_LOCKFILE.touch()
+    yield
+    _PYTEST_LOCKFILE.unlink(missing_ok=True)
+
 
 # These libraries are extremely verbose at DEBUG level; suppress them so they
 # don't overwhelm test output.  (bootstrap.setuplogging() does the same for
@@ -95,6 +111,32 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
             config.dbtestfile = dbfile
 
             yield config
+
+            # Remove any mock cache entries created during the test so they
+            # don't contaminate subsequent tests that use the shared cache.
+            cachedir = pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+            )
+            datacache_db = cachedir / "datacache" / "datacache.sqlite"
+            if datacache_db.exists():
+                with contextlib.suppress(Exception):  # pylint: disable=broad-exception-caught
+
+                    def _cleanup():
+                        with nowplaying.utils.sqlite.sqlite_connection(str(datacache_db)) as conn:
+                            conn.execute(
+                                "DELETE FROM cached_data"
+                                " WHERE identifier LIKE 'wnpmock%'"
+                                " OR LOWER(identifier) LIKE 'wnp mock%'"
+                                " OR url LIKE 'apicache://%/wnp%mock%'"
+                            )
+                            conn.execute(
+                                "DELETE FROM pending_requests"
+                                " WHERE json_extract(params, '$.identifier') LIKE 'wnpmock%'"
+                                " OR LOWER(json_extract(params, '$.identifier')) LIKE 'wnp mock%'"
+                            )
+
+                    nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup)
+
             if pathlib.Path(rmdir).exists():
                 shutil.rmtree(rmdir)
 
@@ -153,9 +195,7 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
         # misses that exhaust the Discogs/etc rate limit across tests).
         if temp_datacache and temp_datacache.exists():
             shutil.move(str(temp_datacache), str(datacache_dir))
-        # Reset singleton so the next test reconnects to the restored database.
-        global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
-        _SHARED_DATACACHE_INSTANCE = None
+        # Reset shared storage singleton so the next test reconnects to the restored DB.
         nowplaying.datacache.reset_shared_storage()
 
     config = QSettings(
@@ -185,18 +225,6 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
     reboot_macosx_prefs()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def run_datacache_maintenance_once():
-    """Run datacache maintenance once per session to clean up expired entries.
-
-    Without this, stale entries (e.g. empty-dict negative results from previous
-    sessions) accumulate indefinitely since the test suite never calls systemtray's
-    startup maintenance path.
-    """
-    nowplaying.datacache.run_maintenance()
-    yield
-
-
 @pytest.fixture(autouse=True)
 def mock_first_install_dialog():
     """Globally mock the first-install dialog to prevent it from blocking tests."""
@@ -204,145 +232,9 @@ def mock_first_install_dialog():
         yield
 
 
-# Global cache instance shared across all tests in the session
-_SHARED_CACHE_INSTANCE = None
-
-
-@pytest_asyncio.fixture
-async def isolated_api_cache():
-    """Create an isolated API cache for testing (one per test)."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_dir = pathlib.Path(temp_dir)
-        cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
-        # Wait for initialization to complete
-        await cache._initialize_db()  # pylint: disable=protected-access
-        try:
-            yield cache
-        finally:
-            # Properly close the cache to prevent event loop warnings
-            await cache.close()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def shared_api_cache():
-    """Create a shared API cache for artistextras tests to reduce API calls.
-
-    Uses Qt standard cache location which is preserved by clear_old_testsuite.
-    """
-    global _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
-
-    # Reuse the same cache instance across all tests
-    # Don't pass cache_dir - let it use Qt standard location
-    if _SHARED_CACHE_INSTANCE is None:
-        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache()
-        await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
-
-    yield _SHARED_CACHE_INSTANCE
-
-
-@pytest_asyncio.fixture
-async def isolated_datacache_storage():
-    """Fresh DataStorage per test for verifying cache hit/miss behaviour."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        storage = nowplaying.datacache.DataStorage(pathlib.Path(temp_dir))
-        await storage.initialize()
-        original = nowplaying.datacache._shared_storage  # pylint: disable=protected-access
-        nowplaying.datacache.set_shared_storage(storage)
-        try:
-            yield storage
-        finally:
-            nowplaying.datacache.set_shared_storage(original)
-            await storage.close()
-
-
-@pytest_asyncio.fixture
-async def isolated_datacache_client():
-    """Fresh DataCacheClient per test with isolated storage.
-
-    Patches nowplaying.datacache.get_client so that plugins calling get_client()
-    receive a client backed by a temporary directory rather than the real cache.
-    Also swaps the shared storage singleton so cached_fetch() is isolated too.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = pathlib.Path(temp_dir)
-        client = nowplaying.datacache.DataCacheClient(temp_path)
-        await client.initialize()
-        original_storage = nowplaying.datacache._shared_storage  # pylint: disable=protected-access
-        nowplaying.datacache.set_shared_storage(client.storage)
-        with unittest.mock.patch("nowplaying.datacache.get_client", return_value=client):
-            try:
-                yield client
-            finally:
-                nowplaying.datacache.set_shared_storage(original_storage)
-                await client.close()
-
-
-_SHARED_DATACACHE_INSTANCE = None
-
-
-@pytest_asyncio.fixture(scope="function")
-async def shared_datacache_storage():
-    """Shared DataStorage for artistextras tests to avoid redundant fetches.
-
-    scope="function" is required by pytest-asyncio's function-scoped event loop.
-    The module-level singleton makes this a session singleton in practice.
-    No explicit close() needed: DataStorage uses connection-per-operation with
-    no persistent handle to release.
-    """
-    global _SHARED_DATACACHE_INSTANCE  # pylint: disable=global-statement
-    if _SHARED_DATACACHE_INSTANCE is None:
-        _SHARED_DATACACHE_INSTANCE = nowplaying.datacache.DataStorage()
-        await _SHARED_DATACACHE_INSTANCE.initialize()
-    yield _SHARED_DATACACHE_INSTANCE
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def auto_shared_datacache_for_artistextras(request, shared_datacache_storage):  # pylint: disable=redefined-outer-name
-    """Mirror of auto_shared_api_cache_for_artistextras for the datacache layer."""
-    test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
-    test_manages_own_cache = (
-        "shared_datacache_storage" in request.fixturenames
-        or "isolated_datacache_storage" in request.fixturenames
-    )
-    if (
-        any(module in request.module.__name__ for module in test_modules)
-        and not test_manages_own_cache
-    ):
-        nowplaying.datacache.set_shared_storage(shared_datacache_storage)
-        yield
-    else:
-        yield
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
-    """Automatically use shared API cache for tests that hit
-    external APIs to prevent CI failures.
-    """
-    # Auto-apply to artistextras, musicbrainz, and metadata_multi_artist tests
-    # Skip tests that explicitly manage their own cache
-    test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
-    test_manages_own_cache = (
-        "shared_api_cache" in request.fixturenames or "isolated_api_cache" in request.fixturenames
-    )
-
-    if (
-        any(module in request.module.__name__ for module in test_modules)
-        and not test_manages_own_cache
-    ):
-        # Set the shared cache instance for this test
-        nowplaying.apicache.set_cache_instance(shared_api_cache)
-        yield
-        # Note: We intentionally do NOT restore the original cache instance
-        # to avoid race conditions where async operations might still be using the cache
-    else:
-        yield
-
-
 @pytest.fixture(autouse=True)
 def mock_charts_key_generation():
     """Mock Charts anonymous key generation to prevent API calls during tests."""
     with unittest.mock.patch("nowplaying.notifications.charts.generate_anonymous_key") as mock_key:
-        # Return None to simulate no key generation during tests
         mock_key.return_value = None
         yield mock_key

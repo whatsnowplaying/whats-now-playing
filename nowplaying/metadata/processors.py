@@ -11,7 +11,6 @@ import re
 import string
 import sys
 import textwrap
-from typing import TYPE_CHECKING
 
 import url_normalize
 import wnpmb.artist_resolution
@@ -27,8 +26,7 @@ import nowplaying.utils
 import nowplaying.utils.filters
 from nowplaying.types import TrackMetadata
 
-if TYPE_CHECKING:
-    import nowplaying.imagecache
+import nowplaying.datacache
 
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
@@ -48,7 +46,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self, config: nowplaying.config.ConfigFile | None = None, test_mode: bool = False
     ):
         self.metadata: TrackMetadata = {}
-        self.imagecache: nowplaying.imagecache.ImageCache | None = None
         self.test_mode = test_mode
         if config:
             self.config: nowplaying.config.ConfigFile = config
@@ -76,7 +73,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     async def getmoremetadata(  # pylint: disable=too-many-branches
         self,
         metadata: TrackMetadata | None = None,
-        imagecache: "nowplaying.imagecache.ImageCache | None" = None,
         skipplugins: bool = False,
     ) -> TrackMetadata:
         """take metadata and process it"""
@@ -84,10 +80,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata = metadata
         else:
             self.metadata = {}
-        self.imagecache = imagecache
-
-        if "artistfanarturls" not in self.metadata:
-            self.metadata["artistfanarturls"] = []
 
         try:
             for processor in "hostmeta", "tinytag", "image2png":
@@ -97,23 +89,27 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
-        if self.imagecache and self.metadata.get("artist") and self.metadata.get("album"):
+        if self.metadata.get("artist") and self.metadata.get("album"):
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
+            storage = nowplaying.datacache.get_client().storage
             if self.metadata.get("coverimageraw"):
                 logging.debug("Placing provided front cover for %s", identifier)
-                _ = self.imagecache.put_db_cachekey(
-                    identifier=identifier,
-                    srclocation=f"{identifier}_provided_0",
-                    imagetype="front_cover",
-                    content=self.metadata["coverimageraw"],
+                normalid = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
+                await storage.store(
+                    url=f"embedded://{normalid}/provided_0",
+                    identifier=normalid,
+                    data_type="front_cover",
+                    provider="embedded",
+                    data_value=self.metadata["coverimageraw"],
+                    ttl_seconds=30 * 24 * 3600,
+                    status_code=200,
                 )
             else:
-                cached = self.imagecache.random_image_fetch(
-                    identifier=identifier, imagetype="front_cover"
-                )
-                if cached:
-                    logging.debug("Restoring coverimageraw from imagecache for %s", identifier)
-                    self.metadata["coverimageraw"] = cached
+                normalid = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
+                result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
+                if result:
+                    logging.debug("Restoring coverimageraw from datacache for %s", identifier)
+                    self.metadata["coverimageraw"] = result.data
                     self.metadata["coverimagetype"] = "png"
                     self.metadata["coverurl"] = "cover.png"
 
@@ -296,9 +292,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_tinytag(self) -> None:
         try:
-            tempdata = nowplaying.metadata.tinytag_runner.TinyTagRunner(
-                imagecache=self.imagecache
-            ).process(metadata=copy.copy(self.metadata))
+            tempdata = nowplaying.metadata.tinytag_runner.TinyTagRunner().process(
+                metadata=copy.copy(self.metadata)
+            )
             self.metadata = recognition_replacement(
                 config=self.config, metadata=self.metadata, addmeta=tempdata
             )
@@ -588,9 +584,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 for plugin in plugins:
                     try:
                         plugin_obj = self.config.pluginobjs["artistextras"][plugin]
-                        task = asyncio.create_task(
-                            plugin_obj.download_async(self.metadata, self.imagecache)
-                        )
+                        task = asyncio.create_task(plugin_obj.download_async(self.metadata))
                         tasks.append((plugin, task))
                         logging.debug("Started %s plugin task", plugin)
                     except Exception as error:  # pylint: disable=broad-except

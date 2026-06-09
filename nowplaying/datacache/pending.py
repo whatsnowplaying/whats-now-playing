@@ -73,13 +73,14 @@ class RequestQueue:
                         return
 
                     # Insert new request
+                    data_type = params.get("data_type", "")
                     await connection.execute(
                         """
                         INSERT INTO pending_requests
-                        (request_id, provider, request_key, params, priority, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        (request_id, provider, request_key, data_type, params, priority, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (request_id, provider, request_key, params_str, priority, now),
+                        (request_id, provider, request_key, data_type, params_str, priority, now),
                     )
                     await connection.commit()
                     queued = True
@@ -115,7 +116,7 @@ class RequestQueue:
                             SELECT request_id, provider, request_key, params, priority, created_at
                             FROM pending_requests
                             WHERE status = 'pending' AND provider = ?
-                            ORDER BY priority ASC, created_at ASC
+                            ORDER BY priority ASC, created_at DESC
                             LIMIT 1
                         """
                         cursor = await connection.execute(query, (provider,))
@@ -124,7 +125,7 @@ class RequestQueue:
                             SELECT request_id, provider, request_key, params, priority, created_at
                             FROM pending_requests
                             WHERE status = 'pending'
-                            ORDER BY priority ASC, created_at ASC
+                            ORDER BY priority ASC, created_at DESC
                             LIMIT 1
                         """
                         cursor = await connection.execute(query)
@@ -161,6 +162,120 @@ class RequestQueue:
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to get next request: %s", error)
             return None
+
+    async def get_next_batch(self, limit: int = 10) -> list[dict[str, Any]]:
+        """Return one pending request per data_type at the lowest priority tier,
+        then fill remaining slots with any other pending items up to limit.
+
+        This round-robin approach ensures one thumbnail, one logo, and one banner
+        are all downloaded before a second of any type starts — preventing a pile
+        of thumbnails from starving banners.
+        """
+        await self.initialize()
+        results: list[dict[str, Any]] = []
+
+        try:
+            now = time.time()
+
+            async def _do_get_batch() -> None:
+                nonlocal results
+                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
+                    # One item per data_type at the current minimum priority.
+                    # Explicit subquery picks the latest row per data_type unambiguously.
+                    cursor = await connection.execute(
+                        """
+                        SELECT pr.request_id, pr.provider, pr.request_key,
+                               pr.params, pr.priority, pr.created_at
+                        FROM pending_requests pr
+                        INNER JOIN (
+                            SELECT data_type, MAX(created_at) AS max_created_at
+                            FROM pending_requests
+                            WHERE status = 'pending'
+                              AND priority = (
+                                  SELECT MIN(priority)
+                                  FROM pending_requests
+                                  WHERE status = 'pending'
+                              )
+                            GROUP BY data_type
+                        ) latest
+                          ON pr.data_type = latest.data_type
+                         AND pr.created_at = latest.max_created_at
+                        WHERE pr.status = 'pending'
+                          AND pr.priority = (
+                              SELECT MIN(priority)
+                              FROM pending_requests
+                              WHERE status = 'pending'
+                          )
+                        ORDER BY pr.created_at DESC
+                        LIMIT ?
+                        """,
+                        (limit,),
+                    )
+                    rows: list = list(await cursor.fetchall())
+                    ids = [r[0] for r in rows]
+
+                    # If we have room, fill with remaining items at any priority.
+                    if len(rows) < limit:
+                        if ids:
+                            placeholders = ",".join("?" * len(ids))
+                            extra_cursor = await connection.execute(
+                                f"""
+                                SELECT request_id, provider, request_key, params, priority, created_at
+                                FROM pending_requests
+                                WHERE status = 'pending'
+                                  AND request_id NOT IN ({placeholders})
+                                ORDER BY priority ASC, created_at DESC
+                                LIMIT ?
+                                """,
+                                (*ids, limit - len(rows)),
+                            )
+                        else:
+                            extra_cursor = await connection.execute(
+                                """
+                                SELECT request_id, provider, request_key,
+                                       params, priority, created_at
+                                FROM pending_requests
+                                WHERE status = 'pending'
+                                ORDER BY priority ASC, created_at DESC
+                                LIMIT ?
+                                """,
+                                (limit,),
+                            )
+                        rows = list(rows) + list(await extra_cursor.fetchall())
+                        ids = [r[0] for r in rows]
+
+                    if not ids:
+                        return
+
+                    placeholders = ",".join("?" * len(ids))
+                    await connection.execute(
+                        f"""
+                        UPDATE pending_requests
+                        SET status = 'processing', attempts = attempts + 1, last_attempt = ?
+                        WHERE request_id IN ({placeholders})
+                        """,
+                        (now, *ids),
+                    )
+                    await connection.commit()
+
+                    results = [
+                        {
+                            "request_id": r[0],
+                            "provider": r[1],
+                            "request_key": r[2],
+                            "params": orjson.loads(r[3]),
+                            "priority": r[4],
+                            "created_at": r[5],
+                        }
+                        for r in rows
+                    ]
+
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_batch)
+            return results
+
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Failed to get next batch: %s", error)
+            return []
 
     async def complete_request(self, request_id: str, success: bool = True) -> bool:
         """

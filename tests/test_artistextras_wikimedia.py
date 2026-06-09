@@ -19,7 +19,7 @@ async def test_wikimedia_apicache_usage(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -33,7 +33,6 @@ async def test_wikimedia_apicache_usage(bootstrap):
     await run_cache_consistency_test(
         plugin=plugin,
         test_metadata=metadata_with_wikidata,
-        imagecache=imagecaches["wikimedia"],
         success_message="Wikimedia API call successful, caching verified",
     )
 
@@ -46,14 +45,13 @@ async def test_wikimedia_langfallback_zh_to_en(bootstrap):
     configuresettings("wikimedia", config.cparser)
     config.cparser.setValue("wikimedia/bio_iso", "zh")
     config.cparser.setValue("wikimedia/bio_iso_en_fallback", True)
-    _, plugins = configureplugins(config)
+    plugins = configureplugins(config)
     data = await plugins["wikimedia"].download_async(
         {
             "artistwebsites": [
                 "https://www.wikidata.org/wiki/Q7766138",
             ]
         },
-        imagecache=None,
     )
     assert "video" in data.get("artistlongbio")
 
@@ -66,14 +64,13 @@ async def test_wikimedia_langfallback_zh_to_none(bootstrap):
     configuresettings("wikimedia", config.cparser)
     config.cparser.setValue("wikimedia/bio_iso", "zh")
     config.cparser.setValue("wikimedia/bio_iso_en_fallback", False)
-    _, plugins = configureplugins(config)
+    plugins = configureplugins(config)
     data = await plugins["wikimedia"].download_async(
         {
             "artistwebsites": [
                 "https://www.wikidata.org/wiki/Q7766138",
             ]
         },
-        imagecache=None,
     )
     assert not data.get("artistlongbio")
 
@@ -86,14 +83,13 @@ async def test_wikimedia_humantetris_en(bootstrap):
     configuresettings("wikimedia", config.cparser)
     config.cparser.setValue("wikimedia/bio_iso", "en")
     config.cparser.setValue("wikimedia/bio_iso_en_fallback", False)
-    _, plugins = configureplugins(config)
+    plugins = configureplugins(config)
     data = await plugins["wikimedia"].download_async(
         {
             "artistwebsites": [
                 "https://www.wikidata.org/wiki/Q60845849",
             ]
         },
-        imagecache=None,
     )
     assert data.get("artistshortbio") == "Russian post-punk band from Moscow"
     assert not data.get("artistlongbio")
@@ -107,14 +103,13 @@ async def test_wikimedia_humantetris_de(bootstrap):
     configuresettings("wikimedia", config.cparser)
     config.cparser.setValue("wikimedia/bio_iso", "de")
     config.cparser.setValue("wikimedia/bio_iso_en_fallback", True)
-    _, plugins = configureplugins(config)
+    plugins = configureplugins(config)
     data = await plugins["wikimedia"].download_async(
         {
             "artistwebsites": [
                 "https://www.wikidata.org/wiki/Q60845849",
             ]
         },
-        imagecache=None,
     )
     if longbio := data.get("artistlongbio"):
         assert "Human Tetris ist eine Band aus Moskau" in longbio  # codespell:ignore
@@ -132,7 +127,7 @@ async def test_wikimedia_timeout_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -152,7 +147,6 @@ async def test_wikimedia_timeout_handling(bootstrap):
                 "imagecacheartist": "testartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should return None or empty dict on timeout, not raise exception
@@ -170,7 +164,7 @@ async def test_wikimedia_http_error_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -213,7 +207,6 @@ async def test_wikimedia_http_error_handling(bootstrap):
                     "imagecacheartist": "testartist",
                     "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
                 },
-                imagecache=imagecaches["wikimedia"],
             )
 
             # Should return None or empty dict on HTTP error, not raise exception
@@ -231,7 +224,7 @@ async def test_wikimedia_ssl_error_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -251,7 +244,6 @@ async def test_wikimedia_ssl_error_handling(bootstrap):
                 "imagecacheartist": "testartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should return None or empty dict on SSL error, not crash
@@ -289,7 +281,7 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -302,7 +294,6 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
                 "imagecacheartist": "testartist",
                 "artistwebsites": malformed_urls,
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should handle malformed URLs gracefully (return None or valid data)
@@ -333,14 +324,14 @@ async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
     logging.debug("Testing missing metadata (%s): %s", test_id, metadata)
 
     try:
-        result = await plugin.download_async(metadata, imagecache=imagecaches["wikimedia"])
+        result = await plugin.download_async(metadata)
 
         # Should handle missing metadata gracefully (return empty dict)
         assert result == {}
@@ -373,7 +364,7 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -389,7 +380,6 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
                 "imagecacheartist": "testartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],  # Valid entity
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should handle invalid languages gracefully (fallback or return None)
@@ -409,7 +399,7 @@ async def test_wikimedia_language_fallback_chain(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -424,7 +414,6 @@ async def test_wikimedia_language_fallback_chain(bootstrap):
                 "imagecacheartist": "nineinchnails",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should either fallback to English or return None gracefully
@@ -450,7 +439,7 @@ async def test_wikimedia_large_content_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -491,7 +480,6 @@ async def test_wikimedia_large_content_handling(bootstrap):
                 "imagecacheartist": "testartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should return valid data or None, not crash
@@ -514,7 +502,7 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -549,7 +537,6 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
                     "imagecacheartist": "testartist",
                     "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
                 },
-                imagecache=imagecaches["wikimedia"],
             )
 
             # Should return empty dict on malformed response, not crash
@@ -598,7 +585,7 @@ def test_wikimedia_configuration_scenarios(bootstrap):
         for setting, value in scenario.items():
             config.cparser.setValue(f"wikimedia/{setting}", value)
 
-        _, plugins = configureplugins(config)
+        plugins = configureplugins(config)
         plugin = plugins["wikimedia"]
 
         # Plugin should initialize successfully in all scenarios
@@ -618,7 +605,7 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -638,9 +625,7 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
     # Simulate rapid-fire requests
     tasks = []
     for entity in artist_entities:
-        task = asyncio.create_task(
-            plugin.download_async(entity, imagecache=imagecaches["wikimedia"])
-        )
+        task = asyncio.create_task(plugin.download_async(entity))
         tasks.append(task)
 
     try:
@@ -672,7 +657,7 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -694,7 +679,6 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
                 "imagecacheartist": "testartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
-            imagecache=imagecaches["wikimedia"],
         )
 
         # Should return None or valid data, not crash
@@ -712,7 +696,7 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
@@ -739,7 +723,7 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
     for i, entity in enumerate(entities):
         try:
-            result = await plugin.download_async(entity, imagecache=imagecaches["wikimedia"])
+            result = await plugin.download_async(entity)
 
             # Should handle all requests without memory issues
             assert result is None or isinstance(result, dict)
@@ -766,20 +750,20 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_wikimedia_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
     """test that wikimedia plugin makes only one API call when cache is used"""
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
-    # Test with a known entity (Nine Inch Nails)
+    # Test with a fake entity (WNP Mock Artist) to avoid real-cache pollution
     metadata = {
-        "artist": "Nine Inch Nails",
-        "imagecacheartist": "nineinchnails",
-        "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
+        "artist": "WNP Mock Artist",
+        "imagecacheartist": "wnpmockartist",
+        "artistwebsites": ["https://www.wikidata.org/wiki/Q00000001"],
     }
 
     # Mock the actual Wikipedia API call to count calls.  This test
@@ -794,10 +778,10 @@ async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage): 
         nonlocal api_call_count
         api_call_count += 1
         logging.debug("Mock Wikipedia API call #%d", api_call_count)
-        page = nowplaying.wikiclient.WikiPage(entity="Q11647", lang="en")
+        page = nowplaying.wikiclient.WikiPage(entity="Q00000001", lang="en")
         page.data = {
             "claims": {},
-            "description": "American industrial rock band",
+            "description": "Fictional band used for unit testing",
         }
         return page
 
@@ -806,7 +790,7 @@ async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage): 
 
     try:
         # First call - should hit API and cache result
-        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
+        result1 = await plugin.download_async(metadata.copy())
 
         # Verify one API call was made
         assert api_call_count == 1, (
@@ -814,7 +798,7 @@ async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage): 
         )
 
         # Second call - should use cached result, no additional API call
-        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
+        result2 = await plugin.download_async(metadata.copy())
 
         # Verify still only one API call was made (cache hit)
         assert api_call_count == 1, (
@@ -837,20 +821,20 @@ async def test_wikimedia_api_call_count(bootstrap, isolated_datacache_storage): 
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_wikimedia_failure_cache(bootstrap):  # pylint: disable=redefined-outer-name
     """test that wikimedia plugin handles cache failures gracefully"""
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     plugin = plugins["wikimedia"]
 
-    # Test with a known entity
+    # Test with a fake entity to avoid real-cache pollution
     metadata = {
-        "artist": "Nine Inch Nails",
-        "imagecacheartist": "nineinchnails",
-        "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],
+        "artist": "WNP Mock Artist",
+        "imagecacheartist": "wnpmockartist",
+        "artistwebsites": ["https://www.wikidata.org/wiki/Q00000001"],
     }
 
     # Mock the Wikipedia API to simulate failures then success
@@ -875,10 +859,10 @@ async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  
 
             def __init__(self):
                 """Initialize mock WikiPage."""
-                self.entity = "Q11647"
+                self.entity = "Q00000001"
                 self.lang = "en"
                 self.data = {
-                    "extract": "Nine Inch Nails is an American industrial rock band.",
+                    "extract": "WNP Mock Artist is a fictional band used for unit testing.",
                     "claims": {},  # Add claims field expected by the plugin
                 }
                 self._images = []
@@ -899,7 +883,7 @@ async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  
 
     try:
         # First call - API fails, should return empty dict and NOT cache the failure
-        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
+        result1 = await plugin.download_async(metadata.copy())
 
         assert api_call_count == 1, (
             f"Expected 1 API call after first download, got {api_call_count}"
@@ -907,7 +891,7 @@ async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  
         assert result1 == {}, "Expected empty dict result from failed Wikipedia API call"
 
         # Second call - should retry (failure not cached) and succeed
-        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
+        result2 = await plugin.download_async(metadata.copy())
 
         assert api_call_count == 2, (
             f"Expected 2 API calls after second download (retry after failure), "
@@ -916,7 +900,7 @@ async def test_wikimedia_failure_cache(bootstrap, isolated_datacache_storage):  
         assert result2 is not None, "Expected successful result from second Wikipedia API call"
 
         # Third call - should use cached success result, no additional API call
-        result3 = await plugin.download_async(metadata.copy(), imagecache=imagecaches["wikimedia"])
+        result3 = await plugin.download_async(metadata.copy())
 
         assert api_call_count == 2, (
             f"Expected 2 API calls after third download (cache hit), got {api_call_count}"

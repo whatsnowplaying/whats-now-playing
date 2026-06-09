@@ -88,8 +88,10 @@ class RateLimiterManager:
         default_factory=lambda: {
             "musicbrainz": 1.0,  # MusicBrainz: 1 req/sec
             "discogs": 2.0,  # Discogs: ~60 req/min authenticated
-            "fanarttv": 0.5,  # FanartTV free: 30 req/min
-            "theaudiodb": 0.5,  # TheAudioDB free: 30 req/min
+            "fanarttv": 0.5,  # FanartTV API: 30 req/min
+            "theaudiodb": 0.5,  # TheAudioDB API: 30 req/min
+            "lastfm": 5.0,  # Last.fm: ~300 req/min
+            "cdn": 10.0,  # CDN image downloads: no meaningful limit
             "wikimedia": 10.0,  # Wikimedia: generous
             "images": 5.0,  # Image fetches: internal
         }

@@ -18,8 +18,8 @@ import nowplaying.version  # pylint: disable=no-name-in-module, import-error
 
 if TYPE_CHECKING:
     import nowplaying.config
+    import nowplaying.datacache
     import nowplaying.db
-    import nowplaying.imagecache
     import nowplaying.metadata
 
 
@@ -30,7 +30,7 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
         self,
         stopevent: asyncio.Event,
         ws_key: web.AppKey[weakref.WeakSet],
-        ic_key: web.AppKey["nowplaying.imagecache.ImageCache"],
+        ic_key: web.AppKey["nowplaying.datacache.DataStorage"],
         metadb_key: web.AppKey["nowplaying.db.MetadataDB"],
         config_key: web.AppKey["nowplaying.config.ConfigFile"],
         metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
@@ -208,12 +208,14 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
                 )
                 return
 
-            imagecache = request.app[self.ic_key]
+            storage = request.app[self.ic_key]
             normalized_artist = self._get_normalized_artist(artist)
+            result = await storage.retrieve_by_identifier(
+                normalized_artist, imagetype, random=True
+            )
+            image_data = result.data if result else None
 
-            if image_data := imagecache.random_image_fetch(
-                identifier=normalized_artist, imagetype=imagetype
-            ):
+            if image_data:
                 image_b64 = base64.b64encode(image_data).decode("utf-8")
                 await self._send_json_response(
                     websocket,
@@ -263,13 +265,14 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
                 )
                 return
 
-            # Create identifier matching the format used in metadata.py
-            identifier = f"{artist}_{album}"
-            imagecache = request.app[self.ic_key]
+            norm_artist = self._get_normalized_artist(artist)
+            norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+            identifier = f"{norm_artist}_{norm_album}"
+            storage = request.app[self.ic_key]
+            result = await storage.retrieve_by_identifier(identifier, "front_cover", random=True)
+            image_data = result.data if result else None
 
-            if image_data := imagecache.random_image_fetch(
-                identifier=identifier, imagetype="front_cover"
-            ):
+            if image_data:
                 image_b64 = base64.b64encode(image_data).decode("utf-8")
                 await self._send_json_response(
                     websocket,
@@ -342,9 +345,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            imagecache = request.app[self.ic_key]
+            storage = request.app[self.ic_key]
             normalized_artist = self._get_normalized_artist(artist)
-            cache_keys = imagecache.get_cache_keys_for_identifier(normalized_artist, imagetype)
+            cache_keys = await storage.get_cache_keys_for_identifier(normalized_artist, imagetype)
 
             await self._send_image_list_response(
                 websocket, "artist", category, cache_keys, artist=artist
@@ -379,9 +382,11 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            imagecache = request.app[self.ic_key]
-            identifier = f"{artist}_{album}"
-            cache_keys = imagecache.get_cache_keys_for_identifier(identifier, "front_cover")
+            storage = request.app[self.ic_key]
+            norm_artist = self._get_normalized_artist(artist)
+            norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+            identifier = f"{norm_artist}_{norm_album}"
+            cache_keys = await storage.get_cache_keys_for_identifier(identifier, "front_cover")
 
             await self._send_image_list_response(
                 websocket, "album", category, cache_keys, artist=artist, album=album

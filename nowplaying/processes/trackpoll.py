@@ -5,7 +5,6 @@ import asyncio
 import contextlib
 import datetime
 import logging
-import multiprocessing
 import os
 import pathlib
 import signal
@@ -19,7 +18,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.guessgame
-import nowplaying.imagecache
+import nowplaying.datacache
 import nowplaying.inputs
 import nowplaying.metadata
 import nowplaying.notifications
@@ -81,8 +80,6 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.plugins: dict = {}
         self.notification_plugins: dict = {}
         self.active_notifications: list = []
-        self.imagecache: nowplaying.imagecache.ImageCache | None = None
-        self.icprocess = None
         self.trackrequests: nowplaying.trackrequests.Requests | None = None
         self.guessgame: nowplaying.guessgame.GuessGame | None = None
         self._pending_meta: TrackMetadata | None = None
@@ -109,7 +106,6 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     def _setup_plugins(self):
         """Initialize all plugin subsystems"""
         self._setup_input_plugins()
-        self._setup_imagecache()
         self._setup_trackrequests()
         self._setup_guessgame()
         self._setup_notifications()
@@ -148,10 +144,6 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.tasks.add(task)
         if self.trackrequests:
             task = self.loop.create_task(self.trackrequests.watch_for_respin(self.stopevent))
-            task.add_done_callback(self.tasks.discard)
-            self.tasks.add(task)
-        if self.imagecache:
-            task = self.loop.create_task(self.imagecache.verify_cache_timer(self.stopevent))
             task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
         if self.guessgame:
@@ -262,16 +254,6 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._publish(self._pending_meta)
             self._pending_meta = None
         self.stopevent.set()
-        if self.imagecache:
-            logging.debug("stopping imagecache")
-            self.imagecache.stop_process()
-        if self.icprocess:
-            logging.debug("joining imagecache")
-            self.icprocess.join(timeout=15)
-            if self.icprocess.is_alive():
-                logging.warning("imagecache did not stop cleanly, terminating")
-                self.icprocess.terminate()
-                self.icprocess.join(timeout=5)
         if self.earshot_plugin:
             await self.earshot_plugin.stop()
             self.earshot_plugin = None
@@ -473,9 +455,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 del metadata[key]
 
         try:
-            metadata = await self.metadataprocessors.getmoremetadata(
-                metadata=metadata, imagecache=self.imagecache
-            )
+            metadata = await self.metadataprocessors.getmoremetadata(metadata=metadata)
             if duration := metadata.get("duration"):
                 metadata["duration_hhmmss"] = nowplaying.utils.humanize_time(duration)
         except Exception as err:  # pylint: disable=broad-except
@@ -572,17 +552,17 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.currentmeta.get("cache_warmed", False):
             # try to interleave downloads in-between the delay
             await self._half_delay_write(fill_duration)  # Use fill duration for first delay
-            await self._process_imagecache()
-            self._start_artistfanartpool()
+            await self._process_artistextras()
             await self._half_delay_write()  # Normal delay for second half
-            await self._process_imagecache()
-            self._start_artistfanartpool()
+            await self._process_artistextras()
             # Reduce sleep by any remaining fill duration beyond the configured delay
             await asyncio.sleep(compute_final_sleep(fill_duration, configured_delay))
         else:
-            # cache was already warmed so just go for it
+            # cache was already warmed — interleave DB-only image reads with the delay
             await self._half_delay_write(fill_duration)  # Use fill duration for first delay
+            await self._process_artistextras()
             await self._half_delay_write()  # Normal delay for second half
+            await self._process_artistextras()
 
         # checkagain
         nextcheck = await self.input.getplayingtrack() or {}
@@ -595,9 +575,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
-        if not self.currentmeta.get("cache_warmed", False):
-            self._start_artistfanartpool()
-        self._artfallbacks()
+        await self._artfallbacks()
 
         # If a previous game was active, reveal its track before starting the new one.
         if self._pending_meta:
@@ -686,7 +664,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             ):
                 """Wrapper to safely call plugin with error handling"""
                 try:
-                    await plugin_instance.notify_track_change(meta, imagecache=self.imagecache)
+                    await plugin_instance.notify_track_change(meta)
                 except Exception as err:  # pylint: disable=broad-except
                     logging.error("Notification plugin %s failed: %s", plugin_instance_name, err)
 
@@ -695,7 +673,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
 
-    def _artfallbacks(self):
+    async def _artfallbacks(self):
         if (
             self.config.cparser.value("artistextras/coverfornologos", type=bool)
             and not self.currentmeta.get("artistlogoraw")
@@ -710,22 +688,34 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         ):
             self.currentmeta["artistthumbnailraw"] = self.currentmeta["coverimageraw"]
 
-        if not self.currentmeta.get("coverimageraw") and self.imagecache:
+        if not self.currentmeta.get("coverimageraw"):
+            storage = nowplaying.datacache.get_client().storage
             artist = self.currentmeta.get("artist")
             album = self.currentmeta.get("album")
             if artist and album:
-                self.currentmeta["coverimageraw"] = self.imagecache.random_image_fetch(
-                    identifier=f"{artist}_{album}",
-                    imagetype="front_cover",
+                norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
+                norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+                result = await storage.retrieve_by_identifier(
+                    f"{norm_artist}_{norm_album}",
+                    "front_cover",
+                    random=True,
                 )
+                if result:
+                    self.currentmeta["coverimageraw"] = result.data
             if not self.currentmeta.get("coverimageraw"):
                 if imagetype := self.config.cparser.value("artistextras/nocoverfallback"):
                     imagetype = imagetype.lower()
                     if imagetype != "none" and self.currentmeta.get("imagecacheartist"):
-                        self.currentmeta["coverimageraw"] = self.imagecache.random_image_fetch(
-                            identifier=self.currentmeta["imagecacheartist"],
-                            imagetype=f"artist{imagetype}",
+                        norm_ic = nowplaying.utils.normalize(
+                            self.currentmeta["imagecacheartist"], sizecheck=0, nospaces=True
                         )
+                        result = await storage.retrieve_by_identifier(
+                            norm_ic,
+                            f"artist{imagetype}",
+                            random=True,
+                        )
+                        if result:
+                            self.currentmeta["coverimageraw"] = result.data
 
     async def _half_delay_write(self, elapsed_time: float = 0.0):
         try:
@@ -744,54 +734,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         )
         await asyncio.sleep(actual_delay)
 
-    def _setup_imagecache(self):
-        if not self.config.cparser.value("artistextras/enabled", type=bool):
-            return
-
-        workers = self.config.cparser.value("artistextras/processes", type=int)
-        sizelimit = self.config.cparser.value("artistextras/cachesize", type=int)
-
-        self.imagecache = nowplaying.imagecache.ImageCache(
-            sizelimit=sizelimit, stopevent=self.stopevent
-        )
-        self.config.cparser.setValue("artistextras/cachedbfile", str(self.imagecache.databasefile))
-
-        # Vacuum the imagecache database on startup to reclaim space from previous session
-        try:
-            self.imagecache.vacuum_database()
-            logging.debug("Image cache database vacuumed successfully on startup")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming image cache database on startup: %s", error)
-
-        self.icprocess = multiprocessing.Process(
-            target=self.imagecache.queue_process,
-            name="ICProcess",
-            args=(
-                self.config.logpath,
-                workers,
-            ),
-        )
-        self.icprocess.start()
-
-    def _start_artistfanartpool(self):
-        if not self.config.cparser.value("artistextras/enabled", type=bool):
-            return
-
-        if not self.imagecache:
-            logging.debug("Artist Extras was enabled without restart; skipping fanart downloads")
-            return
-
-        if self.currentmeta.get("artistfanarturls"):
-            # imagecache handles deduplication at the database level via UNIQUE constraints
-            self.imagecache.fill_queue(
-                config=self.config,
-                identifier=self.currentmeta["artist"],
-                imagetype="artistfanart",
-                srclocationlist=self.currentmeta["artistfanarturls"],
-            )
-            del self.currentmeta["artistfanarturls"]
-
-    async def _process_imagecache(self):
+    async def _process_artistextras(self):
         if not self.currentmeta.get("artist") or not self.config.cparser.value(
             "artistextras/enabled", type=bool
         ):
@@ -801,11 +744,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             """Async wrapper to fetch images with task management"""
             tryagain = False
 
-            if not self.imagecache:
-                logging.debug(
-                    "Artist Extras was enabled without restart; skipping image downloads"
-                )
-                return True
+            storage = nowplaying.datacache.get_client().storage
+            identifier = nowplaying.utils.normalize(
+                self.currentmeta.get("imagecacheartist", ""), sizecheck=0, nospaces=True
+            )
 
             # Create tasks for each image type to fetch concurrently
             image_tasks = []
@@ -816,17 +758,14 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 if not self.currentmeta.get(rawkey):
 
                     async def fetch_image_task(image_key: str, raw_key: str):
-                        """Task to fetch a single image type"""
+                        """Task to fetch a single image type via datacache (aiosqlite + aiofiles)"""
                         try:
-                            # Run the synchronous fetch in executor to avoid blocking
-                            loop = asyncio.get_running_loop()
-                            image = await loop.run_in_executor(
-                                None,
-                                self.imagecache.random_image_fetch,
-                                self.currentmeta["artist"],
-                                image_key,
+                            result = await storage.retrieve_by_identifier(
+                                identifier, image_key, random=True
                             )
-                            return raw_key, image
+                            if result:
+                                return raw_key, result.data
+                            return raw_key, None
                         except Exception as err:  # pylint: disable=broad-except
                             logging.debug("Error fetching %s: %s", image_key, err)
                             return raw_key, None

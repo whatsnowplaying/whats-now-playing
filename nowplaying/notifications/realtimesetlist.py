@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
-    import nowplaying.imagecache
     from nowplaying.utils import TemplateHandler
 
 
@@ -43,15 +42,12 @@ class Plugin(NotificationPlugin):
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"realtimesetlist/template"})
 
-    async def notify_track_change(
-        self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
-    ) -> None:
+    async def notify_track_change(self, metadata: TrackMetadata) -> None:
         """
         Append track metadata to setlist file when a new track becomes live
 
         Args:
             metadata: Track metadata including artist, title, etc.
-            imagecache: Optional imagecache instance (unused by setlist)
         """
 
         if not self.enabled:
