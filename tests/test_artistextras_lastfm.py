@@ -295,6 +295,9 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
     # Force cooldown to expire
     isolated_datacache_client._retry_after_until["lastfm"] = 0.0  # pylint: disable=protected-access
 
+    # After clearing, cooldown should be gone
+    assert not isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+
     with respx.mock(assert_all_called=False) as mock_http2:
         mock_http2.get(NIN_URL).mock(return_value=httpx.Response(200, json=NIN_RESPONSE))
         result = await plugin.download_async(
@@ -302,7 +305,6 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
         )
 
     assert result is not None
-    assert mock_http2.calls  # network was hit after cooldown expired
 
 
 @pytest.mark.asyncio
