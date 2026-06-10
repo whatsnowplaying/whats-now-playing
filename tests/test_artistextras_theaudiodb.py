@@ -8,13 +8,14 @@ import httpx
 import pytest
 import respx
 from utils_artistextras import (
-    FakeImageCache,
     configureplugins,
     configuresettings,
+    datacache_has_pending,
+    datacache_image_available,
 )
 
-import nowplaying.datacache
 import nowplaying.artistextras.theaudiodb
+import nowplaying.datacache
 from nowplaying.artistextras.theaudiodb import DEFAULT_THEAUDIODB_API_KEY
 
 ARTIST_MBID = "b7ffd2af-418f-4be2-bdd1-22f8b48613da"
@@ -27,8 +28,8 @@ def _setup_theaudiodb_plugin(bootstrap):
     config = bootstrap
     configuresettings("theaudiodb", config.cparser)
     config.cparser.setValue("theaudiodb/apikey", DEFAULT_THEAUDIODB_API_KEY)
-    imagecaches, plugins = configureplugins(config)
-    return plugins["theaudiodb"], imagecaches["theaudiodb"]
+    plugins = configureplugins(config)
+    return plugins["theaudiodb"]
 
 
 def _setup_theaudiodb_plugin_no_key(bootstrap):
@@ -38,15 +39,14 @@ def _setup_theaudiodb_plugin_no_key(bootstrap):
     config.cparser.setValue("theaudiodb/apikey", DEFAULT_THEAUDIODB_API_KEY)
     # Directly instantiate the plugin since we don't need real API key
     plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
-    imagecache = FakeImageCache()
-    return plugin, imagecache
+    return plugin
 
 
 @pytest.mark.asyncio
 async def test_theaudiodb_artist_name_correction(bootstrap):
     """test theaudiodb artist name correction for name-based vs musicbrainz searches"""
 
-    plugin, _ = _setup_theaudiodb_plugin(bootstrap)
+    plugin = _setup_theaudiodb_plugin(bootstrap)
 
     # Test 1: Name-based search with lowercase input (should correct artist name)
     metadata_lowercase = {
@@ -54,7 +54,7 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
         "artist": "nine inch nails",  # lowercase input
         "imagecacheartist": "nineinchnails",
     }
-    result1 = await plugin.download_async(metadata_lowercase.copy(), imagecache=None)
+    result1 = await plugin.download_async(metadata_lowercase.copy())
 
     if result1:  # Only test if we got data back
         # Should have corrected the artist name to proper case
@@ -70,7 +70,7 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
         "imagecacheartist": "nineinchnails",
         "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],  # NIN's MBID
     }
-    result2 = await plugin.download_async(metadata_with_mbid.copy(), imagecache=None)
+    result2 = await plugin.download_async(metadata_with_mbid.copy())
 
     if result2:  # Only test if we got data back
         # Should NOT have corrected the artist name (MusicBrainz is authoritative)
@@ -82,7 +82,7 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
 async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
     """test TheAudioDB two-level caching with duplicate artist names"""
 
-    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+    plugin = _setup_theaudiodb_plugin(bootstrap)
 
     # Test two different searches that might return different artists with similar names
     # First search - likely to match main "Madonna"
@@ -95,12 +95,12 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
     }
 
     # Test both variations - first calls hit API, second calls use cache
-    result1a = await plugin.download_async(metadata_madonna1.copy(), imagecache=imagecache)
-    result2a = await plugin.download_async(metadata_madonna2.copy(), imagecache=imagecache)
+    result1a = await plugin.download_async(metadata_madonna1.copy())
+    result2a = await plugin.download_async(metadata_madonna2.copy())
 
     # Second calls - should use cached data
-    result1b = await plugin.download_async(metadata_madonna1.copy(), imagecache=imagecache)
-    result2b = await plugin.download_async(metadata_madonna2.copy(), imagecache=imagecache)
+    result1b = await plugin.download_async(metadata_madonna1.copy())
+    result2b = await plugin.download_async(metadata_madonna2.copy())
 
     # Verify caching works for both variations
     assert (result1a is None) == (result1b is None)
@@ -135,7 +135,7 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
 async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
     """test theaudiodb plugin falls back to name-based search when MusicBrainz ID is invalid"""
 
-    plugin, _ = _setup_theaudiodb_plugin(bootstrap)
+    plugin = _setup_theaudiodb_plugin(bootstrap)
 
     # Mock the MBID and name-based fetch methods to track calls
     original_mbid_fetch = plugin.artistdatafrommbid_async
@@ -194,7 +194,7 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
             "musicbrainzartistid": ["invalid-mbid-12345"],  # Invalid MBID
         }
 
-        result = await plugin.download_async(metadata_invalid_mbid.copy(), imagecache=None)
+        result = await plugin.download_async(metadata_invalid_mbid.copy())
 
         # Verify the call pattern: MBID tried first, then fallback to name-based
         assert mbid_call_count == 1, f"Expected 1 MBID call, got {mbid_call_count}"
@@ -231,7 +231,7 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
             # No musicbrainzartistid provided
         }
 
-        await plugin.download_async(metadata_no_mbid.copy(), imagecache=None)
+        await plugin.download_async(metadata_no_mbid.copy())
 
         # Should skip MBID and go straight to name-based search
         assert mbid_call_count == 0, (
@@ -250,37 +250,38 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_api_call_count(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
     """test that theaudiodb plugin makes only one HTTP call when cache is warm"""
-    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+    plugin = _setup_theaudiodb_plugin(bootstrap)
+    fake_mbid = "00000000-0000-0000-0000-000000000001"
     metadata = {
-        "artist": "Nine Inch Nails",
-        "musicbrainzartistid": [ARTIST_MBID],
-        "imagecacheartist": "nineinchnails",
+        "artist": "WNP Mock Artist",
+        "musicbrainzartistid": [fake_mbid],
+        "imagecacheartist": "wnpmockartist",
     }
-    artist_url = f"{TADB_BASE_URL}/artist-mb.php?i={ARTIST_MBID}"
-    mock_payload = {"artists": [{"strArtist": "Nine Inch Nails", "idArtist": "111239"}]}
+    artist_url = f"{TADB_BASE_URL}/artist-mb.php?i={fake_mbid}"
+    mock_payload = {"artists": [{"strArtist": "WNP Mock Artist", "idArtist": "999999"}]}
 
     with respx.mock(assert_all_called=False) as mock_http:
         mock_http.get(artist_url).mock(return_value=httpx.Response(200, json=mock_payload))
 
-        await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        await plugin.download_async(metadata.copy())
         first_count = mock_http.calls.call_count
         assert first_count >= 1, "Expected at least one HTTP call on cache miss"
 
-        await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        await plugin.download_async(metadata.copy())
         assert mock_http.calls.call_count == first_count, "Cache hit should not add HTTP calls"
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_other_http_errors(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_other_http_errors(bootstrap):  # pylint: disable=redefined-outer-name
     """test that theaudiodb handles non-200 HTTP errors by returning None"""
-    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     url = f"{TADB_BASE_URL}/search.php?s=notfound"
 
     # Use side_effect callable so the mock persists across retries
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(url).mock(side_effect=lambda _r: httpx.Response(404))
+        mock_http.get(url).mock(side_effect=lambda _: httpx.Response(404))
         result = await plugin._fetch_cached(  # pylint: disable=protected-access
             DEFAULT_THEAUDIODB_API_KEY, "search.php?s=notfound", "testartist"
         )
@@ -290,21 +291,26 @@ async def test_theaudiodb_other_http_errors(bootstrap, isolated_datacache_client
 @pytest.mark.asyncio
 async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
     """test that theaudiodb 429 responses are not cached; second call retries"""
-    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     url = f"{TADB_BASE_URL}/search.php?s=test"
 
     # Side-effect callable keeps responding 429 across all retry attempts.
     # Retry-After: 1 caps the per-retry sleep to 1 s.
     with respx.mock(assert_all_called=False) as mock_http:
         mock_http.get(url).mock(
-            side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "1"})
+            side_effect=lambda _: httpx.Response(429, headers={"Retry-After": "1"})
         )
         result = await plugin._fetch_cached(  # pylint: disable=protected-access
             DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test", "testartist"
         )
         assert result is None
 
-    # Second call: if 429 had been cached, this would also return None
+    # Clear in-memory cooldown so the second call can attempt the HTTP request.
+    # The test verifies that 429 was not written to the persistent cache — the
+    # in-memory cooldown is a separate, correct mechanism unrelated to caching.
+    isolated_datacache_client._retry_after_until.clear()  # pylint: disable=protected-access
+
+    # Second call: if 429 had been cached to disk, this would also return None
     with respx.mock(assert_all_called=False) as mock_http:
         mock_http.get(url).mock(
             return_value=httpx.Response(200, json={"artists": [{"strArtist": "Test"}]})
@@ -315,39 +321,39 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client): 
         assert result2 is not None
 
 
-NIN_ARTIST_URL = f"{TADB_BASE_URL}/search.php?s=nine%20inch%20nails"
-NIN_ALBUM_URL = f"{TADB_BASE_URL}/searchalbum.php?s=Nine%20Inch%20Nails&a=The%20Downward%20Spiral"
+WNP_MOCK_ARTIST_URL = f"{TADB_BASE_URL}/search.php?s=wnp%20mock%20artist"
+WNP_MOCK_ALBUM_URL = f"{TADB_BASE_URL}/searchalbum.php?s=WNP%20Mock%20Artist&a=WNP%20Mock%20Album"
 COVER_IMAGE_URL = "https://cdn.theaudiodb.com/images/media/album/thumb/cover.jpg"
 
-NIN_ARTIST_RESPONSE = {
+WNP_MOCK_ARTIST_RESPONSE = {
     "artists": [
         {
-            "idArtist": "111239",
-            "strArtist": "Nine Inch Nails",
-            "strBiography": "Nine Inch Nails is an American industrial rock band.",
-            "strArtistThumb": "https://cdn.theaudiodb.com/images/media/artist/thumb/nin.jpg",
-            "strWebsite": "www.nin.com",
+            "idArtist": "999999",
+            "strArtist": "WNP Mock Artist",
+            "strBiography": "WNP Mock Artist is a fictional band used for unit testing.",
+            "strArtistThumb": "https://cdn.theaudiodb.com/images/media/artist/thumb/mock.jpg",
+            "strWebsite": "www.example.com",
         }
     ]
 }
 
-NIN_ALBUM_RESPONSE = {
+WNP_MOCK_ALBUM_RESPONSE = {
     "album": [
         {
-            "idAlbum": "2087504",
-            "strAlbum": "The Downward Spiral",
-            "strArtist": "Nine Inch Nails",
+            "idAlbum": "8888888",
+            "strAlbum": "WNP Mock Album",
+            "strArtist": "WNP Mock Artist",
             "strAlbumThumb": COVER_IMAGE_URL,
         }
     ]
 }
 
-NIN_ALBUM_RESPONSE_HQ = {
+WNP_MOCK_ALBUM_RESPONSE_HQ = {
     "album": [
         {
-            "idAlbum": "2087504",
-            "strAlbum": "The Downward Spiral",
-            "strArtist": "Nine Inch Nails",
+            "idAlbum": "8888888",
+            "strAlbum": "WNP Mock Album",
+            "strArtist": "WNP Mock Artist",
             "strAlbumThumb": "https://cdn.theaudiodb.com/images/media/album/thumb/cover_sd.jpg",
             "strAlbumThumbHQ": COVER_IMAGE_URL,
         }
@@ -356,157 +362,161 @@ NIN_ALBUM_RESPONSE_HQ = {
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_queued(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_queued(bootstrap):  # pylint: disable=redefined-outer-name
     """album cover art URL is queued in imagecache when album is present"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
-        mock_http.get(NIN_ALBUM_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE)
+        mock_http.get(WNP_MOCK_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
         result = await plugin.download_async(
             {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
             },
-            imagecache=imagecache,
         )
 
     assert result is not None
-    identifier = "Nine Inch Nails_The Downward Spiral"
-    assert identifier in imagecache.urls
-    assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+    identifier = "wnpmockartist_wnpmockalbum"
+    assert await datacache_image_available(
+        nowplaying.datacache.get_client(), identifier, "front_cover"
+    )
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_prefers_hq(bootstrap):  # pylint: disable=redefined-outer-name
     """strAlbumThumbHQ is preferred over strAlbumThumb when available"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
-        mock_http.get(NIN_ALBUM_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ALBUM_RESPONSE_HQ)
+        mock_http.get(WNP_MOCK_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE_HQ)
         )
         result = await plugin.download_async(
             {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
             },
-            imagecache=imagecache,
         )
 
     assert result is not None
-    identifier = "Nine Inch Nails_The Downward Spiral"
-    assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+    identifier = "wnpmockartist_wnpmockalbum"
+    assert await datacache_image_available(
+        nowplaying.datacache.get_client(), identifier, "front_cover"
+    )
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_disabled(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_disabled(bootstrap):  # pylint: disable=redefined-outer-name
     """album cover art is not fetched when coverart setting is disabled"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", False)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
         result = await plugin.download_async(
             {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
             },
-            imagecache=imagecache,
         )
 
     assert result is not None
-    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    # images queued to datacache
 
 
 @pytest.mark.asyncio
 async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint: disable=redefined-outer-name
     bootstrap,
-    isolated_datacache_client,  # pylint: disable=unused-argument
 ):
     """album cover art fetch is skipped when coverimageraw already in metadata"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
         result = await plugin.download_async(
             {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
                 "coverimageraw": b"\xff\xd8\xff",
             },
-            imagecache=imagecache,
         )
 
     assert result is not None
-    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    assert not await datacache_has_pending(
+        nowplaying.datacache.get_client(), "wnpmockartist", "front_cover"
+    )
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_no_album(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_no_album(bootstrap):  # pylint: disable=redefined-outer-name
     """album cover art fetch is skipped when no album in metadata"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
         result = await plugin.download_async(
-            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
-            imagecache=imagecache,
+            {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
 
     assert result is not None
-    assert not any("front_cover" in imagecache.urls.get(k, {}) for k in imagecache.urls)
+    assert not await datacache_has_pending(
+        nowplaying.datacache.get_client(), "wnpmockartist", "front_cover"
+    )
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_theaudiodb_coverart_album_api_error(bootstrap):  # pylint: disable=redefined-outer-name
     """album API error does not prevent artist data from being returned"""
-    plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+    plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(NIN_ARTIST_URL).mock(
-            return_value=httpx.Response(200, json=NIN_ARTIST_RESPONSE)
+        mock_http.get(WNP_MOCK_ARTIST_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
-        mock_http.get(NIN_ALBUM_URL).mock(return_value=httpx.Response(200, json={"album": None}))
+        mock_http.get(WNP_MOCK_ALBUM_URL).mock(
+            return_value=httpx.Response(200, json={"album": None})
+        )
         result = await plugin.download_async(
             {
-                "artist": "Nine Inch Nails",
-                "album": "The Downward Spiral",
-                "imagecacheartist": "nineinchnails",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
             },
-            imagecache=imagecache,
         )
 
     assert result is not None
-    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    assert not await datacache_has_pending(
+        nowplaying.datacache.get_client(), "wnpmockartist", "front_cover"
+    )
 
 
 @pytest.mark.asyncio
 async def test_theaudiodb_live_coverart(bootstrap):  # pylint: disable=redefined-outer-name
     """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""
-    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+    plugin = _setup_theaudiodb_plugin(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
     try:
@@ -516,12 +526,12 @@ async def test_theaudiodb_live_coverart(bootstrap):  # pylint: disable=redefined
                 "album": "The Downward Spiral",
                 "imagecacheartist": "nineinchnails",
             },
-            imagecache=imagecache,
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f"Plugin raised exception during live cover art test: {exc}")
 
-    identifier = "Nine Inch Nails_The Downward Spiral"
+    identifier = "nineinchnails_thedownwardspiral"
     assert result is not None
-    assert identifier in imagecache.urls, "Expected cover art to be queued"
-    assert imagecache.urls[identifier].get("front_cover"), "Expected front_cover URL list"
+    assert await datacache_image_available(
+        nowplaying.datacache.get_client(), identifier, "front_cover"
+    ), "Expected cover art to be queued or cached"

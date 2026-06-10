@@ -57,9 +57,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         )
         if result is None:
             return None
-        data, _ = result
         try:
-            return orjson.loads(data)
+            return orjson.loads(result.data)
         except orjson.JSONDecodeError:
             return None
 
@@ -84,11 +83,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             )
         return False
 
-    def _handle_extradata(
+    async def _handle_extradata(
         self,
         extradata: list[dict[str, Any]],
         metadata: TrackMetadata,
-        imagecache: Any,
         used_musicbrainz: bool = False,
     ) -> TrackMetadata:
         """deal with the various bits of data"""
@@ -100,8 +98,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 continue
 
             self._handle_website_data(artdata, metadata)
-            if imagecache:
-                self._handle_image_data(artdata, metadata, imagecache)
+            await self._handle_image_data(artdata, metadata)
 
         self._correct_artist_name(extradata, metadata, used_musicbrainz)
         return metadata
@@ -147,38 +144,33 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             metadata["artistwebsites"] = []
         metadata["artistwebsites"].append(webstr)
 
-    def _handle_image_data(
-        self, artdata: dict[str, Any], metadata: TrackMetadata, imagecache: Any
-    ) -> None:
+    async def _handle_image_data(self, artdata: dict[str, Any], metadata: TrackMetadata) -> None:
         """Handle image data from TheAudioDB response"""
-        self._queue_single_image(
+        await self._queue_single_image(
             artdata,
             metadata,
-            imagecache,
             "strArtistBanner",
             "artistbannerraw",
             "artistbanner",
             "banners",
         )
-        self._queue_single_image(
-            artdata, metadata, imagecache, "strArtistLogo", "artistlogoraw", "artistlogo", "logos"
+        await self._queue_single_image(
+            artdata, metadata, "strArtistLogo", "artistlogoraw", "artistlogo", "logos"
         )
-        self._queue_single_image(
+        await self._queue_single_image(
             artdata,
             metadata,
-            imagecache,
             "strArtistThumb",
             "artistthumbnailraw",
             "artistthumbnail",
             "thumbnails",
         )
-        self._handle_fanart_data(artdata, metadata, imagecache)
+        await self._handle_fanart_data(artdata, metadata)
 
-    def _queue_single_image(  # pylint: disable=too-many-arguments
+    async def _queue_single_image(  # pylint: disable=too-many-arguments
         self,
         artdata: dict[str, Any],
         metadata: TrackMetadata,
-        imagecache: Any,
         source_key: str,
         metadata_key: str,
         image_type: str,
@@ -192,13 +184,11 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         ):
             return
 
-        self.queue_artist_image(
-            metadata["imagecacheartist"], image_type, [artdata[source_key]], imagecache
+        await self.queue_artist_image(
+            metadata["imagecacheartist"], image_type, [artdata[source_key]], provider="theaudiodb"
         )
 
-    def _handle_fanart_data(
-        self, artdata: dict[str, Any], metadata: TrackMetadata, imagecache: Any
-    ) -> None:
+    async def _handle_fanart_data(self, artdata: dict[str, Any], metadata: TrackMetadata) -> None:
         """Handle fanart data from TheAudioDB response"""
         if not self.config.cparser.value("theaudiodb/fanart", type=bool):
             return
@@ -209,14 +199,13 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             if not artdata.get(artstring):
                 continue
 
-            if not metadata.get("artistfanarturls"):
-                metadata["artistfanarturls"] = []
-            metadata["artistfanarturls"].append(artdata[artstring])
-
             if not fanart_queued:
                 fanart_queued = True
-                self.queue_artist_image(
-                    metadata["imagecacheartist"], "artistfanart", [artdata[artstring]], imagecache
+                await self.queue_artist_image(
+                    metadata["imagecacheartist"],
+                    "artistfanart",
+                    [artdata[artstring]],
+                    provider="theaudiodb",
                 )
 
     def _correct_artist_name(
@@ -249,11 +238,11 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return None
         return data
 
-    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata, imagecache: Any) -> None:
+    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata) -> None:
         """Fetch album cover art from TheAudioDB and queue for download"""
         if not self.config.cparser.value("theaudiodb/coverart", type=bool):
             return
-        if metadata.get("coverimageraw") or not imagecache:
+        if metadata.get("coverimageraw"):
             return
         artist = metadata.get("artist")
         album = metadata.get("album")
@@ -265,7 +254,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         for albuminfo in album_data["album"]:
             cover_url = albuminfo.get("strAlbumThumbHQ") or albuminfo.get("strAlbumThumb")
             if cover_url:
-                self.queue_front_cover(artist, album, cover_url, imagecache)
+                await self.queue_front_cover(artist, album, cover_url, provider="theaudiodb")
                 return
 
     async def artistdatafrommbid_async(
@@ -308,7 +297,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         )
 
     async def download_async(  # pylint: disable=too-many-branches
-        self, metadata: TrackMetadata | None = None, imagecache: Any = None
+        self, metadata: TrackMetadata | None = None
     ) -> TrackMetadata | None:
         """async do data lookup"""
 
@@ -366,8 +355,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not extradata:
             return None
 
-        result = self._handle_extradata(extradata, metadata, imagecache, used_musicbrainz)
-        await self._queue_coverart(apikey, metadata, imagecache)
+        result = await self._handle_extradata(extradata, metadata, used_musicbrainz)
+        await self._queue_coverart(apikey, metadata)
         return result
 
     def providerinfo(self) -> list[str]:  # pylint: disable=no-self-use
@@ -378,7 +367,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             "artistlogoraw",
             "artistthumbnailraw",
             "coverimageraw",
-            "theaudiodb-artistfanarturls",
         ]
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: Any) -> None:

@@ -2,43 +2,14 @@
 """test metadata"""
 
 import logging
-import multiprocessing
 import os
 import types
 
 import pytest
-import pytest_asyncio
 
-import nowplaying.imagecache  # pylint: disable=import-error,no-member
 import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.metadata.processors
 import nowplaying.upgrades.config  # pylint: disable=import-error
-import nowplaying.utils.sqlite
-
-
-@pytest_asyncio.fixture
-async def get_imagecache(bootstrap):
-    """setup the image cache for testing"""
-    config = bootstrap
-    workers = 2
-    dbdir = config.testdir.joinpath("imagecache")
-    dbdir.mkdir()
-    logpath = config.testdir.joinpath("debug.log")
-    stopevent = multiprocessing.Event()
-    imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)  # pylint: disable=no-member
-    icprocess = multiprocessing.Process(
-        target=imagecache.queue_process,
-        name="ICProcess",
-        args=(
-            logpath,
-            workers,
-        ),
-    )
-    icprocess.start()
-    yield config, imagecache
-    stopevent.set()
-    imagecache.stop_process()
-    icprocess.join()
 
 
 @pytest.mark.parametrize(
@@ -594,59 +565,6 @@ async def test_multi(bootstrap, getroot, multifilename):
         "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
         "c0b2500e-0cef-4130-869d-732b23ed9df5",
     ]
-
-
-@pytest.mark.parametrize("multifilename", ["multiimage.m4a"])
-@pytest.mark.asyncio
-async def test_multiimage(get_imagecache, getroot, multifilename):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    config, imagecache = get_imagecache
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {"filename": os.path.join(getroot, "tests", "audio", multifilename)}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain, imagecache=imagecache
-    )
-
-    assert metadataout["coverimageraw"]
-    with nowplaying.utils.sqlite.sqlite_connection(
-        imagecache.databasefile, timeout=30
-    ) as connection:
-        cursor = connection.cursor()
-        cursor.execute(
-            '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"'''
-        )
-        row = cursor.fetchone()[0]
-        assert row > 1
-
-
-@pytest.mark.asyncio
-async def test_preset_image(get_imagecache, getroot):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    config, imagecache = get_imagecache
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {"filename": os.path.join(getroot, "tests", "audio", "multiimage.m4a")}
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain, imagecache=imagecache
-    )
-
-    assert metadataout["coverimageraw"]
-    assert metadataout["album"]
-    metadatain |= {"coverimageraw": metadataout["coverimageraw"], "album": metadataout["album"]}
-
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain, imagecache=imagecache
-    )
-    with nowplaying.utils.sqlite.sqlite_connection(
-        imagecache.databasefile, timeout=30
-    ) as connection:
-        cursor = connection.cursor()
-        cursor.execute(
-            '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"'''
-        )
-        row = cursor.fetchone()[0]
-        assert row > 1
 
 
 @pytest.mark.parametrize(

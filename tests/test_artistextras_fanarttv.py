@@ -7,12 +7,14 @@ import httpx
 import pytest
 import respx
 from utils_artistextras import (
-    FakeImageCache,
     configureplugins,
     configuresettings,
+    datacache_image_available,
     run_cache_consistency_test,
     skip_no_fanarttv_key,
 )
+
+import nowplaying.datacache
 
 
 def _setup_fanarttv_plugin(bootstrap):
@@ -20,8 +22,8 @@ def _setup_fanarttv_plugin(bootstrap):
     config = bootstrap
     configuresettings("fanarttv", config.cparser)
     config.cparser.setValue("fanarttv/apikey", os.environ["FANARTTV_API_KEY"])
-    imagecaches, plugins = configureplugins(config)
-    return plugins["fanarttv"], imagecaches["fanarttv"]
+    plugins = configureplugins(config)
+    return plugins["fanarttv"]
 
 
 def _get_test_metadata():
@@ -38,59 +40,64 @@ def _get_test_metadata():
 @skip_no_fanarttv_key
 async def test_fanarttv_apicache_usage(bootstrap):
     """test that fanarttv plugin uses apicache for API calls"""
-    plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
+    plugin = _setup_fanarttv_plugin(bootstrap)
 
     await run_cache_consistency_test(
         plugin=plugin,
         test_metadata=_get_test_metadata(),
-        imagecache=imagecache,
         success_message="FanartTV API call successful, caching verified",
     )
 
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_call_count(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_fanarttv_apicache_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
     """test that fanarttv makes only one HTTP call when the cache is warm"""
-    plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
-    mbid = "b7ffd2af-418f-4be2-bdd1-22f8b48613da"
+    plugin = _setup_fanarttv_plugin(bootstrap)
+    mbid = "00000000-0000-0000-0000-000000000002"
     url = f"http://webservice.fanart.tv/v3/music/{mbid}"
-    mock_payload = {"name": "Nine Inch Nails"}
+    mock_payload = {"name": "WNP Mock Artist"}
+    metadata = {
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "imagecacheartist": "wnpmockartist",
+        "musicbrainzartistid": [mbid],
+    }
 
     with respx.mock(assert_all_called=False) as mock_http:
         mock_http.get(url).mock(return_value=httpx.Response(200, json=mock_payload))
-        await plugin.download_async(_get_test_metadata().copy(), imagecache=imagecache)
+        await plugin.download_async(metadata.copy())
         first_count = mock_http.calls.call_count
         assert first_count >= 1
 
-        await plugin.download_async(_get_test_metadata().copy(), imagecache=imagecache)
+        await plugin.download_async(metadata.copy())
         assert mock_http.calls.call_count == first_count, "Second call should hit cache"
 
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_failure_behavior(bootstrap, isolated_datacache_client):  # pylint: disable=redefined-outer-name,unused-argument
+async def test_fanarttv_apicache_api_failure_behavior(bootstrap):  # pylint: disable=redefined-outer-name
     """test that fanarttv doesn't cache failed API calls; second call retries"""
-    plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
-    mbid = "invalid-mbid-that-will-fail"
+    plugin = _setup_fanarttv_plugin(bootstrap)
+    mbid = "00000000-0000-0000-0000-000000000099"
     url = f"http://webservice.fanart.tv/v3/music/{mbid}"
     metadata = {
-        "album": "Test Album",
-        "artist": "Test Artist",
-        "imagecacheartist": "testartist",
+        "album": "WNP Mock Album",
+        "artist": "WNP Mock Artist",
+        "imagecacheartist": "wnpmockartist",
         "musicbrainzartistid": [mbid],
     }
 
     # First call: 500 (transient server error) → not cached → returns None
     with respx.mock(assert_all_called=False) as mock_http:
-        mock_http.get(url).mock(side_effect=lambda _r: httpx.Response(500))
-        result1 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        mock_http.get(url).mock(side_effect=lambda _: httpx.Response(500))
+        result1 = await plugin.download_async(metadata.copy())
         assert result1 is None
 
     # Second call: success → should reach API (transient failure was not cached)
     with respx.mock(assert_all_called=False) as mock_http:
         mock_http.get(url).mock(return_value=httpx.Response(200, json={"name": "Test Artist"}))
-        result2 = await plugin.download_async(metadata.copy(), imagecache=imagecache)
+        result2 = await plugin.download_async(metadata.copy())
         assert mock_http.calls.call_count >= 1, "Transient failure must not have been cached"
         _ = result2
 
@@ -105,7 +112,7 @@ async def test_fanarttv_coverart(bootstrap):
     config.cparser.setValue("fanarttv/coverart", True)
     for field in ["banners", "logos", "fanart", "thumbnails"]:
         config.cparser.setValue(f"fanarttv/{field}", False)
-    imagecaches, plugins = configureplugins(config)
+    plugins = configureplugins(config)
 
     metadata = {
         "artist": "Nine Inch Nails",
@@ -115,10 +122,12 @@ async def test_fanarttv_coverart(bootstrap):
         "musicbrainzreleasegroupid": "550bf4b9-92ca-30ba-9ea2-8b45f9d081f1",
     }
 
-    await plugins["fanarttv"].download_async(metadata, imagecache=imagecaches["fanarttv"])
+    await plugins["fanarttv"].download_async(metadata)
 
-    identifier = "Nine Inch Nails_Ghosts I-IV"
-    assert "front_cover" in imagecaches["fanarttv"].urls.get(identifier, {})
+    identifier = "nineinchnails_ghostsiiv"
+    assert await datacache_image_available(
+        nowplaying.datacache.get_client(), identifier, "front_cover"
+    )
 
 
 @pytest.mark.asyncio
@@ -132,7 +141,6 @@ async def test_fanarttv_coverart_no_album_mbid(bootstrap):
         config.cparser.setValue(f"fanarttv/{field}", False)
 
     plugin = config.pluginobjs["artistextras"]["nowplaying.artistextras.fanarttv"]
-    imagecache = FakeImageCache()
 
     async def mock_fetch(apikey, artistid):  # pylint: disable=unused-argument
         return {
@@ -146,14 +154,13 @@ async def test_fanarttv_coverart_no_album_mbid(bootstrap):
     plugin._fetch_async = mock_fetch  # pylint: disable=protected-access
 
     metadata = {
-        "artist": "Nine Inch Nails",
-        "album": "The Downward Spiral",
-        "imagecacheartist": "nineinchnails",
-        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "imagecacheartist": "wnpmockartist",
+        "musicbrainzartistid": ["00000000-0000-0000-0000-000000000001"],
         # no musicbrainzalbumid
     }
 
-    await plugin.download_async(metadata, imagecache=imagecache)
+    await plugin.download_async(metadata)
 
-    identifier = "Nine Inch Nails_The Downward Spiral"
-    assert "front_cover" not in imagecache.urls.get(identifier, {})
+    # images queued to datacache

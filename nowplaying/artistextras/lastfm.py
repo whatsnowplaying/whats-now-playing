@@ -3,6 +3,7 @@
 
 import logging
 import re
+import time
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
@@ -32,12 +33,26 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self.displayname: str = "Last.fm"
         self.priority: int = 60
 
-    async def _get_json(self, url: str) -> dict | None:
+    async def _get_json(self, url: str) -> dict | None:  # pylint: disable=too-many-return-statements
         """Fetch a Last.fm API URL and return the parsed JSON, or None on error."""
         safe_url = re.sub(r"(api_key=)[^&]+", r"\1<redacted>", url)
         try:
-            async with httpx.AsyncClient(timeout=self.calculate_delay()) as client:
-                response = await client.get(url)
+            dc_client = self._get_datacache_client()
+            await dc_client.initialize()
+            if dc_client._in_cooldown("lastfm"):  # pylint: disable=protected-access
+                return None
+            async with httpx.AsyncClient(timeout=self.calculate_delay()) as session:
+                response = await session.get(url)
+            if response.status_code == 429:
+                try:
+                    retry_after = max(1, int(response.headers.get("Retry-After", "60")))
+                except ValueError:
+                    retry_after = 60
+                dc_client._retry_after_until["lastfm"] = (  # pylint: disable=protected-access
+                    time.monotonic() + retry_after
+                )
+                logging.warning("Last.fm rate limited (429), cooldown %ds", retry_after)
+                return None
             if response.status_code == 404:
                 logging.debug("Last.fm 404 for %s — artist/album not found", safe_url)
                 return {}  # stable negative: cache with negative_ttl
@@ -104,11 +119,11 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         htmlfilter.feed(raw)
         return htmlfilter.text.strip()
 
-    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata, imagecache: Any) -> None:
+    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata) -> None:
         """Fetch album cover art from Last.fm and queue for download"""
         if not self.config.cparser.value("lastfm/coverart", type=bool):
             return
-        if metadata.get("coverimageraw") or not imagecache:
+        if metadata.get("coverimageraw"):
             return
         artist = metadata.get("artist")
         album = metadata.get("album")
@@ -136,11 +151,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             None,
         )
         if cover_url:
-            self.queue_front_cover(artist, album, cover_url, imagecache)
+            await self.queue_front_cover(artist, album, cover_url, provider="lastfm")
 
-    async def download_async(
-        self, metadata: TrackMetadata | None = None, imagecache: Any = None
-    ) -> TrackMetadata | None:
+    async def download_async(self, metadata: TrackMetadata | None = None) -> TrackMetadata | None:
         """async do data lookup"""
         if not self.config.cparser.value("lastfm/enabled", type=bool):
             return None
@@ -206,7 +219,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             if url := artist_info.get("url"):
                 result["artistwebsites"] = [url]
 
-        await self._queue_coverart(apikey, metadata, imagecache)
+        await self._queue_coverart(apikey, metadata)
 
         return result or None
 

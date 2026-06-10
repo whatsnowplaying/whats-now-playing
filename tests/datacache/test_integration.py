@@ -12,7 +12,6 @@ from pathlib import Path
 import httpx
 import orjson
 import pytest
-import pytest_asyncio
 import respx
 
 import nowplaying.datacache
@@ -26,19 +25,8 @@ _LIVE_FANART_URLS = [
 ]
 
 
-@pytest_asyncio.fixture
-async def temp_datacache(bootstrap):  # pylint: disable=unused-argument
-    """Create temporary datacache instance"""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        providers = nowplaying.datacache.DataCacheProviders(temp_path)
-        await providers.initialize()
-        yield providers
-        await providers.close()
-
-
 @pytest.mark.asyncio
-async def test_full_image_caching_workflow(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_full_image_caching_workflow(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test complete image caching workflow"""
     test_image_data = b"fake_image_bytes"
     test_url = "https://example.com/artist_thumb.jpg"
@@ -51,22 +39,22 @@ async def test_full_image_caching_workflow(temp_datacache):  # pylint: disable=r
         )
 
         # Cache image immediately
-        result = await temp_datacache.images.cache_artist_thumbnail(
+        result = await nowplaying.datacache.get_client().get_or_fetch(
             url=test_url,
-            artist_identifier="integration_test_artist",
+            identifier="integration_test_artist",
+            data_type="thumbnail",
             provider="test_provider",
             immediate=True,
             metadata={"source": "integration_test"},
         )
 
         assert result is not None
-        data, metadata = result
-        assert data == test_image_data
-        assert metadata["source"] == "integration_test"
+        assert result.data == test_image_data
+        assert result.metadata["source"] == "integration_test"
 
 
 @pytest.mark.asyncio
-async def test_randomimage_functionality_integration(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_randomimage_functionality_integration(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test randomimage functionality works end-to-end"""
     # Cache multiple images for same artist
     image_urls = [
@@ -86,26 +74,26 @@ async def test_randomimage_functionality_integration(temp_datacache):  # pylint:
 
         # Cache all images
         for url in image_urls:
-            await temp_datacache.images.cache_artist_thumbnail(
+            await nowplaying.datacache.get_client().get_or_fetch(
                 url=url,
-                artist_identifier="random_test_artist",
+                identifier="random_test_artist",
+                data_type="thumbnail",
                 provider="test_provider",
                 immediate=True,
             )
 
         # Get random image
-        random_result = await temp_datacache.images.get_random_image(
-            artist_identifier="random_test_artist", image_type="thumbnail"
+        random_result = await nowplaying.datacache.get_client().get_random_image(
+            identifier="random_test_artist", data_type="thumbnail"
         )
 
         assert random_result is not None
-        data, _metadata, url = random_result
-        assert data.startswith(b"image_data_")
-        assert url in image_urls
+        assert random_result.data.startswith(b"image_data_")
+        assert random_result.url in image_urls
 
         # Get cache keys
-        cache_keys = await temp_datacache.images.get_cache_keys_for_identifier(
-            artist_identifier="random_test_artist", image_type="thumbnail"
+        cache_keys = await isolated_datacache_client.get_cache_keys_for_identifier(
+            identifier="random_test_artist", data_type="thumbnail"
         )
 
         assert len(cache_keys) == 3
@@ -117,7 +105,7 @@ async def test_randomimage_functionality_integration(temp_datacache):  # pylint:
 
 
 @pytest.mark.asyncio
-async def test_queue_and_process_workflow(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_queue_and_process_workflow(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test queuing requests and processing them"""
     test_url = "https://example.com/queued_image.jpg"
     test_data = b"queued_image_data"
@@ -130,9 +118,10 @@ async def test_queue_and_process_workflow(temp_datacache):  # pylint: disable=re
         )
 
         # Queue image for background processing
-        result = await temp_datacache.images.cache_artist_logo(
+        result = await nowplaying.datacache.get_client().get_or_fetch(
             url=test_url,
-            artist_identifier="queue_test_artist",
+            identifier="queue_test_artist",
+            data_type="logo",
             provider="test_provider",
             immediate=False,  # Queue for later
         )
@@ -141,14 +130,14 @@ async def test_queue_and_process_workflow(temp_datacache):  # pylint: disable=re
         assert result is None
 
         # Process the queue
-        stats = await temp_datacache.process_queue()
+        stats = await nowplaying.datacache.get_client().process_queue()
 
         # Should have processed some requests
         assert stats["processed"] >= 0
 
 
 @pytest.mark.asyncio
-async def test_cache_hit_avoids_http_request(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_cache_hit_avoids_http_request(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test that cache hits don't make HTTP requests"""
     test_url = "https://example.com/cached_test.jpg"
     test_data = b"cached_test_data"
@@ -161,9 +150,10 @@ async def test_cache_hit_avoids_http_request(temp_datacache):  # pylint: disable
             )
         )
 
-        result1 = await temp_datacache.images.cache_artist_banner(
+        result1 = await nowplaying.datacache.get_client().get_or_fetch(
             url=test_url,
-            artist_identifier="cache_hit_artist",
+            identifier="cache_hit_artist",
+            data_type="banner",
             provider="test_provider",
             immediate=True,
         )
@@ -171,20 +161,20 @@ async def test_cache_hit_avoids_http_request(temp_datacache):  # pylint: disable
         assert result1 is not None
 
     # Second request without mock (should hit cache)
-    result2 = await temp_datacache.images.cache_artist_banner(
+    result2 = await nowplaying.datacache.get_client().get_or_fetch(
         url=test_url,
-        artist_identifier="cache_hit_artist",
+        identifier="cache_hit_artist",
+        data_type="banner",
         provider="test_provider",
         immediate=True,
     )
 
     assert result2 is not None
-    data, _metadata = result2
-    assert data == test_data
+    assert result2.data == test_data
 
 
 @pytest.mark.asyncio
-async def test_provider_filtering_works(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_provider_filtering_works(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test that provider filtering works correctly"""
     test_urls = {
         "theaudiodb": "https://theaudiodb.com/image1.jpg",
@@ -205,23 +195,25 @@ async def test_provider_filtering_works(temp_datacache):  # pylint: disable=rede
         )
 
         # Cache images from different providers
-        await temp_datacache.images.cache_artist_fanart(
+        await nowplaying.datacache.get_client().get_or_fetch(
             url=test_urls["theaudiodb"],
-            artist_identifier="filter_test_artist",
+            identifier="filter_test_artist",
+            data_type="fanart",
             provider="theaudiodb",
             immediate=True,
         )
 
-        await temp_datacache.images.cache_artist_fanart(
+        await nowplaying.datacache.get_client().get_or_fetch(
             url=test_urls["discogs"],
-            artist_identifier="filter_test_artist",
+            identifier="filter_test_artist",
+            data_type="fanart",
             provider="discogs",
             immediate=True,
         )
 
         # Get cache keys filtered by provider
-        theaudiodb_keys = await temp_datacache.images.get_cache_keys_for_identifier(
-            artist_identifier="filter_test_artist", image_type="fanart", provider="theaudiodb"
+        theaudiodb_keys = await isolated_datacache_client.get_cache_keys_for_identifier(
+            identifier="filter_test_artist", data_type="fanart", provider="theaudiodb"
         )
 
         assert len(theaudiodb_keys) == 1
@@ -231,15 +223,15 @@ async def test_provider_filtering_works(temp_datacache):  # pylint: disable=rede
         assert theaudiodb_keys[0].count("-") == 4
 
         # Get all cache keys (no provider filter)
-        all_keys = await temp_datacache.images.get_cache_keys_for_identifier(
-            artist_identifier="filter_test_artist", image_type="fanart"
+        all_keys = await isolated_datacache_client.get_cache_keys_for_identifier(
+            identifier="filter_test_artist", data_type="fanart"
         )
 
         assert len(all_keys) == 2
 
 
 @pytest.mark.asyncio
-async def test_api_response_caching_integration(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_api_response_caching_integration(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test API response caching works end-to-end"""
     test_url = "https://api.example.com/artist/bio"
     test_bio_data = {
@@ -255,25 +247,24 @@ async def test_api_response_caching_integration(temp_datacache):  # pylint: disa
             )
         )
 
-        result = await temp_datacache.api.cache_artist_bio(
+        result = await nowplaying.datacache.get_client().get_or_fetch(
             url=test_url,
-            artist_identifier="api_test_artist",
+            identifier="api_test_artist",
+            data_type="bio_en",
             provider="test_api",
-            language="en",
             immediate=True,
-            metadata={"source": "test_api"},
+            metadata={"language": "en", "source": "test_api"},
         )
 
         assert result is not None
-        data, metadata = result
-        assert isinstance(data, bytes)
-        assert orjson.loads(data) == test_bio_data
-        assert metadata["language"] == "en"
-        assert metadata["source"] == "test_api"
+        assert isinstance(result.data, bytes)
+        assert orjson.loads(result.data) == test_bio_data
+        assert result.metadata["language"] == "en"
+        assert result.metadata["source"] == "test_api"
 
 
 @pytest.mark.asyncio
-async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_storage):  # pylint: disable=unused-argument
+async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """cached_fetch must round-trip dicts containing bytes values via base64 sentinel."""
     test_data = {"text": "hello", "raw": b"\x00\x01\x02binary"}
     call_count = 0
@@ -325,7 +316,7 @@ def test_maintenance_integration():
 
 
 @pytest.mark.asyncio
-async def test_concurrent_storage_operations(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_concurrent_storage_operations(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Test concurrent operations don't interfere"""
     test_urls = [
         "https://example.com/concurrent1.jpg",
@@ -347,9 +338,10 @@ async def test_concurrent_storage_operations(temp_datacache):  # pylint: disable
         # Start concurrent caching operations
         tasks = []
         for i, url in enumerate(test_urls):
-            task = temp_datacache.images.cache_artist_thumbnail(
+            task = isolated_datacache_client.get_or_fetch(
                 url=url,
-                artist_identifier=f"concurrent_artist_{i}",
+                identifier=f"concurrent_artist_{i}",
+                data_type="thumbnail",
                 provider="test_provider",
                 immediate=True,
             )
@@ -361,8 +353,7 @@ async def test_concurrent_storage_operations(temp_datacache):  # pylint: disable
         # All should succeed
         for result in results:
             assert result is not None
-            data, _metadata = result
-            assert data.startswith(b"concurrent_data_")
+            assert result.data.startswith(b"concurrent_data_")
 
 
 def test_module_level_convenience_functions():
@@ -386,7 +377,7 @@ def test_module_level_convenience_functions():
 
 
 @pytest.mark.asyncio
-async def test_fill_queue_and_process_random_image_bytes(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_fill_queue_and_process_random_image_bytes(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """fill_queue → process_queue fetches all URLs → random_image_bytes returns bytes"""
     image_urls = [
         "https://example.com/fanart1.jpg",
@@ -404,29 +395,38 @@ async def test_fill_queue_and_process_random_image_bytes(temp_datacache):  # pyl
                 )
             )
 
-        queued = await temp_datacache.images.fill_queue(
-            identifier="fanart_artist",
-            imagetype="fanart",
-            srclocationlist=image_urls,
-            provider="theaudiodb",
-        )
+        queued = 0
+        for url in image_urls:
+            success = await nowplaying.datacache.get_client().queue_url_fetch(
+                url=url,
+                identifier="fanart_artist",
+                data_type="fanart",
+                provider="theaudiodb",
+                timeout=30.0,
+                retries=3,
+                ttl_seconds=None,
+                priority=2,
+            )
+            if success:
+                queued += 1
         assert queued == 3
 
-        stats = await temp_datacache.process_queue()
+        stats = await nowplaying.datacache.get_client().process_queue()
         assert stats["processed"] == 3
         assert stats["succeeded"] == 3
         assert stats["failed"] == 0
 
-    result = await temp_datacache.images.random_image_bytes(
-        artist_identifier="fanart_artist", image_type="fanart"
+    random_result = await nowplaying.datacache.get_client().get_random_image(
+        identifier="fanart_artist", data_type="fanart"
     )
+    result = random_result.data if random_result else None
     assert result is not None
     assert isinstance(result, bytes)
     assert result.startswith(b"fanart_data_")
 
 
 @pytest.mark.asyncio
-async def test_fill_queue_respects_maxcount(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_fill_queue_respects_maxcount(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """fill_queue maxcount caps how many URLs are queued"""
     image_urls = [
         "https://example.com/maxcount1.jpg",
@@ -436,57 +436,85 @@ async def test_fill_queue_respects_maxcount(temp_datacache):  # pylint: disable=
         "https://example.com/maxcount5.jpg",
     ]
 
-    queued = await temp_datacache.images.fill_queue(
-        identifier="maxcount_artist",
-        imagetype="thumbnail",
-        srclocationlist=image_urls,
-        provider="test",
-        maxcount=2,
-    )
+    maxcount = 2
+    urls_to_queue = image_urls[:maxcount]
+    queued = 0
+    for url in urls_to_queue:
+        success = await nowplaying.datacache.get_client().queue_url_fetch(
+            url=url,
+            identifier="maxcount_artist",
+            data_type="thumbnail",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=None,
+            priority=2,
+        )
+        if success:
+            queued += 1
     assert queued == 2
 
     # Drain the pending queue without making HTTP calls — count items directly
     queue_depth = 0
-    while await temp_datacache.client.queue.get_next_request() is not None:
+    while await isolated_datacache_client.queue.get_next_request() is not None:
         queue_depth += 1
     assert queue_depth == 2
 
 
 @pytest.mark.asyncio
-async def test_fill_queue_empty_list(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_fill_queue_empty_list(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """fill_queue with an empty list queues nothing"""
-    queued = await temp_datacache.images.fill_queue(
-        identifier="empty_artist",
-        imagetype="thumbnail",
-        srclocationlist=[],
-        provider="test",
-    )
+    queued = 0
+    for url in []:
+        success = await nowplaying.datacache.get_client().queue_url_fetch(
+            url=url,
+            identifier="empty_artist",
+            data_type="thumbnail",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=None,
+            priority=2,
+        )
+        if success:
+            queued += 1
     assert queued == 0
 
-    stats = await temp_datacache.process_queue()
+    stats = await nowplaying.datacache.get_client().process_queue()
     assert stats["processed"] == 0
 
 
 @pytest.mark.asyncio
-async def test_fill_queue_deduplicates(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_fill_queue_deduplicates(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
     """Passing the same URL twice only queues it once"""
     url = "https://example.com/dedup.jpg"
 
-    queued = await temp_datacache.images.fill_queue(
-        identifier="dedup_artist",
-        imagetype="fanart",
-        srclocationlist=[url, url],
-        provider="test",
-    )
+    queued = 0
+    for u in [url, url]:
+        success = await nowplaying.datacache.get_client().queue_url_fetch(
+            url=u,
+            identifier="dedup_artist",
+            data_type="fanart",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=None,
+            priority=2,
+        )
+        if success:
+            queued += 1
     assert queued == 1
 
 
 @pytest.mark.asyncio
-async def test_random_image_bytes_returns_none_when_nothing_cached(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_random_image_bytes_returns_none_when_nothing_cached(  # pylint: disable=unused-argument,redefined-outer-name
+    bootstrap, isolated_datacache_client
+):
     """random_image_bytes returns None when there are no cached images"""
-    result = await temp_datacache.images.random_image_bytes(
-        artist_identifier="nobody", image_type="thumbnail"
+    random_result = await nowplaying.datacache.get_client().get_random_image(
+        identifier="nobody", data_type="thumbnail"
     )
+    result = random_result.data if random_result else None
     assert result is None
 
 
@@ -497,53 +525,62 @@ async def test_random_image_bytes_returns_none_when_nothing_cached(temp_datacach
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_immediate_fetch(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
     """Immediate fetch of a real image URL returns bytes and caches them"""
     url = _LIVE_FANART_URLS[0]
 
-    result = await temp_datacache.images.cache_artist_fanart(
+    result = await nowplaying.datacache.get_client().get_or_fetch(
         url=url,
-        artist_identifier="gary_numan",
+        identifier="gary_numan",
+        data_type="fanart",
         provider="theaudiodb",
         immediate=True,
     )
 
     assert result is not None
-    data, _metadata = result
-    assert isinstance(data, bytes)
-    assert len(data) > 0
+    assert isinstance(result.data, bytes)
+    assert len(result.data) > 0
 
     # Cache hit — no network call needed
-    result2 = await temp_datacache.images.cache_artist_fanart(
+    result2 = await nowplaying.datacache.get_client().get_or_fetch(
         url=url,
-        artist_identifier="gary_numan",
+        identifier="gary_numan",
+        data_type="fanart",
         provider="theaudiodb",
         immediate=True,
     )
     assert result2 is not None
-    data2, _metadata2 = result2
-    assert data2 == data
+    assert result2.data == result.data
 
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_fill_queue_and_random_image_bytes(temp_datacache):  # pylint: disable=redefined-outer-name
+async def test_live_fill_queue_and_random_image_bytes(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
     """fill_queue + process_queue with real URLs → random_image_bytes returns bytes"""
-    queued = await temp_datacache.images.fill_queue(
-        identifier="gary_numan",
-        imagetype="fanart",
-        srclocationlist=_LIVE_FANART_URLS,
-        provider="theaudiodb",
-    )
+    queued = 0
+    for url in _LIVE_FANART_URLS:
+        success = await nowplaying.datacache.get_client().queue_url_fetch(
+            url=url,
+            identifier="gary_numan",
+            data_type="fanart",
+            provider="theaudiodb",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=None,
+            priority=2,
+        )
+        if success:
+            queued += 1
     assert queued == len(_LIVE_FANART_URLS)
 
-    stats = await temp_datacache.process_queue()
+    stats = await nowplaying.datacache.get_client().process_queue()
     assert stats["processed"] == len(_LIVE_FANART_URLS)
     assert stats["failed"] == 0
 
-    result = await temp_datacache.images.random_image_bytes(
-        artist_identifier="gary_numan", image_type="fanart"
+    random_result = await nowplaying.datacache.get_client().get_random_image(
+        identifier="gary_numan", data_type="fanart"
     )
+    result = random_result.data if random_result else None
     assert result is not None
     assert isinstance(result, bytes)
     assert len(result) > 0

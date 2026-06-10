@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
-    import nowplaying.imagecache
 
 
 class NotificationPlugin(WNPBasePlugin):
@@ -26,15 +25,12 @@ class NotificationPlugin(WNPBasePlugin):
 
     #### Core notification methods ####
 
-    async def notify_track_change(
-        self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
-    ) -> None:
+    async def notify_track_change(self, metadata: TrackMetadata) -> None:
         """
         Called when a new track becomes live
 
         Args:
             metadata: Track metadata including artist, title, etc.
-            imagecache: Optional imagecache instance for accessing cached images
         """
         raise NotImplementedError
 

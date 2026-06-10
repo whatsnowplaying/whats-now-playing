@@ -2,11 +2,11 @@
 """Input Plugin definition"""
 
 import contextlib
-
-# import logging
 import sys
 from typing import TYPE_CHECKING
 
+import nowplaying.datacache
+import nowplaying.utils
 from nowplaying.plugin import WNPBasePlugin
 from nowplaying.types import TrackMetadata
 
@@ -14,6 +14,20 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
+    import nowplaying.datacache.client
+
+_IMAGE_TTL = 14 * 24 * 3600  # 14 days — images change infrequently
+
+# Queue priority by data type: lower = fetched sooner.
+# cover > logos/banners/thumbs > fanart mirrors the imagecache scheme.
+# Within each tier, newest-queued (currently playing) comes first.
+_IMAGE_PRIORITY: dict[str, int] = {
+    "front_cover": 2,
+    "artistthumbnail": 3,
+    "artistlogo": 3,
+    "artistbanner": 3,
+    "artistfanart": 4,
+}
 
 
 class ArtistExtrasPlugin(WNPBasePlugin):
@@ -26,11 +40,18 @@ class ArtistExtrasPlugin(WNPBasePlugin):
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.plugintype: str = "artistextras"
+        self._datacache_client: "nowplaying.datacache.client.DataCacheClient | None" = None
+
+    def _get_datacache_client(self) -> "nowplaying.datacache.client.DataCacheClient":
+        """Return the shared DataCacheClient, creating it on first use."""
+        if self._datacache_client is None:
+            self._datacache_client = nowplaying.datacache.get_client()
+        return self._datacache_client
 
     #### Plug-in methods
 
     async def download_async(  #  pylint: disable=no-self-use,unused-argument
-        self, metadata: TrackMetadata | None = None, imagecache: object | None = None
+        self, metadata: TrackMetadata | None = None
     ) -> TrackMetadata | None:
         """return metadata (async version) - override this in async plugins"""
         return None
@@ -41,26 +62,57 @@ class ArtistExtrasPlugin(WNPBasePlugin):
 
     #### Utilities
 
-    def queue_artist_image(
-        self, identifier: str, imagetype: str, urls: list[str], imagecache: object
+    async def queue_artist_image(
+        self,
+        identifier: str,
+        imagetype: str,
+        urls: list[str],
+        provider: str,  # pylint: disable=unused-argument
     ) -> None:
-        """Queue artist image URLs into the image cache."""
-        imagecache.fill_queue(  # type: ignore[union-attr]
-            config=self.config,
-            identifier=identifier,
-            imagetype=imagetype,
-            srclocationlist=urls,
-        )
+        """Queue artist image URLs into datacache for background download."""
+        normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
+        if not normalidentifier or not urls:
+            return
+        client = self._get_datacache_client()
+        # First URL gets the type's normal priority (best image by popularity).
+        # Remaining URLs are deferred to fanart priority so a mix of types
+        # downloads before the bulk of any single type.
+        first_priority = _IMAGE_PRIORITY.get(imagetype, 3)
+        bulk_priority = _IMAGE_PRIORITY["artistfanart"]
+        for i, url in enumerate(urls):
+            await client.get_or_fetch(
+                url=url,
+                identifier=normalidentifier,
+                data_type=imagetype,
+                provider="cdn",  # CDN downloads are not rate-limited like API calls
+                immediate=False,
+                ttl_seconds=_IMAGE_TTL,
+                negative_ttl=3600,  # 1h: don't retry permanently-dead image URLs
+                queue_priority=first_priority if i == 0 else bulk_priority,
+            )
 
-    def queue_front_cover(
-        self, artist: str, album: str, cover_url: str, imagecache: object
+    async def queue_front_cover(
+        self,
+        artist: str,
+        album: str,
+        cover_url: str,
+        provider: str,  # pylint: disable=unused-argument
     ) -> None:
-        """Queue a cover art URL into the image cache for the given artist/album."""
-        imagecache.fill_queue(  # type: ignore[union-attr]
-            config=self.config,
-            identifier=f"{artist}_{album}",
-            imagetype="front_cover",
-            srclocationlist=[cover_url],
+        """Queue a cover art URL into datacache for background download."""
+        norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
+        norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+        if not norm_artist or not norm_album or not cover_url:
+            return
+        identifier = f"{norm_artist}_{norm_album}"
+        client = self._get_datacache_client()
+        await client.get_or_fetch(
+            url=cover_url,
+            identifier=identifier,
+            data_type="front_cover",
+            provider="cdn",  # CDN downloads are not rate-limited like API calls
+            immediate=False,
+            queue_priority=_IMAGE_PRIORITY["front_cover"],
+            ttl_seconds=_IMAGE_TTL,
         )
 
     def calculate_delay(self) -> float:

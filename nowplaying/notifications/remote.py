@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
-    import nowplaying.imagecache
 
 
 class Plugin(NotificationPlugin):
@@ -40,15 +39,12 @@ class Plugin(NotificationPlugin):
         self._discovered_services: list[nowplaying.mdns_discovery.DiscoveredService] | None = None
         self._scan_task: asyncio.Task[None] | None = None
 
-    async def notify_track_change(
-        self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
-    ) -> None:
+    async def notify_track_change(self, metadata: TrackMetadata) -> None:
         """
         Send track metadata to remote server when a new track becomes live
 
         Args:
             metadata: Track metadata including artist, title, etc.
-            imagecache: Optional imagecache instance (unused by remote output)
         """
 
         # get a fresh config

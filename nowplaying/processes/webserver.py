@@ -49,7 +49,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
-import nowplaying.imagecache
+import nowplaying.datacache
 import nowplaying.kick.oauth2
 import nowplaying.metadata
 import nowplaying.oauth2
@@ -69,7 +69,7 @@ CONFIG_KEY = web.AppKey("config", nowplaying.config.ConfigFile)
 METADB_KEY = web.AppKey("metadb", nowplaying.db.MetadataDB)
 REMOTEDB_KEY = web.AppKey("remotedb", nowplaying.db.MetadataDB)
 WS_KEY = web.AppKey("websockets", weakref.WeakSet)
-IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
+DC_STORAGE_KEY: web.AppKey[nowplaying.datacache.DataStorage] = web.AppKey("datacache_storage")
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
 JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
@@ -112,7 +112,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self.images_ws_handler = ImagesWebSocketHandler(
             stopevent=self.stopevent,
             ws_key=WS_KEY,
-            ic_key=IC_KEY,
+            ic_key=DC_STORAGE_KEY,
             metadb_key=METADB_KEY,
             config_key=CONFIG_KEY,
             metadata_key=METADATA_KEY,
@@ -131,7 +131,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         # Initialize static content handler
         self.static_handler = StaticContentHandler(
             config_key=CONFIG_KEY,
-            ic_key=IC_KEY,
             metadb_key=METADB_KEY,
             remotedb_key=REMOTEDB_KEY,
             metadata_key=METADATA_KEY,
@@ -345,11 +344,16 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                     continue
 
                 imagedata = None
-
-                with contextlib.suppress(KeyError):
-                    imagedata = request.app[IC_KEY].random_image_fetch(
-                        identifier=metadata["imagecacheartist"], imagetype="artistfanart"
-                    )
+                storage = request.app[DC_STORAGE_KEY]
+                result = await storage.retrieve_by_identifier(
+                    nowplaying.utils.normalize(
+                        metadata["imagecacheartist"], sizecheck=0, nospaces=True
+                    ),
+                    "artistfanart",
+                    random=True,
+                )
+                if result:
+                    imagedata = result.data
 
                 if imagedata:
                     metadata["artistfanartraw"] = imagedata
@@ -689,7 +693,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         if self.testmode:
             metadb_path = app[CONFIG_KEY].cparser.value("testmode/metadbpath", defaultValue=None)
         app[METADB_KEY] = nowplaying.db.MetadataDB(databasefile=metadb_path)
-        app[IC_KEY] = nowplaying.imagecache.ImageCache()
+        app[DC_STORAGE_KEY] = nowplaying.datacache.get_client().storage
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()
         if os.environ.get("WNP_REMOTEDB_TEST_FILE"):
@@ -732,7 +736,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await app["statedb"].close()
         await app[HTTP_SESSION_KEY].close()
         app[WATCHER_KEY].stop()
-        app[IC_KEY].close()
+        await app[DC_STORAGE_KEY].close()
 
         # Cleanup runner last (site cleanup happens automatically)
         if self.runner:

@@ -155,32 +155,26 @@ class Plugin(ArtistExtrasPlugin):
 
         return cached_result
 
-    def _process_metadata(self, artistname, artist, imagecache):
+    async def _process_metadata(self, artistname, artist):
         """update metadata based upon an artist record"""
-        if artist.images and imagecache:
-            self.addmeta["artistfanarturls"] = []
-            gotonefanart = False
+        if artist.images:
             for record in artist.images:
                 if (
                     record["type"] == "primary"
                     and record.get("uri150")
                     and self.config.cparser.value("discogs/thumbnails", type=bool)
                 ):
-                    self.queue_artist_image(
-                        artistname, "artistthumbnail", [record["uri150"]], imagecache
+                    await self.queue_artist_image(
+                        artistname, "artistthumbnail", [record["uri150"]], provider="discogs"
                     )
-
                 if (
                     record["type"] == "secondary"
                     and record.get("uri")
                     and self.config.cparser.value("discogs/fanart", type=bool)
                 ):
-                    if not gotonefanart:
-                        self.queue_artist_image(
-                            artistname, "artistfanart", [record["uri"]], imagecache
-                        )
-                        gotonefanart = True
-                    self.addmeta["artistfanarturls"].append(record["uri"])
+                    await self.queue_artist_image(
+                        artistname, "artistfanart", [record["uri"]], provider="discogs"
+                    )
 
         if self.config.cparser.value("discogs/bio", type=bool):
             self.addmeta["artistlongbio"] = artist.profile_plaintext
@@ -188,7 +182,7 @@ class Plugin(ArtistExtrasPlugin):
         if self.config.cparser.value("discogs/websites", type=bool):
             self.addmeta["artistwebsites"] = artist.urls
 
-    async def _find_discogs_website_async(self, metadata, imagecache):
+    async def _find_discogs_website_async(self, metadata):
         """async use websites listing to find discogs entries"""
         if not self.client and not self._setup_client():
             return False
@@ -230,7 +224,7 @@ class Plugin(ArtistExtrasPlugin):
                     break
                 artist = None
         if artist:
-            self._process_metadata(metadata["imagecacheartist"], artist, imagecache)
+            await self._process_metadata(metadata["imagecacheartist"], artist)
             return True
 
         return False
@@ -272,7 +266,7 @@ class Plugin(ArtistExtrasPlugin):
 
         return None, None
 
-    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
+    async def download_async(self, metadata=None):  # pylint: disable=too-many-branches, too-many-return-statements
         """async download content"""
 
         if not self.config.cparser.value("discogs/enabled", type=bool):
@@ -298,7 +292,7 @@ class Plugin(ArtistExtrasPlugin):
 
         self.addmeta = {}
 
-        if await self._find_discogs_website_async(metadata, imagecache):
+        if await self._find_discogs_website_async(metadata):
             logging.debug("used discogs website")
             return self.addmeta
 
@@ -333,18 +327,19 @@ class Plugin(ArtistExtrasPlugin):
                 if full_artist:
                     artistresultlist = full_artist
 
-        self._process_metadata(metadata["imagecacheartist"], artistresultlist, imagecache)
+        await self._process_metadata(metadata["imagecacheartist"], artistresultlist)
 
         if (
             cover_url
-            and imagecache
             and metadata.get("album")
             and self.config.cparser.value("discogs/coverart", type=bool)
         ):
             logging.debug(
                 "discogs: queuing release cover for %s - %s", metadata["artist"], metadata["album"]
             )
-            self.queue_front_cover(metadata["artist"], metadata["album"], cover_url, imagecache)
+            await self.queue_front_cover(
+                metadata["artist"], metadata["album"], cover_url, provider="discogs"
+            )
 
         return self.addmeta
 
@@ -354,7 +349,6 @@ class Plugin(ArtistExtrasPlugin):
             "artistlongbio",
             "artistthumbnailraw",
             "coverimageraw",
-            "discogs-artistfanarturls",
             "artistwebsites",
         ]
 

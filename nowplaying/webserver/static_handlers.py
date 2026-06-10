@@ -31,7 +31,6 @@ REMOTE_AGENT_MIN_VERSIONS: dict[str, str] = {
 
 if TYPE_CHECKING:
     import nowplaying.config
-    import nowplaying.imagecache
     import nowplaying.metadata
 
 # Import constants from main webserver module
@@ -83,14 +82,12 @@ class StaticContentHandler:
     def __init__(  # pylint: disable=too-many-arguments
         self,
         config_key: web.AppKey["nowplaying.config.ConfigFile"],
-        ic_key: web.AppKey["nowplaying.imagecache.ImageCache"],
         metadb_key: web.AppKey[nowplaying.db.MetadataDB],
         remotedb_key: web.AppKey[nowplaying.db.MetadataDB],
         metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
         http_session_key: web.AppKey[aiohttp.ClientSession],
     ):
         self.config_key = config_key
-        self.ic_key = ic_key
         self.metadb_key = metadb_key
         self.remotedb_key = remotedb_key
         self.metadata_key = metadata_key
@@ -586,9 +583,7 @@ class StaticContentHandler:
             # Processing timeout to prevent hanging on network calls
             try:
                 processed_metadata = await asyncio.wait_for(
-                    request.app[self.metadata_key].getmoremetadata(
-                        metadata=clean_metadata, imagecache=request.app[self.ic_key]
-                    ),
+                    request.app[self.metadata_key].getmoremetadata(metadata=clean_metadata),
                     timeout=30.0,
                 )
             except asyncio.TimeoutError:
