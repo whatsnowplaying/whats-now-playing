@@ -102,3 +102,45 @@ async def test_complete_request(temp_queue):  # pylint: disable=redefined-outer-
     # Should no longer be available
     next_request = await temp_queue.get_next_request()
     assert next_request is None
+
+
+@pytest.mark.asyncio
+async def test_failed_entry_can_be_requeued(temp_queue):  # pylint: disable=redefined-outer-name
+    """A request marked failed is deleted and re-inserted on the next queue_request call."""
+    params = {
+        "url": "https://example.com/retry.jpg",
+        "identifier": "artist",
+        "data_type": "fanart",
+    }
+
+    # First queue: succeeds
+    assert await temp_queue.queue_request(provider="cdn", request_key="fetch_url", params=params)
+
+    # Simulate a failed download
+    request = await temp_queue.get_next_request()
+    assert request is not None
+    await temp_queue.complete_request(request["request_id"], success=False)
+
+    # Re-queue the same URL: should succeed because the entry is now 'failed'
+    assert await temp_queue.queue_request(provider="cdn", request_key="fetch_url", params=params)
+
+    # The re-queued entry should be retrievable as pending
+    retry = await temp_queue.get_next_request()
+    assert retry is not None
+    assert retry["params"]["url"] == params["url"]
+
+
+@pytest.mark.asyncio
+async def test_completed_entry_is_not_requeued(temp_queue):  # pylint: disable=redefined-outer-name
+    """A successfully completed request is not re-inserted to avoid redundant downloads."""
+    params = {"url": "https://example.com/done.jpg", "identifier": "artist", "data_type": "fanart"}
+
+    assert await temp_queue.queue_request(provider="cdn", request_key="fetch_url", params=params)
+
+    request = await temp_queue.get_next_request()
+    await temp_queue.complete_request(request["request_id"], success=True)
+
+    # Re-queue the same URL: should return False (already completed)
+    assert not await temp_queue.queue_request(
+        provider="cdn", request_key="fetch_url", params=params
+    )

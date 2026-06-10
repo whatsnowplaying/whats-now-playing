@@ -358,11 +358,6 @@ async def test_concurrent_storage_operations(bootstrap, isolated_datacache_clien
 
 def test_module_level_convenience_functions():
     """Test module-level convenience functions"""
-    # Test get_providers returns same instance
-    providers1 = nowplaying.datacache.get_providers()
-    providers2 = nowplaying.datacache.get_providers()
-    assert providers1 is providers2
-
     # Test get_client returns same instance
     client1 = nowplaying.datacache.get_client()
     client2 = nowplaying.datacache.get_client()
@@ -370,15 +365,9 @@ def test_module_level_convenience_functions():
 
 
 # ---------------------------------------------------------------------------
-# fill_queue / random_image_bytes tests
-# (Ported concept from imagecache: queue URLs for background download, then
-#  retrieve via the random-image interface.)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
-async def test_fill_queue_and_process_random_image_bytes(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
-    """fill_queue → process_queue fetches all URLs → random_image_bytes returns bytes"""
+async def test_queue_and_process_random_image_bytes(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
+    """get_or_fetch(immediate=False) + process_queue → get_random_image returns bytes"""
     image_urls = [
         "https://example.com/fanart1.jpg",
         "https://example.com/fanart2.jpg",
@@ -395,21 +384,15 @@ async def test_fill_queue_and_process_random_image_bytes(bootstrap, isolated_dat
                 )
             )
 
-        queued = 0
         for url in image_urls:
-            success = await nowplaying.datacache.get_client().queue_url_fetch(
+            result = await nowplaying.datacache.get_client().get_or_fetch(
                 url=url,
                 identifier="fanart_artist",
                 data_type="fanart",
-                provider="theaudiodb",
-                timeout=30.0,
-                retries=3,
-                ttl_seconds=None,
-                priority=2,
+                provider="cdn",
+                immediate=False,
             )
-            if success:
-                queued += 1
-        assert queued == 3
+            assert result is None  # queued for background processing
 
         stats = await nowplaying.datacache.get_client().process_queue()
         assert stats["processed"] == 3
@@ -423,87 +406,6 @@ async def test_fill_queue_and_process_random_image_bytes(bootstrap, isolated_dat
     assert result is not None
     assert isinstance(result, bytes)
     assert result.startswith(b"fanart_data_")
-
-
-@pytest.mark.asyncio
-async def test_fill_queue_respects_maxcount(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
-    """fill_queue maxcount caps how many URLs are queued"""
-    image_urls = [
-        "https://example.com/maxcount1.jpg",
-        "https://example.com/maxcount2.jpg",
-        "https://example.com/maxcount3.jpg",
-        "https://example.com/maxcount4.jpg",
-        "https://example.com/maxcount5.jpg",
-    ]
-
-    maxcount = 2
-    urls_to_queue = image_urls[:maxcount]
-    queued = 0
-    for url in urls_to_queue:
-        success = await nowplaying.datacache.get_client().queue_url_fetch(
-            url=url,
-            identifier="maxcount_artist",
-            data_type="thumbnail",
-            provider="test",
-            timeout=30.0,
-            retries=3,
-            ttl_seconds=None,
-            priority=2,
-        )
-        if success:
-            queued += 1
-    assert queued == 2
-
-    # Drain the pending queue without making HTTP calls — count items directly
-    queue_depth = 0
-    while await isolated_datacache_client.queue.get_next_request() is not None:
-        queue_depth += 1
-    assert queue_depth == 2
-
-
-@pytest.mark.asyncio
-async def test_fill_queue_empty_list(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
-    """fill_queue with an empty list queues nothing"""
-    queued = 0
-    for url in []:
-        success = await nowplaying.datacache.get_client().queue_url_fetch(
-            url=url,
-            identifier="empty_artist",
-            data_type="thumbnail",
-            provider="test",
-            timeout=30.0,
-            retries=3,
-            ttl_seconds=None,
-            priority=2,
-        )
-        if success:
-            queued += 1
-    assert queued == 0
-
-    stats = await nowplaying.datacache.get_client().process_queue()
-    assert stats["processed"] == 0
-
-
-@pytest.mark.asyncio
-async def test_fill_queue_deduplicates(bootstrap, isolated_datacache_client):  # pylint: disable=unused-argument,redefined-outer-name
-    """Passing the same URL twice only queues it once"""
-    url = "https://example.com/dedup.jpg"
-
-    queued = 0
-    for u in [url, url]:
-        success = await nowplaying.datacache.get_client().queue_url_fetch(
-            url=u,
-            identifier="dedup_artist",
-            data_type="fanart",
-            provider="test",
-            timeout=30.0,
-            retries=3,
-            ttl_seconds=None,
-            priority=2,
-        )
-        if success:
-            queued += 1
-    assert queued == 1
 
 
 @pytest.mark.asyncio
@@ -555,27 +457,23 @@ async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argume
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_fill_queue_and_random_image_bytes(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
-    """fill_queue + process_queue with real URLs → random_image_bytes returns bytes"""
-    queued = 0
+async def test_live_queue_and_random_image_bytes(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
+    """get_or_fetch(immediate=False) + process_queue → get_random_image returns bytes"""
+    # Use the production path (get_or_fetch checks cached_data before queuing)
     for url in _LIVE_FANART_URLS:
-        success = await nowplaying.datacache.get_client().queue_url_fetch(
+        result = await nowplaying.datacache.get_client().get_or_fetch(
             url=url,
             identifier="gary_numan",
             data_type="fanart",
-            provider="theaudiodb",
+            provider="cdn",
             timeout=30.0,
             retries=3,
-            ttl_seconds=None,
-            priority=2,
+            immediate=False,
         )
-        if success:
-            queued += 1
-    assert queued == len(_LIVE_FANART_URLS)
+        # Returns None when queued for background processing or already cached
+        assert result is None or isinstance(result.data, bytes)
 
-    stats = await nowplaying.datacache.get_client().process_queue()
-    assert stats["processed"] == len(_LIVE_FANART_URLS)
-    assert stats["failed"] == 0
+    await nowplaying.datacache.get_client().process_queue()
 
     random_result = await nowplaying.datacache.get_client().get_random_image(
         identifier="gary_numan", data_type="fanart"

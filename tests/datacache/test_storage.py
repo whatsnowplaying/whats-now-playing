@@ -655,3 +655,28 @@ async def test_concurrent_access():
             # Cleanup
             for storage in storages:
                 await storage.close()
+
+
+@pytest.mark.asyncio
+async def test_retrieve_returns_none_when_db_missing(bootstrap):  # pylint: disable=unused-argument
+    """retrieve_by_url returns None gracefully if the database file is deleted mid-operation."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        storage = nowplaying.datacache.storage.DataStorage(Path(temp_dir))
+        await storage.initialize()
+
+        url = "https://example.com/robustness.jpg"
+        await storage.store(
+            url=url,
+            identifier="robustness_test",
+            data_type="fanart",
+            provider="test",
+            data_value=b"data",
+            ttl_seconds=3600,
+        )
+
+        # Delete the database file to simulate a missing/corrupted DB
+        storage.database_path.unlink()
+
+        # retrieve_by_url must not raise — it should return None and log an error
+        result = await storage.retrieve_by_url(url)
+        assert result is None
