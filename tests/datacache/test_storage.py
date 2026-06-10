@@ -674,6 +674,9 @@ async def test_retrieve_returns_none_when_db_missing(bootstrap):  # pylint: disa
             ttl_seconds=3600,
         )
 
+        # Close before unlinking — required on Windows where open files cannot be deleted
+        await storage.close()
+
         # Delete the database file to simulate a missing/corrupted DB
         storage.database_path.unlink()
 

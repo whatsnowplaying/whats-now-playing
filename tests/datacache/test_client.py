@@ -168,6 +168,7 @@ async def test_get_or_fetch_queues_for_background(temp_client):  # pylint: disab
     # Verify request was queued
     request = await temp_client.queue.get_next_request()
     assert request is not None
+    assert request["priority"] == 1
     assert request["params"]["url"] == "https://example.com/queue.jpg"
 
 
