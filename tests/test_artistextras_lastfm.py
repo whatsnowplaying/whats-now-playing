@@ -293,7 +293,7 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
     assert isolated_datacache_client.in_cooldown("lastfm")
 
     # Force cooldown to expire
-    isolated_datacache_client.set_retry_after("lastfm", -1)  # negative = already expired
+    isolated_datacache_client.clear_retry_after("lastfm")
 
     # After clearing, cooldown should be gone
     assert not isolated_datacache_client.in_cooldown("lastfm")

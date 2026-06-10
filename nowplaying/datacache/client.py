@@ -7,7 +7,6 @@ without dealing with low-level storage details.
 
 import asyncio
 import logging
-import re
 import random
 import time
 from pathlib import Path
@@ -24,6 +23,7 @@ import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 from .pending import RequestQueue
 from .queue import RateLimiterManager
 from .storage import IMAGE_DATA_TYPES, CachedEntry, DataStorage
+from .utils import redact_url
 
 _PROVIDER_TTL_DEFAULTS: dict[str, int] = {
     "theaudiodb": 7 * 24 * 3600,
@@ -198,12 +198,7 @@ class DataCacheClient:
 
     @staticmethod
     def _redact_url(url: str) -> str:
-        """Strip API keys from a URL before logging."""
-        # Query-param keys: api_key=, token=, key=, apikey=
-        url = re.sub(r"(?i)((?:api_?key|token|apikey)=)[^&\s]+", r"\1<redacted>", url)
-        # Path-embedded numeric keys: e.g. theaudiodb /json/523532/
-        url = re.sub(r"(/(?:json|api)/)\d{4,}/", r"\1<redacted>/", url)
-        return url
+        return redact_url(url)
 
     def in_cooldown(self, provider: str) -> bool:
         """Return True if provider is still in a server-side 429 back-off window."""
@@ -222,6 +217,13 @@ class DataCacheClient:
         cooldown state.
         """
         self._retry_after_until[provider] = time.monotonic() + seconds
+
+    def clear_retry_after(self, provider: str) -> None:
+        """Clear any active cooldown for a provider, allowing immediate retries.
+
+        Useful in tests to reset cooldown state between scenarios.
+        """
+        self._retry_after_until.pop(provider, None)
 
     async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches,too-many-statements
         self,

@@ -19,6 +19,7 @@ import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.utils.sqlite
+from .utils import redact_url
 
 
 @dataclasses.dataclass
@@ -174,7 +175,7 @@ class DataStorage:
             return True
 
         except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to store cached data for URL %s: %s", url, error)
+            logging.error("Failed to store cached data for URL %s: %s", redact_url(url), error)
             if blob_written and blob_path:
                 with contextlib.suppress(OSError):
                     blob_path.unlink()
@@ -262,7 +263,7 @@ class DataStorage:
             )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to retrieve cached data for URL %s: %s", url, error)
+            logging.error("Failed to retrieve cached data for URL %s: %s", redact_url(url), error)
             return None
 
     async def retrieve_by_cachekey(self, cachekey: str) -> "CachedEntry | None":  # pylint: disable=too-many-locals
