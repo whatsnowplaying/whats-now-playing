@@ -146,6 +146,17 @@ Key testing patterns:
 - `asyncio_default_fixture_loop_scope = "function"` for proper async test
   isolation
 
+**Mock Artist Names in Tests:**
+
+- **ALWAYS use `"WNP Mock Artist"` / `"WNP Mock Album"` / `imagecacheartist: "wnpmockartist"`**
+  for synthetic test data in artistextras and datacache tests. These identifiers
+  match the `wnpmock%` bootstrap cleanup pattern and are purged from the shared
+  datacache between tests.
+- **Never use `"Test Artist"`, `"testartist"`, or similar generic names** as
+  `imagecacheartist` values — they accumulate in the shared datacache and pollute
+  other tests (e.g. webserver image tests that expect no cached data for unknown artists).
+- For variants: `"wnpmockartist1"` / `"wnpmockartist2"` for multi-artist tests.
+
 **Test Architecture and Shared Utilities:**
 
 - Shared test utilities in `tests/utils_artistextras.py` for artistextras

@@ -431,51 +431,6 @@ class DataCacheClient:
         await self.initialize()
         return await self.storage.retrieve_by_cachekey(cachekey)
 
-    async def queue_url_fetch(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        self,
-        url: str,
-        identifier: str,
-        data_type: str,
-        provider: str,
-        timeout: float = 30.0,
-        retries: int = 3,
-        ttl_seconds: int | None = None,
-        priority: int = 2,
-        metadata: dict | None = None,
-    ) -> bool:
-        """
-        Queue a URL fetch for background processing.
-
-        Args:
-            url: The URL to fetch
-            identifier: Artist identifier
-            data_type: Type of data
-            provider: Provider name
-            timeout: Request timeout
-            retries: Retry attempts
-            ttl_seconds: Cache TTL
-            priority: Request priority (1=immediate, 2=batch)
-            metadata: Optional metadata
-
-        Returns:
-            True if queued successfully
-        """
-        await self.initialize()
-        return await self.queue.queue_request(
-            provider=provider,
-            request_key="fetch_url",
-            params={
-                "url": url,
-                "identifier": identifier,
-                "data_type": data_type,
-                "timeout": timeout,
-                "retries": retries,
-                "ttl_seconds": ttl_seconds,
-                "metadata": metadata,
-            },
-            priority=priority,
-        )
-
     async def process_queue(
         self, provider: str | None = None, max_concurrent: int = 10
     ) -> dict[str, Any]:

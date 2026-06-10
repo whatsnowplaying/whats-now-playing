@@ -18,12 +18,13 @@ The datacache module is designed with performance and multiprocess coordination 
 
 ```code
 nowplaying/datacache/
-├── __init__.py          # Main interface and convenience functions
-├── storage.py           # URL-based storage layer with aiosqlite
-├── client.py            # HTTP client with rate limiting and caching
-├── providers.py         # Provider-specific interfaces (MusicBrainz, Images, API)
-├── rate_limiting.py     # Token bucket rate limiting implementation
-└── CLAUDE.md            # This documentation file
+├── __init__.py   # Public API and cached_fetch
+├── storage.py    # URL-keyed SQLite storage with TTL and blob files
+├── client.py     # HTTP client with rate limiting, get_or_fetch, process_queue
+├── pending.py    # Database-backed pending request queue
+├── queue.py      # Token-bucket rate limiter
+├── utils.py      # Shared utilities (redact_url)
+└── CLAUDE.md     # This documentation file
 ```
 
 ## Design Principles
@@ -47,70 +48,39 @@ nowplaying/datacache/
 - **Size management**: Automatic cleanup and size limits like the current imagecache
 - **Database vacuum**: Periodic maintenance operations
 
-## Migration Strategy
-
-### Phase 1: Parallel Development
-
-- Develop datacache alongside existing systems
-- No disruption to current functionality
-- Gradual testing and validation
-
-### Phase 2: Selective Migration
-
-- Start with new features (artist pre-caching)
-- Migrate non-critical API calls first
-- Keep immediate/critical paths on old system until proven
-
-### Phase 3: Full Migration
-
-- Replace apicache.py usage throughout codebase
-- Replace imagecache.py with datacache equivalent
-- Remove old systems
-
 ## Key Interfaces
 
-### Immediate Requests (for live operations)
+### Immediate fetch (for live operations)
 
 ```python
-# Get providers instance
-providers = nowplaying.datacache.get_providers()
-await providers.initialize()
-
-# Immediate MusicBrainz search
-result = await providers.musicbrainz.search_artists("Daft Punk", immediate=True)
-
-# Immediate image caching
-image_result = await providers.images.cache_artist_thumbnail(
+client = nowplaying.datacache.get_client()
+result = await client.get_or_fetch(
     url="https://example.com/image.jpg",
-    artist_identifier="daft_punk",
+    identifier="daft_punk",
+    data_type="artistthumbnail",
     provider="theaudiodb",
-    immediate=True
+    immediate=True,
 )
 ```
 
-### Background Requests (for pre-caching)
+### Background fetch (queue for datacache worker process)
 
 ```python
-# Queue image for background processing
-await providers.images.cache_artist_logo(
+await client.get_or_fetch(
     url="https://example.com/logo.jpg",
-    artist_identifier="daft_punk",
+    identifier="daft_punk",
+    data_type="artistlogo",
     provider="theaudiodb",
-    immediate=False  # Queued for background processing
+    immediate=False,
 )
 ```
 
-### Random Image Support (replacing imagecache.randomimage)
+### Random image retrieval
 
 ```python
-# Get random artist image
-random_image = await providers.images.get_random_image(
-    artist_identifier="daft_punk",
-    image_type="thumbnail"
-)
-
-if random_image:
-    image_data, metadata, url = random_image
+result = await client.get_random_image(identifier="daft_punk", data_type="artistthumbnail")
+if result:
+    image_bytes = result.data
 ```
 
 ## Performance Considerations
@@ -183,13 +153,6 @@ The datacache module is designed to work with minimal configuration, using sensi
 - Rate limiting integration with token bucket algorithm
 - Error handling (timeouts, HTTP errors, rate limits)
 - Queue processing functionality
-
-`tests/datacache/test_providers.py`
-
-- Provider-specific interfaces (MusicBrainz, Images, API)
-- Method parameter validation and URL construction
-- Configuration settings and shared client behavior
-- Internal mocking with unittest.mock (not HTTP requests)
 
 `tests/datacache/test_integration.py`
 

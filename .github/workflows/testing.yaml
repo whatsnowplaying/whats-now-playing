@@ -54,6 +54,12 @@ jobs:
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: restore datacache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/whatsnowplaying/testsuite/datacache
+          key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
+          restore-keys: datacache-${{ runner.os }}-
       - name: tests
         shell: bash
         run: |
@@ -119,6 +125,12 @@ jobs:
           python tools/setupnltk.py
           python tools/build_templates.py
           pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: restore datacache
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\whatsnowplaying\testsuite\datacache
+          key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
+          restore-keys: datacache-${{ runner.os }}-
       - name: tests
         shell: bash
         run: |
@@ -213,6 +225,14 @@ jobs:
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: restore datacache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/whatsnowplaying/testsuite/datacache
+          key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('nowplaying/datacache/**') }}
+          restore-keys: |
+            datacache-${{ runner.os }}-${{ matrix.python }}-
+            datacache-${{ runner.os }}-
       - name: tests
         shell: bash
         run: |

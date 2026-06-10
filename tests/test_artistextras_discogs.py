@@ -255,7 +255,11 @@ async def test_discogs_timeout_handling(bootstrap):
         try:
             # Should handle timeout gracefully and return None
             result = await plugin.download_async(
-                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                {
+                    "album": "WNP Mock Album",
+                    "artist": "WNP Mock Artist",
+                    "imagecacheartist": "wnpmockartist",
+                },
             )
 
             # Should return None on timeout, not raise exception
@@ -307,9 +311,9 @@ async def test_discogs_http_error_handling(bootstrap):
                 # Should handle HTTP errors gracefully and return None
                 result = await plugin.download_async(
                     {
-                        "album": "Test Album",
-                        "artist": "Test Artist",
-                        "imagecacheartist": "testartist",
+                        "album": "WNP Mock Album",
+                        "artist": "WNP Mock Artist",
+                        "imagecacheartist": "wnpmockartist",
                     },
                 )
 
@@ -361,7 +365,11 @@ async def test_discogs_malformed_json_handling(bootstrap):
         try:
             # Should handle malformed response gracefully
             result = await plugin.download_async(
-                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                {
+                    "album": "WNP Mock Album",
+                    "artist": "WNP Mock Artist",
+                    "imagecacheartist": "wnpmockartist",
+                },
             )
 
             # Should return None on malformed response, not crash
@@ -450,7 +458,11 @@ async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
 
     try:
         result = await plugin.download_async(
-            {"artist": artist_name, "album": "Test Album", "imagecacheartist": "testartist"},
+            {
+                "artist": artist_name,
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
+            },
         )
 
         # Should handle all variations without crashing
@@ -497,9 +509,9 @@ async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
     try:
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "album": "Test Album",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "album": "WNP Mock Album",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": test_urls,
             },
         )
@@ -636,7 +648,11 @@ async def test_discogs_cache_corruption_handling(bootstrap):
     try:
         # Should handle corrupted cache gracefully
         result = await plugin.download_async(
-            {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+            {
+                "album": "WNP Mock Album",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
+            },
         )
 
         # Should return None or valid data, not crash
@@ -730,7 +746,7 @@ async def test_discogs_missing_artist_data(bootstrap):
                 # Create a release with missing/malformed artist data
                 release_data = {
                     "id": 123456,
-                    "title": "Test Album",
+                    "title": "WNP Mock Album",
                     "artists": [],  # Empty artists list
                 }
                 release = models.Release(release_data)
@@ -752,7 +768,11 @@ async def test_discogs_missing_artist_data(bootstrap):
         try:
             # Should handle missing artist data gracefully
             result = await plugin.download_async(
-                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                {
+                    "album": "WNP Mock Album",
+                    "artist": "WNP Mock Artist",
+                    "imagecacheartist": "wnpmockartist",
+                },
             )
 
             # Should return None or valid data, not crash
@@ -918,9 +938,9 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
             # First call should timeout
             result1 = await plugin.download_async(
                 {
-                    "artist": "Test Artist",
-                    "album": "Test Album",
-                    "imagecacheartist": "testartist1",
+                    "artist": "WNP Mock Artist",
+                    "album": "WNP Mock Album",
+                    "imagecacheartist": "wnpmockartist1",
                 },
             )
 
@@ -930,9 +950,9 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
             # Second call should work (network recovered)
             result2 = await plugin.download_async(
                 {
-                    "artist": "Test Artist 2",
-                    "album": "Test Album 2",
-                    "imagecacheartist": "testartist2",
+                    "artist": "WNP Mock Artist 2",
+                    "album": "WNP Mock Album 2",
+                    "imagecacheartist": "wnpmockartist2",
                 },
             )
 

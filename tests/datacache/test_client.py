@@ -152,17 +152,18 @@ async def test_get_cache_keys_for_identifier(temp_client):  # pylint: disable=re
 
 
 @pytest.mark.asyncio
-async def test_queue_url_fetch(temp_client):  # pylint: disable=redefined-outer-name
-    """Test URL fetch queuing"""
-    success = await temp_client.queue_url_fetch(
+async def test_get_or_fetch_queues_for_background(temp_client):  # pylint: disable=redefined-outer-name
+    """get_or_fetch(immediate=False) queues the URL and returns None"""
+    result = await temp_client.get_or_fetch(
         url="https://example.com/queue.jpg",
         identifier="queue_artist",
         data_type="thumbnail",
         provider="test",
-        priority=1,  # immediate priority
+        immediate=False,
+        queue_priority=1,
     )
 
-    assert success is True
+    assert result is None  # queued for background processing
 
     # Verify request was queued
     request = await temp_client.queue.get_next_request()

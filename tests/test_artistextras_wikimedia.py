@@ -143,8 +143,8 @@ async def test_wikimedia_timeout_handling(bootstrap):
         # Should handle timeout gracefully and return None
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
         )
@@ -203,8 +203,8 @@ async def test_wikimedia_http_error_handling(bootstrap):
             # Should handle HTTP errors gracefully and return None
             result = await plugin.download_async(
                 {
-                    "artist": "Test Artist",
-                    "imagecacheartist": "testartist",
+                    "artist": "WNP Mock Artist",
+                    "imagecacheartist": "wnpmockartist",
                     "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
                 },
             )
@@ -240,8 +240,8 @@ async def test_wikimedia_ssl_error_handling(bootstrap):
         # Should handle SSL errors gracefully
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
         )
@@ -290,8 +290,8 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
     try:
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": malformed_urls,
             },
         )
@@ -311,7 +311,7 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
     "metadata,test_id",
     [
         ({}, "empty-metadata"),
-        ({"artist": "Test Artist"}, "missing-artistwebsites"),
+        ({"artist": "WNP Mock Artist"}, "missing-artistwebsites"),
         ({"artistwebsites": None}, "none-artistwebsites"),
         ({"artistwebsites": []}, "empty-artistwebsites-list"),
         ({"artistwebsites": [""]}, "empty-string-in-list"),
@@ -376,8 +376,8 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
     try:
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q11647"],  # Valid entity
             },
         )
@@ -476,8 +476,8 @@ async def test_wikimedia_large_content_handling(bootstrap):
         # Should handle large content without memory issues
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
         )
@@ -533,8 +533,8 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
             # Should handle malformed responses gracefully
             result = await plugin.download_async(
                 {
-                    "artist": "Test Artist",
-                    "imagecacheartist": "testartist",
+                    "artist": "WNP Mock Artist",
+                    "imagecacheartist": "wnpmockartist",
                     "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
                 },
             )
@@ -675,8 +675,8 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
         # Should handle corrupted cache gracefully
         result = await plugin.download_async(
             {
-                "artist": "Test Artist",
-                "imagecacheartist": "testartist",
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
                 "artistwebsites": ["https://www.wikidata.org/wiki/Q12345"],
             },
         )

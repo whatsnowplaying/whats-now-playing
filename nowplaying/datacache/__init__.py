@@ -16,32 +16,18 @@ import orjson
 from .client import DataCacheClient, get_client, reset_client
 from .utils import redact_url
 from .pending import RequestQueue
-from .providers import (
-    APIProvider,
-    DataCacheProviders,
-    ImageProvider,
-    get_providers,
-)
 from .queue import RateLimiter, RateLimiterManager
 from .storage import CachedEntry, DataStorage, get_datacache_path, run_datacache_maintenance
 
-# Public API - these are the main interfaces artist extras plugins should use
+# Public API
 __all__ = [
-    # High-level interfaces (recommended for most use cases)
-    "get_providers",  # Get DataCacheProviders instance
     "get_client",  # Get DataCacheClient instance
-    # Provider classes (for direct instantiation if needed)
-    "DataCacheProviders",  # Unified provider interface
-    "ImageProvider",  # Image caching with randomimage support
-    "APIProvider",  # Generic API response caching
-    # Low-level components (for advanced use cases)
     "DataCacheClient",  # Core client with get_or_fetch
     "CachedEntry",  # Result dataclass from retrieve methods
     "DataStorage",  # Direct storage layer access
     "RequestQueue",  # Database-backed pending request queue
     "RateLimiter",  # Rate limiting primitives
     "RateLimiterManager",  # Rate limiter management
-    # Utility functions
     "get_datacache_path",  # Get database path
     "run_datacache_maintenance",  # Cleanup function for system startup
     "cached_fetch",  # Drop-in replacement for apicache.cached_fetch
@@ -52,34 +38,6 @@ __all__ = [
     "get_shared_storage",  # Access the storage singleton directly
     "CacheHeaders",  # httpx.Headers re-export — use for get_or_fetch() headers param
 ]
-
-# Module-level convenience functions
-
-
-async def initialize_datacache(cache_dir: Path | None = None) -> DataCacheProviders:
-    """
-    Initialize the datacache system.
-
-    This is a convenience function that initializes the global providers
-    instance. Most applications will want to call this at startup.
-
-    Args:
-        cache_dir: Optional custom cache directory
-    """
-    providers = get_providers(cache_dir)
-    await providers.initialize()
-    return providers
-
-
-async def shutdown_datacache() -> None:
-    """
-    Shutdown the datacache system.
-
-    This should be called during application shutdown to cleanup
-    resources and close database connections.
-    """
-    providers = get_providers()
-    await providers.close()
 
 
 def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
