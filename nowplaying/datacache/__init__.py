@@ -13,7 +13,7 @@ from httpx import Headers as CacheHeaders  # re-exported so callers don't import
 import orjson
 
 # Core components
-from .client import DataCacheClient, get_client
+from .client import DataCacheClient, get_client, reset_client
 from .pending import RequestQueue
 from .providers import (
     APIProvider,
@@ -45,6 +45,7 @@ __all__ = [
     "run_datacache_maintenance",  # Cleanup function for system startup
     "cached_fetch",  # Drop-in replacement for apicache.cached_fetch
     "set_shared_storage",  # Test isolation helper
+    "reset_client",  # Reset DataCacheClient singleton (test fixtures)
     "reset_shared_storage",  # Reset singleton after DB move/delete
     "get_shared_storage",  # Access the storage singleton directly
     "CacheHeaders",  # httpx.Headers re-export — use for get_or_fetch() headers param

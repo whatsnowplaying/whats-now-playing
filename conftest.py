@@ -195,8 +195,10 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
         # misses that exhaust the Discogs/etc rate limit across tests).
         if temp_datacache and temp_datacache.exists():
             shutil.move(str(temp_datacache), str(datacache_dir))
-        # Reset shared storage singleton so the next test reconnects to the restored DB.
+        # Reset singletons so the next test reconnects to the restored DB
+        # on the current event loop rather than a stale one.
         nowplaying.datacache.reset_shared_storage()
+        nowplaying.datacache.reset_client()
 
     config = QSettings(
         qsettingsformat,

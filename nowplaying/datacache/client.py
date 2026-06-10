@@ -7,6 +7,7 @@ without dealing with low-level storage details.
 
 import asyncio
 import logging
+import re
 import random
 import time
 from pathlib import Path
@@ -134,7 +135,7 @@ class DataCacheClient:
                     "Cache hit (negative, status=%d) for URL: %s", cached_result.status_code, url
                 )
                 return None
-            logging.debug("Cache hit for URL: %s", url)
+            logging.debug("Cache hit for URL: %s", self._redact_url(url))
             return cached_result
 
         if not immediate:
@@ -153,7 +154,7 @@ class DataCacheClient:
                 },
                 priority=queue_priority,
             )
-            logging.debug("Queued background fetch for URL: %s", url)
+            logging.debug("Queued background fetch for URL: %s", self._redact_url(url))
             return None
 
         # Immediate fetch
@@ -180,7 +181,7 @@ class DataCacheClient:
         metadata: dict | None,
     ) -> None:
         """Store b'' with status_code=404 and a short TTL for a definitive 404 response."""
-        logging.debug("HTTP 404 for %s — caching negative result", url)
+        logging.debug("HTTP 404 for %s — caching negative result", self._redact_url(url))
         try:
             await self.storage.store(
                 url=url,
@@ -193,9 +194,18 @@ class DataCacheClient:
                 status_code=404,
             )
         except Exception as err:  # pylint: disable=broad-exception-caught
-            logging.warning("Failed to cache 404 for %s: %s", url, err)
+            logging.warning("Failed to cache 404 for %s: %s", self._redact_url(url), err)
 
-    def _in_cooldown(self, provider: str) -> bool:
+    @staticmethod
+    def _redact_url(url: str) -> str:
+        """Strip API keys from a URL before logging."""
+        # Query-param keys: api_key=, token=, key=, apikey=
+        url = re.sub(r"(?i)((?:api_?key|token|apikey)=)[^&\s]+", r"\1<redacted>", url)
+        # Path-embedded numeric keys: e.g. theaudiodb /json/523532/
+        url = re.sub(r"(/(?:json|api)/)\d{4,}/", r"\1<redacted>/", url)
+        return url
+
+    def in_cooldown(self, provider: str) -> bool:
         """Return True if provider is still in a server-side 429 back-off window."""
         until = self._retry_after_until.get(provider, 0.0)
         if time.monotonic() < until:
@@ -203,6 +213,15 @@ class DataCacheClient:
             logging.warning("Provider %s in 429 cooldown, %ds remaining", provider, remaining)
             return True
         return False
+
+    def set_retry_after(self, provider: str, seconds: float) -> None:
+        """Record a server-requested retry-after delay for a provider.
+
+        Called by plugins that make their own HTTP requests (e.g. Last.fm)
+        when they receive a 429 response, so all callers share the same
+        cooldown state.
+        """
+        self._retry_after_until[provider] = time.monotonic() + seconds
 
     async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches,too-many-statements
         self,
@@ -226,7 +245,7 @@ class DataCacheClient:
             raise RuntimeError("DataCacheClient not initialized - call initialize() first")
 
         # Honour server-side 429 cooldown recorded from a previous call
-        if self._in_cooldown(provider):
+        if self.in_cooldown(provider):
             return None
 
         # Apply rate limiting
@@ -264,9 +283,9 @@ class DataCacheClient:
                     )
 
                     if success:
-                        logging.debug("Cached data from URL: %s", url)
+                        logging.debug("Cached data from URL: %s", self._redact_url(url))
                     else:
-                        logging.warning("Failed to cache data from URL: %s", url)
+                        logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
                     return CachedEntry(
                         data=data,
                         metadata=metadata or {},
@@ -301,7 +320,9 @@ class DataCacheClient:
                         url, identifier, data_type, provider, negative_ttl, metadata
                     )
                     return None
-                logging.warning("HTTP %d error fetching %s", response.status_code, url)
+                logging.warning(
+                    "HTTP %d error fetching %s", response.status_code, self._redact_url(url)
+                )
                 if attempt < retries:
                     wait_time = _backoff(attempt)
                     await asyncio.sleep(wait_time)
@@ -310,7 +331,10 @@ class DataCacheClient:
 
             except httpx.TimeoutException:
                 logging.warning(
-                    "Timeout fetching URL (attempt %d/%d): %s", attempt + 1, retries + 1, url
+                    "Timeout fetching URL (attempt %d/%d): %s",
+                    attempt + 1,
+                    retries + 1,
+                    self._redact_url(url),
                 )
                 if attempt < retries:
                     wait_time = _backoff(attempt)
@@ -323,7 +347,7 @@ class DataCacheClient:
                     "Error fetching URL (attempt %d/%d): %s - %s",
                     attempt + 1,
                     retries + 1,
-                    url,
+                    self._redact_url(url),
                     error,
                 )
                 if attempt < retries:
@@ -535,3 +559,14 @@ def get_client(cache_dir: Path | None = None) -> DataCacheClient:
     if _client_instance is None:
         _client_instance = DataCacheClient(cache_dir)
     return _client_instance
+
+
+def reset_client() -> None:
+    """Reset the global client singleton.
+
+    Forces the next get_client() call to create a fresh DataCacheClient,
+    binding its httpx session to the current event loop.  Call this from
+    test fixtures after the event loop or database path may have changed.
+    """
+    global _client_instance  # pylint: disable=global-statement
+    _client_instance = None

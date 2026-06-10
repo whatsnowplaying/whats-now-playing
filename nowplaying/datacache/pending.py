@@ -63,14 +63,21 @@ class RequestQueue:
             async def _do_queue() -> None:
                 nonlocal queued
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                    # Check if request already exists
+                    # Skip if already active; re-queue if previously failed
                     cursor = await connection.execute(
-                        "SELECT request_id FROM pending_requests WHERE request_id = ?",
+                        "SELECT status FROM pending_requests WHERE request_id = ?",
                         (request_id,),
                     )
-                    if await cursor.fetchone():
-                        logging.debug("Request already queued: %s", request_id)
-                        return
+                    row = await cursor.fetchone()
+                    if row:
+                        if row[0] in ("pending", "processing", "completed"):
+                            logging.debug("Request already queued: %s", request_id)
+                            return
+                        # status == 'failed': delete and re-insert for a fresh attempt
+                        await connection.execute(
+                            "DELETE FROM pending_requests WHERE request_id = ?",
+                            (request_id,),
+                        )
 
                     # Insert new request
                     data_type = params.get("data_type", "")

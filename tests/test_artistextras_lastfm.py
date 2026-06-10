@@ -265,7 +265,7 @@ async def test_lastfm_429_sets_cooldown(bootstrap, isolated_datacache_client):  
         )
 
     assert result is None
-    assert isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+    assert isolated_datacache_client.in_cooldown("lastfm")
 
     # Second call during cooldown must not touch the network
     with respx.mock(assert_all_called=False) as mock_http2:
@@ -290,13 +290,13 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
 
-    assert isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+    assert isolated_datacache_client.in_cooldown("lastfm")
 
     # Force cooldown to expire
-    isolated_datacache_client._retry_after_until["lastfm"] = 0.0  # pylint: disable=protected-access
+    isolated_datacache_client.set_retry_after("lastfm", -1)  # negative = already expired
 
     # After clearing, cooldown should be gone
-    assert not isolated_datacache_client._in_cooldown("lastfm")  # pylint: disable=protected-access
+    assert not isolated_datacache_client.in_cooldown("lastfm")
 
     with respx.mock(assert_all_called=False) as mock_http2:
         mock_http2.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
@@ -498,7 +498,7 @@ async def test_lastfm_coverart_queued(bootstrap):  # pylint: disable=redefined-o
                 "imagecacheartist": "wnpmockartist",
             },
         )
-        await nowplaying.datacache.get_client().process_queue()
+        await nowplaying.datacache.get_client().process_queue(provider="cdn")
 
     assert result is not None
     keys = await nowplaying.datacache.get_client().storage.get_cache_keys_for_identifier(
@@ -620,7 +620,7 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):  # pylint: disable=re
                 "musicbrainzalbumid": album_mbid,
             },
         )
-        await nowplaying.datacache.get_client().process_queue()
+        await nowplaying.datacache.get_client().process_queue(provider="cdn")
 
     assert result is not None
     keys = await nowplaying.datacache.get_client().storage.get_cache_keys_for_identifier(
@@ -642,7 +642,7 @@ async def test_lastfm_live_coverart(bootstrap):  # pylint: disable=redefined-out
             "imagecacheartist": "nineinchnails",
         },
     )
-    await nowplaying.datacache.get_client().process_queue()
+    await nowplaying.datacache.get_client().process_queue(provider="cdn")
 
     assert result is not None
     keys = await nowplaying.datacache.get_client().storage.get_cache_keys_for_identifier(
