@@ -16,7 +16,9 @@ Type codes:
   0x05  2-byte skip marker / field-count hint
   0x08  null-terminated UTF-8 string
   0x0a  int16 (2-byte-aligned) — seen in contentPacks (sortOrder)
-  0x0b  array (4-byte-aligned int32 count, then typed elements)
+  0x0b  array (4-byte-aligned int32 count, then typed elements); elements may
+        be objects (0x2b), strings (0x08/0x21), or typed key-value pairs where
+        any scalar type code is followed by its value bytes then 0x08+key
   0x0c  int32 (4-byte-aligned) — seen in contentPacks / historySessions
   0x0d  boolean False (implicit 0, zero-byte) — e.g. isStraightGrid; present on
         tracks with a constant-tempo beatgrid; absent when analysis was skipped
@@ -127,8 +129,38 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                 pos += 1  # skip trailing null
             return s
         if tc == 0x08:
-            return read_string()
-        return None
+            value: object = read_string()
+        elif tc == 0x13:
+            value = read_float32()
+        elif tc in (0x14, 0x30):
+            value = read_float64()
+        elif tc == 0x0A:
+            value = read_aligned_int(2, "<h")
+        elif tc in (0x0C, 0x11, 0x1A):
+            value = read_aligned_int(4, "<I")
+        elif tc == 0x12:
+            value = read_aligned_int(8, "<Q")
+        elif tc == 0x0F:
+            value = blob[pos] if pos < len(blob) else None
+            pos += 1
+        elif tc in (0x0D, 0x2D):
+            value = 0
+        elif tc == 0x0E:
+            value = 1
+        elif tc == 0x2E:
+            value = None
+        elif tc == 0x15:
+            length = read_aligned_int(4, "<I")
+            value = bytes(blob[pos : pos + length])
+            pos += length
+        else:
+            return None
+        # Typed array elements may carry a key — return a dict for _merge_list_into
+        if pos < len(blob) and blob[pos] == 0x08:
+            pos += 1
+            key = read_string()
+            return {key: value}
+        return value
 
     def parse_object() -> dict:  # pylint: disable=too-many-branches,too-many-statements
         nonlocal pos

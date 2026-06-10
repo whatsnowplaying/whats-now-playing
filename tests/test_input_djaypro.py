@@ -215,6 +215,55 @@ def test_parse_blob_ignores_root_only_file_uri():
     assert result["filename"] is None
 
 
+def test_parse_blob_array_typed_scalar_field(caplog):
+    """Array elements may be typed float32 key-value pairs, not just objects/strings.
+
+    Regression: localMediaItemLocations blobs contain a 0x0b array whose second
+    element is a 0x13 float32 with a key (e.g. duration).  read_array_element
+    previously only handled 0x2b/0x21/0x08, so it consumed the 0x13 type byte
+    without reading the value bytes.  The main loop then saw 0x66 (the first
+    byte of the float32 value for ~354 s) as an unknown type and aborted.
+    """
+    # Build the blob manually to replicate the exact production structure.
+    # Offsets are calculated precisely so float32 alignment works out:
+    #   pos=120 when element-1 type byte (0x13) is consumed → pos=121
+    #   read_float32 pads 121→124, reads 4 bytes at 124-127, key at 128+
+    duration_float = 240.0
+    blob = (
+        b"TSAF"
+        + b"\x00" * 16  # 20-byte header
+        + b"\x2b"  # outer object
+        + b"\x08ADCMediaItemLocation\x00"  # class name
+        + b"\x0b"  # array type (no trailing key → merges into parent)
+        + b"\x02\x00\x00\x00"  # count=2
+        # element 0: nested ADCMediaItemTitleID object
+        + b"\x2b"
+        + b"\x08ADCMediaItemTitleID\x00"
+        + b"\x05\x02"  # local_max=2
+        + b"\x08WNP Mock Title\x00"
+        + b"\x08title\x00"
+        + b"\x08WNP Mock Artist\x00"
+        + b"\x08artist\x00"
+        # element 1 type byte is at offset 120; after consuming it pos=121
+        # read_float32 aligns 121→124; bytes 121-123 are skipped padding
+        + b"\x13"  # float32 type
+        + b"\x00\x00\x00"  # padding (alignment skip, any value)
+        + struct.pack("<f", duration_float)  # float32 value at offset 124
+        + b"\x08duration\x00"  # key
+        + b"\x00"  # end-of-object
+    )
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = nowplaying.djaypro.tsaf.parse_blob(blob)
+
+    assert result["artist"] == "WNP Mock Artist"
+    assert result["title"] == "WNP Mock Title"
+    assert result["duration"] == int(duration_float)
+    assert "Unknown TSAF type" not in caplog.text
+
+
 def test_parse_blob_no_float_returns_none_bpm_duration():
     """_parse_blob returns None for bpm/duration when those fields are absent."""
     blob = _build_tsaf_blob(
