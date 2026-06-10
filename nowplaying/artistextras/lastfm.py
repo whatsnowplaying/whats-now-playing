@@ -3,7 +3,6 @@
 
 import logging
 import re
-import time
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
@@ -39,7 +38,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         try:
             dc_client = self._get_datacache_client()
             await dc_client.initialize()
-            if dc_client._in_cooldown("lastfm"):  # pylint: disable=protected-access
+            if dc_client.in_cooldown("lastfm"):
                 return None
             async with httpx.AsyncClient(timeout=self.calculate_delay()) as session:
                 response = await session.get(url)
@@ -48,9 +47,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     retry_after = max(1, int(response.headers.get("Retry-After", "60")))
                 except ValueError:
                     retry_after = 60
-                dc_client._retry_after_until["lastfm"] = (  # pylint: disable=protected-access
-                    time.monotonic() + retry_after
-                )
+                dc_client.set_retry_after("lastfm", retry_after)
                 logging.warning("Last.fm rate limited (429), cooldown %ds", retry_after)
                 return None
             if response.status_code == 404:

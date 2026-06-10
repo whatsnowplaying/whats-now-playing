@@ -308,7 +308,7 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client): 
     # Clear in-memory cooldown so the second call can attempt the HTTP request.
     # The test verifies that 429 was not written to the persistent cache — the
     # in-memory cooldown is a separate, correct mechanism unrelated to caching.
-    isolated_datacache_client._retry_after_until.clear()  # pylint: disable=protected-access
+    isolated_datacache_client.set_retry_after("theaudiodb", -1)  # negative = already expired
 
     # Second call: if 429 had been cached to disk, this would also return None
     with respx.mock(assert_all_called=False) as mock_http:

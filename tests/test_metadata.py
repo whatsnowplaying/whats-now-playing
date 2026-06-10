@@ -7,9 +7,11 @@ import types
 
 import pytest
 
+import nowplaying.datacache
 import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.metadata.processors
 import nowplaying.upgrades.config  # pylint: disable=import-error
+import nowplaying.utils
 
 
 @pytest.mark.parametrize(
@@ -542,6 +544,29 @@ async def test_15ghosts2_fake_date(bootstrap, getroot, filename, expected_date):
         metadata=metadatain
     )
     assert metadataout["date"] == expected_date
+
+
+@pytest.mark.asyncio
+async def test_multiimage_coverart(bootstrap, getroot):
+    """multiimage.m4a has 8 embedded covers; all should be stored in datacache"""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    metadatain = {"filename": str(getroot.joinpath("tests", "audio", "multiimage.m4a"))}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+    assert metadataout.get("coverimageraw"), "Primary cover must be set"
+    assert "_embedded_extra_covers" not in metadataout, "Temp key must not leak into output"
+
+    artist = metadataout.get("artist", "")
+    album = metadataout.get("album", "")
+    if artist and album:
+        normalid = nowplaying.utils.normalize(f"{artist}_{album}", sizecheck=0, nospaces=True)
+        keys = await nowplaying.datacache.get_client().storage.get_cache_keys_for_identifier(
+            normalid, "front_cover"
+        )
+        assert len(keys) > 1, f"Expected multiple covers in datacache, got {len(keys)}"
 
 
 @pytest.mark.parametrize("multifilename", ["multi.flac", "multi.m4a", "multi.mp3"])

@@ -104,7 +104,22 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     ttl_seconds=30 * 24 * 3600,
                     status_code=200,
                 )
+                # Store additional embedded covers from multi-image audio files
+                extra_covers = self.metadata.pop("_embedded_extra_covers", [])
+                for index, raw_data in enumerate(extra_covers, start=1):
+                    converted = nowplaying.utils.image2png(raw_data)
+                    if converted:
+                        await storage.store(
+                            url=f"embedded://{normalid}/provided_{index}",
+                            identifier=normalid,
+                            data_type="front_cover",
+                            provider="embedded",
+                            data_value=converted,
+                            ttl_seconds=30 * 24 * 3600,
+                            status_code=200,
+                        )
             else:
+                self.metadata.pop("_embedded_extra_covers", None)
                 normalid = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
                 result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
                 if result:

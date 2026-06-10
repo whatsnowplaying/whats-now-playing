@@ -391,3 +391,11 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
     def _images(self, images: tinytag.Images) -> None:
         if "coverimageraw" not in self.metadata and images.front_cover:
             self.metadata["coverimageraw"] = images.front_cover.data
+
+        # Collect all embedded covers; processors.py stores them all to datacache
+        # so random_image retrieval can cycle through embedded art variations.
+        # "cover" holds all embedded images; fall back to "front_cover" if absent.
+        images_dict = images.as_dict()
+        all_covers = images_dict.get("cover") or images_dict.get("front_cover", [])
+        if len(all_covers) > 1:
+            self.metadata["_embedded_extra_covers"] = [c.data for c in all_covers[1:]]
