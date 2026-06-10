@@ -55,7 +55,7 @@ jobs:
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: restore datacache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/Library/Caches/whatsnowplaying/testsuite/datacache
           key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
@@ -126,7 +126,7 @@ jobs:
           python tools/build_templates.py
           pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: restore datacache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~\AppData\Local\whatsnowplaying\testsuite\datacache
           key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
@@ -226,7 +226,7 @@ jobs:
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: restore datacache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/whatsnowplaying/testsuite/datacache
           key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('nowplaying/datacache/**') }}
