@@ -524,6 +524,15 @@ def reset_client() -> None:
     Forces the next get_client() call to create a fresh DataCacheClient,
     binding its httpx session to the current event loop.  Call this from
     test fixtures after the event loop or database path may have changed.
+
+    Nulls out the httpx session before dropping the instance so that
+    Windows's ProactorEventLoop does not emit ResourceWarning about
+    unclosed transports — the connections are abandoned rather than
+    cleanly closed, which is acceptable in test fixtures that run
+    synchronously.
     """
     global _client_instance  # pylint: disable=global-statement
+    if _client_instance is not None:
+        _client_instance._session = None  # pylint: disable=protected-access
+        _client_instance._initialized = False  # pylint: disable=protected-access
     _client_instance = None

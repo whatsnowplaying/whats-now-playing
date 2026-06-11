@@ -15,7 +15,8 @@ env:
   ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
   DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
   FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
-  THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
+  THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}
+  LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}  # pragma: allowlist secret  # pragma: allowlist secret
   # needed for upgrade test
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}    # pragma: allowlist secret
 
@@ -54,12 +55,18 @@ jobs:
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: get week stamp
+        id: week
+        shell: bash
+        run: echo "stamp=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
       - name: restore datacache
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/whatsnowplaying/testsuite/datacache
-          key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
-          restore-keys: datacache-${{ runner.os }}-
+          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
+          restore-keys: |
+            datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-
+            datacache-${{ runner.os }}-
       - name: tests
         shell: bash
         run: |
@@ -125,12 +132,18 @@ jobs:
           python tools/setupnltk.py
           python tools/build_templates.py
           pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: get week stamp
+        id: week
+        shell: bash
+        run: echo "stamp=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
       - name: restore datacache
         uses: actions/cache@v5
         with:
           path: ~\AppData\Local\whatsnowplaying\testsuite\datacache
-          key: datacache-${{ runner.os }}-${{ hashFiles('nowplaying/datacache/**') }}
-          restore-keys: datacache-${{ runner.os }}-
+          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
+          restore-keys: |
+            datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-
+            datacache-${{ runner.os }}-
       - name: tests
         shell: bash
         run: |
@@ -225,12 +238,16 @@ jobs:
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+      - name: get week stamp
+        id: week
+        run: echo "stamp=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
       - name: restore datacache
         uses: actions/cache@v5
         with:
           path: ~/.cache/whatsnowplaying/testsuite/datacache
-          key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('nowplaying/datacache/**') }}
+          key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
           restore-keys: |
+            datacache-${{ runner.os }}-${{ matrix.python }}-${{ steps.week.outputs.stamp }}-
             datacache-${{ runner.os }}-${{ matrix.python }}-
             datacache-${{ runner.os }}-
       - name: tests
