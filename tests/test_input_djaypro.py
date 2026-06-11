@@ -2,6 +2,7 @@
 """test djay Pro input plugin"""
 # pylint: disable=protected-access,too-many-lines
 
+import logging
 import pathlib
 import sqlite3
 import struct
@@ -252,8 +253,6 @@ def test_parse_blob_array_typed_scalar_field(caplog):
         + b"\x08duration\x00"  # key
         + b"\x00"  # end-of-object
     )
-
-    import logging
 
     with caplog.at_level(logging.WARNING):
         result = nowplaying.djaypro.tsaf.parse_blob(blob)
