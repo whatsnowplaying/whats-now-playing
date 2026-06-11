@@ -287,3 +287,11 @@ def rebuild(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:
         logging.debug("djaypro locationdb: could not stamp rebuild time: %s", err)
 
     tmp.replace(side_db)
+
+    try:
+        with nowplaying.utils.sqlite.sqlite_connection(str(side_db), timeout=1) as conn:
+            row = conn.execute("SELECT COUNT(*) FROM locations").fetchone()
+            count = row[0] if row else 0
+        logging.info("djaypro locationdb: rebuild complete, %d tracks indexed", count)
+    except (sqlite3.OperationalError, FileNotFoundError) as err:
+        logging.info("djaypro locationdb: rebuild complete (count unavailable: %s)", err)

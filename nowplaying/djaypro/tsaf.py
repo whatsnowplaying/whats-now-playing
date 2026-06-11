@@ -16,7 +16,9 @@ Type codes:
   0x05  2-byte skip marker / field-count hint
   0x08  null-terminated UTF-8 string
   0x0a  int16 (2-byte-aligned) — seen in contentPacks (sortOrder)
-  0x0b  array (4-byte-aligned int32 count, then typed elements)
+  0x0b  array (4-byte-aligned int32 count, then typed elements); elements may
+        be objects (0x2b), strings (0x08/0x21), or typed key-value pairs where
+        any scalar type code is followed by its value bytes then 0x08+key
   0x0c  int32 (4-byte-aligned) — seen in contentPacks / historySessions
   0x0d  boolean False (implicit 0, zero-byte) — e.g. isStraightGrid; present on
         tracks with a constant-tempo beatgrid; absent when analysis was skipped
@@ -51,6 +53,12 @@ except ImportError:
     _MacAliasBookmark = None  # type: ignore[assignment,misc]
     _kBookmarkPath = None
     _HAS_MAC_ALIAS = False
+
+
+# Sentinel returned by _read_typed_value for unrecognised type codes.
+# Identity comparison (value is _TSAF_UNKNOWN) never accidentally matches a
+# real parsed value, including None.
+_TSAF_UNKNOWN = object()
 
 
 def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-many-statements
@@ -111,6 +119,48 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
                     if v is not None and k not in target:
                         target[k] = v
 
+    def _read_typed_value(tc: int) -> object:
+        """Read the value for a scalar type code; return _TSAF_UNKNOWN if unrecognised.
+
+        Shared by read_array_element and parse_object so the type table stays
+        in one place.  The 0x2b (nested object), 0x0b (array), and 0x21
+        (string wrapper) types are structural and handled by their callers.
+        """
+        nonlocal pos
+        value: object = _TSAF_UNKNOWN
+        if tc == 0x08:
+            value = read_string()
+        elif tc == 0x0F:
+            # uint8: single value byte, no alignment
+            value = blob[pos] if pos < len(blob) else None
+            pos += 1
+        elif tc == 0x13:
+            value = read_float32()
+        elif tc in (0x14, 0x30):
+            value = read_float64()
+        elif tc == 0x0A:
+            value = read_aligned_int(2, "<h")
+        elif tc == 0x0C:
+            value = read_aligned_int(4, "<i")
+        elif tc in (0x11, 0x1A):
+            value = read_aligned_int(4, "<I")
+        elif tc == 0x12:
+            value = read_aligned_int(8, "<Q")
+        elif tc in (0x0D, 0x2D):
+            value = 0
+        elif tc == 0x0E:
+            value = 1
+        elif tc == 0x2E:
+            value = None
+        elif tc == 0x15:
+            # Binary blob: length may be larger than remaining bytes if the
+            # blob is truncated; clamp pos so subsequent fields aren't skipped.
+            length = read_aligned_int(4, "<I")
+            end = pos + length
+            value = bytes(blob[pos:end])
+            pos = min(end, len(blob))
+        return value
+
     def read_array_element() -> object:
         nonlocal pos
         if pos >= len(blob):
@@ -126,9 +176,16 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             if pos < len(blob) and blob[pos] == 0x00:
                 pos += 1  # skip trailing null
             return s
-        if tc == 0x08:
-            return read_string()
-        return None
+        value = _read_typed_value(tc)
+        if value is _TSAF_UNKNOWN:
+            logging.warning("Unknown TSAF type 0x%02x in array at offset %d", tc, pos - 1)
+            return None
+        # Typed array elements may carry a key — return a dict for _merge_list_into
+        if pos < len(blob) and blob[pos] == 0x08:
+            pos += 1
+            key = read_string()
+            return {key: value}
+        return value
 
     def parse_object() -> dict:  # pylint: disable=too-many-branches,too-many-statements
         nonlocal pos
@@ -196,87 +253,35 @@ def parse_tsaf(blob: bytes) -> dict:  # pylint: disable=too-many-branches,too-ma
             tc = blob[pos]
             pos += 1
 
-            if tc == 0x0A:
-                # int16 (2-byte-aligned) — sortOrder in contentPacks
-                value: object = read_aligned_int(2, "<h")
-            elif tc == 0x08:
-                value: object = read_string()
-            elif tc == 0x0F:
-                # uint8: value is the next byte (e.g. deckNumber on macOS)
-                value = blob[pos] if pos < len(blob) else None
-                pos += 1
-            elif tc == 0x13:
-                # macOS: float32 with 4-byte alignment
-                value = read_float32()
-            elif tc in (0x14, 0x30):
-                # float64 with 8-byte alignment; 0x30 = timestamp
-                value = read_float64()
-            elif tc == 0x0D:
-                # Boolean False marker (zero-byte, implicit 0).  Seen on
-                # isStraightGrid, which djay sets on tracks that have a
-                # constant-tempo (straight) beatgrid.  Absent when djay has not
-                # analysed the track or when the grid is dynamic/variable.
-                value = 0
-            elif tc == 0x0E:
-                # Boolean True marker (zero-byte, implicit 1).  Completes the
-                # 0x0d/0x0e implicit boolean pair.  Seen on the "featured" flag
-                # in contentPacks.
-                value = 1
-            elif tc == 0x2D:
-                # Zero-byte integer marker seen before deckNumber=1 on macOS.
-                # The value is implicit (1); no value bytes precede the key.
-                value = 1
-            elif tc == 0x2E:
-                # Zero-byte null/indeterminate marker.  Seen before
-                # keySignatureIndex when djay has not determined the key for
-                # a track.  The value is implicit None; no value bytes precede
-                # the key.  Parsing continues so subsequent fields are read.
-                value = None
-            elif tc == 0x2B:
+            if tc == 0x2B:
                 # Inline nested object: merge fields into parent
                 sub = parse_object()
                 result.update(sub)
                 fields_read += 1
                 continue  # no separate key
-            elif tc == 0x0B:
+            if tc == 0x0B:
                 # Array: 4-byte-aligned int32 count, then elements
                 count = read_aligned_int(4, "<i")
-                value = [read_array_element() for _ in range(count) if pos < len(blob)]
+                value: object = [read_array_element() for _ in range(count) if pos < len(blob)]
             elif tc == 0x21:
                 if pos < len(blob):
                     pos += 1  # skip sub-type byte
                 value = read_string()
                 if pos < len(blob) and blob[pos] == 0x00:
                     pos += 1
-            elif tc == 0x0C:
-                # int32 (4-byte-aligned).  Seen in contentPacks and
-                # historySessions; not used for track metadata but handled
-                # so parsing continues past these fields without warnings.
-                value = read_aligned_int(4, "<i")
-            elif tc in (0x11, 0x1A):
-                # uint32 (4-byte-aligned).
-                # 0x11: fileSize in contentPacks
-                # 0x1a: colorIndex in mediaItemUserData
-                value = read_aligned_int(4, "<I")
-            elif tc == 0x12:
-                # uint64 (8-byte-aligned).  Inferred counterpart to 0x11;
-                # would be used for fileSize values exceeding 4 GB.
-                value = read_aligned_int(8, "<Q")
-            elif tc == 0x15:
-                # Binary blob: 4-byte-aligned uint32 length, then raw bytes
-                # Used on macOS for CFURLBookmarkData (urlBookmarkData field)
-                length = read_aligned_int(4, "<I")
-                value = bytes(blob[pos : pos + length])
-                pos += length
             else:
-                # Unknown type: the value size is unknowable so the cursor
-                # cannot be advanced safely.  Stop parsing this object and
-                # return what was collected so far.  Log at WARNING so new
-                # type codes added by djay Pro updates are visible.
-                logging.warning(
-                    "Unknown TSAF type 0x%02x at offset %d; stopping parse", tc, pos - 1
-                )
-                break
+                value = _read_typed_value(tc)
+                if value is _TSAF_UNKNOWN:
+                    # Unknown type: value size is unknowable so the cursor
+                    # cannot be advanced safely.  Stop and return what was
+                    # collected so far.  Log at WARNING so new type codes
+                    # added by djay Pro updates are visible.
+                    logging.warning(
+                        "Unknown TSAF type 0x%02x at offset %d; stopping parse",
+                        tc,
+                        pos - 1,
+                    )
+                    break
 
             if pos < len(blob) and blob[pos] == 0x08:
                 pos += 1
