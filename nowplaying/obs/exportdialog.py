@@ -193,7 +193,9 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
 
             # Sync the preview window to this row's selected template
             tmpl_widget = self.table.cellWidget(row, _COL_TEMPLATE)
-            url_path = tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""  # type: ignore[union-attr]
+            url_path = (  # type: ignore[union-attr]
+                tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""
+            )
             if url_path:
                 filename = pathlib.Path(url_path).name
                 for i in range(self._preview_window.template_combo.count()):
@@ -231,7 +233,9 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         name = name_item.text() if name_item else ""
 
         tmpl_widget = self.table.cellWidget(row, _COL_TEMPLATE)
-        url_path = tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""  # type: ignore[union-attr]
+        url_path = (  # type: ignore[union-attr]
+            tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""
+        )
         if url_path and not url_path.startswith("custom/"):
             url_path = self._ensure_custom_copy(url_path)
         path = f"/{url_path}" if url_path else "/"
