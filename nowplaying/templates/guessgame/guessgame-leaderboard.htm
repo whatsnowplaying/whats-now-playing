@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <title>Guess Game Leaderboard</title>
     <style>
+        :root {
+            --wnp-gg-bg-session: rgba(30, 30, 50, 0.95);
+            --wnp-gg-bg-alltime: rgba(30, 50, 30, 0.95);
+            --wnp-gg-text: #ffffff;
+            --wnp-gg-session-accent: #ffaa00;
+            --wnp-gg-alltime-accent: #aaffaa;
+            --wnp-gg-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -11,9 +20,9 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--wnp-gg-font-family);
             background: transparent;
-            color: #ffffff;
+            color: var(--wnp-gg-text);
             padding: 20px;
         }
 
@@ -24,46 +33,44 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
         }
 
-        /* Session leaderboard styling (purple/orange) */
         .leaderboard-container.session {
-            background: linear-gradient(135deg, rgba(30, 30, 50, 0.95), rgba(50, 30, 80, 0.95));
+            background: var(--wnp-gg-bg-session);
         }
 
         .leaderboard-container.session .leaderboard-title {
-            color: #ffaa00;
+            color: var(--wnp-gg-session-accent);
         }
 
         .leaderboard-container.session .rank {
-            color: #ffaa00;
+            color: var(--wnp-gg-session-accent);
         }
 
         .leaderboard-container.session .score {
-            color: #ffdd66;
+            color: var(--wnp-gg-session-accent);
         }
 
         .leaderboard-container.session th {
             color: #aaaaff;
         }
 
-        /* All-time leaderboard styling (green) */
         .leaderboard-container.all_time {
-            background: linear-gradient(135deg, rgba(30, 50, 30, 0.95), rgba(50, 80, 50, 0.95));
+            background: var(--wnp-gg-bg-alltime);
         }
 
         .leaderboard-container.all_time .leaderboard-title {
-            color: #aaffaa;
+            color: var(--wnp-gg-alltime-accent);
         }
 
         .leaderboard-container.all_time .rank {
-            color: #aaffaa;
+            color: var(--wnp-gg-alltime-accent);
         }
 
         .leaderboard-container.all_time .score {
-            color: #aaffaa;
+            color: var(--wnp-gg-alltime-accent);
         }
 
         .leaderboard-container.all_time th {
-            color: #aaffaa;
+            color: var(--wnp-gg-alltime-accent);
         }
 
         .leaderboard-container.hidden {
@@ -175,7 +182,7 @@
         </table>
     </div>
 
-    <script src="guessgame-websocket.js"></script>
+    <script src="/guessgame/guessgame-websocket.js"></script>
     <script>
         // Configuration based on URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -285,8 +292,20 @@
             });
         }
 
-        // Connect on page load
-        connect();
+        // Connect on page load (skip WebSocket in preview mode)
+        if (window.location.search.includes('preview=1')) {
+            containerEl.classList.add('session');
+            updateLeaderboard({
+                session_leaderboard: [
+                    { rank: 1, username: 'TopDJ', score: 1500, solves: 10 },
+                    { rank: 2, username: 'MixMaster', score: 1200, solves: 8 },
+                    { rank: 3, username: 'BeatPro', score: 900, solves: 6 },
+                ],
+                all_time_leaderboard: []
+            });
+        } else {
+            connect();
+        }
     </script>
 </body>
 </html>

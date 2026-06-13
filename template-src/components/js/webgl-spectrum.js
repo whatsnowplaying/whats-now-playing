@@ -1,6 +1,16 @@
 // WebGL Spectrum (fake EQ bars) Display
 'use strict';
 
+function _wnpAccentVec3() {
+    const raw = (getComputedStyle(document.documentElement)
+                     .getPropertyValue('--wnp-accent-color') || '#00dcff').trim();
+    const m = raw.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (m) return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
+    const r = raw.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (r) return [parseInt(r[1]) / 255, parseInt(r[2]) / 255, parseInt(r[3]) / 255];
+    return [0.0, 0.86, 1.0];
+}
+
 (function () {
     const canvas = document.getElementById('bgCanvas');
     const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
@@ -31,6 +41,7 @@
         uniform float u_time;
         uniform float u_active;
         uniform float u_beat;
+        uniform vec3  u_accent;
 
         float barHeight(float idx, float t) {
             float p = idx * 0.42 + t * 1.8;
@@ -68,8 +79,8 @@
 
             // Colour: cyan tip → blue base, beat adds brightness
             float t   = v_uv.y / h;
-            vec3  tip = vec3(0.1, 1.0, 1.0) + u_beat * vec3(0.2, 0.0, 0.0);
-            vec3  base= vec3(0.05, 0.35, 0.85);
+            vec3  tip = u_accent + u_beat * vec3(0.2, 0.0, 0.0);
+            vec3  base= u_accent * 0.4;
             vec3  col3= mix(base, tip, t * t);
 
             // Mirror: bars are stronger in centre of the card
@@ -89,6 +100,7 @@
     const uTime   = gl.getUniformLocation(prog, 'u_time');
     const uActive = gl.getUniformLocation(prog, 'u_active');
     const uBeat   = gl.getUniformLocation(prog, 'u_beat');
+    const uAccent = gl.getUniformLocation(prog, 'u_accent');
 
     // ── Animation state ──────────────────────────────────────────────────
     let active      = 0;
@@ -110,11 +122,18 @@
         gl.uniform1f(uTime,   t);
         gl.uniform1f(uActive, active);
         gl.uniform1f(uBeat,   beat);
+        gl.uniform3fv(uAccent, _wnpAccentVec3());
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        requestAnimationFrame(frame);
+        rafId = requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    let rafId = requestAnimationFrame(frame);
+
+    window.addEventListener('pagehide', () => {
+        cancelAnimationFrame(rafId);
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+    });
 
     // ── updateDisplay ─────────────────────────────────────────────────────
     window.updateDisplay = function (metadata) {
@@ -127,10 +146,20 @@
             return;
         }
 
+        const coverImg = document.getElementById('cover-image');
+        if (metadata.coverimagebase64) {
+            coverImg.src = 'data:image/jpeg;base64,' + metadata.coverimagebase64;
+        } else if (metadata.artistthumbnailbase64) {
+            coverImg.src = 'data:image/jpeg;base64,' + metadata.artistthumbnailbase64;
+        } else {
+            coverImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        }
+
         const isNew = document.getElementById('track-artist').textContent !== (metadata.artist || '');
         document.getElementById('track-artist').textContent = metadata.artist || '';
         document.getElementById('track-title').textContent  =
             '\u201c' + metadata.title + '\u201d';
+        document.getElementById('track-album').textContent  = metadata.album || '';
         card.classList.add('visible');
         targetActive = 1;
 

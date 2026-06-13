@@ -46,6 +46,7 @@ packages = [
   "nowplaying.processes",
   "nowplaying.recognition",
   "nowplaying.resources",
+  "nowplaying.resources.templates",
   "nowplaying.templates",
   "nowplaying.twitch",
   "nowplaying.vendor",

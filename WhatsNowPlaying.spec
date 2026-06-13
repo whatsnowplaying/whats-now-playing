@@ -164,7 +164,8 @@ for execname, execpy in executables.items():
                         ('nowplaying/resources/ui/*', 'resources/ui/'),
                         ('nowplaying/resources/preview/*', 'resources/preview/'),
                         ('nowplaying/resources/tufup/*', 'resources/tufup/'),
-                        ('nowplaying/templates/*', 'templates/')] +
+                        ('nowplaying/templates/*', 'templates/'),
+                        ('nowplaying/webserver/editor_static/*', 'webserver/editor_static/')] +
                        _nltk_datas('punkt') +
                        _nltk_datas('punkt_tab'),
                  hiddenimports=ALL_PLUGIN_MODULES + [

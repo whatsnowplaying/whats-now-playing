@@ -35,15 +35,15 @@ function updateDisplay(data) {
     }
 
     // Update record label (prioritize album over label)
+    // Use classList so --wnp-album-display CSS var can override without being stomped.
     const labelElement = document.getElementById('record-label');
     if (data.album) {
         labelElement.textContent = data.album;
-        labelElement.style.display = 'block';
+        labelElement.classList.remove('hidden');
     } else if (data.label) {
-        // Fallback to label if no album
         labelElement.textContent = data.label;
-        labelElement.style.display = 'block';
+        labelElement.classList.remove('hidden');
     } else {
-        labelElement.style.display = 'none';
+        labelElement.classList.add('hidden');
     }
 }

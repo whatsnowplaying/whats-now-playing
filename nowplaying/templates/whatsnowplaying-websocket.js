@@ -84,6 +84,9 @@ class WhatsNowPlayingWebSocket {
                 this.log('Received last message from server');
                 return;
             }
+            if (data.title) {
+                window._wnpLastMeta = data;
+            }
             this.onMessage(data, event);
         } catch (error) {
             this.log(`Error parsing message: ${error}`);

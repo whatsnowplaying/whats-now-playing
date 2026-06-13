@@ -5,6 +5,7 @@ template_families:
     description: "WebGL-rendered spinning vinyl record with cover art texture"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-vinyl
     common_js:
       - webgl-helpers
@@ -24,6 +25,7 @@ template_families:
     description: "WebGL animated EQ spectrum bars lower-third"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-spectrum
     common_js:
       - webgl-helpers
@@ -42,6 +44,7 @@ template_families:
     description: "WebGL scanline hologram panel with glitch text reveal"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-hologram
     common_js:
       - webgl-helpers
@@ -61,6 +64,7 @@ template_families:
     description: "WebGL panel with animated wavy top edge and glow line"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-wave
     common_js:
       - webgl-helpers
@@ -79,6 +83,7 @@ template_families:
     description: "WebGL floating particles over transparent stream background"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-particles
     common_websocket:
       - metadata-streaming
@@ -96,6 +101,7 @@ template_families:
     description: "Rotating 3D cube textured with artist fanart images"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-cube
     common_js:
       - webgl-helpers

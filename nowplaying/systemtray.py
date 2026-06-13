@@ -24,6 +24,7 @@ import nowplaying.upgrade
 import nowplaying.upgrades
 import nowplaying.upgrades.background
 import nowplaying.obs.exportdialog
+import nowplaying.preview.editor
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
 import nowplaying.datacache.storage
@@ -78,6 +79,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.vacuum_thread = None  # QThread for background database vacuum
         self._prefetch_worker = None  # QThread for background update pre-fetch
         self._obs_export_dialog = None
+        self._template_editor_window = None
 
         # Core initialization
         self._initialize_core_components(config=config)
@@ -182,6 +184,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self._show_installation_error("settings UI files")
             self.settingswindow = None
 
+    def _show_template_editor(self) -> None:
+        """Open the template editor window (non-modal)."""
+        if self._template_editor_window is None:
+            self._template_editor_window = nowplaying.preview.editor.TemplateEditorWindow(
+                config=self.config
+            )
+        self._template_editor_window.show()
+        self._template_editor_window.raise_()
+        self._template_editor_window.activateWindow()
+
     def _show_obs_export(self) -> None:
         """Open the OBS scene export dialog (non-modal)."""
         if self._obs_export_dialog is None:
@@ -217,6 +229,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self._show_settings)
         self.menu.addAction(self.settings_action)
+
+        self.template_editor_action = QAction("Template Editor...")
+        self.template_editor_action.triggered.connect(self._show_template_editor)
+        self.menu.addAction(self.template_editor_action)
 
         self.obs_export_action = QAction("Export for OBS...")
         self.obs_export_action.triggered.connect(self._show_obs_export)

@@ -1,6 +1,16 @@
 // WebGL Hologram (scanline + glitch) Display
 'use strict';
 
+function _wnpAccentVec3() {
+    const raw = (getComputedStyle(document.documentElement)
+                     .getPropertyValue('--wnp-accent-color') || '#00ffb4').trim();
+    const m = raw.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (m) return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
+    const r = raw.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (r) return [parseInt(r[1]) / 255, parseInt(r[2]) / 255, parseInt(r[3]) / 255];
+    return [0.0, 1.0, 0.71];
+}
+
 (function () {
     const canvas = document.getElementById('bgCanvas');
     const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
@@ -35,6 +45,7 @@
         uniform float u_time;
         uniform float u_active;
         uniform float u_glitch;
+        uniform vec3  u_accent;
 
         float rand(vec2 co) {
             return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
@@ -62,11 +73,11 @@
             // Periodic sweep glow (fast scan line moving top to bottom)
             float sweep  = fract(u_time * 0.4);
             float band   = smoothstep(0.03, 0.0, abs(uv.y - sweep));
-            col         += band * vec3(0.0, 0.6, 0.45) * 0.9;
+            col         += band * u_accent * 0.9;
 
             // Horizontal edge fringe (chromatic-aberration feel on left border)
             float edgeX  = smoothstep(0.0, 0.04, uv.x);
-            col         += (1.0 - edgeX) * vec3(0.0, 0.8, 0.5) * 0.4;
+            col         += (1.0 - edgeX) * u_accent * 0.4;
 
             // Top/bottom soft vignette
             float vy     = uv.y * (1.0 - uv.y) * 4.0;
@@ -76,7 +87,7 @@
             if (u_glitch > 0.01) {
                 float gr  = rand(vec2(floor(uv.y * 40.0), floor(u_time * 25.0)));
                 if (gr > (1.0 - u_glitch * 0.4)) {
-                    col  += vec3(0.0, 0.4, 0.3) * u_glitch * 0.5;
+                    col  += u_accent * 0.7 * u_glitch * 0.5;
                 }
             }
 
@@ -90,6 +101,7 @@
     const uTime   = gl.getUniformLocation(prog, 'u_time');
     const uActive = gl.getUniformLocation(prog, 'u_active');
     const uGlitch = gl.getUniformLocation(prog, 'u_glitch');
+    const uAccent = gl.getUniformLocation(prog, 'u_accent');
 
     // ── Animation state ──────────────────────────────────────────────────
     let active       = 0;
@@ -110,11 +122,18 @@
         gl.uniform1f(uTime,   t);
         gl.uniform1f(uActive, active);
         gl.uniform1f(uGlitch, glitch);
+        gl.uniform3fv(uAccent, _wnpAccentVec3());
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        requestAnimationFrame(frame);
+        rafId = requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    let rafId = requestAnimationFrame(frame);
+
+    window.addEventListener('pagehide', () => {
+        cancelAnimationFrame(rafId);
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+    });
 
     // ── Text glitch-reveal helper ─────────────────────────────────────────
     const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
@@ -146,9 +165,21 @@
         if (!metadata || !metadata.title) {
             document.getElementById('track-artist').textContent = '';
             document.getElementById('track-title').textContent  = '';
+            document.getElementById('track-album').textContent  = '';
+            document.getElementById('track-label').textContent  = '';
             targetActive = 0;
             card.classList.remove('visible');
             return;
+        }
+
+        // Cover image (respects --wnp-cover-display via CSS)
+        const coverImg = document.getElementById('cover-image');
+        if (metadata.coverimagebase64) {
+            coverImg.src = 'data:image/jpeg;base64,' + metadata.coverimagebase64;
+        } else if (metadata.artistthumbnailbase64) {
+            coverImg.src = 'data:image/jpeg;base64,' + metadata.artistthumbnailbase64;
+        } else {
+            coverImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         }
 
         const isNew = document.getElementById('track-artist').textContent !== (metadata.artist || '');
@@ -162,5 +193,7 @@
             glitchReveal(artistEl, metadata.artist || '', 600);
             glitchReveal(titleEl,  '\u201c' + metadata.title + '\u201d', 800);
         }
+        document.getElementById('track-album').textContent = metadata.album || '';
+        document.getElementById('track-label').textContent = metadata.label  || '';
     };
 }());

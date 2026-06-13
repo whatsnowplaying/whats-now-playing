@@ -1,17 +1,45 @@
 /* Basic Text Template Styles */
+
+:root {
+    --wnp-bg-color: transparent;
+    --wnp-text-title: white;
+    --wnp-text-artist: white;
+    --wnp-font-family: "Heebo";
+    --wnp-font-title: var(--wnp-font-family);
+    --wnp-font-artist: var(--wnp-font-family);
+    --wnp-size-title: 36px;
+    --wnp-size-artist: 24px;
+    --wnp-bg-title: transparent;
+    --wnp-bg-artist: transparent;
+}
+
+body {
+    background: var(--wnp-bg-color);
+}
+
 .container {
     margin: 1px;
     float: left;
     text-transform: uppercase;
-    line-height: 50%;
+    transform-origin: center center;
 }
 
 .title {
-    font-size: 36px;
-    font-family: "Helvetica";
+    font-size: var(--wnp-size-title);
+    line-height: 1.2;
+    font-family: var(--wnp-font-title);
+    color: var(--wnp-text-title);
+    background: var(--wnp-bg-title);
+    padding: 2px 6px;
+    width: fit-content;
 }
 
 .artist {
-    font-size: 24px;
-    font-family: "Helvetica";
+    font-size: var(--wnp-size-artist);
+    line-height: 1.2;
+    font-family: var(--wnp-font-artist);
+    color: var(--wnp-text-artist);
+    background: var(--wnp-bg-artist);
+    padding: 2px 6px;
+    width: fit-content;
 }
