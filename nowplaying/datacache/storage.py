@@ -31,6 +31,7 @@ class CachedEntry:
     status_code: int
     mime_type: str | None
     url: str | None = None  # populated by retrieve_by_cachekey and retrieve_by_identifier
+    checksum: str | None = None  # SHA-256 hex digest of data, set on store
 
 
 # Module-level lock for schema operations
@@ -98,6 +99,7 @@ class DataStorage:
         ttl_seconds: int,
         metadata: dict | None = None,
         status_code: int = 200,
+        checksum: str | None = None,
     ) -> bool:
         """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps)."""
         await self.initialize()
@@ -111,6 +113,9 @@ class DataStorage:
             metadata_json = orjson.dumps(metadata).decode() if metadata else None
             new_cachekey = str(uuid.uuid4())
             data_size = len(data_value)
+            content_checksum = (
+                checksum if checksum is not None else hashlib.sha256(data_value).hexdigest()
+            )
 
             try:
                 mime_type: str | None = puremagic.from_string(data_value, mime=True)
@@ -137,8 +142,8 @@ class DataStorage:
                         (url, cachekey, identifier, data_type, provider,
                          data_value, file_path, metadata,
                          created_at, expires_at, last_accessed, data_size,
-                         status_code, mime_type)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         status_code, mime_type, content_checksum)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(url) DO UPDATE SET
                           identifier = excluded.identifier,
                           data_type = excluded.data_type,
@@ -150,7 +155,8 @@ class DataStorage:
                           last_accessed = excluded.last_accessed,
                           data_size = excluded.data_size,
                           status_code = excluded.status_code,
-                          mime_type = excluded.mime_type
+                          mime_type = excluded.mime_type,
+                          content_checksum = excluded.content_checksum
                         """,
                         (
                             url,
@@ -167,6 +173,7 @@ class DataStorage:
                             data_size,
                             status_code,
                             mime_type,
+                            content_checksum,
                         ),
                     )
                     await connection.commit()
@@ -202,7 +209,8 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata, status_code, mime_type
+                        SELECT data_value, file_path, metadata, status_code,
+                               mime_type, content_checksum
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -231,7 +239,9 @@ class DataStorage:
             if result is None:
                 return None
 
-            data_value, file_path_str, metadata_json, status_code, mime_type = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json, status_code, mime_type, content_checksum = (
+                result  # pylint: disable=unpacking-non-sequence
+            )
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str
@@ -259,7 +269,11 @@ class DataStorage:
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return CachedEntry(
-                data=data, metadata=metadata, status_code=status_code, mime_type=mime_type
+                data=data,
+                metadata=metadata,
+                status_code=status_code,
+                mime_type=mime_type,
+                checksum=content_checksum,
             )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -909,7 +923,8 @@ def _ensure_datacache_schema(database_path: Path) -> None:
                 last_accessed REAL NOT NULL,
                 data_size INTEGER NOT NULL,
                 status_code INTEGER NOT NULL DEFAULT 200,
-                mime_type TEXT              -- MIME type detected by puremagic, NULL for non-binary
+                mime_type TEXT,             -- MIME type detected by puremagic, NULL for non-binary
+                content_checksum TEXT       -- SHA-256 hex digest of stored content
             );
 
             CREATE TABLE IF NOT EXISTS pending_requests (

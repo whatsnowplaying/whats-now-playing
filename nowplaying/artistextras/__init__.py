@@ -81,14 +81,16 @@ class ArtistExtrasPlugin(WNPBasePlugin):
         bulk_priority = _IMAGE_PRIORITY["artistfanart"]
         for i, url in enumerate(urls):
             await client.get_or_fetch(
-                url=url,
-                identifier=normalidentifier,
-                data_type=imagetype,
-                provider="cdn",  # CDN downloads are not rate-limited like API calls
-                immediate=False,
-                ttl_seconds=_IMAGE_TTL,
-                negative_ttl=3600,  # 1h: don't retry permanently-dead image URLs
-                queue_priority=first_priority if i == 0 else bulk_priority,
+                nowplaying.datacache.FetchRequest(
+                    url=url,
+                    identifier=normalidentifier,
+                    data_type=imagetype,
+                    provider="cdn",
+                    immediate=False,
+                    ttl_seconds=_IMAGE_TTL,
+                    negative_ttl=3600,
+                    queue_priority=first_priority if i == 0 else bulk_priority,
+                )
             )
 
     async def queue_front_cover(
@@ -106,13 +108,15 @@ class ArtistExtrasPlugin(WNPBasePlugin):
         identifier = f"{norm_artist}_{norm_album}"
         client = self._get_datacache_client()
         await client.get_or_fetch(
-            url=cover_url,
-            identifier=identifier,
-            data_type="front_cover",
-            provider="cdn",  # CDN downloads are not rate-limited like API calls
-            immediate=False,
-            queue_priority=_IMAGE_PRIORITY["front_cover"],
-            ttl_seconds=_IMAGE_TTL,
+            nowplaying.datacache.FetchRequest(
+                url=cover_url,
+                identifier=identifier,
+                data_type="front_cover",
+                provider="cdn",
+                immediate=False,
+                queue_priority=_IMAGE_PRIORITY["front_cover"],
+                ttl_seconds=_IMAGE_TTL,
+            )
         )
 
     def calculate_delay(self) -> float:
