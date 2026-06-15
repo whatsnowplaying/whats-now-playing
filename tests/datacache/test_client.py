@@ -458,6 +458,35 @@ async def test_4xx_not_stored_in_cache(temp_client):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
+async def test_404_is_not_retried(temp_client):  # pylint: disable=redefined-outer-name
+    """404 is terminal — the server is called exactly once even when retries>0"""
+    url = "https://example.com/gone_retry.jpg"
+    call_count = 0
+
+    def _count(request):  # pylint: disable=unused-argument
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(404)
+
+    with respx.mock() as mock_responses:
+        mock_responses.get(url).mock(side_effect=_count)
+
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
+            url=url,
+            identifier="gone_retry_artist",
+            data_type="thumbnail",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=3600,
+            metadata=None,
+        )
+
+    assert result is None
+    assert call_count == 1, "404 must not consume retry budget"
+
+
+@pytest.mark.asyncio
 async def test_5xx_retry_then_success_stores_item(temp_client):  # pylint: disable=redefined-outer-name
     """503 on first attempt then 200 on retry — item ends up in the cache"""
     url = "https://example.com/flaky.jpg"

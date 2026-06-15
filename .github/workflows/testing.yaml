@@ -63,10 +63,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/whatsnowplaying/testsuite/datacache
-          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
-          restore-keys: |
-            datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-
-            datacache-${{ runner.os }}-
+          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ hashFiles('nowplaying/datacache/**') }}
       - name: tests
         shell: bash
         run: |
@@ -140,10 +137,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~\AppData\Local\whatsnowplaying\testsuite\datacache
-          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
-          restore-keys: |
-            datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-
-            datacache-${{ runner.os }}-
+          key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ hashFiles('nowplaying/datacache/**') }}
       - name: tests
         shell: bash
         run: |
@@ -245,11 +239,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/whatsnowplaying/testsuite/datacache
-          key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
-          restore-keys: |
-            datacache-${{ runner.os }}-${{ matrix.python }}-${{ steps.week.outputs.stamp }}-
-            datacache-${{ runner.os }}-${{ matrix.python }}-
-            datacache-${{ runner.os }}-
+          key: datacache-${{ runner.os }}-${{ matrix.python }}-${{ steps.week.outputs.stamp }}-${{ hashFiles('nowplaying/datacache/**') }}
       - name: tests
         shell: bash
         run: |

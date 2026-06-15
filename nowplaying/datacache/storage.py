@@ -202,10 +202,9 @@ class DataStorage:
 
         try:
             now = time.time()
-            result: Any = None
+            rows: list[tuple] = []
 
             async def _do_retrieve() -> None:
-                nonlocal result
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
@@ -220,7 +219,7 @@ class DataStorage:
                     if not row:
                         return
 
-                    result = tuple(row)
+                    rows.append(tuple(row))
 
                     # Lazy access_count update: only write if not updated in last 5 min.
                     # Reduces WAL pressure when OBS polls every few seconds.
@@ -236,11 +235,11 @@ class DataStorage:
 
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_retrieve)
 
-            if result is None:
+            if not rows:
                 return None
 
             data_value, file_path_str, metadata_json, status_code, mime_type, content_checksum = (
-                result  # pylint: disable=unpacking-non-sequence
+                rows[0]
             )
 
             if file_path_str:
@@ -298,10 +297,9 @@ class DataStorage:
 
         try:
             now = time.time()
-            result: Any = None
+            rows: list[tuple] = []
 
-            async def _do_retrieve() -> None:
-                nonlocal result
+            async def _do_retrieve_by_key() -> None:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
@@ -315,7 +313,7 @@ class DataStorage:
                     if not row:
                         return
 
-                    result = tuple(row)
+                    rows.append(tuple(row))
 
                     await connection.execute(
                         """
@@ -327,12 +325,12 @@ class DataStorage:
                     )
                     await connection.commit()
 
-            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_retrieve)
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_retrieve_by_key)
 
-            if result is None:
+            if not rows:
                 return None
 
-            data_value, file_path_str, metadata_json, url, status_code, mime_type = result  # pylint: disable=unpacking-non-sequence
+            data_value, file_path_str, metadata_json, url, status_code, mime_type = rows[0]
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str

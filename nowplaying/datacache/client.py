@@ -42,7 +42,9 @@ _DEFAULT_TTL = 7 * 24 * 3600
 
 
 @dataclasses.dataclass
-class FetchRequest:
+class FetchRequest:  # pylint: disable=too-many-instance-attributes
+    """Parameters for a single get_or_fetch call."""
+
     url: str
     identifier: str
     data_type: str
@@ -59,12 +61,30 @@ class FetchRequest:
     on_complete: Callable[[str, "CachedEntry | None"], Coroutine[Any, Any, None]] | None = None
 
 
+_TERMINAL_HTTP_STATUSES: frozenset[int] = frozenset(range(400, 500)) - {429}
+
+
+@dataclasses.dataclass
+class FetchResult:
+    """Result of a single _fetch_with_retry call."""
+
+    data: bytes | None = None
+    checksum: str | None = None
+    status: int | None = None
+    terminal: bool = False
+
+    @property
+    def ok(self) -> bool:
+        """True only on a successful 200 response with data."""
+        return self.status == 200 and self.data is not None
+
+
 def _backoff(attempt: int) -> float:
     """Exponential backoff with random jitter."""
     return (2**attempt) + random.uniform(0, 1.0)
 
 
-class DataCacheClient:
+class DataCacheClient:  # pylint: disable=too-many-instance-attributes
     """
     High-level client for datacache operations.
 
@@ -159,7 +179,8 @@ class DataCacheClient:
                 "expected_checksum": request.expected_checksum,
             }
             params_str = orjson.dumps(params, option=orjson.OPT_SORT_KEYS).decode()
-            request_id = f"{request.provider}:fetch_url:{hashlib.sha256(params_str.encode()).hexdigest()[:16]}"
+            digest = hashlib.sha256(params_str.encode()).hexdigest()[:16]
+            request_id = f"{request.provider}:fetch_url:{digest}"
             if request.on_complete:
                 self._callbacks[request_id] = request.on_complete
             await self.queue.queue_request(
@@ -238,7 +259,8 @@ class DataCacheClient:
         """
         self._retry_after_until.pop(provider, None)
 
-    async def _stream_body(self, response: httpx.Response) -> tuple[bytes, str]:
+    @staticmethod
+    async def _stream_body(response: httpx.Response) -> tuple[bytes, str]:
         """Stream response body, returning (data, sha256_hex)."""
         h = hashlib.sha256()
         chunks: list[bytes] = []
@@ -247,7 +269,7 @@ class DataCacheClient:
             chunks.append(chunk)
         return b"".join(chunks), h.hexdigest()
 
-    async def _handle_429(
+    async def _handle_429(  # pylint: disable=too-many-arguments
         self,
         response: httpx.Response,
         provider: str,
@@ -255,7 +277,10 @@ class DataCacheClient:
         retries: int,
         rate_limiter: Any,
     ) -> bool:
-        """Record 429 cooldown and sleep if retries remain. Returns True to continue, False to break."""
+        """Record 429 cooldown and sleep if retries remain.
+
+        Returns True to retry, False to give up.
+        """
         try:
             retry_after = max(1, int(response.headers.get("Retry-After", "60")))
         except ValueError:
@@ -268,7 +293,7 @@ class DataCacheClient:
         logging.warning("Rate limited by %s on final attempt, cooldown %ds", provider, retry_after)
         return False
 
-    async def _fetch_with_retry(
+    async def _fetch_with_retry(  # pylint: disable=too-many-arguments
         self,
         url: str,
         provider: str,
@@ -276,37 +301,40 @@ class DataCacheClient:
         retries: int,
         headers: CacheHeaders | None,
         rate_limiter: Any,
-    ) -> tuple[bytes, str] | int | None:
+    ) -> FetchResult:
         """Stream-fetch url with retries.
 
-        Returns:
-            (data, checksum) on 200 success
-            int status code on terminal HTTP error (e.g. 404) after all retries
-            None on network/timeout failure
+        4xx responses (except 429) are terminal — returned immediately without
+        consuming retry budget.  5xx and network errors are retried with
+        exponential backoff.
         """
-        last_status: int | None = None
+        last_result = FetchResult()
         for attempt in range(retries + 1):
             try:
                 async with self._session.stream(  # type: ignore[union-attr]
                     "GET", url, timeout=httpx.Timeout(timeout), headers=headers
                 ) as response:
                     if response.status_code == 200:
-                        return await self._stream_body(response)
+                        data, checksum = await self._stream_body(response)
+                        return FetchResult(data=data, checksum=checksum, status=200)
                     if response.status_code == 429:
                         should_continue = await self._handle_429(
                             response, provider, attempt, retries, rate_limiter
                         )
                         if should_continue:
                             continue
-                        return None
-                    last_status = response.status_code
+                        return FetchResult(status=429, terminal=False)
+                    if response.status_code in _TERMINAL_HTTP_STATUSES:
+                        logging.warning(
+                            "HTTP %d fetching %s (terminal)",
+                            response.status_code,
+                            self._redact_url(url),
+                        )
+                        return FetchResult(status=response.status_code, terminal=True)
                     logging.warning(
                         "HTTP %d fetching %s", response.status_code, self._redact_url(url)
                     )
-                    if attempt < retries:
-                        await asyncio.sleep(_backoff(attempt))
-                        continue
-                    return last_status
+                    last_result = FetchResult(status=response.status_code, terminal=False)
             except httpx.TimeoutException:
                 logging.warning(
                     "Timeout fetching URL (attempt %d/%d): %s",
@@ -314,10 +342,6 @@ class DataCacheClient:
                     retries + 1,
                     self._redact_url(url),
                 )
-                if attempt < retries:
-                    await asyncio.sleep(_backoff(attempt))
-                    continue
-                return None
             except Exception as error:  # pylint: disable=broad-except
                 logging.error(
                     "Error fetching URL (attempt %d/%d): %s - %s",
@@ -326,13 +350,11 @@ class DataCacheClient:
                     self._redact_url(url),
                     error,
                 )
-                if attempt < retries:
-                    await asyncio.sleep(_backoff(attempt))
-                    continue
-                return None
-        return last_status
+            if attempt < retries:
+                await asyncio.sleep(_backoff(attempt))
+        return last_result
 
-    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         self,
         url: str,
         identifier: str,
@@ -364,14 +386,14 @@ class DataCacheClient:
         result = await self._fetch_with_retry(
             url, provider, timeout, retries, headers, rate_limiter
         )
-        if not isinstance(result, tuple):
-            if result == 404 and negative_ttl is not None:
+        if not result.ok:
+            if result.terminal and result.status == 404 and negative_ttl is not None:
                 await self._cache_negative(
                     url, identifier, data_type, provider, negative_ttl, metadata
                 )
             return None
 
-        data, content_checksum = result
+        data, content_checksum = result.data, result.checksum  # type: ignore[assignment]
         success = await self.storage.store(
             url=url,
             identifier=identifier,
