@@ -201,7 +201,7 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
                 filename = pathlib.Path(url_path).name
                 for i in range(self._preview_window.template_combo.count()):
                     item_path = self._preview_window.template_combo.itemData(i)
-                    if hasattr(item_path, "name") and item_path.name == filename:
+                    if isinstance(item_path, str) and pathlib.Path(item_path).name == filename:
                         self._preview_window.template_combo.setCurrentIndex(i)
                         break
 
