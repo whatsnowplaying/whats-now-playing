@@ -189,6 +189,17 @@ class TemplateBuilder:
             "js_components": js_components,
         }
 
+    @staticmethod
+    def _inject_timing_meta(output: str, timing: dict) -> str:
+        """Embed timing defaults as a <meta> tag for server-side parsing."""
+        if not timing:
+            return output
+        hide_after = timing.get("hide_after", 0)
+        repeat_animation = timing.get("repeat_animation", 0)
+        delay_update = timing.get("delay_update", 0)
+        meta = f'<meta name="wnp-timing" content="{hide_after},{repeat_animation},{delay_update}">'
+        return output.replace("<head>", f"<head>\n    {meta}", 1)
+
     def build_template_family(self, family_name: str, family_config: dict[str, Any]) -> None:
         """Build all templates in a family"""
         print(f"Building family: {family_name}")
@@ -197,19 +208,13 @@ class TemplateBuilder:
         for template_name, template_config in family_config["templates"].items():
             print(f"  Building: {template_name}")
 
-            # Gather all content components
             css_parts = self._gather_css_content(family_config, template_config)
             js_parts = self._gather_js_content(family_config, template_config)
 
-            # Get body layout
             body_content = ""
             if template_config.get("body_layout"):
                 body_content = self.load_component("html", template_config["body_layout"])
 
-            # Build external imports
-            external_imports = self._build_external_imports(family_config)
-
-            # Create template context
             context = self._create_template_context(
                 family_config,
                 template_config,
@@ -217,23 +222,13 @@ class TemplateBuilder:
                 css_parts,
                 js_parts,
                 body_content,
-                external_imports,
+                self._build_external_imports(family_config),
             )
 
-            # Render and write template
-            output = base_template.render(context)
-
-            # Embed timing defaults as a meta tag for server-side parsing
-            timing = template_config.get("timing_defaults", {})
-            if timing:
-                hide_after = timing.get("hide_after", 0)
-                repeat_animation = timing.get("repeat_animation", 0)
-                delay_update = timing.get("delay_update", 0)
-                meta = (
-                    f'<meta name="wnp-timing" '
-                    f'content="{hide_after},{repeat_animation},{delay_update}">'
-                )
-                output = output.replace("<head>", f"<head>\n    {meta}", 1)
+            output = self._inject_timing_meta(
+                base_template.render(context),
+                template_config.get("timing_defaults", {}),
+            )
 
             output_file = self.output_dir / f"{template_name}.htm"
             output_file.write_text(output, encoding="utf-8")
