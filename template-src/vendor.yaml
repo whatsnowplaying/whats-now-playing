@@ -25,3 +25,38 @@ vendor_dependencies:
     url: "https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js"
     version: "2.1.0"
     description: "Typed.js - A JavaScript library for creating typewriter effects"
+
+  bebas-neue.woff2:
+    url: "https://fonts.gstatic.com/s/bebasneue/v16/JTUSjIg69CK48gW7PXoo9WlhyyTh89Y.woff2"
+    version: "16"
+    description: "Bebas Neue (broadcast/display font)"
+
+  orbitron.woff2:
+    url: "https://fonts.gstatic.com/s/orbitron/v35/yMJMMIlzdpvBhQQL_SC3X9yhF25-T1nyGy6BoWgzfDAlp7lk.woff2"
+    version: "35"
+    description: "Orbitron (electronic/futuristic font)"
+
+  rajdhani.woff2:
+    url: "https://fonts.gstatic.com/s/rajdhani/v17/LDIxapCSOBg7S-QT7p4HM-aGW-rO.woff2"
+    version: "17"
+    description: "Rajdhani (techy/modern font)"
+
+  montserrat.woff2:
+    url: "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Hw5aXp-p7K4KLg.woff2"
+    version: "31"
+    description: "Montserrat (clean modern font)"
+
+  heebo.woff2:
+    url: "https://fonts.gstatic.com/s/heebo/v28/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiSysdUmm7UiCXB5W.woff2"
+    version: "28"
+    description: "Heebo (clean workhorse font)"
+
+  rubik.woff2:
+    url: "https://fonts.gstatic.com/s/rubik/v31/iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-B4iFV0U1dYPFkZVO.woff2"
+    version: "31"
+    description: "Rubik (friendly rounded font)"
+
+  playfair-display.woff2:
+    url: "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtPK-F2qC0s.woff2"
+    version: "40"
+    description: "Playfair Display (elegant serif font)"

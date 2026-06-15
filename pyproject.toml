@@ -123,6 +123,9 @@ ignore-paths = [
   "nowplaying/version.py"
 ]
 
+[tool.pylint.messages_control]
+disable = ["duplicate-code"]
+
 [tool.pylint.design]
 max-positional-arguments = 8
 

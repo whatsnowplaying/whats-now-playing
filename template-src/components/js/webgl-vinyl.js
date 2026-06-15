@@ -176,9 +176,15 @@
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        requestAnimationFrame(frame);
+        rafId = requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    let rafId = requestAnimationFrame(frame);
+
+    window.addEventListener('pagehide', () => {
+        cancelAnimationFrame(rafId);
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+    });
 
     // ── updateDisplay (called by metadata-streaming.js) ───────────────────
     window.updateDisplay = function (metadata) {
@@ -187,6 +193,7 @@
             document.getElementById('track-artist').textContent = '';
             document.getElementById('track-title').textContent  = '';
             document.getElementById('track-album').textContent  = '';
+            document.getElementById('track-label').textContent  = '';
             targetAlpha = 0;
             card.classList.remove('visible');
             return;
@@ -195,6 +202,7 @@
         document.getElementById('track-artist').textContent =  metadata.artist || '';
         document.getElementById('track-title').textContent  = '\u201c' + metadata.title + '\u201d';
         document.getElementById('track-album').textContent  =  metadata.album  || '';
+        document.getElementById('track-label').textContent  =  metadata.label  || '';
         card.classList.add('visible');
 
         targetAlpha = 1;

@@ -315,7 +315,7 @@
             }
         }
 
-        requestAnimationFrame(frame);
+        rafId = requestAnimationFrame(frame);
     }
 
     // ── updateDisplay (called by metadata-streaming.js) ───────────────────
@@ -325,6 +325,7 @@
             document.getElementById('track-artist').textContent = '';
             document.getElementById('track-title').textContent  = '';
             document.getElementById('track-album').textContent  = '';
+            document.getElementById('track-label').textContent  = '';
             card.classList.remove('visible');
             active = false;
             return;
@@ -334,6 +335,7 @@
         document.getElementById('track-artist').textContent = metadata.artist || '';
         document.getElementById('track-title').textContent  = metadata.title  || '';
         document.getElementById('track-album').textContent  = metadata.album  || '';
+        document.getElementById('track-label').textContent  = metadata.label  || '';
         card.classList.add('visible');
         active = true;
 
@@ -349,5 +351,11 @@
     };
 
     connectImagesWs();
-    requestAnimationFrame(frame);
+    let rafId = requestAnimationFrame(frame);
+
+    window.addEventListener('pagehide', () => {
+        cancelAnimationFrame(rafId);
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+    });
 }());

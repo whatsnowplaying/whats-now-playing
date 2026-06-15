@@ -138,21 +138,25 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
     def populate_templates(self) -> None:
         """Fill the combobox with .htm files from the bundled template directory."""
         templatedir = pathlib.Path(self.config.templatedir)
-        templates = sorted(templatedir.glob("*.htm"))
+        synced_dir = templatedir / "synced"
+        synced_templates = sorted(synced_dir.glob("*.htm")) if synced_dir.exists() else []
+        stock_templates = sorted(templatedir.glob("*.htm"))
 
         configured = self.config.cparser.value("weboutput/htmltemplate", defaultValue="")
         configured_name = pathlib.Path(configured).name if configured else ""
 
         self.template_combo.blockSignals(True)
         self.template_combo.clear()
-        if not templates:
+        if not stock_templates and not synced_templates:
             self.template_combo.addItem("(no templates found)", userData=None)
             self.template_combo.setEnabled(False)
             self.webview.setEnabled(False)
         else:
             self.template_combo.setEnabled(True)
             self.webview.setEnabled(True)
-            for tmpl in templates:
+            for tmpl in synced_templates:
+                self.template_combo.addItem(f"☁ {tmpl.stem}", userData=tmpl.name)
+            for tmpl in stock_templates:
                 self.template_combo.addItem(tmpl.name, userData=tmpl.name)
 
             # Preselect the currently configured template if it's in the list

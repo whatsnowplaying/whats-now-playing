@@ -245,7 +245,7 @@ def ping_version(config: "nowplaying.config.ConfigFile") -> None:
         response = requests.get(
             UPDATE_CHECK_URL,
             params=params,
-            headers={"X-API-Key": charts_key},
+            headers={"X-WNP-Charts-Key": charts_key},
             timeout=1,
         )
         logging.debug("Version ping succeeded: HTTP %s", response.status_code)

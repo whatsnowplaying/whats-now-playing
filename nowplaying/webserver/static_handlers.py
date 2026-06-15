@@ -18,6 +18,7 @@ from aiohttp import web
 import nowplaying.db
 import nowplaying.hostmeta
 import nowplaying.preview.sampledata
+import nowplaying.template_colors
 import nowplaying.upgrades
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
@@ -40,6 +41,13 @@ INDEXREFRESH = (
     "<body></body></html>\n"
 )
 MAX_FIELD_LENGTH = 1000
+
+
+def _make_timing_script(hide_after: int, repeat_anim: int, delay_update: int) -> str:
+    return nowplaying.template_colors.make_timing_script(hide_after, repeat_anim, delay_update)
+
+
+_BUNDLED_TEMPLATE_DIR = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR
 
 
 def validate_field_lengths(
@@ -76,7 +84,7 @@ def validate_field_lengths(
     return validated_metadata, warnings
 
 
-class StaticContentHandler:
+class StaticContentHandler:  # pylint: disable=too-many-public-methods
     """Handler for static content endpoints"""
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -131,12 +139,15 @@ class StaticContentHandler:
         if not template_name or not template_name.endswith(".htm"):
             return web.Response(status=404, text="Template not found")
 
-        # Security: prevent directory traversal
-        if "/" in template_name or "\\" in template_name or ".." in template_name:
-            return web.Response(status=403, text="Invalid template name")
-
         config = request.app[self.config_key]
         template_path = config.templatedir.joinpath(template_name)
+
+        # Security: resolve both paths and confirm template stays inside templatedir
+        try:
+            template_path = template_path.resolve()
+            template_path.relative_to(config.templatedir.resolve())
+        except ValueError:
+            return web.Response(status=403, text="Invalid template name")
 
         if not template_path.exists():
             logging.debug("Cannot load %s as a template", template_path.absolute())
@@ -168,9 +179,65 @@ class StaticContentHandler:
 
             templatehandler = nowplaying.utils.TemplateHandler(filename=str(template_path))
             htmloutput = templatehandler.generate(metadata)
+
+            stem = template_path.stem
+            hide_after = config.cparser.value(
+                f"weboutput/templates/{stem}/hide_after", type=int, defaultValue=0
+            )
+            repeat_anim = config.cparser.value(
+                f"weboutput/templates/{stem}/repeat_animation", type=int, defaultValue=0
+            )
+            delay_update = config.cparser.value(
+                f"weboutput/templates/{stem}/delay_update", type=int, defaultValue=0
+            )
+            timing_script = _make_timing_script(hide_after, repeat_anim, delay_update)
+            if timing_script:
+                if "</body>" in htmloutput:
+                    htmloutput = htmloutput.replace("</body>", timing_script + "</body>", 1)
+                else:
+                    logging.warning(
+                        "template %s has no </body>; appending timing script", template_name
+                    )
+                    htmloutput += timing_script
+
             return web.Response(content_type="text/html", text=htmloutput)
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("template_handler error for %s: %s", template_name, err)
+            return web.Response(status=500, text="Template error")
+
+    async def editor_template_handler(self, request: web.Request) -> web.Response:
+        """Serve a bundled stock template for the template editor.
+
+        Unlike template_handler, this always reads from the package's bundled
+        templates directory so the editor always sees the current stock template,
+        not the user's potentially-stale installed copy.  Sample data is always
+        injected so the editor has something to display.
+        """
+        template_name = request.match_info.get("template_name")
+        if not template_name or not template_name.endswith(".htm"):
+            return web.Response(status=404, text="Template not found")
+
+        template_path = _BUNDLED_TEMPLATE_DIR / template_name
+        try:
+            template_path = template_path.resolve()
+            template_path.relative_to(_BUNDLED_TEMPLATE_DIR.resolve())
+        except ValueError:
+            return web.Response(status=403, text="Invalid template name")
+
+        if not template_path.exists():
+            return web.Response(status=404, text="Template not found")
+
+        try:
+            config = request.app[self.config_key]
+            metadata = nowplaying.preview.sampledata.get_preview_metadata(config.getbundledir())
+            metadata.update(nowplaying.hostmeta.gethostmeta())
+            metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
+            metadata["session_id"] = str(uuid.uuid4())[:8]
+            templatehandler = nowplaying.utils.TemplateHandler(filename=str(template_path))
+            htmloutput = templatehandler.generate(metadata)
+            return web.Response(content_type="text/html", text=htmloutput)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.exception("editor_template_handler error for %s: %s", template_name, err)
             return web.Response(status=500, text="Template error")
 
     async def _htm_handler(

@@ -16,10 +16,14 @@ class TemplateBuilder:
     """Template builder for What's Now Playing templates with component system"""
 
     def __init__(
-        self, src_dir: str = "template-src", output_dir: str = "nowplaying/templates"
+        self,
+        src_dir: str = "template-src",
+        output_dir: str = "nowplaying/resources/templates",
+        vendor_dir: str = "nowplaying/templates/vendor",
     ) -> None:
         self.src_dir = Path(src_dir)
         self.output_dir = Path(output_dir)
+        self.vendor_dir = Path(vendor_dir)
         self.jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.src_dir / "bases"))
 
     def load_component(self, component_type: str, component_name: str) -> str:
@@ -218,6 +222,19 @@ class TemplateBuilder:
 
             # Render and write template
             output = base_template.render(context)
+
+            # Embed timing defaults as a meta tag for server-side parsing
+            timing = template_config.get("timing_defaults", {})
+            if timing:
+                hide_after = timing.get("hide_after", 0)
+                repeat_animation = timing.get("repeat_animation", 0)
+                delay_update = timing.get("delay_update", 0)
+                meta = (
+                    f'<meta name="wnp-timing" '
+                    f'content="{hide_after},{repeat_animation},{delay_update}">'
+                )
+                output = output.replace("<head>", f"<head>\n    {meta}", 1)
+
             output_file = self.output_dir / f"{template_name}.htm"
             output_file.write_text(output, encoding="utf-8")
             print(f"    Generated: {output_file}")
@@ -255,11 +272,11 @@ class TemplateBuilder:
         """Download and setup vendor JavaScript files"""
         vendor_config_file = self.src_dir / "vendor.yaml"
         vendor_cache_dir = self.src_dir / "vendor"
-        vendor_out_dir = self.output_dir / "vendor"
+        vendor_out_dir = self.vendor_dir
 
         # Create directories
         vendor_cache_dir.mkdir(exist_ok=True)
-        vendor_out_dir.mkdir(exist_ok=True)
+        vendor_out_dir.mkdir(parents=True, exist_ok=True)
 
         # Load vendor configuration
         if not vendor_config_file.exists():

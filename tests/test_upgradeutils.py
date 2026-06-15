@@ -152,7 +152,7 @@ def test_check_for_update_sends_correct_params(
 
 
 def test_ping_version_sends_key(bootstrap, monkeypatch):
-    """ping_version sends version, os, and X-API-Key header to the update check URL"""
+    """ping_version sends version, os, and X-WNP-Charts-Key header to the update check URL"""
     monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.2.0", raising=False)  # pylint: disable=no-member
     bootstrap.cparser.setValue("charts/charts_key", "testkey1234")
 
@@ -164,7 +164,7 @@ def test_ping_version_sends_key(bootstrap, monkeypatch):
 
     assert sent_params.get("version") == "5.2.0"
     assert "os" in sent_params
-    assert sent_headers.get("X-API-Key") == "testkey1234"
+    assert sent_headers.get("X-WNP-Charts-Key") == "testkey1234"
 
 
 def test_ping_version_network_failure(bootstrap, monkeypatch):

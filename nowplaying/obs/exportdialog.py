@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 import nowplaying.obs.scenebuilder
 import nowplaying.preview.window
+import nowplaying.template_colors
 import nowplaying.utils.qt
 
 logger = logging.getLogger(__name__)
@@ -48,16 +49,38 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         self.port: int = config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
         self._preview_window: nowplaying.preview.window.WebPreviewWindow | None = None
         self._preview_row: int = -1
-        self._templates: list[str] = self._load_templates()
+        self._templates: list[tuple[str, str]] = self._load_templates()
         self.setWindowTitle("Export for OBS")
         self.resize(980, 300)
         self._setup_ui()
         self._populate_table()
 
-    def _load_templates(self) -> list[str]:
-        """Return sorted list of .htm template filenames from the template directory."""
+    def _load_templates(self) -> list[tuple[str, str]]:
+        """Return (display_name, url_path) pairs for all available templates.
+
+        Synced templates from the charts server are listed first with a ☁ prefix.
+        Stock templates from templatedir follow; TEMPLATE_FAMILIES provides
+        friendly display names where available, filename used for the rest.
+        """
+        entries: list[tuple[str, str]] = []
         templatedir = pathlib.Path(self.config.templatedir)
-        return sorted(t.name for t in templatedir.glob("*.htm"))
+
+        synced_dir = templatedir / "synced"
+        if synced_dir.exists():
+            for tmpl in sorted(synced_dir.glob("*.htm")):
+                entries.append((f"☁ {tmpl.stem}", f"synced/{tmpl.name}"))
+
+        stem_to_label: dict[str, str] = {}
+        for family, effects in nowplaying.template_colors.TEMPLATE_FAMILIES.items():
+            for effect, stem in effects.items():
+                label = family if effect == "None" else f"{family} — {effect}"
+                stem_to_label[stem] = label
+
+        for tmpl in sorted(templatedir.glob("*.htm")):
+            label = stem_to_label.get(tmpl.stem, tmpl.name)
+            entries.append((label, tmpl.name))
+
+        return entries
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -92,13 +115,22 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
     def _make_template_combo(self, default_path: str, configured_name: str) -> QComboBox:
         """Build a template-selector combo preselecting the given path's template."""
         combo = QComboBox()
-        for tmpl in self._templates:
-            combo.addItem(tmpl)
+        first_bundled = -1
+        for display, url_path in self._templates:
+            combo.addItem(display, userData=url_path)
+            if first_bundled < 0 and not url_path.startswith("synced/"):
+                first_bundled = combo.count() - 1
+
         preselect = default_path.lstrip("/") or configured_name
+        matched = False
         if preselect:
-            idx = combo.findText(preselect)
-            if idx >= 0:
-                combo.setCurrentIndex(idx)
+            for i in range(combo.count()):
+                if combo.itemData(i) == preselect:
+                    combo.setCurrentIndex(i)
+                    matched = True
+                    break
+        if not matched and first_bundled >= 0:
+            combo.setCurrentIndex(first_bundled)
         return combo
 
     def _populate_table(self) -> None:
@@ -153,8 +185,6 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         @Slot()
         def _handler():
             self._preview_row = row
-            tmpl_widget = self.table.cellWidget(row, _COL_TEMPLATE)
-            tmpl_name = tmpl_widget.currentText() if tmpl_widget else ""  # type: ignore[union-attr]
 
             if self._preview_window is None:
                 self._preview_window = nowplaying.preview.window.WebPreviewWindow(
@@ -163,10 +193,17 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
                 self._preview_window.template_selected.connect(self._on_template_selected)
 
             # Sync the preview window to this row's selected template
-            if tmpl_name:
-                idx = self._preview_window.template_combo.findData(tmpl_name)
-                if idx >= 0:
-                    self._preview_window.template_combo.setCurrentIndex(idx)
+            tmpl_widget = self.table.cellWidget(row, _COL_TEMPLATE)
+            url_path = (  # type: ignore[union-attr]
+                tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""
+            )
+            if url_path:
+                filename = pathlib.Path(url_path).name
+                for i in range(self._preview_window.template_combo.count()):
+                    item_path = self._preview_window.template_combo.itemData(i)
+                    if hasattr(item_path, "name") and item_path.name == filename:
+                        self._preview_window.template_combo.setCurrentIndex(i)
+                        break
 
             nowplaying.utils.qt.focus_window(self._preview_window)
 
@@ -178,10 +215,14 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         if self._preview_row < 0:
             return
         tmpl_widget = self.table.cellWidget(self._preview_row, _COL_TEMPLATE)
-        if tmpl_widget:
-            idx = tmpl_widget.findText(template_name)  # type: ignore[union-attr]
-            if idx >= 0:
-                tmpl_widget.setCurrentIndex(idx)  # type: ignore[union-attr]
+        if not isinstance(tmpl_widget, QComboBox):
+            return
+        signal_stem = pathlib.Path(template_name).stem
+        for i in range(tmpl_widget.count()):
+            url_path = tmpl_widget.itemData(i)
+            if isinstance(url_path, str) and pathlib.Path(url_path).stem == signal_stem:
+                tmpl_widget.setCurrentIndex(i)
+                return
 
     def _row_to_source(self, row: int) -> "nowplaying.obs.scenebuilder.OBSSourceDef | None":
         """Read one table row; return OBSSourceDef if checked, else None."""
@@ -193,17 +234,19 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         name = name_item.text() if name_item else ""
 
         tmpl_widget = self.table.cellWidget(row, _COL_TEMPLATE)
-        tmpl_name = tmpl_widget.currentText() if tmpl_widget else ""  # type: ignore[union-attr]
-        path = f"/{tmpl_name}" if tmpl_name else "/"
+        url_path = (  # type: ignore[union-attr]
+            tmpl_widget.currentData() if isinstance(tmpl_widget, QComboBox) else ""
+        )
+        path = f"/{url_path}" if url_path else "/"
 
         width_widget = self.table.cellWidget(row, _COL_WIDTH)
-        width = width_widget.value() if width_widget else 800  # type: ignore[union-attr]
+        width = width_widget.value() if isinstance(width_widget, QSpinBox) else 800
 
         height_widget = self.table.cellWidget(row, _COL_HEIGHT)
-        height = height_widget.value() if height_widget else 300  # type: ignore[union-attr]
+        height = height_widget.value() if isinstance(height_widget, QSpinBox) else 300
 
         pos_widget = self.table.cellWidget(row, _COL_POSITION)
-        hint = pos_widget.currentText() if pos_widget else "bottom"  # type: ignore[union-attr]
+        hint = pos_widget.currentText() if isinstance(pos_widget, QComboBox) else "bottom"
 
         return nowplaying.obs.scenebuilder.OBSSourceDef(
             name=name, path=path, width=width, height=height, hint=hint

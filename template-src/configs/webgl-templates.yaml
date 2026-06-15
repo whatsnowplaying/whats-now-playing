@@ -5,6 +5,7 @@ template_families:
     description: "WebGL-rendered spinning vinyl record with cover art texture"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-vinyl
     common_js:
       - webgl-helpers
@@ -18,12 +19,17 @@ template_families:
         body_layout: webgl-vinyl-layout
         display_js: webgl-vinyl
         image_field: coverimagebase64
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
   webgl_spectrum:
     base: webgl-base
     description: "WebGL animated EQ spectrum bars lower-third"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-spectrum
     common_js:
       - webgl-helpers
@@ -36,12 +42,17 @@ template_families:
         description: "Animated EQ bars with artist and title overlay"
         body_layout: webgl-spectrum-layout
         display_js: webgl-spectrum
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
   webgl_hologram:
     base: webgl-base
     description: "WebGL scanline hologram panel with glitch text reveal"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-hologram
     common_js:
       - webgl-helpers
@@ -55,12 +66,17 @@ template_families:
           change"
         body_layout: webgl-hologram-layout
         display_js: webgl-hologram
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
   webgl_wave:
     base: webgl-base
     description: "WebGL panel with animated wavy top edge and glow line"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-wave
     common_js:
       - webgl-helpers
@@ -73,12 +89,17 @@ template_families:
         description: "Dark panel with animated wavy top boundary and glow edge"
         body_layout: webgl-wave-layout
         display_js: webgl-wave
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
   webgl_particles:
     base: webgl-base
     description: "WebGL floating particles over transparent stream background"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-particles
     common_websocket:
       - metadata-streaming
@@ -90,12 +111,17 @@ template_families:
           panel"
         body_layout: webgl-particles-layout
         display_js: webgl-particles
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
   webgl_cube:
     base: webgl-base
     description: "Rotating 3D cube textured with artist fanart images"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - webgl-cube
     common_js:
       - webgl-helpers
@@ -109,3 +135,7 @@ template_families:
           falls back to cover art"
         body_layout: webgl-cube-layout
         display_js: webgl-cube
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0

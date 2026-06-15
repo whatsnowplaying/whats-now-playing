@@ -22,11 +22,13 @@ import nowplaying.config
 import nowplaying.datacache.client
 import nowplaying.db
 import nowplaying.frozen
+import nowplaying.processes.template_sync
 import nowplaying.utils
 
 
 async def _run(
     stopevent: asyncio.Event,
+    config: nowplaying.config.ConfigFile,
     cache_dir: Path | None = None,
     max_concurrent: int = 3,
 ) -> None:
@@ -34,6 +36,7 @@ async def _run(
     client = nowplaying.datacache.client.DataCacheClient(cache_dir)
     await client.initialize()
     logging.info("DataCache worker started")
+    asyncio.create_task(nowplaying.processes.template_sync.sync_from_charts(config, client))
 
     # Watch the pending_requests database for writes so new image downloads
     # queued by trackpoll wake the worker immediately instead of sleeping up to 30 s.
@@ -85,7 +88,7 @@ def start(stopevent: asyncio.Event, bundledir: str, testmode: bool = False) -> N
     logging.info("boot up")
 
     try:
-        asyncio.run(_run(stopevent=stopevent))
+        asyncio.run(_run(stopevent=stopevent, config=config))
     except Exception as error:  # pylint: disable=broad-except
         logging.error("DataCache worker crashed: %s", error, exc_info=True)
         sys.exit(1)

@@ -1,4 +1,28 @@
 /* WebGL Spectrum (EQ bars) Lower-Third */
+
+:root {
+    --wnp-accent-color: #00dcff;
+    --wnp-card-bg: rgba(4, 6, 20, 0.82);
+    --wnp-bg-color: transparent;
+    --wnp-text-title: var(--wnp-accent-color);
+    --wnp-text-artist: #ffffff;
+    --wnp-font-family: "Rajdhani";
+    --wnp-font-title: var(--wnp-font-family);
+    --wnp-font-artist: var(--wnp-font-family);
+    --wnp-size-artist: 24px;
+    --wnp-size-title: 16px;
+    --wnp-cover-display: none;
+    --wnp-album-display: none;
+    --wnp-text-album: rgba(255, 255, 255, 0.55);
+    --wnp-font-album: var(--wnp-font-family);
+    --wnp-size-album: 13px;
+    --wnp-bg-title: transparent;
+    --wnp-bg-artist: transparent;
+    --wnp-bg-album: transparent;
+    --wnp-text-align: left;
+    --wnp-text-shadow: none;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -6,7 +30,7 @@ body {
     background: transparent;
     width: 800px;
     height: 150px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--wnp-font-family), sans-serif;
 }
 
 #card {
@@ -27,7 +51,7 @@ body {
 #card-bg {
     position: absolute;
     inset: 0;
-    background: rgba(4, 6, 20, 0.82);
+    background: var(--wnp-card-bg);
     border-top: 1px solid rgba(0, 200, 255, 0.2);
 }
 
@@ -40,7 +64,7 @@ body {
     z-index: 1;
 }
 
-#track-info {
+#content {
     position: absolute;
     top: 0;
     left: 0;
@@ -48,27 +72,69 @@ body {
     bottom: 0;
     z-index: 10;
     display: flex;
+    align-items: stretch;
+}
+
+#cover-wrap {
+    display: var(--wnp-cover-display);
+    width: 150px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+#cover-image {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+}
+
+#track-info {
+    flex: 1;
+    display: flex;
     flex-direction: column;
     justify-content: center;
     padding: 0 28px;
+    overflow: hidden;
 }
 
 #track-artist {
-    font-size: 24px;
+    font-size: var(--wnp-size-artist);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--wnp-text-artist);
+    background: var(--wnp-bg-artist);
+    font-family: var(--wnp-font-artist);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 6px;
-    text-shadow: 0 0 16px rgba(0, 220, 255, 0.6);
+    text-shadow: 0 0 16px var(--wnp-accent-color);
+    text-align: var(--wnp-text-align);
 }
 
-#track-title {
-    font-size: 16px;
-    font-weight: 400;
-    color: rgba(0, 220, 255, 0.8);
+#track-album {
+    font-size: var(--wnp-size-album);
+    color: var(--wnp-text-album);
+    background: var(--wnp-bg-album);
+    font-family: var(--wnp-font-album);
+    display: var(--wnp-album-display);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-top: 4px;
+    text-align: var(--wnp-text-align);
+    text-shadow: var(--wnp-text-shadow);
+}
+
+#track-title {
+    font-size: var(--wnp-size-title);
+    font-weight: 400;
+    color: var(--wnp-text-title);
+    background: var(--wnp-bg-title);
+    font-family: var(--wnp-font-title);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: var(--wnp-text-align);
+    text-shadow: var(--wnp-text-shadow);
 }

@@ -5,36 +5,31 @@ template_families:
     description: "MTV-style layouts with customizable fade effects"
     common_css:
       - obs-compatibility
+      - vendor-fonts
       - kabel-font
       - mtv-layout
     common_websocket:
       - metadata-streaming
 
     templates:
-      ws-mtv-cover-nofade:
+      ws-mtv:
         title: "Titlecard"
-        description: "MTV Style with Cover - No Fade"
-        body_layout: mtv-cover-layout
-        display_js: mtv-display-cover
-        effects: []
-
-      ws-mtv-cover-fade:
-        title: "Titlecard"
-        description: "MTV Style with Cover - Fade Effects"
-        body_layout: mtv-cover-layout
-        display_js: mtv-display-cover
-        effects: [fade-effects]
-
-      ws-mtv-nofade:
-        title: "Titlecard"
-        description: "MTV Style Text Only - No Fade"
+        description: "MTV Style"
         body_layout: mtv-text-layout
         display_js: mtv-display-text
         effects: []
+        timing_defaults:
+          hide_after: 0
+          repeat_animation: 0
+          delay_update: 0
 
       ws-mtv-fade:
         title: "Titlecard"
-        description: "MTV Style Text Only - Fade Effects"
+        description: "MTV Style - Fade Effects"
         body_layout: mtv-text-layout
         display_js: mtv-display-text
         effects: [fade-effects]
+        timing_defaults:
+          hide_after: 30
+          repeat_animation: 30
+          delay_update: 0
