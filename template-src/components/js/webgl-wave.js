@@ -113,9 +113,9 @@ function _wnpAccentVec3() {
 
         const coverImg = document.getElementById('cover-image');
         if (metadata.coverimagebase64) {
-            coverImg.src = 'data:image/jpeg;base64,' + metadata.coverimagebase64;
+            coverImg.src = 'data:image/png;base64,' + metadata.coverimagebase64;
         } else if (metadata.artistthumbnailbase64) {
-            coverImg.src = 'data:image/jpeg;base64,' + metadata.artistthumbnailbase64;
+            coverImg.src = 'data:image/png;base64,' + metadata.artistthumbnailbase64;
         } else {
             coverImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         }
