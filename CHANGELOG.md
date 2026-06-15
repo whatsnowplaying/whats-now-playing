@@ -22,6 +22,7 @@
 
 * Fixed template preview window showing a stale template list when
     reopened after new templates were added or removed
+* Wrong image type in the generic DJ display templates
 * Fixed several settings that could silently fall back to Qt's built-in
     defaults instead of WNP's intended defaults when no value had ever
     been explicitly stored (e.g. after a clean install or config reset)
