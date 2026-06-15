@@ -36,15 +36,17 @@ class Plugin(ArtistExtrasPlugin):
         for artistid in metadata["musicbrainzartistid"]:
             url = f"http://webservice.fanart.tv/v3/music/{artistid}"
             result = await datacache_client.get_or_fetch(
-                url=url,
-                identifier=metadata.get("imagecacheartist", artistid),
-                data_type="artist",
-                provider="fanarttv",
-                timeout=self.calculate_delay(),
-                retries=3,
-                ttl_seconds=_FANARTTV_TTL,
-                headers=nowplaying.datacache.CacheHeaders({"client-key": apikey}),
-                negative_ttl=24 * 3600,  # 24h: artist not in FanartTV DB
+                nowplaying.datacache.FetchRequest(
+                    url=url,
+                    identifier=metadata.get("imagecacheartist", artistid),
+                    data_type="artist",
+                    provider="fanarttv",
+                    timeout=self.calculate_delay(),
+                    retries=3,
+                    ttl_seconds=_FANARTTV_TTL,
+                    headers=nowplaying.datacache.CacheHeaders({"client-key": apikey}),
+                    negative_ttl=24 * 3600,
+                )
             )
             if result is None:
                 continue

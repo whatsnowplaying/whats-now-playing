@@ -13,7 +13,7 @@ from httpx import Headers as CacheHeaders  # re-exported so callers don't import
 import orjson
 
 # Core components
-from .client import DataCacheClient, get_client, reset_client
+from .client import DataCacheClient, FetchRequest, get_client, reset_client
 from .utils import redact_url
 from .pending import RequestQueue
 from .queue import RateLimiter, RateLimiterManager
@@ -23,6 +23,7 @@ from .storage import CachedEntry, DataStorage, get_datacache_path, run_datacache
 __all__ = [
     "get_client",  # Get DataCacheClient instance
     "DataCacheClient",  # Core client with get_or_fetch
+    "FetchRequest",  # Dataclass for get_or_fetch parameters
     "CachedEntry",  # Result dataclass from retrieve methods
     "DataStorage",  # Direct storage layer access
     "RequestQueue",  # Database-backed pending request queue

@@ -6,15 +6,19 @@ without dealing with low-level storage details.
 """
 
 import asyncio
+import dataclasses
+import hashlib
 import logging
 import random
 import time
+from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
 import ssl
 
 import httpx
+import orjson
 import truststore
 from httpx import Headers as CacheHeaders
 
@@ -37,12 +41,50 @@ _IMAGE_DATA_TYPES = IMAGE_DATA_TYPES  # re-exported from storage for TTL doublin
 _DEFAULT_TTL = 7 * 24 * 3600
 
 
+@dataclasses.dataclass
+class FetchRequest:  # pylint: disable=too-many-instance-attributes
+    """Parameters for a single get_or_fetch call."""
+
+    url: str
+    identifier: str
+    data_type: str
+    provider: str
+    timeout: float = 30.0
+    retries: int = 3
+    ttl_seconds: int | None = None
+    immediate: bool = True
+    metadata: dict | None = None
+    headers: CacheHeaders | None = None
+    negative_ttl: int | None = None
+    queue_priority: int = 2
+    expected_checksum: str | None = None
+    on_complete: Callable[[str, "CachedEntry | None"], Coroutine[Any, Any, None]] | None = None
+
+
+_TERMINAL_HTTP_STATUSES: frozenset[int] = frozenset(range(400, 500)) - {429}
+
+
+@dataclasses.dataclass
+class FetchResult:
+    """Result of a single _fetch_with_retry call."""
+
+    data: bytes | None = None
+    checksum: str | None = None
+    status: int | None = None
+    terminal: bool = False
+
+    @property
+    def ok(self) -> bool:
+        """True only on a successful 200 response with data."""
+        return self.status == 200 and self.data is not None
+
+
 def _backoff(attempt: int) -> float:
     """Exponential backoff with random jitter."""
     return (2**attempt) + random.uniform(0, 1.0)
 
 
-class DataCacheClient:
+class DataCacheClient:  # pylint: disable=too-many-instance-attributes
     """
     High-level client for datacache operations.
 
@@ -61,6 +103,7 @@ class DataCacheClient:
         self._session: httpx.AsyncClient | None = None
         self._init_lock = asyncio.Lock()
         self._retry_after_until: dict[str, float] = {}
+        self._callbacks: dict[str, Callable] = {}
 
     async def initialize(self) -> None:
         """Initialize the client and underlying storage (concurrency-safe)."""
@@ -93,82 +136,73 @@ class DataCacheClient:
             self._session = None
         await self.storage.close()
 
-    async def get_or_fetch(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        self,
-        url: str,
-        identifier: str,
-        data_type: str,
-        provider: str,
-        timeout: float = 30.0,
-        retries: int = 3,
-        ttl_seconds: int | None = None,
-        immediate: bool = True,
-        metadata: dict | None = None,
-        headers: CacheHeaders | None = None,
-        negative_ttl: int | None = None,
-        queue_priority: int = 2,
-    ) -> CachedEntry | None:
+    async def get_or_fetch(self, request: FetchRequest) -> CachedEntry | None:
         """
         Get data from cache, or fetch from URL if not cached.
-
-        Args:
-            url: The URL to fetch data from
-            identifier: Artist identifier (e.g., "daft_punk")
-            data_type: Type of data ("thumbnail", "logo", "bio", etc.)
-            provider: Provider name ("theaudiodb", "discogs", etc.)
-            timeout: Request timeout in seconds
-            retries: Number of retry attempts
-            ttl_seconds: Cache TTL in seconds (None for provider default)
-            immediate: If True, fetch immediately; if False, queue for later
-            metadata: Optional metadata to store with cached item
 
         Returns:
             CachedEntry if found/fetched, None if failed or queued
         """
         await self.initialize()
 
-        # Try to retrieve from cache first
-        cached_result = await self.storage.retrieve_by_url(url)
+        cached_result = await self.storage.retrieve_by_url(request.url)
         if cached_result:
             if cached_result.status_code != 200:
                 logging.debug(
-                    "Cache hit (negative, status=%d) for URL: %s", cached_result.status_code, url
+                    "Cache hit (negative, status=%d) for URL: %s",
+                    cached_result.status_code,
+                    request.url,
                 )
                 return None
-            logging.debug("Cache hit for URL: %s", self._redact_url(url))
-            return cached_result
-
-        if not immediate:
-            # Queue for background processing
-            await self.queue.queue_request(
-                provider=provider,
-                request_key="fetch_url",
-                params={
-                    "url": url,
-                    "identifier": identifier,
-                    "data_type": data_type,
-                    "timeout": timeout,
-                    "retries": retries,
-                    "ttl_seconds": ttl_seconds,
-                    "metadata": metadata,
-                },
-                priority=queue_priority,
+            if (
+                request.expected_checksum is None
+                or cached_result.checksum == request.expected_checksum
+            ):
+                logging.debug("Cache hit for URL: %s", self._redact_url(request.url))
+                if request.on_complete:
+                    asyncio.create_task(request.on_complete(request.url, cached_result))
+                return cached_result
+            logging.debug(
+                "Cache hit checksum mismatch for URL: %s, re-fetching",
+                self._redact_url(request.url),
             )
-            logging.debug("Queued background fetch for URL: %s", self._redact_url(url))
+
+        if not request.immediate:
+            params = {
+                "url": request.url,
+                "identifier": request.identifier,
+                "data_type": request.data_type,
+                "timeout": request.timeout,
+                "retries": request.retries,
+                "ttl_seconds": request.ttl_seconds,
+                "metadata": request.metadata,
+                "expected_checksum": request.expected_checksum,
+            }
+            params_str = orjson.dumps(params, option=orjson.OPT_SORT_KEYS).decode()
+            digest = hashlib.sha256(params_str.encode()).hexdigest()[:16]
+            request_id = f"{request.provider}:fetch_url:{digest}"
+            if request.on_complete:
+                self._callbacks[request_id] = request.on_complete
+            await self.queue.queue_request(
+                provider=request.provider,
+                request_key="fetch_url",
+                params=params,
+                priority=request.queue_priority,
+            )
+            logging.debug("Queued background fetch for URL: %s", self._redact_url(request.url))
             return None
 
-        # Immediate fetch
         return await self._fetch_and_store(
-            url=url,
-            identifier=identifier,
-            data_type=data_type,
-            provider=provider,
-            timeout=timeout,
-            retries=retries,
-            ttl_seconds=ttl_seconds,
-            metadata=metadata,
-            headers=headers,
-            negative_ttl=negative_ttl,
+            url=request.url,
+            identifier=request.identifier,
+            data_type=request.data_type,
+            provider=request.provider,
+            timeout=request.timeout,
+            retries=request.retries,
+            ttl_seconds=request.ttl_seconds,
+            metadata=request.metadata,
+            headers=request.headers,
+            negative_ttl=request.negative_ttl,
         )
 
     async def _cache_negative(  # pylint: disable=too-many-arguments
@@ -225,7 +259,102 @@ class DataCacheClient:
         """
         self._retry_after_until.pop(provider, None)
 
-    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-branches,too-many-statements
+    @staticmethod
+    async def _stream_body(response: httpx.Response) -> tuple[bytes, str]:
+        """Stream response body, returning (data, sha256_hex)."""
+        h = hashlib.sha256()
+        chunks: list[bytes] = []
+        async for chunk in response.aiter_bytes(65536):
+            h.update(chunk)
+            chunks.append(chunk)
+        return b"".join(chunks), h.hexdigest()
+
+    async def _handle_429(  # pylint: disable=too-many-arguments
+        self,
+        response: httpx.Response,
+        provider: str,
+        attempt: int,
+        retries: int,
+        rate_limiter: Any,
+    ) -> bool:
+        """Record 429 cooldown and sleep if retries remain.
+
+        Returns True to retry, False to give up.
+        """
+        try:
+            retry_after = max(1, int(response.headers.get("Retry-After", "60")))
+        except ValueError:
+            retry_after = 60
+        self._retry_after_until[provider] = time.monotonic() + retry_after
+        if attempt < retries:
+            logging.warning("Rate limited by %s, waiting %d seconds", provider, retry_after)
+            await asyncio.sleep(retry_after)
+            return await rate_limiter.acquire()
+        logging.warning("Rate limited by %s on final attempt, cooldown %ds", provider, retry_after)
+        return False
+
+    async def _fetch_with_retry(  # pylint: disable=too-many-arguments
+        self,
+        url: str,
+        provider: str,
+        timeout: float,
+        retries: int,
+        headers: CacheHeaders | None,
+        rate_limiter: Any,
+    ) -> FetchResult:
+        """Stream-fetch url with retries.
+
+        4xx responses (except 429) are terminal — returned immediately without
+        consuming retry budget.  5xx and network errors are retried with
+        exponential backoff.
+        """
+        last_result = FetchResult()
+        for attempt in range(retries + 1):
+            try:
+                async with self._session.stream(  # type: ignore[union-attr]
+                    "GET", url, timeout=httpx.Timeout(timeout), headers=headers
+                ) as response:
+                    if response.status_code == 200:
+                        data, checksum = await self._stream_body(response)
+                        return FetchResult(data=data, checksum=checksum, status=200)
+                    if response.status_code == 429:
+                        should_continue = await self._handle_429(
+                            response, provider, attempt, retries, rate_limiter
+                        )
+                        if should_continue:
+                            continue
+                        return FetchResult(status=429, terminal=False)
+                    if response.status_code in _TERMINAL_HTTP_STATUSES:
+                        logging.warning(
+                            "HTTP %d fetching %s (terminal)",
+                            response.status_code,
+                            self._redact_url(url),
+                        )
+                        return FetchResult(status=response.status_code, terminal=True)
+                    logging.warning(
+                        "HTTP %d fetching %s", response.status_code, self._redact_url(url)
+                    )
+                    last_result = FetchResult(status=response.status_code, terminal=False)
+            except httpx.TimeoutException:
+                logging.warning(
+                    "Timeout fetching URL (attempt %d/%d): %s",
+                    attempt + 1,
+                    retries + 1,
+                    self._redact_url(url),
+                )
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error(
+                    "Error fetching URL (attempt %d/%d): %s - %s",
+                    attempt + 1,
+                    retries + 1,
+                    self._redact_url(url),
+                    error,
+                )
+            if attempt < retries:
+                await asyncio.sleep(_backoff(attempt))
+        return last_result
+
+    async def _fetch_and_store(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         self,
         url: str,
         identifier: str,
@@ -238,19 +367,12 @@ class DataCacheClient:
         headers: CacheHeaders | None = None,
         negative_ttl: int | None = None,
     ) -> CachedEntry | None:
-        """
-        Fetch data from URL and store in cache.
-
-        Handles rate limiting and retries automatically.
-        """
         if not self._session:
             raise RuntimeError("DataCacheClient not initialized - call initialize() first")
 
-        # Honour server-side 429 cooldown recorded from a previous call
         if self.in_cooldown(provider):
             return None
 
-        # Apply rate limiting
         rate_limiter = self.rate_limiters.get_limiter(provider)
         if not await rate_limiter.acquire():
             logging.warning(
@@ -258,107 +380,43 @@ class DataCacheClient:
             )
             return None
 
-        # Default TTL based on provider and data type
         if ttl_seconds is None:
             ttl_seconds = self._get_default_ttl(provider, data_type)
 
-        # Fetch with retries
-        for attempt in range(retries + 1):
-            try:
-                # self._session is guaranteed non-None after the check above
-                response = await self._session.get(
-                    url, timeout=httpx.Timeout(timeout), headers=headers
+        result = await self._fetch_with_retry(
+            url, provider, timeout, retries, headers, rate_limiter
+        )
+        if not result.ok:
+            if result.terminal and result.status == 404 and negative_ttl is not None:
+                await self._cache_negative(
+                    url, identifier, data_type, provider, negative_ttl, metadata
                 )
-                if response.status_code == 200:
-                    data = response.content  # callers decode (e.g. orjson.loads) as needed
+            return None
 
-                    # Store in cache
-                    success = await self.storage.store(
-                        url=url,
-                        identifier=identifier,
-                        data_type=data_type,
-                        provider=provider,
-                        data_value=data,
-                        ttl_seconds=ttl_seconds,
-                        metadata=metadata,
-                        status_code=200,
-                    )
-
-                    if success:
-                        logging.debug("Cached data from URL: %s", self._redact_url(url))
-                    else:
-                        logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
-                    return CachedEntry(
-                        data=data,
-                        metadata=metadata or {},
-                        status_code=200,
-                        mime_type=None,
-                        url=url,
-                    )
-                if response.status_code == 429:
-                    try:
-                        retry_after = max(1, int(response.headers.get("Retry-After", "60")))
-                    except ValueError:
-                        retry_after = 60
-                    # Record cooldown so the next get_or_fetch call skips immediately
-                    self._retry_after_until[provider] = time.monotonic() + retry_after
-                    if attempt < retries:
-                        logging.warning(
-                            "Rate limited by %s, waiting %d seconds", provider, retry_after
-                        )
-                        await asyncio.sleep(retry_after)
-                        # Re-acquire token after sleeping so local limiter stays in
-                        # sync with the server's actual rate-limit window.
-                        if not await rate_limiter.acquire():
-                            return None
-                        continue
-                    logging.warning(
-                        "Rate limited by %s on final attempt, cooldown %ds", provider, retry_after
-                    )
-                    break
-
-                if response.status_code == 404 and negative_ttl is not None:
-                    await self._cache_negative(
-                        url, identifier, data_type, provider, negative_ttl, metadata
-                    )
-                    return None
-                logging.warning(
-                    "HTTP %d error fetching %s", response.status_code, self._redact_url(url)
-                )
-                if attempt < retries:
-                    wait_time = _backoff(attempt)
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
-
-            except httpx.TimeoutException:
-                logging.warning(
-                    "Timeout fetching URL (attempt %d/%d): %s",
-                    attempt + 1,
-                    retries + 1,
-                    self._redact_url(url),
-                )
-                if attempt < retries:
-                    wait_time = _backoff(attempt)
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
-
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error(
-                    "Error fetching URL (attempt %d/%d): %s - %s",
-                    attempt + 1,
-                    retries + 1,
-                    self._redact_url(url),
-                    error,
-                )
-                if attempt < retries:
-                    wait_time = _backoff(attempt)
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
-
-        return None
+        data, content_checksum = result.data, result.checksum  # type: ignore[assignment]
+        success = await self.storage.store(
+            url=url,
+            identifier=identifier,
+            data_type=data_type,
+            provider=provider,
+            data_value=data,
+            ttl_seconds=ttl_seconds,
+            metadata=metadata,
+            status_code=200,
+            checksum=content_checksum,
+        )
+        if success:
+            logging.debug("Cached data from URL: %s", self._redact_url(url))
+        else:
+            logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
+        return CachedEntry(
+            data=data,
+            metadata=metadata or {},
+            status_code=200,
+            mime_type=None,
+            url=url,
+            checksum=content_checksum,
+        )
 
     @staticmethod
     def _get_default_ttl(provider: str, data_type: str) -> int:
@@ -471,6 +529,13 @@ class DataCacheClient:
                     success = False
 
                 await self.queue.complete_request(request_id, success=success)
+
+                if request_id in self._callbacks:
+                    cb = self._callbacks.pop(request_id)
+                    url = request["params"]["url"]
+                    entry = await self.storage.retrieve_by_url(url) if success else None
+                    asyncio.create_task(cb(url, entry))
+
                 return success
 
             except Exception as error:  # pylint: disable=broad-except

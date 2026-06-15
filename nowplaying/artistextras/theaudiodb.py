@@ -46,14 +46,16 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         url = f"{_THEAUDIODB_BASE}/{apikey}/{api}"
         logging.debug("Fetching async %s", api)
         result = await nowplaying.datacache.get_client().get_or_fetch(
-            url=url,
-            identifier=artist_name,
-            data_type="api_response",
-            provider="theaudiodb",
-            timeout=self.calculate_delay(),
-            retries=3,
-            ttl_seconds=_THEAUDIODB_TTL,
-            negative_ttl=24 * 3600,  # 24h: artist/album not in TheAudioDB
+            nowplaying.datacache.FetchRequest(
+                url=url,
+                identifier=artist_name,
+                data_type="api_response",
+                provider="theaudiodb",
+                timeout=self.calculate_delay(),
+                retries=3,
+                ttl_seconds=_THEAUDIODB_TTL,
+                negative_ttl=24 * 3600,
+            )
         )
         if result is None:
             return None

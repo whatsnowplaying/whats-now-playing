@@ -57,13 +57,14 @@ async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined
     )
     assert success is True
 
-    # Should return cached data without HTTP request
     result = await temp_client.get_or_fetch(
-        url=test_url,
-        identifier="test_artist",
-        data_type="thumbnail",
-        provider="test",
-        immediate=True,
+        nowplaying.datacache.FetchRequest(
+            url=test_url,
+            identifier="test_artist",
+            data_type="thumbnail",
+            provider="test",
+            immediate=True,
+        )
     )
 
     assert result is not None
@@ -76,11 +77,13 @@ async def test_get_or_fetch_immediate_false_queues_request(temp_client):  # pyli
     test_url = "https://example.com/queue_test.jpg"
 
     result = await temp_client.get_or_fetch(
-        url=test_url,
-        identifier="queue_artist",
-        data_type="thumbnail",
-        provider="test",
-        immediate=False,  # Should queue
+        nowplaying.datacache.FetchRequest(
+            url=test_url,
+            identifier="queue_artist",
+            data_type="thumbnail",
+            provider="test",
+            immediate=False,
+        )
     )
 
     # Should return None (queued for later)
@@ -155,12 +158,14 @@ async def test_get_cache_keys_for_identifier(temp_client):  # pylint: disable=re
 async def test_get_or_fetch_queues_for_background(temp_client):  # pylint: disable=redefined-outer-name
     """get_or_fetch(immediate=False) queues the URL and returns None"""
     result = await temp_client.get_or_fetch(
-        url="https://example.com/queue.jpg",
-        identifier="queue_artist",
-        data_type="thumbnail",
-        provider="test",
-        immediate=False,
-        queue_priority=1,
+        nowplaying.datacache.FetchRequest(
+            url="https://example.com/queue.jpg",
+            identifier="queue_artist",
+            data_type="thumbnail",
+            provider="test",
+            immediate=False,
+            queue_priority=1,
+        )
     )
 
     assert result is None  # queued for background processing
@@ -450,6 +455,35 @@ async def test_4xx_not_stored_in_cache(temp_client):  # pylint: disable=redefine
     # Nothing should have been written
     cached = await temp_client.storage.retrieve_by_url(url)
     assert cached is None
+
+
+@pytest.mark.asyncio
+async def test_404_is_not_retried(temp_client):  # pylint: disable=redefined-outer-name
+    """404 is terminal — the server is called exactly once even when retries>0"""
+    url = "https://example.com/gone_retry.jpg"
+    call_count = 0
+
+    def _count(request):  # pylint: disable=unused-argument
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(404)
+
+    with respx.mock() as mock_responses:
+        mock_responses.get(url).mock(side_effect=_count)
+
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
+            url=url,
+            identifier="gone_retry_artist",
+            data_type="thumbnail",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            ttl_seconds=3600,
+            metadata=None,
+        )
+
+    assert result is None
+    assert call_count == 1, "404 must not consume retry budget"
 
 
 @pytest.mark.asyncio

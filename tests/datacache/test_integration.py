@@ -38,14 +38,15 @@ async def test_full_image_caching_workflow(bootstrap, isolated_datacache_client)
             )
         )
 
-        # Cache image immediately
         result = await nowplaying.datacache.get_client().get_or_fetch(
-            url=test_url,
-            identifier="integration_test_artist",
-            data_type="thumbnail",
-            provider="test_provider",
-            immediate=True,
-            metadata={"source": "integration_test"},
+            nowplaying.datacache.FetchRequest(
+                url=test_url,
+                identifier="integration_test_artist",
+                data_type="thumbnail",
+                provider="test_provider",
+                immediate=True,
+                metadata={"source": "integration_test"},
+            )
         )
 
         assert result is not None
@@ -72,14 +73,15 @@ async def test_randomimage_functionality_integration(bootstrap, isolated_datacac
                 )
             )
 
-        # Cache all images
         for url in image_urls:
             await nowplaying.datacache.get_client().get_or_fetch(
-                url=url,
-                identifier="random_test_artist",
-                data_type="thumbnail",
-                provider="test_provider",
-                immediate=True,
+                nowplaying.datacache.FetchRequest(
+                    url=url,
+                    identifier="random_test_artist",
+                    data_type="thumbnail",
+                    provider="test_provider",
+                    immediate=True,
+                )
             )
 
         # Get random image
@@ -117,13 +119,14 @@ async def test_queue_and_process_workflow(bootstrap, isolated_datacache_client):
             )
         )
 
-        # Queue image for background processing
         result = await nowplaying.datacache.get_client().get_or_fetch(
-            url=test_url,
-            identifier="queue_test_artist",
-            data_type="logo",
-            provider="test_provider",
-            immediate=False,  # Queue for later
+            nowplaying.datacache.FetchRequest(
+                url=test_url,
+                identifier="queue_test_artist",
+                data_type="logo",
+                provider="test_provider",
+                immediate=False,
+            )
         )
 
         # Should return None (queued for background processing)
@@ -151,22 +154,25 @@ async def test_cache_hit_avoids_http_request(bootstrap, isolated_datacache_clien
         )
 
         result1 = await nowplaying.datacache.get_client().get_or_fetch(
+            nowplaying.datacache.FetchRequest(
+                url=test_url,
+                identifier="cache_hit_artist",
+                data_type="banner",
+                provider="test_provider",
+                immediate=True,
+            )
+        )
+
+        assert result1 is not None
+
+    result2 = await nowplaying.datacache.get_client().get_or_fetch(
+        nowplaying.datacache.FetchRequest(
             url=test_url,
             identifier="cache_hit_artist",
             data_type="banner",
             provider="test_provider",
             immediate=True,
         )
-
-        assert result1 is not None
-
-    # Second request without mock (should hit cache)
-    result2 = await nowplaying.datacache.get_client().get_or_fetch(
-        url=test_url,
-        identifier="cache_hit_artist",
-        data_type="banner",
-        provider="test_provider",
-        immediate=True,
     )
 
     assert result2 is not None
@@ -194,21 +200,24 @@ async def test_provider_filtering_works(bootstrap, isolated_datacache_client):  
             )
         )
 
-        # Cache images from different providers
         await nowplaying.datacache.get_client().get_or_fetch(
-            url=test_urls["theaudiodb"],
-            identifier="filter_test_artist",
-            data_type="fanart",
-            provider="theaudiodb",
-            immediate=True,
+            nowplaying.datacache.FetchRequest(
+                url=test_urls["theaudiodb"],
+                identifier="filter_test_artist",
+                data_type="fanart",
+                provider="theaudiodb",
+                immediate=True,
+            )
         )
 
         await nowplaying.datacache.get_client().get_or_fetch(
-            url=test_urls["discogs"],
-            identifier="filter_test_artist",
-            data_type="fanart",
-            provider="discogs",
-            immediate=True,
+            nowplaying.datacache.FetchRequest(
+                url=test_urls["discogs"],
+                identifier="filter_test_artist",
+                data_type="fanart",
+                provider="discogs",
+                immediate=True,
+            )
         )
 
         # Get cache keys filtered by provider
@@ -248,12 +257,14 @@ async def test_api_response_caching_integration(bootstrap, isolated_datacache_cl
         )
 
         result = await nowplaying.datacache.get_client().get_or_fetch(
-            url=test_url,
-            identifier="api_test_artist",
-            data_type="bio_en",
-            provider="test_api",
-            immediate=True,
-            metadata={"language": "en", "source": "test_api"},
+            nowplaying.datacache.FetchRequest(
+                url=test_url,
+                identifier="api_test_artist",
+                data_type="bio_en",
+                provider="test_api",
+                immediate=True,
+                metadata={"language": "en", "source": "test_api"},
+            )
         )
 
         assert result is not None
@@ -339,11 +350,13 @@ async def test_concurrent_storage_operations(bootstrap, isolated_datacache_clien
         tasks = []
         for i, url in enumerate(test_urls):
             task = isolated_datacache_client.get_or_fetch(
-                url=url,
-                identifier=f"concurrent_artist_{i}",
-                data_type="thumbnail",
-                provider="test_provider",
-                immediate=True,
+                nowplaying.datacache.FetchRequest(
+                    url=url,
+                    identifier=f"concurrent_artist_{i}",
+                    data_type="thumbnail",
+                    provider="test_provider",
+                    immediate=True,
+                )
             )
             tasks.append(task)
 
@@ -386,13 +399,15 @@ async def test_queue_and_process_random_image_bytes(bootstrap, isolated_datacach
 
         for url in image_urls:
             result = await nowplaying.datacache.get_client().get_or_fetch(
-                url=url,
-                identifier="fanart_artist",
-                data_type="fanart",
-                provider="cdn",
-                immediate=False,
+                nowplaying.datacache.FetchRequest(
+                    url=url,
+                    identifier="fanart_artist",
+                    data_type="fanart",
+                    provider="cdn",
+                    immediate=False,
+                )
             )
-            assert result is None  # queued for background processing
+            assert result is None
 
         stats = await nowplaying.datacache.get_client().process_queue()
         assert stats["processed"] == 3
@@ -432,24 +447,27 @@ async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argume
     url = _LIVE_FANART_URLS[0]
 
     result = await nowplaying.datacache.get_client().get_or_fetch(
-        url=url,
-        identifier="gary_numan",
-        data_type="fanart",
-        provider="theaudiodb",
-        immediate=True,
+        nowplaying.datacache.FetchRequest(
+            url=url,
+            identifier="gary_numan",
+            data_type="fanart",
+            provider="theaudiodb",
+            immediate=True,
+        )
     )
 
     assert result is not None
     assert isinstance(result.data, bytes)
     assert len(result.data) > 0
 
-    # Cache hit — no network call needed
     result2 = await nowplaying.datacache.get_client().get_or_fetch(
-        url=url,
-        identifier="gary_numan",
-        data_type="fanart",
-        provider="theaudiodb",
-        immediate=True,
+        nowplaying.datacache.FetchRequest(
+            url=url,
+            identifier="gary_numan",
+            data_type="fanart",
+            provider="theaudiodb",
+            immediate=True,
+        )
     )
     assert result2 is not None
     assert result2.data == result.data
@@ -462,15 +480,16 @@ async def test_live_queue_and_random_image_bytes(bootstrap):  # pylint: disable=
     # Use the production path (get_or_fetch checks cached_data before queuing)
     for url in _LIVE_FANART_URLS:
         result = await nowplaying.datacache.get_client().get_or_fetch(
-            url=url,
-            identifier="gary_numan",
-            data_type="fanart",
-            provider="cdn",
-            timeout=30.0,
-            retries=3,
-            immediate=False,
+            nowplaying.datacache.FetchRequest(
+                url=url,
+                identifier="gary_numan",
+                data_type="fanart",
+                provider="cdn",
+                timeout=30.0,
+                retries=3,
+                immediate=False,
+            )
         )
-        # Returns None when queued for background processing or already cached
         assert result is None or isinstance(result.data, bytes)
 
     await nowplaying.datacache.get_client().process_queue()
