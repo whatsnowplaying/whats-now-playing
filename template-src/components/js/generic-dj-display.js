@@ -4,11 +4,11 @@ function updateDisplay(data) {
     // Update cover image with artist thumbnail fallback
     const coverImg = document.getElementById('cover-image');
     if (data.coverimagebase64) {
-        coverImg.src = 'data:image/jpeg;base64,' + data.coverimagebase64;
+        coverImg.src = 'data:image/png;base64,' + data.coverimagebase64;
         coverImg.alt = 'Album cover for ' + (data.album || 'Unknown Album');
     } else if (data.artistthumbnailbase64) {
         // Fallback to artist thumbnail if no cover
-        coverImg.src = 'data:image/jpeg;base64,' + data.artistthumbnailbase64;
+        coverImg.src = 'data:image/png;base64,' + data.artistthumbnailbase64;
         coverImg.alt = 'Artist thumbnail for ' + (data.artist || 'Unknown Artist');
     } else {
         // Keep the default transparent placeholder if neither is available
