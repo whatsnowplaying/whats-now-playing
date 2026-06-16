@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 5.2.2 - in-progress
+## Version 5.2.2 - 2026-06-16
 
 ### New Features
 
@@ -31,12 +31,19 @@
 * Library lookups are now O(1) instead of a full table scan: WNP
     maintains its own side index of djay Pro's location data, so track
     matching stays fast even for large libraries
+* The location index is now updated immediately when djay Pro signals a
+    change, rather than on a polling interval, so new tracks appear faster
+* Fixed a crash where an unrecognised TSAF field type (introduced by a
+    djay Pro update) would abort parsing of the entire record; WNP now
+    captures all fields up to the unknown type and continues normally
 
 ### Platform
 
 * macOS: WNP now detects when an Intel build is running under Rosetta on
     Apple Silicon hardware and offers the native Apple Silicon build
     during update checks instead of another Intel build
+* **5.2.x will be the last release series to include a macOS Intel (x86_64) build.**
+    Starting with 5.3.0, macOS builds will be Apple Silicon only.
 
 ## Version 5.2.1 - 2026-05-20
 
