@@ -6,7 +6,7 @@ ignore:
   - nowplaying/version.py
   - NowPlaying.spec
   - build/*
-  - template-src/vendor/*
+
   - nowplaying/template/vendor/*
   - site/*
   - keep/*

@@ -1,9 +1,0 @@
-/* Generic DJ Titlecard Layout - Blue Line variant */
-
-:root {
-    --wnp-accent-color: #3498db;
-    --wnp-accent-glow-low: rgba(52, 152, 219, 0.5);
-    --wnp-accent-glow-high: rgba(52, 152, 219, 0.8);
-    --wnp-text-align: left;
-    --wnp-text-shadow: none;
-}
