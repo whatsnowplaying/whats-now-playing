@@ -34,6 +34,9 @@ See your profile page on <https://whatsnowplaying.com/signup> for the full view.
 * **[Online Guess Game Board](guessgame.md#online-game-board)**: a public web page at
   `https://whatsnowplaying.com/guessgame/(your-username)` that shows your active guess game,
   masked track/artist, live leaderboards, and game status, shareable with your viewers
+* **[Chat Token](https://whatsnowplaying.com/docs/chat-token)**: a read-only token for displaying
+  your currently playing track in stream chat via Nightbot, StreamElements, Streamlabs Cloudbot,
+  or any chatbot that supports URL fetching
 
 ## Automatic Setup
 

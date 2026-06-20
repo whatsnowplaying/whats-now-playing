@@ -250,6 +250,9 @@ requires no account to start, and is built into WNP with no configuration needed
   * Replay: year-in-review analytics for your streams
 * Community charts showing top tracks and artists across all streamers
 * Online Guess Game leaderboard integration
+* [Chat Token](https://whatsnowplaying.com/docs/chat-token): a read-only token for displaying
+  the currently playing track in Nightbot, StreamElements, Streamlabs Cloudbot, or any chatbot
+  supporting URL fetching
 
 ## Platform Support
 
