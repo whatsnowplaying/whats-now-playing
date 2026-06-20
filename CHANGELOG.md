@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 5.2.2 - in-progress
+## Version 5.2.2 - 2026-06-20
 
 ### New Features
 
