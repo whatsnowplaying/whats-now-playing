@@ -2,12 +2,12 @@
  "signatures": [
   {
    "keyid": "3009823a498e7d7dd5b244f5f7c3fab05d5a7f0923e141de96d0f1eaa8d2fe9e",
-   "sig": "8fbd4d8d8af08b9eb8a824e3295ff5b05d4bb741e94e2c9f9eb56c5e504069beb465bfeacad129f0d8612df8063e8805e21f6a85989f5832ddae8e1fade8d80f"
+   "sig": "047a2e44a122f8074920556b97945407e82bb7b8c1cc4d00c982c5dbe118f85b102ab3a1f94d16e7f50e01d166abbb975f8e719f856b7780f9b68ca2e676c308"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-07-20T08:48:31Z",
+  "expires": "2026-07-20T22:49:05Z",
   "spec_version": "1.0.31",
   "targets": {
    "WhatsNowPlaying_linux_x86_64-5.2.1.tar.gz": {
@@ -21,6 +21,18 @@
      "sha256": "5ccc2524be5eadbfdf69a0557bd4bcdc465db6a0146113571fe098d28c497ef4"
     },
     "length": 305069078
+   },
+   "WhatsNowPlaying_linux_x86_64-5.2.2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "cd7d4dc8710b65c8980ca6b7bc46eae659b09f1e7bf4f228a7b118fa92787211"
+    },
+    "length": 311569286
    },
    "WhatsNowPlaying_linux_x86_64_prerelease-5.2.2-preview1.tar.gz": {
     "custom": {
@@ -58,6 +70,18 @@
     },
     "length": 267564724
    },
+   "WhatsNowPlaying_macos15_arm-5.2.2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "4d06d3de1fd29e2c970b0861d276341c62b32da8a73a77409350ce12e534536b"
+    },
+    "length": 267537627
+   },
    "WhatsNowPlaying_macos15_arm_prerelease-5.2.2-preview1.tar.gz": {
     "custom": {
      "tufup": {
@@ -93,6 +117,18 @@
      "sha256": "01d1442b228a8ebe83fa80ad67a4ec339b05035db27d0993228aa3d379b91baf"
     },
     "length": 288464812
+   },
+   "WhatsNowPlaying_macos15_intel-5.2.2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "95cf556dbafc3f14d1b761e118d58b3c4cdd0e97f8f53db7fbd889b91e019141"
+    },
+    "length": 288490760
    },
    "WhatsNowPlaying_macos15_intel_prerelease-5.2.2-preview1.tar.gz": {
     "custom": {
@@ -130,6 +166,18 @@
     },
     "length": 310423642
    },
+   "WhatsNowPlaying_windows_x86_64-5.2.2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "db67ffca6740f4664e3e944a750d7c3efb6b2f3ad0ef02e1e17433f78fe6bf43"
+    },
+    "length": 310404558
+   },
    "WhatsNowPlaying_windows_x86_64_prerelease-5.2.2-preview1.tar.gz": {
     "custom": {
      "tufup": {
@@ -155,6 +203,6 @@
     "length": 310394060
    }
   },
-  "version": 33
+  "version": 34
  }
 }
