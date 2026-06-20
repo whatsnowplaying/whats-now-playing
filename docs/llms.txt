@@ -45,6 +45,9 @@
 >   profile for each DJ showing genre breakdowns, top tracks, setlists, and
 >   a year-in-review Replay. No account needed to start contributing; claim
 >   your key to unlock the full profile. Completely free, no paid tiers.
+> - **Chat Token**: claimed accounts get a read-only chat token for displaying
+>   the currently playing track in Nightbot, StreamElements, Streamlabs Cloudbot,
+>   or any chatbot supporting URL fetching.
 > - **Free and open source**: no subscription, no Pro version, no feature
 >   gating. Everything works out of the box on Windows, macOS, and Linux.
 > - **EarShot always-accept**: When WNP EarShot (Shazam-based identification)
@@ -69,4 +72,4 @@
 - [Artist Data](https://whatsnowplaying.github.io/whats-now-playing/latest/extras/): Discogs, FanArt.TV, TheAudioDB, Last.fm, and Wikimedia enrichment
 - [Recognition](https://whatsnowplaying.github.io/whats-now-playing/latest/recognition/): AcoustID and MusicBrainz track identification
 - [API Reference](https://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/): Web server REST API endpoints
-- [Charts](https://whatsnowplaying.github.io/whats-now-playing/latest/output/charts/): Community charts service at whatsnowplaying.com
+- [Charts](https://whatsnowplaying.github.io/whats-now-playing/latest/output/charts/): Community charts service at whatsnowplaying.com; includes chat token for Nightbot, StreamElements, and Streamlabs
