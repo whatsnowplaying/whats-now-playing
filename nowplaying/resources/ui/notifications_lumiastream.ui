@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>notifications_lumiastream_ui</class>
+ <widget class="QWidget" name="notifications_lumiastream_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Lumia Stream</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Lumia Stream</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
+   </property>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="header_label">
+     <property name="text">
+      <string>**Lumia Stream Support**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="enable_checkbox">
+     <property name="text">
+      <string>Enable</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="token_layout">
+     <item>
+      <widget class="QLabel" name="token_label">
+       <property name="text">
+        <string>API Token:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="token_lineedit">
+       <property name="placeholderText">
+        <string>Paste token from Lumia Stream Settings &gt; Advanced</string>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::Password</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="port_layout">
+     <item>
+      <widget class="QLabel" name="port_label">
+       <property name="text">
+        <string>Port:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="port_lineedit">
+       <property name="placeholderText">
+        <string>39231</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="description_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;Lumia Stream integration fires a &lt;b&gt;nowplaying-switchSong&lt;/b&gt; alert in Lumia Stream each time a new track becomes live.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Open Lumia Stream and go to &lt;b&gt;Settings &amp;gt; Advanced&lt;/b&gt;.&lt;/li&gt;
+&lt;li&gt;Enable the Developers API and copy the token.&lt;/li&gt;
+&lt;li&gt;Paste the token above and click Enable.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Sends: title, artist, album, label, BPM, key, duration, ISRC, and cover art URL.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

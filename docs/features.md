@@ -179,6 +179,12 @@ variable and exportable.
 * Optional cover art in announcements
 * Rich Presence support (independently toggleable from Bot Mode)
 
+### [Lumia Stream](output/lumiastream.md)
+
+* Fires a `nowplaying-switchSong` alert in Lumia Stream on every track change
+* Sends title, artist, album, label, BPM, key, duration, ISRC, and cover art URL
+* Enables light shows, overlays, and automations that react to your music in real time
+
 ## Audience Engagement
 
 ### [Guess Game](output/guessgame.md)
