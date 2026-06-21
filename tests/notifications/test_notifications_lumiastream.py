@@ -3,6 +3,7 @@
 
 import logging
 
+import aiohttp
 import pytest
 import pytest_asyncio
 from aioresponses import aioresponses
@@ -113,11 +114,11 @@ def test_lumia_payload_no_isrc():
 
 
 @pytest.mark.asyncio
-async def test_lumia_connection_error_logged(
-    lumia_plugin,
-    caplog,  # pylint: disable=redefined-outer-name
+async def test_lumia_client_error_logged(
+    lumia_plugin,  # pylint: disable=redefined-outer-name
+    caplog,
 ):
-    """connection errors are logged, not raised"""
+    """aiohttp.ClientError is caught and logged, not raised"""
     lumia_plugin.config.cparser.setValue("lumiastream/enabled", True)
     lumia_plugin.config.cparser.setValue("lumiastream/token", "testtoken123")
     lumia_plugin.config.cparser.setValue("lumiastream/port", 39231)
@@ -128,18 +129,42 @@ async def test_lumia_connection_error_logged(
     with aioresponses() as mock_resp:
         mock_resp.post(
             "http://localhost:39231/api/send?token=testtoken123",
-            exception=Exception("connection refused"),
+            exception=aiohttp.ClientConnectionError("connection refused"),
         )
         with caplog.at_level(logging.ERROR):
             await lumia_plugin.notify_track_change(metadata)
 
-        assert any("Lumia Stream" in r.message for r in caplog.records)
+        assert any("Failed to connect to Lumia Stream" in r.message for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_lumia_generic_error_logged(
+    lumia_plugin,  # pylint: disable=redefined-outer-name
+    caplog,
+):
+    """unexpected non-aiohttp errors are caught and logged, not raised"""
+    lumia_plugin.config.cparser.setValue("lumiastream/enabled", True)
+    lumia_plugin.config.cparser.setValue("lumiastream/token", "testtoken123")
+    lumia_plugin.config.cparser.setValue("lumiastream/port", 39231)
+    await lumia_plugin.start()
+
+    metadata = {"artist": "WNP Mock Artist", "title": "Mock Track"}
+
+    with aioresponses() as mock_resp:
+        mock_resp.post(
+            "http://localhost:39231/api/send?token=testtoken123",
+            exception=ValueError("unexpected"),
+        )
+        with caplog.at_level(logging.ERROR):
+            await lumia_plugin.notify_track_change(metadata)
+
+        assert any("Unexpected error" in r.message for r in caplog.records)
 
 
 @pytest.mark.asyncio
 async def test_lumia_non_200_logged(
-    lumia_plugin,
-    caplog,  # pylint: disable=redefined-outer-name
+    lumia_plugin,  # pylint: disable=redefined-outer-name
+    caplog,
 ):
     """non-200 HTTP responses are logged"""
     lumia_plugin.config.cparser.setValue("lumiastream/enabled", True)

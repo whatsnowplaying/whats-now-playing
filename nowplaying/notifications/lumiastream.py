@@ -26,7 +26,7 @@ class Plugin(NotificationPlugin):
     def __init__(
         self,
         config: "nowplaying.config.ConfigFile | None" = None,
-        qsettings: "QWidget | None" = None,
+        qsettings: "QSettings | None" = None,
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Lumia Stream"
@@ -37,7 +37,6 @@ class Plugin(NotificationPlugin):
 
     async def notify_track_change(self, metadata: TrackMetadata) -> None:
         """Send track metadata to Lumia Stream when a new track becomes live."""
-        await self.start()
         if not self.enabled or not self.token:
             return
 
