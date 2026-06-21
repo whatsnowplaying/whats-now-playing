@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Sync named templates from the What's Now Playing charts server.
+"""Sync templates and vendor assets from the What's Now Playing charts server.
 
-On datacache startup, sync_from_charts(config, client) is launched as a
-fire-and-forget asyncio task.  It fetches the sync manifest from the charts
-server, enqueues stale base .htm file downloads through the datacache client
-(with per-download callbacks), and assembles the final HTML once all bases
-are ready.  Assembled templates are written to templatedir/synced/.
+Two fire-and-forget tasks are launched from datacache startup:
 
-A manifest file (templatedir/synced/.wnp_sync_manifest.json) tracks which
-files we wrote so stale entries can be deleted without touching files the user
-placed there manually.
+sync_base_templates(config)
+    Fetches /api/v1/templates/manifest (public endpoint), downloads any
+    base .htm files with stale checksums to templatedir/, and downloads
+    missing vendor assets (fonts, JS) to templatedir/vendor/.
+
+sync_from_charts(config, client)
+    Fetches /api/v1/editor/sync (requires API key), downloads base files
+    via the datacache client, assembles user-customised named templates,
+    and writes them to templatedir/synced/.  A manifest file
+    (templatedir/synced/.wnp_sync_manifest.json) tracks written files so
+    stale entries can be removed without touching user-placed files.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import pathlib
@@ -196,3 +201,66 @@ def _cleanup_stale(synced_dir: pathlib.Path, current_names: set[str]) -> None:
         if stale_path.exists():
             stale_path.unlink()
             logging.debug("Template sync: removed stale template %r", stale_name)
+
+
+async def sync_base_templates(config: "nowplaying.config.ConfigFile") -> None:
+    """Download base .htm files and vendor assets from the charts manifest.
+
+    Runs as a fire-and-forget background task on startup.  Safe to call even
+    when charts is unreachable — all errors are logged and swallowed.
+    """
+    base_url = nowplaying.utils.charts_api.get_charts_base_url(config)
+    manifest_data = await _fetch_manifest(f"{base_url}/api/v1/templates/manifest", "")
+    if not manifest_data:
+        return
+
+    template_dir = pathlib.Path(config.templatedir)
+    vendor_dir = template_dir / "vendor"
+    vendor_dir.mkdir(parents=True, exist_ok=True)
+
+    ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    async with httpx.AsyncClient(
+        verify=ssl_ctx, follow_redirects=True, timeout=httpx.Timeout(_DOWNLOAD_TIMEOUT)
+    ) as client:
+        await _sync_base_htms(client, manifest_data.get("templates", {}), template_dir)
+        await _sync_vendor_files(client, manifest_data.get("vendor", {}), vendor_dir)
+
+
+async def _sync_base_htms(
+    client: httpx.AsyncClient,
+    templates: dict[str, dict],
+    template_dir: pathlib.Path,
+) -> None:
+    for stem, info in templates.items():
+        url = info.get("url", "")
+        expected = info.get("checksum", "")
+        dest = template_dir / f"{stem}.htm"
+        if dest.exists() and expected:
+            if hashlib.sha256(dest.read_bytes()).hexdigest() == expected:
+                continue
+        try:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            dest.write_bytes(resp.content)
+            logging.debug("Base template sync: downloaded %s", stem)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.warning("Base template sync: failed to download %s", stem)
+
+
+async def _sync_vendor_files(
+    client: httpx.AsyncClient,
+    vendor: dict[str, dict],
+    vendor_dir: pathlib.Path,
+) -> None:
+    for filename, info in vendor.items():
+        url = info.get("url", "")
+        dest = vendor_dir / filename
+        if dest.exists():
+            continue
+        try:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            dest.write_bytes(resp.content)
+            logging.debug("Vendor sync: downloaded %s", filename)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.warning("Vendor sync: failed to download %s from %s", filename, url)

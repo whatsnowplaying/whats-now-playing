@@ -36,6 +36,7 @@ async def _run(
     client = nowplaying.datacache.client.DataCacheClient(cache_dir)
     await client.initialize()
     logging.info("DataCache worker started")
+    asyncio.create_task(nowplaying.processes.template_sync.sync_base_templates(config))
     asyncio.create_task(nowplaying.processes.template_sync.sync_from_charts(config, client))
 
     # Watch the pending_requests database for writes so new image downloads

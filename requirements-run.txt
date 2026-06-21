@@ -34,7 +34,7 @@ twitchAPI==4.5.0
 url_normalize==3.0.0
 watchdog==6.0.0
 wnpmb @ https://github.com/whatsnowplaying/wnpmb/releases/download/0.3.0/wnpmb-0.3.0-py3-none-any.whl
-wnp-templates @ https://github.com/whatsnowplaying/wnp-templates/releases/download/0.1.0/wnp_templates-0.1.0-py3-none-any.whl
+wnp-templates @ https://github.com/whatsnowplaying/wnp-templates/releases/download/0.1.2/wnp_templates-0.1.2-py3-none-any.whl
 zeroconf==0.149.16
 
 #
