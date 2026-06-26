@@ -27,6 +27,9 @@ SPLITSTR = "@@SPLITHERE@@"
 
 METADATALIST = [
     "acoustidid",
+    "cover_palette",
+    "cover_palette_lighting",
+    "cover_palette_type",
     "album",
     "albumartist",
     "artist",

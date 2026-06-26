@@ -47,6 +47,9 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.
 | bpm | Beats per minute of the song |
 | comments | Comments from either the DJ software or the song file, whichever is discovered first |
 | composer | Composer of the song |
+| cover_palette | Up to 6 dominant hex colors from the cover art, comma-separated (e.g. `#c85028,#3a7abf`). Suitable for graphics and overlays. |
+| cover_palette_lighting | Up to 6 vibrant hex colors extracted from the cover art, comma-separated. Filtered for stage-usable saturation — suitable for lighting systems like Lumia. |
+| cover_palette_type | Character of the cover art palette: `vibrant`, `desaturated`, or `monochrome`. |
 | coverurl | Relative location to fetch the cover. Note that this will only work when the webserver is active. |
 | date | Date (either release date or date of the media) |
 | deck | Deck # this track is playing on |
@@ -91,6 +94,27 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.
 | year | Release year of the media |
 
 ## Implementation Notes
+
+### Cover Art Colors
+
+WNP analyzes each track's cover art and extracts two color palettes:
+
+- **`cover_palette`** — up to 6 dominant colors by frequency, with minimal filtering.
+  Use this for on-screen graphics, overlays, and OBS scenes where dark or muted tones look good.
+- **`cover_palette_lighting`** — up to 6 colors filtered for vibrance and saturation.
+  Near-black, near-white, and washed-out tones are removed so every color returned
+  looks good on a light fixture or LED system such as Lumia Stream.
+
+Both variables are comma-separated hex values (e.g. `#c85028,#3a7abf,#e0c040`).
+
+**`cover_palette_type`** describes the overall character of the cover art:
+
+- `vibrant` — the cover has strong, saturated colors
+- `desaturated` — the cover is muted or pastel
+- `monochrome` — the cover is essentially black, white, or grey
+
+Use `cover_palette_type` to conditionally swap lighting scenes or template layouts.
+For example, fall back to a default color scheme when a cover is monochrome.
 
 ### Arrays
 

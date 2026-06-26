@@ -179,6 +179,14 @@ variable and exportable.
 * Optional cover art in announcements
 * Rich Presence support (independently toggleable from Bot Mode)
 
+### [Lumia Stream](output/lumiastream.md)
+
+* Dedicated Lumia Stream plugin exposes 26 track metadata variables including title, artist,
+  BPM, key, cover art URL, and cover art color palettes
+* Fires a **Track Changed** alert on every track change for light shows, overlays, and automations
+* Install by downloading the `.lumiaplugin` file from the plugin repository and adding it
+  manually in Lumia Stream
+
 ## Audience Engagement
 
 ### [Guess Game](output/guessgame.md)

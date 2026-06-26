@@ -19,6 +19,7 @@ import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.utils.sqlite
+from .colors import COLOR_EXTRACT_TYPES, extract_palettes
 from .utils import redact_url
 
 
@@ -32,6 +33,7 @@ class CachedEntry:
     mime_type: str | None
     url: str | None = None  # populated by retrieve_by_cachekey and retrieve_by_identifier
     checksum: str | None = None  # SHA-256 hex digest of data, set on store
+    color_palette: dict | None = None  # cover_palette/lighting/type extracted by colors.py
 
 
 # Module-level lock for schema operations
@@ -179,6 +181,13 @@ class DataStorage:
                     await connection.commit()
 
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_store)
+
+            if data_type in COLOR_EXTRACT_TYPES:
+                asyncio.create_task(
+                    self._extract_and_store_colors(url, data_value),
+                    name=f"colors:{url[:60]}",
+                )
+
             return True
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -187,6 +196,25 @@ class DataStorage:
                 with contextlib.suppress(OSError):
                     blob_path.unlink()
             return False
+
+    async def _extract_and_store_colors(self, url: str, data_value: bytes) -> None:
+        """Run color extraction and write result to the dedicated color_palette column."""
+        try:
+            colors = await extract_palettes(data_value)
+            if not any(colors.values()):
+                return
+
+            async def _do_update() -> None:
+                async with aiosqlite.connect(str(self.database_path), timeout=30.0) as conn:
+                    await conn.execute(
+                        "UPDATE cached_data SET color_palette = ? WHERE url = ? AND color_palette IS NULL",
+                        (orjson.dumps(colors).decode(), url),
+                    )
+                    await conn.commit()
+
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_update)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Color extraction failed for %s", redact_url(url))
 
     async def retrieve_by_url(self, url: str) -> "CachedEntry | None":  # pylint: disable=too-many-locals
         """
@@ -209,7 +237,7 @@ class DataStorage:
                     cursor = await connection.execute(
                         """
                         SELECT data_value, file_path, metadata, status_code,
-                               mime_type, content_checksum
+                               mime_type, content_checksum, color_palette
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -238,9 +266,15 @@ class DataStorage:
             if not rows:
                 return None
 
-            data_value, file_path_str, metadata_json, status_code, mime_type, content_checksum = (
-                rows[0]
-            )
+            (
+                data_value,
+                file_path_str,
+                metadata_json,
+                status_code,
+                mime_type,
+                content_checksum,
+                color_palette_json,
+            ) = rows[0]
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str
@@ -273,6 +307,7 @@ class DataStorage:
                 status_code=status_code,
                 mime_type=mime_type,
                 checksum=content_checksum,
+                color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
             )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -303,7 +338,8 @@ class DataStorage:
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     cursor = await connection.execute(
                         """
-                        SELECT data_value, file_path, metadata, url, status_code, mime_type
+                        SELECT data_value, file_path, metadata, url, status_code, mime_type,
+                               color_palette
                         FROM cached_data
                         WHERE cachekey = ? AND expires_at > ?
                         """,
@@ -330,7 +366,15 @@ class DataStorage:
             if not rows:
                 return None
 
-            data_value, file_path_str, metadata_json, url, status_code, mime_type = rows[0]
+            (
+                data_value,
+                file_path_str,
+                metadata_json,
+                url,
+                status_code,
+                mime_type,
+                color_palette_json,
+            ) = rows[0]
 
             if file_path_str:
                 full_path = self.database_path.parent / file_path_str
@@ -358,7 +402,12 @@ class DataStorage:
 
             metadata = orjson.loads(metadata_json) if metadata_json else {}
             return CachedEntry(
-                data=data, metadata=metadata, status_code=status_code, mime_type=mime_type, url=url
+                data=data,
+                metadata=metadata,
+                status_code=status_code,
+                mime_type=mime_type,
+                url=url,
+                color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
             )
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -369,7 +418,15 @@ class DataStorage:
         self, row: tuple[Any, ...], identifier: str, data_type: str
     ) -> "CachedEntry | None":
         """Load data for a random row, deleting orphaned DB rows on FileNotFoundError."""
-        data_value, file_path_str, metadata_json, url, status_code, mime_type = row
+        (
+            data_value,
+            file_path_str,
+            metadata_json,
+            url,
+            status_code,
+            mime_type,
+            color_palette_json,
+        ) = row
         if file_path_str:
             full_path = self.database_path.parent / file_path_str
             try:
@@ -393,7 +450,12 @@ class DataStorage:
             data = bytes(data_value)
         metadata = orjson.loads(metadata_json) if metadata_json else {}
         return CachedEntry(
-            data=data, metadata=metadata, status_code=status_code, mime_type=mime_type, url=url
+            data=data,
+            metadata=metadata,
+            status_code=status_code,
+            mime_type=mime_type,
+            url=url,
+            color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
         )
 
     @overload
@@ -444,13 +506,11 @@ class DataStorage:
                 nonlocal rows
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     if random:
-                        select_cols = (
-                            "data_value, file_path, metadata, url, status_code, mime_type"
-                        )
+                        select_cols = "data_value, file_path, metadata, url, status_code, mime_type, color_palette"
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
-                        select_cols = "metadata, url, status_code, mime_type"
+                        select_cols = "metadata, url, status_code, mime_type, color_palette"
                         order_limit = ""
 
                     if provider:
@@ -513,8 +573,9 @@ class DataStorage:
                     status_code=status_code,
                     mime_type=mime_type,
                     url=url,
+                    color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
                 )
-                for metadata_json, url, status_code, mime_type in rows
+                for metadata_json, url, status_code, mime_type, color_palette_json in rows
             ]
 
         except Exception as error:  # pylint: disable=broad-exception-caught
@@ -922,7 +983,8 @@ def _ensure_datacache_schema(database_path: Path) -> None:
                 data_size INTEGER NOT NULL,
                 status_code INTEGER NOT NULL DEFAULT 200,
                 mime_type TEXT,             -- MIME type detected by puremagic, NULL for non-binary
-                content_checksum TEXT       -- SHA-256 hex digest of stored content
+                content_checksum TEXT,      -- SHA-256 hex digest of stored content
+                color_palette TEXT          -- JSON dict with cover_palette/lighting/type keys
             );
 
             CREATE TABLE IF NOT EXISTS pending_requests (

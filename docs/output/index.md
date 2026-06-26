@@ -8,6 +8,7 @@
 - **[Discord](discord.md)** - Discord rich presence integration
 - **[Guess Game](guessgame.md)** - Interactive hangman-style game for Twitch chat
 - **[Kick Bot](kickbot.md)** - Kick streaming platform bot
+- **[Lumia Stream](lumiastream.md)** - Lumia Stream lighting and automation integration
 - **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
 - **[Remote Output](../input/remote.md#client-side)** - Send track data to another What's Now Playing instance
 - **[Text Output](textoutput.md)** - Simple text file output
