@@ -2430,6 +2430,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#cover-art-colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cover Art Colors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#arrays" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2935,6 +2946,18 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.</p>
 <td>Composer of the song</td>
 </tr>
 <tr>
+<td>cover_palette</td>
+<td>Up to 6 dominant hex colors from the cover art, comma-separated (e.g. <code>#c85028,#3a7abf</code>). Suitable for graphics and overlays.</td>
+</tr>
+<tr>
+<td>cover_palette_lighting</td>
+<td>Up to 6 vibrant hex colors extracted from the cover art, comma-separated. Filtered for stage-usable saturation — suitable for lighting systems like Lumia.</td>
+</tr>
+<tr>
+<td>cover_palette_type</td>
+<td>Character of the cover art palette: <code>vibrant</code>, <code>desaturated</code>, or <code>monochrome</code>.</td>
+</tr>
+<tr>
 <td>coverurl</td>
 <td>Relative location to fetch the cover. Note that this will only work when the webserver is active.</td>
 </tr>
@@ -3105,6 +3128,24 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.</p>
 </tbody>
 </table>
 <h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
+<h3 id="cover-art-colors">Cover Art Colors<a class="headerlink" href="#cover-art-colors" title="Permanent link">&para;</a></h3>
+<p>WNP analyzes each track's cover art and extracts two color palettes:</p>
+<ul>
+<li><strong><code>cover_palette</code></strong> — up to 6 dominant colors by frequency, with minimal filtering.
+  Use this for on-screen graphics, overlays, and OBS scenes where dark or muted tones look good.</li>
+<li><strong><code>cover_palette_lighting</code></strong> — up to 6 colors filtered for vibrance and saturation.
+  Near-black, near-white, and washed-out tones are removed so every color returned
+  looks good on a light fixture or LED system such as Lumia Stream.</li>
+</ul>
+<p>Both variables are comma-separated hex values (e.g. <code>#c85028,#3a7abf,#e0c040</code>).</p>
+<p><strong><code>cover_palette_type</code></strong> describes the overall character of the cover art:</p>
+<ul>
+<li><code>vibrant</code> — the cover has strong, saturated colors</li>
+<li><code>desaturated</code> — the cover is muted or pastel</li>
+<li><code>monochrome</code> — the cover is essentially black, white, or grey</li>
+</ul>
+<p>Use <code>cover_palette_type</code> to conditionally swap lighting scenes or template layouts.
+For example, fall back to a default color scheme when a cover is monochrome.</p>
 <h3 id="arrays">Arrays<a class="headerlink" href="#arrays" title="Permanent link">&para;</a></h3>
 <p>Some fields that might be multi-valued (e.g., genre) will be merged into
 one. If they are not merged, the description will specifically say it is
