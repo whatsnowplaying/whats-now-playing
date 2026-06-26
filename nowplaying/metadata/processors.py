@@ -27,6 +27,7 @@ import nowplaying.utils.filters
 from nowplaying.types import TrackMetadata
 
 import nowplaying.datacache
+import nowplaying.datacache.colors
 
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
@@ -89,6 +90,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
+        try:
+            logging.debug("running cover_colors")
+            await self._process_cover_colors()
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Ignoring sub-metaproc failure.")
+
         if self.metadata.get("artist") and self.metadata.get("album"):
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
             storage = nowplaying.datacache.get_client().storage
@@ -127,6 +134,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     self.metadata["coverimageraw"] = result.data
                     self.metadata["coverimagetype"] = "png"
                     self.metadata["coverurl"] = "cover.png"
+                    if result.color_palette:
+                        self.metadata.update(result.color_palette)  # type: ignore[arg-type]
 
         self._fix_filename_stem()
         self._fix_artist_in_title()
@@ -329,6 +338,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata["coverimageraw"] = nowplaying.utils.image2png(self.metadata["coverimageraw"])
         self.metadata["coverimagetype"] = "png"
         self.metadata["coverurl"] = "cover.png"
+
+    async def _process_cover_colors(self) -> None:
+        if not self.metadata.get("coverimageraw"):
+            return
+        if self.metadata.get("cover_palette"):
+            return
+        colors = await nowplaying.datacache.colors.extract_palettes(self.metadata["coverimageraw"])
+        self.metadata.update(colors)  # type: ignore[arg-type]
 
     async def _musicbrainz(self) -> None:
         if not self.metadata:

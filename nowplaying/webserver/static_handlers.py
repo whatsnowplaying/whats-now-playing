@@ -20,6 +20,7 @@ import nowplaying.hostmeta
 import nowplaying.preview.sampledata
 import nowplaying.upgrades
 import nowplaying.utils
+import nowplaying.version
 from nowplaying.types import TrackMetadata
 
 # Minimum required versions for known remote agents.
@@ -28,6 +29,10 @@ REMOTE_AGENT_MIN_VERSIONS: dict[str, str] = {
     "wnptrackhunter": "0",
     "wnpearshot": "0",
 }
+
+# Minimum Lumia plugin version WNP will accept.
+# Bump this when a plugin change is required to work with the current WNP release.
+LUMIA_MIN_PLUGIN_VERSION = "1.0.0"
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -423,6 +428,34 @@ class StaticContentHandler:
             except Exception as err:  # pylint: disable=broad-exception-caught
                 logging.exception("api_v1_last_handler: %s", err)
         return web.json_response(data)
+
+    async def api_v1_lumia_version_handler(self, request: web.Request) -> web.Response:
+        """Lumia plugin compatibility handshake — returns WNP version and acceptance status."""
+        plugin_version = request.rel_url.query.get("plugin_version", "0").strip()
+        try:
+            accepted = nowplaying.upgrades.Version(
+                self._normalize_version(plugin_version)
+            ) >= nowplaying.upgrades.Version(self._normalize_version(LUMIA_MIN_PLUGIN_VERSION))
+        except ValueError:
+            accepted = False
+        t = nowplaying.version.__VERSION_TUPLE__
+        wnp_version = f"{t[0]}.{t[1]}.{t[2]}"
+        response: dict = {
+            "wnp_version": wnp_version,
+            "min_plugin_version": LUMIA_MIN_PLUGIN_VERSION,
+            "accepted": accepted,
+        }
+        if not accepted:
+            response["message"] = (
+                f"Plugin version {plugin_version} is too old. "
+                f"Please reinstall from your WNP download to get version {LUMIA_MIN_PLUGIN_VERSION} or later."
+            )
+            logging.warning(
+                "Lumia plugin version %s rejected (minimum: %s)",
+                plugin_version,
+                LUMIA_MIN_PLUGIN_VERSION,
+            )
+        return web.json_response(response)
 
     MAX_COVER_BYTES = 10 * 1024 * 1024  # 10 MB
 
