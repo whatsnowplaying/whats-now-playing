@@ -73,3 +73,4 @@
 - [Recognition](https://whatsnowplaying.github.io/whats-now-playing/latest/recognition/): AcoustID and MusicBrainz track identification
 - [API Reference](https://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/): Web server REST API endpoints
 - [Charts](https://whatsnowplaying.github.io/whats-now-playing/latest/output/charts/): Community charts service at whatsnowplaying.com; includes chat token for Nightbot, StreamElements, and Streamlabs
+- [Lumia Stream](https://whatsnowplaying.github.io/whats-now-playing/latest/output/lumiastream/): Lumia Stream lighting integration; fires nowplaying-switchSong alert with track metadata on every track change
