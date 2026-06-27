@@ -83,6 +83,8 @@ def _extract_palettes_sync(data: bytes, max_colors: int = 6) -> dict[str, str]:
             if not selected:
                 selected = candidates[:4]
 
+        # Most vibrant first so consumers can take [0] without scanning.
+        selected.sort(key=lambda c: c[2] * c[3], reverse=True)
         lighting_colors = [f"#{r:02x}{g:02x}{b:02x}" for _, _, _, _, r, g, b in selected]
 
         return {

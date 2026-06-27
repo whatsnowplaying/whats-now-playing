@@ -702,3 +702,158 @@ async def test_post_to_channel_swallows_http_exception(discord_support):
     discord_support.clients.bot = mock_bot
     discord_support.config.cparser.setValue("discord/channel_id", "123456789")
     await discord_support._post_to_channel("track")  # must not raise
+
+
+# _build_embed tests
+
+
+def test_build_embed_sets_description():
+    """Embed description contains the template output."""
+    embed = DiscordSupport._build_embed("now playing: Test Track", metadata=None)
+    assert embed.description == "now playing: Test Track"
+
+
+@pytest.mark.parametrize(
+    "palette_str,expected",
+    [
+        ("", None),
+        ("#ff6600", discord.Color(0xFF6600)),
+        # Pre-sorted by s×v: first entry returned directly, no scan
+        ("#ff6600,#0044cc", discord.Color(0xFF6600)),
+        # Invalid entry skipped; first valid hex returned
+        ("notahex,#ffffff", discord.Color(0xFFFFFF)),
+        # All invalid → None
+        ("notahex,tooshort", None),
+    ],
+)
+def test_first_valid_color(palette_str, expected):
+    """_first_valid_color returns the first parseable hex entry or None."""
+    assert DiscordSupport._first_valid_color(palette_str) == expected
+
+
+@pytest.mark.parametrize(
+    "palette_str,expected",
+    [
+        ("", None),
+        ("#ff0000", discord.Color(0xFF0000)),
+        # Scans all entries; most vibrant (#ff6600, s×v=1.0) wins over #0044cc (s×v=0.8)
+        ("#0044cc,#ff6600", discord.Color(0xFF6600)),
+        # Falls back to only valid entry even when s×v is low (white)
+        ("notahex,#ffffff", discord.Color(0xFFFFFF)),
+        # Pure invalid → None
+        ("notahex,tooshort", None),
+    ],
+)
+def test_most_vibrant_color(palette_str, expected):
+    """_most_vibrant_color returns the highest s×v color or None."""
+    assert DiscordSupport._most_vibrant_color(palette_str) == expected
+
+
+@pytest.mark.parametrize(
+    "metadata,expected_color",
+    [
+        # Lighting palette pre-sorted at extraction time: first entry taken directly
+        ({"cover_palette_lighting": "#ff6600,#0044cc"}, discord.Color(0xFF6600)),
+        # Display palette fallback: most-vibrant scan finds #e60024 over dark #32221f
+        ({"cover_palette": "#32221f,#e60024"}, discord.Color(0xE60024)),
+        # Malformed entry skipped; most vibrant valid entry returned
+        ({"cover_palette": "notahex,#ffffff"}, discord.Color(0xFFFFFF)),
+        # Empty palette → no color set
+        ({"cover_palette": ""}, None),
+        # No palette keys at all → no color set
+        ({}, None),
+    ],
+)
+def test_build_embed_color(metadata, expected_color):
+    """_build_embed sets embed color: first entry from lighting, or scan of display palette."""
+    embed = DiscordSupport._build_embed("track", metadata=metadata)
+    assert embed.color == expected_color
+
+
+def test_build_embed_thumbnail_set_when_has_file():
+    """When has_file=True the thumbnail URL points to the attachment."""
+    embed = DiscordSupport._build_embed("track", metadata={}, has_file=True)
+    assert embed.thumbnail.url == "attachment://cover.jpg"
+
+
+def test_build_embed_no_thumbnail_without_file():
+    """When has_file=False no thumbnail is set."""
+    embed = DiscordSupport._build_embed("track", metadata={}, has_file=False)
+    assert embed.thumbnail.url is None
+
+
+# _post_to_channel embed-mode tests
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_sends_embed_when_configured(discord_support):
+    """When channel_post_as_embed is True, an embed is sent instead of plain text."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_post_as_embed", True)
+
+    await discord_support._post_to_channel("now playing: Test Track")
+
+    assert mock_channel.send.called
+    _, kwargs = mock_channel.send.call_args
+    assert "embed" in kwargs
+    assert isinstance(kwargs["embed"], discord.Embed)
+    assert kwargs["embed"].description == "now playing: Test Track"
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_embed_with_image(discord_support):
+    """Embed mode with cover art attaches file and sets embed thumbnail."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_post_as_embed", True)
+    discord_support.config.cparser.setValue("discord/channel_attach_image", True)
+    discord_support.config.cparser.setValue("discord/channel_image_size", 200)
+
+    metadata = {"coverimageraw": _make_png(500, 500)}
+    await discord_support._post_to_channel("track", metadata)
+
+    assert mock_channel.send.called
+    _, kwargs = mock_channel.send.call_args
+    assert "embed" in kwargs
+    assert "file" in kwargs
+    assert kwargs["embed"].thumbnail.url == "attachment://cover.jpg"
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_embed_uses_palette_color(discord_support):
+    """Embed color is taken from cover_palette when embed mode is on."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_post_as_embed", True)
+
+    # Lighting palette pre-sorted by s×v: #ff0000 (s×v=1.0) is first
+    metadata = {"cover_palette_lighting": "#ff0000,#004400"}
+    await discord_support._post_to_channel("track", metadata)
+
+    _, kwargs = mock_channel.send.call_args
+    assert kwargs["embed"].color == discord.Color(0xFF0000)
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_plain_text_when_embed_disabled(discord_support):
+    """Plain text is sent when channel_post_as_embed is False."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_post_as_embed", False)
+
+    await discord_support._post_to_channel("now playing: Test Track")
+
+    mock_channel.send.assert_awaited_once_with("now playing: Test Track")

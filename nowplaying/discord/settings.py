@@ -74,6 +74,9 @@ class DiscordSettings:
         widget.channel_strip_extra_lines_checkbox.setChecked(
             config.cparser.value("discord/channel_strip_extra_lines", type=bool)
         )
+        widget.channel_post_as_embed_checkbox.setChecked(
+            config.cparser.value("discord/channel_post_as_embed", type=bool)
+        )
         widget.template_lineedit.setText(config.cparser.value("discord/template") or "")
         DiscordSettings._update_fields(widget)
 
@@ -107,6 +110,10 @@ class DiscordSettings:
             "discord/channel_strip_extra_lines",
             widget.channel_strip_extra_lines_checkbox.isChecked(),
         )
+        config.cparser.setValue(
+            "discord/channel_post_as_embed",
+            widget.channel_post_as_embed_checkbox.isChecked(),
+        )
         config.cparser.setValue("discord/template", widget.template_lineedit.text())
 
         if old_bot != new_bot or old_rp != new_rp:
@@ -125,6 +132,7 @@ class DiscordSettings:
         settings.setValue("discord/channel_image_size", 200)
         settings.setValue("discord/channel_template", "")
         settings.setValue("discord/channel_strip_extra_lines", False)
+        settings.setValue("discord/channel_post_as_embed", False)
         settings.setValue("discord/large_image_key", "")
         settings.setValue("discord/small_image_key", "")
 
@@ -150,6 +158,7 @@ class DiscordSettings:
         widget.channel_template_button.setEnabled(bot_enabled)
         widget.channel_template_preview_button.setEnabled(bot_enabled)
         widget.channel_strip_extra_lines_checkbox.setEnabled(bot_enabled)
+        widget.channel_post_as_embed_checkbox.setEnabled(bot_enabled)
 
         widget.template_label.setEnabled(either_enabled)
         widget.template_lineedit.setEnabled(either_enabled)

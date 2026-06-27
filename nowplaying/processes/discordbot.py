@@ -6,6 +6,7 @@ Discord support code
 """
 
 import asyncio
+import colorsys
 import contextlib
 import io
 import logging
@@ -317,6 +318,79 @@ class DiscordSupport:
             logging.debug("Failed to prepare channel image: %s", error)
             return None
 
+    @staticmethod
+    def _first_valid_color(palette_str: str) -> discord.Color | None:
+        """Return the discord.Color for the first parseable hex entry in palette_str.
+
+        cover_palette_lighting is sorted by s×v at extraction time, so the first
+        valid entry is always the most vibrant — no per-call colorsys math needed.
+        """
+        for token in palette_str.split(","):
+            token = token.strip()
+            if token.startswith("#") and len(token) == 7:
+                try:
+                    r = int(token[1:3], 16)
+                    g = int(token[3:5], 16)
+                    b = int(token[5:7], 16)
+                    return discord.Color((r << 16) | (g << 8) | b)
+                except ValueError:
+                    continue
+        return None
+
+    @staticmethod
+    def _most_vibrant_color(palette_str: str) -> discord.Color | None:
+        """Return the most vibrant (highest s×v) color from a comma-separated hex palette.
+
+        Used for cover_palette (frequency-sorted display palette) where the most
+        vibrant color is not guaranteed to be first.
+        """
+        best_rgb: tuple[int, int, int] | None = None
+        best_sv = -1.0
+        for token in palette_str.split(","):
+            token = token.strip()
+            if not (token.startswith("#") and len(token) == 7):
+                continue
+            try:
+                r = int(token[1:3], 16)
+                g = int(token[3:5], 16)
+                b = int(token[5:7], 16)
+                _, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+                if s * v > best_sv:
+                    best_sv = s * v
+                    best_rgb = (r, g, b)
+            except ValueError:
+                continue
+        if best_rgb is None:
+            return None
+        r, g, b = best_rgb
+        return discord.Color((r << 16) | (g << 8) | b)
+
+    @staticmethod
+    def _build_embed(
+        templateout: str,
+        metadata: dict[str, Any] | None,
+        has_file: bool = False,
+    ) -> discord.Embed:
+        """Build a Discord embed from template output and track metadata.
+
+        Color is taken from the first entry of cover_palette_lighting (pre-sorted
+        by vibrancy at extraction time), falling back to a vibrancy scan of
+        cover_palette. When has_file is True the cover art thumbnail is wired to
+        the attached file via the attachment:// URL scheme.
+        """
+        embed = discord.Embed(description=templateout)
+        if metadata is not None:
+            lighting: str = metadata.get("cover_palette_lighting") or ""
+            display: str = metadata.get("cover_palette") or ""
+            color = DiscordSupport._first_valid_color(
+                lighting
+            ) or DiscordSupport._most_vibrant_color(display)
+            if color is not None:
+                embed.color = color
+            if has_file:
+                embed.set_thumbnail(url="attachment://cover.jpg")
+        return embed
+
     async def _post_to_channel(
         self, templateout: str, metadata: dict[str, Any] | None = None
     ) -> None:
@@ -346,15 +420,34 @@ class DiscordSupport:
                 max_dim = int(self.config.cparser.value("discord/channel_image_size") or 200)
                 file = self._prepare_channel_image(rawdata, max_dim=max_dim)
 
+        post_as_embed = self.config.cparser.value("discord/channel_post_as_embed", type=bool)
+
         try:
-            if file:
-                await channel.send(templateout, file=file)
-            else:
-                await channel.send(templateout)
+            await self._send_channel_message(channel, templateout, metadata, file, post_as_embed)
         except discord.Forbidden:
             logging.error("Bot lacks permission to send messages to channel %s", channel_id)
         except discord.HTTPException as error:
             logging.error("Failed to send message to Discord channel: %s", error)
+
+    async def _send_channel_message(
+        self,
+        channel: discord.abc.Messageable,
+        templateout: str,
+        metadata: dict[str, Any] | None,
+        file: discord.File | None,
+        post_as_embed: bool,
+    ) -> None:
+        """Send a message to a Discord channel as plain text or embed."""
+        if post_as_embed:
+            embed = self._build_embed(templateout, metadata, has_file=file is not None)
+            if file:
+                await channel.send(embed=embed, file=file)
+            else:
+                await channel.send(embed=embed)
+        elif file:
+            await channel.send(templateout, file=file)
+        else:
+            await channel.send(templateout)
 
     async def _update_all_clients(self, templateout: str, metadata: dict[str, Any]) -> None:
         """update bot presence, IPC rich presence, and optional channel post"""
