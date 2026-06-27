@@ -82,6 +82,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         else:
             self.metadata = {}
 
+        # musicbrainzalbumid is a single string; coerce list → str before any
+        # processing (old DB rows or some DJ software inputs can produce a list)
+        if isinstance(self.metadata.get("musicbrainzalbumid"), list):
+            raw = self.metadata["musicbrainzalbumid"]
+            self.metadata["musicbrainzalbumid"] = raw[0] if raw else None
+
         try:
             for processor in "hostmeta", "tinytag", "image2png":
                 logging.debug("running %s", processor)
@@ -89,6 +95,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 func()
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
+
+        if self.config.cparser.value("artistextras/ignoreembeddedart", type=bool):
+            logging.debug("ignoreembeddedart: discarding embedded cover art")
+            for key in ("coverimageraw", "coverimagetype", "coverurl", "cover_palette"):
+                self.metadata.pop(key, None)
+            self.metadata.pop("_embedded_extra_covers", None)
 
         try:
             logging.debug("running cover_colors")

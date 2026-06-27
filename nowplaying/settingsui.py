@@ -480,6 +480,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets["artistextras"].bio_dedup_checkbox.setChecked(
             self.config.cparser.value("artistextras/bio_dedup", type=bool)
         )
+        self.widgets["artistextras"].ignoreembeddedart_checkbox.setChecked(
+            self.config.cparser.value("artistextras/ignoreembeddedart", type=bool)
+        )
 
     def _upd_win_filters(self):
         """update the filter settings"""
@@ -739,6 +742,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             "artistextras/bio_dedup",
             self.widgets["artistextras"].bio_dedup_checkbox.isChecked(),
+        )
+        self.config.cparser.setValue(
+            "artistextras/ignoreembeddedart",
+            self.widgets["artistextras"].ignoreembeddedart_checkbox.isChecked(),
         )
 
     def _upd_conf_recognition(self):

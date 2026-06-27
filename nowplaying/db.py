@@ -84,7 +84,6 @@ LISTFIELDS = [
     "artistwebsites",
     "genres",
     "isrc",
-    "musicbrainzalbumid",
     "musicbrainzartistid",
 ]
 

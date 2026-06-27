@@ -261,3 +261,42 @@ async def test_duplicate_artist_no_strip_when_no_dash(bootstrap):
         metadata=metadatain
     )
     assert metadataout["title"] == "Madonna Song Title"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ignore_embedded", [False, True])
+async def test_ignoreembeddedart_toggle(bootstrap, ignore_embedded):
+    """When ignoreembeddedart is True, embedded coverimageraw is discarded before plugins run."""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    config.cparser.setValue("artistextras/ignoreembeddedart", ignore_embedded)
+
+    fake_image = b"fake-embedded-cover-bytes"
+    metadatain = {
+        "artist": "Test Artist",
+        "title": "Test Song",
+        "coverimageraw": fake_image,
+        "_embedded_extra_covers": [fake_image],
+    }
+
+    # Bypass image conversion so coverimageraw survives into the toggle check.
+    # skipplugins=True prevents artist-extras from overwriting coverimageraw.
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_image2png",
+        lambda self: None,
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    if ignore_embedded:
+        assert not metadataout.get("coverimageraw"), (
+            "coverimageraw should be cleared when ignoreembeddedart is True"
+        )
+        assert "_embedded_extra_covers" not in metadataout
+    else:
+        assert metadataout.get("coverimageraw") == fake_image, (
+            "coverimageraw should be preserved when ignoreembeddedart is False"
+        )
