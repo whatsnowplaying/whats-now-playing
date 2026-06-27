@@ -261,3 +261,38 @@ async def test_duplicate_artist_no_strip_when_no_dash(bootstrap):
         metadata=metadatain
     )
     assert metadataout["title"] == "Madonna Song Title"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("prioritize_network", [False, True])
+async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
+    """prioritizenetworkart stashes embedded art, lets plugins run, restores only if nothing found."""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    config.cparser.setValue("artistextras/prioritizenetworkart", prioritize_network)
+
+    fake_image = b"fake-embedded-cover-bytes"
+    metadatain = {
+        "artist": "Test Artist",
+        "title": "Test Song",
+        "coverimageraw": fake_image,
+        "_embedded_extra_covers": [fake_image],
+    }
+
+    # Bypass image conversion so coverimageraw survives into the toggle check.
+    # skipplugins=True simulates no network source providing cover art, so the
+    # embedded backup should be restored when prioritize_network is True.
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_image2png",
+        lambda self: None,
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    # In both cases the embedded art should be present: when toggle is off it
+    # was never cleared; when toggle is on plugins found nothing so it was restored.
+    assert metadataout.get("coverimageraw") == fake_image
+    assert "_embedded_extra_covers" not in metadataout

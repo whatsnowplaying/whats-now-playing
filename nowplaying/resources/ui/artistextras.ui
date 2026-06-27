@@ -407,6 +407,16 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="prioritizenetworkart_checkbox">
+     <property name="text">
+      <string>Prefer network cover art (use embedded as fallback if none found)</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer>
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -493,6 +503,12 @@ p, li { white-space: pre-wrap; }
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>fanartdelay_spin</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>artistextras_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>prioritizenetworkart_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
  </connections>

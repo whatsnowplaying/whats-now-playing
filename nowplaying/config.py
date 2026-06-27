@@ -212,6 +212,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("artistextras/coverfornothumbs", True)
         settings.setValue("artistextras/nocoverfallback", "none")
         settings.setValue("artistextras/bio_dedup", True)
+        settings.setValue("artistextras/prioritizenetworkart", False)
 
     @staticmethod
     def _defaults_recognition(settings: QSettings) -> None:
