@@ -85,8 +85,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         # musicbrainzalbumid is a single string; coerce list → str before any
         # processing (old DB rows or some DJ software inputs can produce a list)
         if isinstance(self.metadata.get("musicbrainzalbumid"), list):
-            raw = self.metadata["musicbrainzalbumid"]
-            self.metadata["musicbrainzalbumid"] = raw[0] if raw else None
+            raw = self.metadata.pop("musicbrainzalbumid")
+            if raw:
+                self.metadata["musicbrainzalbumid"] = raw[0]
 
         try:
             for processor in "hostmeta", "tinytag", "image2png":
@@ -96,9 +97,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
-        if self.config.cparser.value("artistextras/ignoreembeddedart", type=bool):
-            logging.debug("ignoreembeddedart: discarding embedded cover art")
-            for key in ("coverimageraw", "coverimagetype", "coverurl", "cover_palette"):
+        embedded_art_backup: bytes | None = None
+        if self.config.cparser.value("artistextras/prioritizenetworkart", type=bool):
+            logging.debug("prioritizenetworkart: stashing embedded cover art as fallback")
+            embedded_art_backup = self.metadata.pop("coverimageraw", None)
+            for key in ("coverimagetype", "coverurl",
+                        "cover_palette", "cover_palette_lighting", "cover_palette_type"):
                 self.metadata.pop(key, None)
             self.metadata.pop("_embedded_extra_covers", None)
 
@@ -153,6 +157,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._fix_artist_in_title()
 
         await self._process_plugins(skipplugins)
+
+        if embedded_art_backup and not self.metadata.get("coverimageraw"):
+            logging.debug("prioritizenetworkart: no network art found, restoring embedded cover")
+            self.metadata["coverimageraw"] = embedded_art_backup
+            self.metadata["coverimagetype"] = "png"
+            self.metadata["coverurl"] = "cover.png"
 
         if "publisher" in self.metadata:
             if "label" not in self.metadata:

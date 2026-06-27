@@ -264,13 +264,13 @@ async def test_duplicate_artist_no_strip_when_no_dash(bootstrap):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("ignore_embedded", [False, True])
-async def test_ignoreembeddedart_toggle(bootstrap, ignore_embedded):
-    """When ignoreembeddedart is True, embedded coverimageraw is discarded before plugins run."""
+@pytest.mark.parametrize("prioritize_network", [False, True])
+async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
+    """prioritizenetworkart stashes embedded art, lets plugins run, restores only if nothing found."""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    config.cparser.setValue("artistextras/ignoreembeddedart", ignore_embedded)
+    config.cparser.setValue("artistextras/prioritizenetworkart", prioritize_network)
 
     fake_image = b"fake-embedded-cover-bytes"
     metadatain = {
@@ -281,7 +281,8 @@ async def test_ignoreembeddedart_toggle(bootstrap, ignore_embedded):
     }
 
     # Bypass image conversion so coverimageraw survives into the toggle check.
-    # skipplugins=True prevents artist-extras from overwriting coverimageraw.
+    # skipplugins=True simulates no network source providing cover art, so the
+    # embedded backup should be restored when prioritize_network is True.
     with unittest.mock.patch.object(
         nowplaying.metadata.processors.MetadataProcessors,
         "_process_image2png",
@@ -291,12 +292,7 @@ async def test_ignoreembeddedart_toggle(bootstrap, ignore_embedded):
             metadata=metadatain, skipplugins=True
         )
 
-    if ignore_embedded:
-        assert not metadataout.get("coverimageraw"), (
-            "coverimageraw should be cleared when ignoreembeddedart is True"
-        )
-        assert "_embedded_extra_covers" not in metadataout
-    else:
-        assert metadataout.get("coverimageraw") == fake_image, (
-            "coverimageraw should be preserved when ignoreembeddedart is False"
-        )
+    # In both cases the embedded art should be present: when toggle is off it
+    # was never cleared; when toggle is on plugins found nothing so it was restored.
+    assert metadataout.get("coverimageraw") == fake_image
+    assert "_embedded_extra_covers" not in metadataout

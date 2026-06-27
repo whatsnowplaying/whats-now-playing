@@ -407,9 +407,9 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="ignoreembeddedart_checkbox">
+    <widget class="QCheckBox" name="prioritizenetworkart_checkbox">
      <property name="text">
-      <string>Ignore embedded cover art (always fetch from online sources)</string>
+      <string>Prefer network cover art (use embedded as fallback if none found)</string>
      </property>
      <property name="checked">
       <bool>false</bool>
@@ -508,7 +508,7 @@ p, li { white-space: pre-wrap; }
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>ignoreembeddedart_checkbox</receiver>
+   <receiver>prioritizenetworkart_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
  </connections>
