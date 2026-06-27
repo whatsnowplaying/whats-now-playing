@@ -133,7 +133,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
             storage = nowplaying.datacache.get_client().storage
             if self.metadata.get("coverimageraw"):
-                logging.debug("Placing provided front cover for %s", identifier)
+                logging.debug(
+                    "Placing provided front cover for %s (normalized key: %s)",
+                    identifier,
+                    normalid,
+                )
                 await storage.store(
                     url=f"embedded://{normalid}/provided_0",
                     identifier=normalid,
@@ -180,9 +184,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata["coverurl"] = "cover.png"
 
         if prioritize_network:
-            # Art may have been replaced by network art; re-extract palette from final image.
-            for key in ("cover_palette", "cover_palette_lighting", "cover_palette_type"):
-                self.metadata.pop(key, None)
+            # If palette wasn't already supplied by the datacache hit, extract it now
+            # (e.g. embedded backup was restored with no cached palette).
+            # _process_cover_colors() is a no-op when cover_palette is already set.
             try:
                 await self._process_cover_colors()
             except Exception:  # pylint: disable=broad-except

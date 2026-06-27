@@ -319,6 +319,17 @@ class DiscordSupport:
             return None
 
     @staticmethod
+    def _parse_hex_rgb(token: str) -> tuple[int, int, int] | None:
+        """Parse a '#RRGGBB' token into an (r, g, b) tuple, or None if invalid."""
+        token = token.strip()
+        if not (token.startswith("#") and len(token) == 7):
+            return None
+        try:
+            return int(token[1:3], 16), int(token[3:5], 16), int(token[5:7], 16)
+        except ValueError:
+            return None
+
+    @staticmethod
     def _first_valid_color(palette_str: str) -> discord.Color | None:
         """Return the discord.Color for the first parseable hex entry in palette_str.
 
@@ -326,15 +337,10 @@ class DiscordSupport:
         valid entry is always the most vibrant — no per-call colorsys math needed.
         """
         for token in palette_str.split(","):
-            token = token.strip()
-            if token.startswith("#") and len(token) == 7:
-                try:
-                    r = int(token[1:3], 16)
-                    g = int(token[3:5], 16)
-                    b = int(token[5:7], 16)
-                    return discord.Color((r << 16) | (g << 8) | b)
-                except ValueError:
-                    continue
+            rgb = DiscordSupport._parse_hex_rgb(token)
+            if rgb is not None:
+                r, g, b = rgb
+                return discord.Color((r << 16) | (g << 8) | b)
         return None
 
     @staticmethod
@@ -347,19 +353,14 @@ class DiscordSupport:
         best_rgb: tuple[int, int, int] | None = None
         best_sv = -1.0
         for token in palette_str.split(","):
-            token = token.strip()
-            if not (token.startswith("#") and len(token) == 7):
+            rgb = DiscordSupport._parse_hex_rgb(token)
+            if rgb is None:
                 continue
-            try:
-                r = int(token[1:3], 16)
-                g = int(token[3:5], 16)
-                b = int(token[5:7], 16)
-                _, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-                if s * v > best_sv:
-                    best_sv = s * v
-                    best_rgb = (r, g, b)
-            except ValueError:
-                continue
+            r, g, b = rgb
+            _, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if s * v > best_sv:
+                best_sv = s * v
+                best_rgb = rgb
         if best_rgb is None:
             return None
         r, g, b = best_rgb
@@ -387,8 +388,8 @@ class DiscordSupport:
             ) or DiscordSupport._most_vibrant_color(display)
             if color is not None:
                 embed.color = color
-            if has_file:
-                embed.set_thumbnail(url="attachment://cover.jpg")
+        if has_file:
+            embed.set_thumbnail(url="attachment://cover.jpg")
         return embed
 
     async def _post_to_channel(

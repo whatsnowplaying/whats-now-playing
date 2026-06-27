@@ -714,6 +714,23 @@ def test_build_embed_sets_description():
 
 
 @pytest.mark.parametrize(
+    "token,expected",
+    [
+        ("#ff6600", (0xFF, 0x66, 0x00)),
+        ("#000000", (0, 0, 0)),
+        ("#ffffff", (255, 255, 255)),
+        ("notahex", None),
+        ("#gg0000", None),   # invalid hex digits
+        ("#ff660",  None),   # too short
+        ("",        None),
+    ],
+)
+def test_parse_hex_rgb(token, expected):
+    """_parse_hex_rgb returns an (r, g, b) tuple or None for invalid tokens."""
+    assert DiscordSupport._parse_hex_rgb(token) == expected
+
+
+@pytest.mark.parametrize(
     "palette_str,expected",
     [
         ("", None),
@@ -770,9 +787,10 @@ def test_build_embed_color(metadata, expected_color):
     assert embed.color == expected_color
 
 
-def test_build_embed_thumbnail_set_when_has_file():
-    """When has_file=True the thumbnail URL points to the attachment."""
-    embed = DiscordSupport._build_embed("track", metadata={}, has_file=True)
+@pytest.mark.parametrize("metadata", [{}, None])
+def test_build_embed_thumbnail_set_when_has_file(metadata):
+    """has_file=True sets thumbnail regardless of whether metadata is present."""
+    embed = DiscordSupport._build_embed("track", metadata=metadata, has_file=True)
     assert embed.thumbnail.url == "attachment://cover.jpg"
 
 
