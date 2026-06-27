@@ -101,8 +101,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.config.cparser.value("artistextras/prioritizenetworkart", type=bool):
             logging.debug("prioritizenetworkart: stashing embedded cover art as fallback")
             embedded_art_backup = self.metadata.pop("coverimageraw", None)
-            for key in ("coverimagetype", "coverurl",
-                        "cover_palette", "cover_palette_lighting", "cover_palette_type"):
+            for key in (
+                "coverimagetype",
+                "coverurl",
+                "cover_palette",
+                "cover_palette_lighting",
+                "cover_palette_type",
+            ):
                 self.metadata.pop(key, None)
             self.metadata.pop("_embedded_extra_covers", None)
 
