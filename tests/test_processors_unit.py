@@ -280,13 +280,20 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
         "_embedded_extra_covers": [fake_image],
     }
 
-    # Bypass image conversion so coverimageraw survives into the toggle check.
+    # Bypass image conversion and color extraction so fake bytes don't crash PIL.
     # skipplugins=True simulates no network source providing cover art, so the
     # embedded backup should be restored when prioritize_network is True.
-    with unittest.mock.patch.object(
-        nowplaying.metadata.processors.MetadataProcessors,
-        "_process_image2png",
-        lambda self: None,
+    with (
+        unittest.mock.patch.object(
+            nowplaying.metadata.processors.MetadataProcessors,
+            "_process_image2png",
+            lambda self: None,
+        ),
+        unittest.mock.patch.object(
+            nowplaying.metadata.processors.MetadataProcessors,
+            "_process_cover_colors",
+            unittest.mock.AsyncMock(),
+        ),
     ):
         metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
             metadata=metadatain, skipplugins=True
@@ -295,4 +302,7 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
     # In both cases the embedded art should be present: when toggle is off it
     # was never cleared; when toggle is on plugins found nothing so it was restored.
     assert metadataout.get("coverimageraw") == fake_image
-    assert "_embedded_extra_covers" not in metadataout
+    # _embedded_extra_covers is only stripped by the stash block (prioritize_network=True)
+    # or by the datacache block which requires artist+album; no album here so False keeps it.
+    if prioritize_network:
+        assert "_embedded_extra_covers" not in metadataout

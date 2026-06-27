@@ -562,7 +562,9 @@ async def test_multiimage_coverart(bootstrap, getroot):
     artist = metadataout.get("artist", "")
     album = metadataout.get("album", "")
     if artist and album:
-        normalid = nowplaying.utils.normalize(f"{artist}_{album}", sizecheck=0, nospaces=True)
+        norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
+        norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+        normalid = f"{norm_artist}_{norm_album}"
         keys = await nowplaying.datacache.get_client().storage.get_cache_keys_for_identifier(
             normalid, "front_cover"
         )

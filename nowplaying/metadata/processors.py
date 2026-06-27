@@ -97,8 +97,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
+        prioritize_network: bool = self.config.cparser.value(
+            "artistextras/prioritizenetworkart", type=bool
+        )
         embedded_art_backup: bytes | None = None
-        if self.config.cparser.value("artistextras/prioritizenetworkart", type=bool):
+        if prioritize_network:
             logging.debug("prioritizenetworkart: stashing embedded cover art as fallback")
             embedded_art_backup = self.metadata.pop("coverimageraw", None)
             for key in (
@@ -118,11 +121,23 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.exception("Ignoring sub-metaproc failure.")
 
         if self.metadata.get("artist") and self.metadata.get("album"):
+            # Normalize artist and album separately then join — mirrors queue_front_cover() in
+            # artistextras/__init__.py so the lookup key matches what network-art plugins store.
+            norm_artist = nowplaying.utils.normalize(
+                self.metadata["artist"], sizecheck=0, nospaces=True
+            )
+            norm_album = nowplaying.utils.normalize(
+                self.metadata["album"], sizecheck=0, nospaces=True
+            )
+            normalid = f"{norm_artist}_{norm_album}"
             identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
             storage = nowplaying.datacache.get_client().storage
             if self.metadata.get("coverimageraw"):
-                logging.debug("Placing provided front cover for %s", identifier)
-                normalid = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
+                logging.debug(
+                    "Placing provided front cover for %s (normalized key: %s)",
+                    identifier,
+                    normalid,
+                )
                 await storage.store(
                     url=f"embedded://{normalid}/provided_0",
                     identifier=normalid,
@@ -148,7 +163,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                         )
             else:
                 self.metadata.pop("_embedded_extra_covers", None)
-                normalid = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
                 result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
                 if result:
                     logging.debug("Restoring coverimageraw from datacache for %s", identifier)
@@ -168,6 +182,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata["coverimageraw"] = embedded_art_backup
             self.metadata["coverimagetype"] = "png"
             self.metadata["coverurl"] = "cover.png"
+
+        if prioritize_network:
+            # If palette wasn't already supplied by the datacache hit, extract it now
+            # (e.g. embedded backup was restored with no cached palette).
+            # _process_cover_colors() is a no-op when cover_palette is already set.
+            try:
+                await self._process_cover_colors()
+            except Exception:  # pylint: disable=broad-except
+                logging.exception("Ignoring cover_colors re-extraction failure.")
 
         if "publisher" in self.metadata:
             if "label" not in self.metadata:
