@@ -60,6 +60,57 @@ PATH_KEYS: frozenset[str] = frozenset(
 )
 
 
+def collect_config_data(settings: QSettings) -> dict[str, t.Any]:
+    """
+    Collect user-scope settings into a plain dict.
+
+    Uses childGroups()/childKeys() to read only user-scope keys, avoiding
+    system-scope contamination that allKeys() causes on macOS.  IGNORE_KEYS
+    entries are excluded so the result mirrors what export_config() writes.
+
+    Args:
+        settings: QSettings instance to read from
+    Returns:
+        dict mapping "group/key" strings to their values
+    """
+    config_data: dict[str, t.Any] = {}
+    for group in settings.childGroups():
+        settings.beginGroup(group)
+        for key in settings.childKeys():
+            full_key = f"{group}/{key}"
+            if any(full_key.startswith(pattern) for pattern in IGNORE_KEYS):
+                continue
+            value = settings.value(key)
+            if isinstance(value, list):
+                value = [str(item) for item in value]
+            elif not isinstance(value, (bool, int, float, str, type(None))):
+                value = str(value)
+            config_data[full_key] = value
+        settings.endGroup()
+    return config_data
+
+
+def restore_config_data(settings: QSettings, data: dict[str, t.Any]) -> None:
+    """
+    Restore settings from a dict snapshot produced by collect_config_data().
+
+    Intended for same-machine undo (e.g. cancelling a config reset).  No path
+    remapping is performed; all keys are written back verbatim.
+
+    The blanket clear() is intentional: a partial clear scoped to the
+    snapshot's groups would leave behind keys written during the reset
+    (e.g. settings/initialized=False) that are not in the snapshot.
+
+    Args:
+        settings: QSettings instance to write into (cleared first)
+        data: dict previously returned by collect_config_data()
+    """
+    settings.clear()
+    for key, value in data.items():
+        settings.setValue(key, value)
+    settings.sync()
+
+
 def export_config(
     export_path: pathlib.Path,
     settings: QSettings,
@@ -77,45 +128,9 @@ def export_config(
     """
 
     try:
-        # Use childGroups() and childKeys() to avoid system preferences contamination
-        # that can occur with allKeys() on macOS
-        config_data = {}
+        config_data = collect_config_data(settings)
 
         home = str(pathlib.Path.home())
-
-        # Get keys from each configuration group (avoids system preferences)
-        for group in settings.childGroups():
-            settings.beginGroup(group)
-            group_keys = settings.childKeys()
-
-            for key in group_keys:
-                full_key = f"{group}/{key}"
-
-                # Skip excluded settings
-                if any(full_key.startswith(pattern) for pattern in IGNORE_KEYS):
-                    continue
-
-                value = settings.value(key)
-
-                # Convert QSettings types to JSON-serializable types
-                if (
-                    isinstance(value, bool)
-                    or value is not None
-                    and isinstance(value, (int, float, str))
-                ):
-                    pass  # bools are fine
-                elif value is None:
-                    value = None
-                elif isinstance(value, list):
-                    # Convert list items to strings
-                    value = [str(item) for item in value]
-                else:
-                    # Convert everything else to string
-                    value = str(value)
-
-                config_data[full_key] = value
-
-            settings.endGroup()
 
         # Add metadata about the export
         export_metadata = {
