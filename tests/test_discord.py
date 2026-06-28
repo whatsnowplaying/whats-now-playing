@@ -720,9 +720,9 @@ def test_build_embed_sets_description():
         ("#000000", (0, 0, 0)),
         ("#ffffff", (255, 255, 255)),
         ("notahex", None),
-        ("#gg0000", None),   # invalid hex digits
-        ("#ff660",  None),   # too short
-        ("",        None),
+        ("#gg0000", None),  # invalid hex digits
+        ("#ff660", None),  # too short
+        ("", None),
     ],
 )
 def test_parse_hex_rgb(token, expected):

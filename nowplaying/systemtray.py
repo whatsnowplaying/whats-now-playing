@@ -701,8 +701,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.exit_everything()
         self.config.get()
         if not self.config.initialized:
+            charts_key = self.config.cparser.value("charts/charts_key", defaultValue="")
             self.config.cparser.clear()
             self.config.cparser.sync()
+            if charts_key:
+                self.config.cparser.setValue("charts/charts_key", charts_key)
+                self.config.cparser.sync()
 
         self._exit_app()
 
