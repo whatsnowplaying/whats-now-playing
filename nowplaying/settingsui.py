@@ -11,7 +11,8 @@ import logging
 import os
 import pathlib
 import re
-from typing import TYPE_CHECKING
+import shutil
+from typing import TYPE_CHECKING, Any
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import QCoreApplication, QEventLoop, QFile, QStandardPaths, Qt, Slot
@@ -53,6 +54,7 @@ import nowplaying.twitch.chat
 import nowplaying.twitch.settings
 import nowplaying.uihelp
 import nowplaying.utils
+import nowplaying.utils.config_json
 import nowplaying.utils.filters
 
 if TYPE_CHECKING:
@@ -112,7 +114,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.simple_filter_manager = nowplaying.utils.filters.FilterManager()
 
         self.uihelp = None
-        self.ui_populated = False  # Track if UI widgets are populated with config data
+        self.ui_populated = False
+        self._reset_backup: dict[str, Any] | None = None
         self.load_qtui()
         if not self.config.iconfile:
             self.tray.cleanquit()
@@ -412,6 +415,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _set_source_description(self, index):
         item = self.widgets["source"].sourcelist.item(index)
+        if not item:
+            return
         display_name = item.text().lower()
         plugin = self.input_display_to_module.get(display_name, display_name)
         self.config.plugins_description("inputs", plugin, self.widgets["source"].description)
@@ -530,6 +535,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # Fallback: if no mapping found, try to find by the stored
         # value directly (for backward compatibility)
         search_term = target_display_name or currentinput
+
+        if not search_term:
+            self.widgets["source"].sourcelist.setCurrentItem(None)
+            return
 
         if curbutton := self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains):
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
@@ -1186,6 +1195,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_cancel_button(self):
         """cancel button clicked action"""
+        if self._reset_backup is not None:
+            nowplaying.utils.config_json.restore_config_data(
+                self.config.cparser, self._reset_backup
+            )
+            self._reset_backup = None
+            self.config.get()
+            self._connect_plugins()
+
         self._cleanup_settings_classes()
         if self.tray:
             self.tray.settings_action.setEnabled(True)
@@ -1201,10 +1218,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     @Slot()
     def on_reset_button(self):
-        """cancel button clicked action"""
+        """reset config to defaults, keeping a backup so Cancel can undo it"""
+        self._reset_backup = nowplaying.utils.config_json.collect_config_data(self.config.cparser)
         self.config.reset()
         SettingsUI.httpenabled = self.config.cparser.value("weboutput/httpenabled", type=bool)
         SettingsUI.httpport = self.config.cparser.value("weboutput/httpport", type=int)
+        self._connect_plugins()
         self.refresh_ui()
 
     @Slot()
@@ -1251,8 +1270,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.errormessage.showMessage(error.message)
                 return
 
-        # Check if this is first-time setup before marking as initialized
-        is_first_install = not self.config.initialized
+        # True only on genuine first install, not after a config reset.
+        is_first_install = not self.config.initialized and self._reset_backup is None
+        self._reset_backup = None
 
         self.config.unpause()
         self.upd_conf()  # This sets initialized=True

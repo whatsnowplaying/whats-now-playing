@@ -159,15 +159,26 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
 
-    async def switch_input_plugin(self):
-        """handle user switching source input while running"""
-        if not self.previousinput or self.previousinput != self.config.cparser.value(
-            "settings/input"
-        ):
+    async def switch_input_plugin(self) -> bool:
+        """Handle user switching source input while running.
+
+        Returns True when an input plugin is active and ready for gettrack(),
+        False when no input is configured or the plugin failed to start.
+        Callers use the False return to skip polling until the next cycle.
+        """
+        configured: str | None = self.config.cparser.value("settings/input")
+        if not configured:
             if self.input:
                 logging.info("stopping %s", self.previousinput)
                 await self.input.stop()
-            self.previousinput: str | None = self.config.cparser.value("settings/input")
+                self.input = None
+                self.previousinput = None
+            return False
+        if self.previousinput != configured:
+            if self.input:
+                logging.info("stopping %s", self.previousinput)
+                await self.input.stop()
+            self.previousinput: str | None = configured
             self.input = self.plugins[f"nowplaying.inputs.{self.previousinput}"].Plugin(
                 config=self.config
             )
