@@ -40,7 +40,11 @@ import sqlite3
 from typing import TYPE_CHECKING
 
 import aiosqlite
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -49,13 +53,42 @@ import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
+import nowplaying.wizard
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
     import nowplaying.uihelp
+
+
+class _DjucedWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for DJUCED library directory configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("DJUCED Setup")
+        self.setSubTitle("Confirm the location of your DJUCED library folder.")
+
+        self._dir_edit = nowplaying.wizard.WizardPage.PathEdit(
+            "Select DJUCED Library Folder",
+            placeholder="DJUCED library directory…",
+        )
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("DJUCED library directory:"))
+        layout.addWidget(self._dir_edit)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._dir_edit.setText(str(config.cparser.value("djuced/directory", defaultValue="")))
+
+    def commit(self) -> None:
+        """Write the DJUCED library path to config."""
+        self.config.cparser.setValue("djuced/directory", self._dir_edit.text().strip())
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -71,6 +104,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "DJUCED"
+        self.wizardpage = _DjucedWizardPage
         self.mixmode = "newest"
         self.event_handler = None
         self.observer = None
@@ -524,12 +558,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def on_djuced_dir_button(self):
         """filename button clicked action"""
-        if self.qwidget.dir_lineedit.text():
-            startdir = self.qwidget.dir_lineedit.text()
-        else:
-            startdir = str(self.config.userdocs.joinpath("DJUCED"))
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
-            self.qwidget.dir_lineedit.setText(dirname)
+        self.uihelp.dir_picker_lineedit(
+            self.qwidget.dir_lineedit,
+            startdir=self.config.userdocs.joinpath("DJUCED"),
+        )
 
     def defaults(self, qsettings: "QSettings"):
         """(re-)set the default configuration values for this plugin"""

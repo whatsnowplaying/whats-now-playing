@@ -12,9 +12,16 @@ import urllib.parse
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from PySide6.QtGui import QIntValidator  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QFormLayout,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
 
@@ -31,6 +38,7 @@ logging.config.dictConfig(
 # from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
+import nowplaying.wizard
 
 METADATALIST: list[str] = ["artist", "title", "album", "key", "filename", "bpm"]
 
@@ -218,6 +226,41 @@ class IcecastProtocol(asyncio.Protocol):
             self.metadata_callback(self._current_metadata.copy())
 
 
+class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for Icecast SOURCE protocol port configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("Icecast / SOURCE Protocol")
+        self.setSubTitle(
+            "Set the port What's Now Playing will listen on for Icecast metadata. "
+            "Configure your DJ software to broadcast to this port."
+        )
+
+        self._port_edit = QLineEdit()
+        self._port_edit.setPlaceholderText("8000")
+        self._port_edit.setMaximumWidth(120)
+        self._port_edit.setValidator(QIntValidator(1, 65535, self))
+        self._port_edit.setText(
+            config.cparser.value("icecast/port", type=str, defaultValue="8000")
+        )
+
+        form = QFormLayout()
+        form.addRow("Icecast port:", self._port_edit)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def commit(self) -> None:
+        """Write the Icecast port to config."""
+        self.config.cparser.setValue("icecast/port", self._port_edit.text().strip() or "8000")
+
+
 class Plugin(InputPlugin):
     """base class of input plugins"""
 
@@ -229,6 +272,7 @@ class Plugin(InputPlugin):
         """no custom init"""
         super().__init__(config=config, qsettings=qsettings)
         self.displayname: str = "Icecast"
+        self.wizardpage = _IcecastWizardPage
         self.server: asyncio.Server | None = None
         self.mode: str | None = None
         self.lastmetadata: dict[str, str] = {}

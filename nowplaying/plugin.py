@@ -4,7 +4,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-import nowplaying.types
+import nowplaying.wizard
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
@@ -28,7 +28,7 @@ class WNPBasePlugin:  # pylint: disable=too-many-instance-attributes
         self.uihelp: object | None = None
         self.displayname: str = ""
         self.priority: int = 0
-        self.wizardpage: type[nowplaying.types.WizardPage] | None = None
+        self.wizardpage: type[nowplaying.wizard.WizardPage] | None = None
 
         if qsettings:
             self.defaults(qsettings)

@@ -16,10 +16,19 @@ from typing import TYPE_CHECKING
 import aiohttp
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QButtonGroup,
+    QLabel,
+    QLineEdit,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 import nowplaying.inputs
 import nowplaying.utils.sqlite
 from nowplaying.types import TrackMetadata
+import nowplaying.wizard
 
 from .handler import Serato4Handler
 from .reader import Serato4RootReader
@@ -27,9 +36,63 @@ from .remote import SeratoRemoteHandler
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
+
+
+class _SeratoWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for Serato DJ local/remote mode configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("Serato DJ Setup")
+        self.setSubTitle(
+            "Choose whether What's Now Playing reads from Serato on this "
+            "computer or from a remote Serato Live Playlists URL."
+        )
+
+        self._local_radio = QRadioButton("Local — read from this computer's Serato library")
+        self._remote_radio = QRadioButton("Remote — use Serato Live Playlists URL")
+
+        self._button_group = QButtonGroup(self)
+        self._button_group.addButton(self._local_radio)
+        self._button_group.addButton(self._remote_radio)
+
+        self._url_label = QLabel("Live Playlists URL:")
+        self._url_edit = QLineEdit()
+        self._url_edit.setPlaceholderText("https://serato.com/playlists/…")
+
+        self._local_radio.toggled.connect(self._on_mode_changed)
+
+        local_mode = config.cparser.value("serato4/local", type=bool, defaultValue=True)
+        if local_mode:
+            self._local_radio.setChecked(True)
+        else:
+            self._remote_radio.setChecked(True)
+        self._url_edit.setText(str(config.cparser.value("serato4/url", defaultValue="")))
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._local_radio)
+        layout.addWidget(self._remote_radio)
+        layout.addSpacing(8)
+        layout.addWidget(self._url_label)
+        layout.addWidget(self._url_edit)
+        layout.addStretch()
+        self.setLayout(layout)
+        self._on_mode_changed()
+
+    def _on_mode_changed(self) -> None:
+        remote = self._remote_radio.isChecked()
+        self._url_label.setVisible(remote)
+        self._url_edit.setVisible(remote)
+
+    def commit(self) -> None:
+        """Write Serato mode and URL to config."""
+        self.config.cparser.setValue("serato4/local", self._local_radio.isChecked())
+        self.config.cparser.setValue("serato4/url", self._url_edit.text().strip())
 
 
 class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -43,6 +106,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         super().__init__(config=config, qsettings=qsettings)
 
         self.displayname = "Serato DJ"
+        self.wizardpage = _SeratoWizardPage
         self.handler: Serato4Handler | None = None
         self.remote_handler: SeratoRemoteHandler | None = None
         self.serato_lib_path: pathlib.Path | None = None

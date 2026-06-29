@@ -58,6 +58,19 @@ class UIHelp:
         ):
             qwidget.setText(filename)
 
+    def file_picker_lineedit(self, qwidget, title="Open file", limit="*", startdir=None):
+        """Pick a file and set the result in a QLineEdit widget."""
+        start = qwidget.text() or (str(startdir) if startdir else ".")
+        result, _ = QFileDialog.getOpenFileName(self.qtui, title, start, limit)
+        if result:
+            qwidget.setText(result)
+
+    def dir_picker_lineedit(self, qwidget, title="Select directory", startdir=None):
+        """Pick a directory and set the result in a QLineEdit widget."""
+        start = qwidget.text() or (str(startdir) if startdir else ".")
+        if dirname := QFileDialog.getExistingDirectory(self.qtui, title, start):
+            qwidget.setText(dirname)
+
     @staticmethod
     def find_widget_in_tabs(widget_container: "QWidget", widget_name: str) -> "QWidget | None":
         """Find a widget by name across tabs or in a single widget
