@@ -17,6 +17,7 @@ class Plugin(ArtistExtrasPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Wikimedia"
         self.priority = 1000
+        self.requires_apikey = False
 
     def _check_missing(self, metadata):
         """check for missing required data"""
