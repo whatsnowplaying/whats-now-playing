@@ -62,10 +62,12 @@ class UIHelp:
         if result := UIHelp.open_file_dialog(self.qtui, title, start, limit):
             qwidget.setText(result)
 
-    def dir_picker_lineedit(self, qwidget, title="Select directory", startdir=None):
+    def dir_picker_lineedit(
+        self, qwidget, title="Select directory", startdir=None, allow_bundles: bool = False
+    ):
         """Pick a directory and set the result in a QLineEdit widget."""
         start = qwidget.text() or (str(startdir) if startdir else ".")
-        if result := UIHelp.open_dir_dialog(self.qtui, title, start):
+        if result := UIHelp.open_dir_dialog(self.qtui, title, start, allow_bundles=allow_bundles):
             qwidget.setText(result)
 
     @staticmethod
@@ -75,9 +77,20 @@ class UIHelp:
         return result
 
     @staticmethod
-    def open_dir_dialog(parent: "QWidget", title: str, startdir: str) -> str:
-        """Open a directory-picker dialog; return the chosen path or empty string."""
-        return QFileDialog.getExistingDirectory(parent, title, startdir)
+    def open_dir_dialog(
+        parent: "QWidget", title: str, startdir: str, allow_bundles: bool = False
+    ) -> str:
+        """Open a directory-picker dialog; return the chosen path or empty string.
+
+        Pass allow_bundles=True on macOS when the target directory has a bundle
+        extension (.djayMediaLibrary, .app, etc.) — the native picker treats those
+        as files.  DontUseNativeDialog makes Qt show its own picker, which exposes
+        them as plain directories.
+        """
+        opts = QFileDialog.Option.ShowDirsOnly
+        if allow_bundles:
+            opts |= QFileDialog.Option.DontUseNativeDialog
+        return QFileDialog.getExistingDirectory(parent, title, startdir, opts)
 
     @staticmethod
     def find_widget_in_tabs(widget_container: "QWidget", widget_name: str) -> "QWidget | None":

@@ -184,9 +184,8 @@ class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"traktor/collections"})
 
-    def install(self):
-        """auto-install for Traktor"""
-        # Check multiple possible Native Instruments locations
+    def _find_best_collection(self) -> pathlib.Path | None:
+        """Return the most-recently-modified collection.nml across all NI locations, or None."""
         possible_locations = [
             # Traditional Documents/Native Instruments location
             self.config.userdocs.joinpath("Native Instruments"),
@@ -195,19 +194,24 @@ class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
                 QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
             ).parent.joinpath("Native Instruments"),
         ]
-
+        all_collections = []
         for nidir in possible_locations:
             if nidir.exists():
-                for entry in os.scandir(nidir):
-                    if entry.is_dir() and "Traktor" in entry.name:
-                        cmlpath = pathlib.Path(entry).joinpath("collection.nml")
-                        if cmlpath.exists():
-                            self.config.cparser.setValue("traktor/collections", str(cmlpath))
-                            self.config.cparser.setValue("settings/input", "traktor")
-                            self.config.cparser.setValue("traktor/port", "8000")
-                            return True
+                all_collections.extend(nidir.glob("**/collection.nml"))
+        if not all_collections:
+            return None
+        all_collections.sort(key=lambda p: p.stat().st_mtime)
+        return all_collections[-1]
 
-        return False
+    def install(self):
+        """auto-install for Traktor; picks most-recently-used version when multiple installed"""
+        best = self._find_best_collection()
+        if best is None:
+            return False
+        self.config.cparser.setValue("traktor/collections", str(best))
+        self.config.cparser.setValue("settings/input", "traktor")
+        self.config.cparser.setValue("traktor/port", "8000")
+        return True
 
     def defaults(self, qsettings):
         """(re-)set the default configuration values for this plugin"""
@@ -215,22 +219,8 @@ class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
         qsettings.setValue("traktor/max_age_days", 7)
         qsettings.setValue("traktor/artist_query_scope", "entire_library")
         qsettings.setValue("traktor/selected_playlists", "")
-        # Check multiple possible Native Instruments locations for defaults
-        possible_locations = [
-            self.config.userdocs.joinpath("Native Instruments"),
-            pathlib.Path(
-                QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
-            ).parent.joinpath("Native Instruments"),
-        ]
-
-        all_collections = []
-        for nidir in possible_locations:
-            if nidir.exists():
-                all_collections.extend(list(nidir.glob("**/collection.nml")))
-
-        if all_collections:
-            all_collections.sort(key=lambda x: x.stat().st_mtime)
-            qsettings.setValue("traktor/collections", str(all_collections[-1]))
+        if best := self._find_best_collection():
+            qsettings.setValue("traktor/collections", str(best))
 
     def connect_settingsui(self, qwidget, uihelp):
         """connect any UI elements such as buttons"""

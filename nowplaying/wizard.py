@@ -32,18 +32,20 @@ class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
         location when the field is empty.
         """
 
-        def __init__(
+        def __init__(  # pylint: disable=too-many-arguments
             self,
             title: str,
             placeholder: str = "",
             file_filter: str = "",
             startdir: "pathlib.Path | str | None" = None,
+            allow_bundles: bool = False,
             parent: "QWidget | None" = None,
         ) -> None:
             super().__init__(parent)
             self._title = title
             self._file_filter = file_filter
             self._startdir = str(startdir) if startdir is not None else None
+            self._allow_bundles = allow_bundles
 
             self._edit = QLineEdit()
             self._edit.setPlaceholderText(placeholder)
@@ -72,7 +74,9 @@ class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
                     parent, self._title, start, self._file_filter
                 )
             else:
-                result = nowplaying.uihelp.UIHelp.open_dir_dialog(parent, self._title, start)
+                result = nowplaying.uihelp.UIHelp.open_dir_dialog(
+                    parent, self._title, start, allow_bundles=self._allow_bundles
+                )
             if result:
                 self._edit.setText(result)
 

@@ -90,7 +90,11 @@ class _InputSourcePage(QWizardPage):
         self._on_selection_changed()
 
     def _on_selection_changed(self) -> None:
-        """Rebuild the plugin-specific config page whenever the selection changes."""
+        """Rebuild the plugin-specific config page whenever the selection changes.
+
+        A fresh page instance is constructed on each call, so loading from config
+        in __init__ is correct — there is no stale-instance risk.
+        """
         wizard = self.wizard()
         if wizard is None:
             return
@@ -108,7 +112,7 @@ class _InputSourcePage(QWizardPage):
                 page = plugin_obj.wizardpage(config=self.config)
                 wizard.setPage(PAGE_INPUT_CONFIG, page)
         except Exception:  # pylint: disable=broad-exception-caught
-            logging.exception("wizard: no wizard page for %s", short_name)
+            logging.exception("wizard: failed to load plugin page for %s", short_name)
 
     def selected_short_name(self) -> str | None:
         """Return the short module name of the selected input plugin."""

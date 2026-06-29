@@ -68,6 +68,12 @@ class _JRiverWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
         self._user_edit.setText(str(config.cparser.value("jriver/username", defaultValue="")))
         self._pass_edit.setText(str(config.cparser.value("jriver/password", defaultValue="")))
 
+        self._host_edit.textChanged.connect(self.completeChanged)
+
+    def isComplete(self) -> bool:  # pylint: disable=invalid-name
+        """Require a host before allowing Next."""
+        return bool(self._host_edit.text().strip())
+
     def commit(self) -> None:
         """Write JRiver connection settings to config."""
         self.config.cparser.setValue("jriver/host", self._host_edit.text().strip())

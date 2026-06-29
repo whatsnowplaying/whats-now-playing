@@ -41,7 +41,7 @@ class _OutputsPage(QWizardPage):
         self.setTitle("Output Destinations")
         self.setSubTitle(
             "Choose where What's Now Playing should send track information. "
-            "All outputs can be enabled and configured later via Preferences."
+            "All outputs can be enabled and configured later via Settings."
         )
         self.weboverlay_check: QCheckBox
         self.obsws_check: QCheckBox

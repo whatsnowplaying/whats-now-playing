@@ -17,7 +17,7 @@ class _WelcomePage(QWizardPage):
             "This wizard will help you get started quickly.\n\n"
             "You will choose your DJ software source, configure "
             "artist information services, and select outputs. "
-            "Everything can be changed later via Preferences.\n\n"
+            "Everything can be changed later via Settings.\n\n"
             "Click Next to begin."
         )
         intro.setWordWrap(True)

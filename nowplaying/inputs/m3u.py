@@ -6,16 +6,20 @@ import logging
 import os
 import pathlib
 import re
+from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget  # pylint: disable=no-name-in-module
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import nowplaying.utils
+import nowplaying.wizard
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
+
+if TYPE_CHECKING:
+    import nowplaying.config
 
 # VDJ Extension lines that matter
 EXTVDJ_TITLE_RE = re.compile(r".*<title>(.+)</title>.*")
@@ -25,12 +29,44 @@ EXTVDJ_REMIX_RE = re.compile(r".*<remix>(.+)</remix>.*")
 # https://datatracker.ietf.org/doc/html/rfc8216
 
 
+class _M3UWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for M3U directory configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("M3U Setup")
+        self.setSubTitle(
+            "Select the directory where What's Now Playing should watch for M3U playlist files."
+        )
+
+        self._dir_edit = nowplaying.wizard.WizardPage.PathEdit(
+            "Select M3U Directory",
+            placeholder="Directory containing .m3u files…",
+        )
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("M3U playlist directory:"))
+        layout.addWidget(self._dir_edit)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._dir_edit.setText(str(config.cparser.value("m3u/directory", defaultValue="")))
+
+    def commit(self) -> None:
+        """Write the M3U directory path to config."""
+        self.config.cparser.setValue("m3u/directory", self._dir_edit.text().strip())
+
+
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for NowPlaying"""
 
     def __init__(self, config=None, m3udir: str | None = None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "M3U"
+        self.wizardpage = _M3UWizardPage
         self.m3udir: str | None = None
         if m3udir and os.path.exists(m3udir):
             self.m3udir = m3udir
@@ -235,12 +271,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def on_m3u_dir_button(self):
         """filename button clicked action"""
-        if self.qwidget.dir_lineedit.text():
-            startdir = self.qwidget.dir_lineedit.text()
-        else:
-            startdir = QDir.homePath()
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
-            self.qwidget.dir_lineedit.setText(dirname)
+        self.uihelp.dir_picker_lineedit(
+            self.qwidget.dir_lineedit,
+            startdir=pathlib.Path.home(),
+        )
 
     def connect_settingsui(self, qwidget, uihelp):
         """connect m3u button to filename picker"""
