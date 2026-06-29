@@ -47,7 +47,15 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -57,11 +65,11 @@ import nowplaying.djaypro.mediadb
 import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
+import nowplaying.types
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
     import nowplaying.uihelp
@@ -74,6 +82,46 @@ _ANALYZED_DATA_RETRY_DEFAULT = 0.5
 _COREDATA_EPOCH = datetime.datetime(2001, 1, 1, tzinfo=datetime.timezone.utc)
 
 
+class _DjayProWizardPage(nowplaying.types.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for djay Pro library directory configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("djay Pro Setup")
+        self.setSubTitle("Confirm the location of your djay Pro media library.")
+
+        self._dir_edit = QLineEdit()
+        self._dir_edit.setPlaceholderText("djay Pro library directory…")
+        browse_btn = QPushButton("Browse…")
+        browse_btn.clicked.connect(self._browse)
+
+        row = QHBoxLayout()
+        row.addWidget(self._dir_edit)
+        row.addWidget(browse_btn)
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("djay Pro library directory:"))
+        layout.addLayout(row)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._dir_edit.setText(str(config.cparser.value("djaypro/directory", defaultValue="")))
+
+    def _browse(self) -> None:
+        start = self._dir_edit.text() or str(pathlib.Path.home())
+        directory = QFileDialog.getExistingDirectory(self, "Select djay Pro Library Folder", start)
+        if directory:
+            self._dir_edit.setText(directory)
+
+    def commit(self) -> None:
+        """Write the djay Pro library path to config."""
+        if directory := self._dir_edit.text().strip():
+            self.config.cparser.setValue("djaypro/directory", directory)
+
+
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for djay Pro"""
 
@@ -84,6 +132,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "djay Pro"
+        self.wizardpage = _DjayProWizardPage
         self.event_handler = None
         self.observer = None
         self.djaypro_dir = ""

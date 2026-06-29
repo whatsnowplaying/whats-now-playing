@@ -12,8 +12,17 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
+import nowplaying.types
 import nowplaying.utils
 import nowplaying.utils.sqlite
 import nowplaying.utils.xml
@@ -160,6 +169,72 @@ class VirtualDJFolderSAXHandler(xml.sax.ContentHandler):
                 self.content.append(entry)
 
 
+class _VirtualDJWizardPage(nowplaying.types.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for VirtualDJ directory configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("VirtualDJ Setup")
+        self.setSubTitle("Confirm the locations of your VirtualDJ history and playlists folders.")
+
+        self._history_edit = QLineEdit()
+        self._history_edit.setPlaceholderText("VirtualDJ history directory…")
+        history_btn = QPushButton("Browse…")
+        history_btn.clicked.connect(self._browse_history)
+
+        self._playlist_edit = QLineEdit()
+        self._playlist_edit.setPlaceholderText("VirtualDJ playlists directory…")
+        playlist_btn = QPushButton("Browse…")
+        playlist_btn.clicked.connect(self._browse_playlists)
+
+        history_row = QHBoxLayout()
+        history_row.addWidget(self._history_edit)
+        history_row.addWidget(history_btn)
+
+        playlist_row = QHBoxLayout()
+        playlist_row.addWidget(self._playlist_edit)
+        playlist_row.addWidget(playlist_btn)
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("History directory:"))
+        layout.addLayout(history_row)
+        layout.addWidget(QLabel("Playlists directory:"))
+        layout.addLayout(playlist_row)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._history_edit.setText(str(config.cparser.value("virtualdj/history", defaultValue="")))
+        self._playlist_edit.setText(
+            str(config.cparser.value("virtualdj/playlists", defaultValue=""))
+        )
+
+    def _browse_history(self) -> None:
+        start = self._history_edit.text() or str(pathlib.Path.home())
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select VirtualDJ History Folder", start
+        )
+        if directory:
+            self._history_edit.setText(directory)
+
+    def _browse_playlists(self) -> None:
+        start = self._playlist_edit.text() or str(pathlib.Path.home())
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select VirtualDJ Playlists Folder", start
+        )
+        if directory:
+            self._playlist_edit.setText(directory)
+
+    def commit(self) -> None:
+        """Write the VirtualDJ directory paths to config."""
+        if hist := self._history_edit.text().strip():
+            self.config.cparser.setValue("virtualdj/history", hist)
+        if plists := self._playlist_edit.text().strip():
+            self.config.cparser.setValue("virtualdj/playlists", plists)
+
+
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """handler for NowPlaying"""
 
@@ -168,6 +243,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     ):
         super().__init__(config=config, m3udir=m3udir, qsettings=qsettings)
         self.displayname = "VirtualDJ"
+        self.wizardpage = _VirtualDJWizardPage
         # Separate databases for different data sources
         self.songs_databasefile = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]

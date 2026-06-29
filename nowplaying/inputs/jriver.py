@@ -10,15 +10,72 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 import lxml.etree
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from nowplaying.inputs import InputPlugin
+import nowplaying.types
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
+
+
+class _JRiverWizardPage(nowplaying.types.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for JRiver Media Center connection configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("JRiver Media Center")
+        self.setSubTitle(
+            "Enter the address of your JRiver Media Center server. "
+            "Username and password are optional."
+        )
+
+        self._host_edit = QLineEdit()
+        self._host_edit.setPlaceholderText("localhost or IP address")
+        self._port_edit = QLineEdit()
+        self._port_edit.setPlaceholderText("52199")
+        self._port_edit.setMaximumWidth(100)
+        self._user_edit = QLineEdit()
+        self._user_edit.setPlaceholderText("optional")
+        self._pass_edit = QLineEdit()
+        self._pass_edit.setPlaceholderText("optional")
+        self._pass_edit.setEchoMode(QLineEdit.EchoMode.Password)
+
+        form = QFormLayout()
+        form.addRow("Host / IP:", self._host_edit)
+        form.addRow("Port:", self._port_edit)
+        form.addRow(QLabel(""))
+        form.addRow("Username:", self._user_edit)
+        form.addRow("Password:", self._pass_edit)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._host_edit.setText(str(config.cparser.value("jriver/host", defaultValue="")))
+        self._port_edit.setText(str(config.cparser.value("jriver/port", defaultValue="52199")))
+        self._user_edit.setText(str(config.cparser.value("jriver/username", defaultValue="")))
+        self._pass_edit.setText(str(config.cparser.value("jriver/password", defaultValue="")))
+
+    def commit(self) -> None:
+        """Write JRiver connection settings to config."""
+        self.config.cparser.setValue("jriver/host", self._host_edit.text().strip())
+        self.config.cparser.setValue("jriver/port", self._port_edit.text().strip() or "52199")
+        self.config.cparser.setValue("jriver/username", self._user_edit.text().strip())
+        self.config.cparser.setValue("jriver/password", self._pass_edit.text())
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -31,6 +88,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname: str = "JRiver"
+        self.wizardpage = _JRiverWizardPage
         self.host: str | None = None
         self.port: str | None = None
         self.username: str | None = None

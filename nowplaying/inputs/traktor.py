@@ -12,7 +12,15 @@ from typing import TYPE_CHECKING
 
 import aiosqlite  # pylint: disable=import-error
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 logging.config.dictConfig(
     {
@@ -23,6 +31,7 @@ logging.config.dictConfig(
 
 # pylint: disable=wrong-import-position
 
+import nowplaying.types
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
 from nowplaying.exceptions import PluginVerifyError
@@ -130,13 +139,56 @@ class TraktorSAXHandler(xml.sax.ContentHandler):
                 self.current_playlist = None
 
 
-class Plugin(IcecastPlugin):
+class _TraktorWizardPage(nowplaying.types.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for Traktor collection file configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("Traktor Setup")
+        self.setSubTitle("Confirm the location of your Traktor collection file.")
+
+        self._path_edit = QLineEdit()
+        self._path_edit.setPlaceholderText("Path to collection.nml…")
+        browse_btn = QPushButton("Browse…")
+        browse_btn.clicked.connect(self._browse)
+
+        row = QHBoxLayout()
+        row.addWidget(self._path_edit)
+        row.addWidget(browse_btn)
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Collection file (collection.nml):"))
+        layout.addLayout(row)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        existing = config.cparser.value("traktor/collections", defaultValue="")
+        if existing:
+            self._path_edit.setText(str(existing))
+
+    def _browse(self) -> None:
+        start = self._path_edit.text() or str(pathlib.Path.home())
+        filename, _ = QFileDialog.getOpenFileName(self, "Open Traktor Collection", start, "*.nml")
+        if filename:
+            self._path_edit.setText(filename)
+
+    def commit(self) -> None:
+        """Write the collection path to config."""
+        if path := self._path_edit.text().strip():
+            self.config.cparser.setValue("traktor/collections", path)
+
+
+class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
     """base class of input plugins"""
 
     def __init__(self, config: "nowplaying.config.ConfigFile | None" = None, qsettings=None):
         """no custom init"""
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Traktor"
+        self.wizardpage = _TraktorWizardPage
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
         ).joinpath("traktor", "traktor.db")
@@ -219,7 +271,9 @@ class Plugin(IcecastPlugin):
 
     def load_settingsui(self, qwidget):
         """load values from config and populate page"""
-        qwidget.port_lineedit.setText(self.config.cparser.value("traktor/port"))
+        qwidget.port_lineedit.setText(
+            self.config.cparser.value("traktor/port", type=str, defaultValue="8000")
+        )
         qwidget.traktor_collection_lineedit.setText(
             self.config.cparser.value("traktor/collections")
         )
