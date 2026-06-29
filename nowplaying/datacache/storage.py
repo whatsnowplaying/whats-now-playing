@@ -18,7 +18,7 @@ import aiosqlite
 
 import nowplaying.utils.sqlite
 from .colors import COLOR_EXTRACT_TYPES, extract_palettes
-from .utils import _ensure_datacache_schema, get_datacache_path, redact_url
+from .utils import ensure_datacache_schema, get_datacache_path, redact_url
 
 
 @dataclasses.dataclass
@@ -87,7 +87,7 @@ class DataStorage:
     async def _create_schema(self) -> None:
         """Create the database schema without blocking the event loop."""
         async with _schema_lock:
-            await asyncio.to_thread(_ensure_datacache_schema, self.database_path)
+            await asyncio.to_thread(ensure_datacache_schema, self.database_path)
 
     async def store(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
         self,

@@ -27,7 +27,7 @@ import nowplaying.upgrades.background
 import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
-import nowplaying.datacache.utils
+import nowplaying.datacache
 import nowplaying.db
 import nowplaying.firstinstall
 import nowplaying.guessgame
@@ -54,7 +54,7 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming guess game database: %s", error)
         try:
-            stats = nowplaying.datacache.utils.run_datacache_maintenance()
+            stats = nowplaying.datacache.run_datacache_maintenance()
             logging.debug("Datacache maintenance completed: %s", stats)
         except (sqlite3.Error, OSError) as error:
             logging.error("Error during datacache maintenance: %s", error)

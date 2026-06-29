@@ -37,7 +37,7 @@ def redact_url(url: str) -> str:
     return url
 
 
-def _ensure_datacache_schema(database_path: Path) -> None:
+def ensure_datacache_schema(database_path: Path) -> None:
     """Ensure the datacache database schema exists (sync version)"""
     database_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -115,7 +115,7 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
 
     try:
         # Ensure database exists with proper schema
-        _ensure_datacache_schema(database_path)
+        ensure_datacache_schema(database_path)
 
         now = time.time()
         one_day_ago = now - (24 * 3600)
