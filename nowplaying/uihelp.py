@@ -30,9 +30,7 @@ class UIHelp:
             startdir = os.path.dirname(startfile)
         elif not startdir:
             startdir = str(self.config.templatedir)
-        if filename := QFileDialog.getOpenFileName(self.qtui, "Open file", startdir, limit):
-            return filename[0]
-        return None
+        return UIHelp.open_file_dialog(self.qtui, "Open file", startdir, limit) or None
 
     def template_picker_lineedit(self, qwidget, limit="*.txt"):
         """generic code to pick a template file"""
@@ -61,15 +59,25 @@ class UIHelp:
     def file_picker_lineedit(self, qwidget, title="Open file", limit="*", startdir=None):
         """Pick a file and set the result in a QLineEdit widget."""
         start = qwidget.text() or (str(startdir) if startdir else ".")
-        result, _ = QFileDialog.getOpenFileName(self.qtui, title, start, limit)
-        if result:
+        if result := UIHelp.open_file_dialog(self.qtui, title, start, limit):
             qwidget.setText(result)
 
     def dir_picker_lineedit(self, qwidget, title="Select directory", startdir=None):
         """Pick a directory and set the result in a QLineEdit widget."""
         start = qwidget.text() or (str(startdir) if startdir else ".")
-        if dirname := QFileDialog.getExistingDirectory(self.qtui, title, start):
-            qwidget.setText(dirname)
+        if result := UIHelp.open_dir_dialog(self.qtui, title, start):
+            qwidget.setText(result)
+
+    @staticmethod
+    def open_file_dialog(parent: "QWidget", title: str, startdir: str, limit: str = "*") -> str:
+        """Open a file-picker dialog; return the chosen path or empty string."""
+        result, _ = QFileDialog.getOpenFileName(parent, title, startdir, limit)
+        return result
+
+    @staticmethod
+    def open_dir_dialog(parent: "QWidget", title: str, startdir: str) -> str:
+        """Open a directory-picker dialog; return the chosen path or empty string."""
+        return QFileDialog.getExistingDirectory(parent, title, startdir)
 
     @staticmethod
     def find_widget_in_tabs(widget_container: "QWidget", widget_name: str) -> "QWidget | None":

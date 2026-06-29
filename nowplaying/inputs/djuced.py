@@ -76,6 +76,7 @@ class _DjucedWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
         self._dir_edit = nowplaying.wizard.WizardPage.PathEdit(
             "Select DJUCED Library Folder",
             placeholder="DJUCED library directory…",
+            startdir=config.userdocs.joinpath("DJUCED"),
         )
 
         layout = QVBoxLayout()

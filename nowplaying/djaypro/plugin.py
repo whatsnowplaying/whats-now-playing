@@ -92,6 +92,7 @@ class _DjayProWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
         self._dir_edit = nowplaying.wizard.WizardPage.PathEdit(
             "Select djay Pro Library Folder",
             placeholder="djay Pro library directory…",
+            startdir=config.userdocs.parent.joinpath("Music", "djay"),
         )
 
         layout = QVBoxLayout()

@@ -150,6 +150,7 @@ class _TraktorWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
             "Open Traktor Collection",
             placeholder="Path to collection.nml…",
             file_filter="*.nml",
+            startdir=config.userdocs.joinpath("Native Instruments"),
         )
 
         layout = QVBoxLayout()

@@ -179,10 +179,12 @@ class _VirtualDJWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too
         self._history_edit = nowplaying.wizard.WizardPage.PathEdit(
             "Select VirtualDJ History Folder",
             placeholder="VirtualDJ history directory…",
+            startdir=config.userdocs.joinpath("VirtualDJ", "History"),
         )
         self._playlist_edit = nowplaying.wizard.WizardPage.PathEdit(
             "Select VirtualDJ Playlists Folder",
             placeholder="VirtualDJ playlists directory…",
+            startdir=config.userdocs.joinpath("VirtualDJ"),
         )
 
         layout = QVBoxLayout()
