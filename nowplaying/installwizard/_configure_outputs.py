@@ -5,6 +5,7 @@
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtGui import QIntValidator  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
@@ -41,6 +42,7 @@ class _ConfigureOutputsPage(QWizardPage):
 
         self.obsws_host = QLineEdit()
         self.obsws_port = QLineEdit()
+        self.obsws_port.setValidator(QIntValidator(1, 65535, self))
         self.obsws_secret = QLineEdit()
         self.twitch_channel = QLineEdit()
         self.twitch_clientid = QLineEdit()

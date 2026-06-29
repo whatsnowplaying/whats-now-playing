@@ -57,7 +57,7 @@ class _ArtistExtrasPage(QWizardPage):  # pylint: disable=too-few-public-methods
             try:
                 plugin_obj = module.Plugin(config=self.config)
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.debug("wizard: could not load artistextras plugin %s", key)
+                logging.exception("wizard: could not load artistextras plugin %s", key)
                 continue
 
             display = plugin_obj.displayname
@@ -74,10 +74,9 @@ class _ArtistExtrasPage(QWizardPage):  # pylint: disable=too-few-public-methods
 
             if not needs_key:
                 check = QCheckBox(f"{display}  — free, no API key required")
-                check.setChecked(True)
             else:
                 check = QCheckBox(display)
-                check.setChecked(current_enabled)
+            check.setChecked(current_enabled)
 
             self.enable_checks[short_name] = check
             row_layout.addWidget(check)
@@ -154,5 +153,6 @@ class _ArtistExtrasPage(QWizardPage):  # pylint: disable=too-few-public-methods
                     plugin_obj = module.Plugin(config=self.config)
                     names.append(plugin_obj.displayname)
                 except Exception:  # pylint: disable=broad-exception-caught
+                    logging.exception("wizard: could not load artistextras plugin %s", key)
                     names.append(short_name)
         return names

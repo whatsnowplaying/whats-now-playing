@@ -53,7 +53,7 @@ class _InputSourcePage(QWizardPage):
             try:
                 plugin_obj = module.Plugin(config=self.config)
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.debug("wizard: could not load input plugin %s", key)
+                logging.exception("wizard: could not load input plugin %s", key)
                 continue
 
             display = plugin_obj.displayname
@@ -61,7 +61,7 @@ class _InputSourcePage(QWizardPage):
             try:
                 detected = bool(plugin_obj.install())
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.debug("wizard: install() failed for %s", key)
+                logging.exception("wizard: install() failed for %s", key)
 
             label = f"✓  {display}" if detected else f"    {display}"
             btn = QRadioButton(label)
@@ -108,7 +108,7 @@ class _InputSourcePage(QWizardPage):
                 page = plugin_obj.wizardpage(config=self.config)
                 wizard.setPage(PAGE_INPUT_CONFIG, page)
         except Exception:  # pylint: disable=broad-exception-caught
-            logging.debug("wizard: no wizard page for %s", short_name)
+            logging.exception("wizard: no wizard page for %s", short_name)
 
     def selected_short_name(self) -> str | None:
         """Return the short module name of the selected input plugin."""
