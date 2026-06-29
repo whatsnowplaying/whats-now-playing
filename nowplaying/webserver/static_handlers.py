@@ -20,7 +20,7 @@ import nowplaying.hostmeta
 import nowplaying.preview.sampledata
 import nowplaying.upgrades
 import nowplaying.utils
-import nowplaying.version
+import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 from nowplaying.types import TrackMetadata
 
 # Minimum required versions for known remote agents.
