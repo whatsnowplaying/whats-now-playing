@@ -4,8 +4,9 @@
 # pylint: disable=no-name-in-module
 
 import logging
+import sys
 
-from PySide6.QtWidgets import QWidget, QWizard
+from PySide6.QtWidgets import QDialog, QWidget, QWizard
 
 import nowplaying.config
 from nowplaying.installwizard._artist_extras import _ArtistExtrasPage
@@ -130,8 +131,11 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
                 cparser.setValue("kick/channel", cp.kick_channel.text().strip())
                 cparser.setValue("kick/clientid", cp.kick_clientid.text().strip())
                 cparser.setValue("kick/secret", cp.kick_secret.text())
-            if op.discord_bot_check.isChecked() or op.discord_rp_check.isChecked():
+            if op.discord_bot_check.isChecked():
                 cparser.setValue("discord/token", cp.discord_token.text().strip())
+                cparser.setValue("discord/channel_id", cp.discord_channel_id.text().strip())
+            if op.discord_rp_check.isChecked():
+                cparser.setValue("discord/clientid", cp.discord_clientid.text().strip())
 
         self.config.initialized = True
         self.config.save()
@@ -139,8 +143,14 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
 
 
 def maybe_show_wizard(config: nowplaying.config.ConfigFile) -> None:
-    """Show the setup wizard for a fresh install; no-op if already initialized."""
+    """Show the setup wizard for a fresh install; no-op if already initialized.
+
+    Exits the process if the user cancels a first-run wizard — an unconfigured
+    app has nothing useful to do.
+    """
     if config.initialized:
         return
     wizard = InstallWizard(config)
-    wizard.exec()
+    if wizard.exec() != QDialog.DialogCode.Accepted:
+        logging.info("First-run wizard cancelled — exiting")
+        sys.exit(0)

@@ -16,9 +16,18 @@ import struct
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QButtonGroup,
+    QLabel,
+    QLineEdit,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 import nowplaying.serato.plugin
+import nowplaying.uihelp
+import nowplaying.wizard
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 
@@ -29,10 +38,79 @@ from .smart_crate import SeratoSmartCrateReader
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
-    import nowplaying.uihelp
+
+
+class _SeratoLegacyWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
+    """First-run wizard page for Serato Legacy (≤3) local/remote mode configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("Serato DJ Setup")
+        self.setSubTitle(
+            "Choose whether What's Now Playing reads from Serato on this "
+            "computer or from a remote Serato Live Playlists URL."
+        )
+
+        self._local_radio = QRadioButton("Local — read from this computer's Serato library")
+        self._remote_radio = QRadioButton("Remote — use Serato Live Playlists URL")
+
+        self._button_group = QButtonGroup(self)
+        self._button_group.addButton(self._local_radio)
+        self._button_group.addButton(self._remote_radio)
+
+        music_dir = pathlib.Path(
+            QStandardPaths.standardLocations(QStandardPaths.StandardLocation.MusicLocation)[0]
+        )
+        self._dir_label = QLabel("Serato library directory:")
+        self._dir_edit = nowplaying.wizard.WizardPage.PathEdit(
+            "Select Serato Library Folder",
+            placeholder="_Serato_ directory…",
+            startdir=music_dir,
+        )
+
+        self._url_label = QLabel("Live Playlists URL:")
+        self._url_edit = QLineEdit()
+        self._url_edit.setPlaceholderText("https://serato.com/playlists/…")
+
+        self._local_radio.toggled.connect(self._on_mode_changed)
+
+        local_mode = config.cparser.value("serato/local", type=bool, defaultValue=True)
+        if local_mode:
+            self._local_radio.setChecked(True)
+        else:
+            self._remote_radio.setChecked(True)
+        self._dir_edit.setText(str(config.cparser.value("serato/libpath", defaultValue="")))
+        self._url_edit.setText(str(config.cparser.value("serato/url", defaultValue="")))
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._local_radio)
+        layout.addWidget(self._remote_radio)
+        layout.addSpacing(8)
+        layout.addWidget(self._dir_label)
+        layout.addWidget(self._dir_edit)
+        layout.addWidget(self._url_label)
+        layout.addWidget(self._url_edit)
+        layout.addStretch()
+        self.setLayout(layout)
+        self._on_mode_changed()
+
+    def _on_mode_changed(self) -> None:
+        local = self._local_radio.isChecked()
+        self._dir_label.setVisible(local)
+        self._dir_edit.setVisible(local)
+        self._url_label.setVisible(not local)
+        self._url_edit.setVisible(not local)
+
+    def commit(self) -> None:
+        """Write Serato mode, library path, and URL to config."""
+        self.config.cparser.setValue("serato/local", self._local_radio.isChecked())
+        self.config.cparser.setValue("serato/libpath", self._dir_edit.text().strip())
+        self.config.cparser.setValue("serato/url", self._url_edit.text().strip())
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -45,6 +123,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Serato (Legacy)"
+        self.wizardpage = _SeratoLegacyWizardPage
         self.url: str | None = None
         self.libpath = None
         self.local = True
@@ -525,23 +604,21 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def on_serato_lib_button(self):
         """lib button clicked action"""
         connection_widgets = self.uihelp.find_tab_by_identifier(self.qwidget, "local_button")
-        startdir = connection_widgets.local_dir_lineedit.text() or str(pathlib.Path.home())
-        if libdir := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
-            connection_widgets.local_dir_lineedit.setText(libdir)
+        self.uihelp.dir_picker_lineedit(
+            connection_widgets.local_dir_lineedit,
+            startdir=pathlib.Path.home(),
+        )
 
     def on_add_additional_lib_button(self):
         """add additional library button clicked action"""
         library_widgets = self.uihelp.find_tab_by_identifier(
             self.qwidget, "serato_artist_scope_combo"
         )
-        startdir = str(pathlib.Path.home())
-        if libdir := QFileDialog.getExistingDirectory(
-            self.qwidget, "Select additional Serato library directory", startdir
+        if libdir := nowplaying.uihelp.UIHelp.open_dir_dialog(
+            self.qwidget, "Select additional Serato library directory", str(pathlib.Path.home())
         ):
-            if current_text := library_widgets.additional_libs_textedit.toPlainText().strip():
-                new_text = current_text + "\n" + libdir
-            else:
-                new_text = libdir
+            current_text = library_widgets.additional_libs_textedit.toPlainText().strip()
+            new_text = current_text + "\n" + libdir if current_text else libdir
             library_widgets.additional_libs_textedit.setPlainText(new_text)
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):

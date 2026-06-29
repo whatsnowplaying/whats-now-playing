@@ -93,6 +93,7 @@ class _DjayProWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
             "Select djay Pro Library Folder",
             placeholder="djay Pro library directory…",
             startdir=config.userdocs.parent.joinpath("Music", "djay"),
+            allow_bundles=True,
         )
 
         layout = QVBoxLayout()
@@ -872,4 +873,5 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.uihelp.dir_picker_lineedit(
             self.qwidget.dir_lineedit,
             startdir=music_dir.joinpath("djay"),
+            allow_bundles=True,
         )

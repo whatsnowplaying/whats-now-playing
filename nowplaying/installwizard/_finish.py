@@ -19,7 +19,7 @@ class _FinishPage(QWizardPage):
         self._summary.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self._summary)
         note = QLabel(
-            "\nAll settings can be adjusted later via the What's Now Playing Preferences menu."
+            "\nAll settings can be adjusted later via the What's Now Playing Settings menu."
         )
         note.setWordWrap(True)
         layout.addWidget(note)

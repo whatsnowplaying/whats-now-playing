@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QFormLayout,
     QLabel,
+    QLineEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -23,35 +25,49 @@ if TYPE_CHECKING:
 
 
 class _RemoteWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
-    """Informational wizard page for the Remote (multi-PC) input plugin."""
+    """Wizard page for the Remote (multi-PC) input plugin."""
 
     def __init__(
         self,
-        config: "nowplaying.config.ConfigFile",  # pylint: disable=unused-argument
+        config: "nowplaying.config.ConfigFile",
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self.config = config
         self.setTitle("Remote / Multi-PC Setup")
         self.setSubTitle(
-            "What's Now Playing will receive track data from another PC "
-            "running WNP as the primary DJ system."
+            "What's Now Playing will receive track data from another source — "
+            "a second PC running WNP, or the EarShot app."
         )
+
         info = QLabel(
-            "No file path to configure here — the remote database is created "
-            "automatically.\n\n"
-            "On your primary DJ PC, install What's Now Playing, set it up with "
-            "your DJ software, and enable 'Remote Source' in its Outputs "
+            "The remote database is created automatically — no path to configure.\n\n"
+            "Multi-PC: on your primary DJ PC, install What's Now Playing, set it up "
+            "with your DJ software, and enable 'Remote Source' in its Outputs "
             "settings to point it at this machine.\n\n"
-            "Click Next to continue."
+            "EarShot: install the WNP EarShot app and it will push identified "
+            "tracks to this machine automatically."
         )
         info.setWordWrap(True)
+
+        self._secret_edit = QLineEdit()
+        self._secret_edit.setPlaceholderText("leave blank for no authentication")
+        self._secret_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self._secret_edit.setText(str(config.cparser.value("remote/remote_key", defaultValue="")))
+
+        form = QFormLayout()
+        form.addRow("Shared secret (optional):", self._secret_edit)
+
         layout = QVBoxLayout()
         layout.addWidget(info)
+        layout.addSpacing(12)
+        layout.addLayout(form)
         layout.addStretch()
         self.setLayout(layout)
 
     def commit(self) -> None:
-        """Remote has no configurable paths — nothing to write."""
+        """Write the shared secret to config."""
+        self.config.cparser.setValue("remote/remote_key", self._secret_edit.text().strip())
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
