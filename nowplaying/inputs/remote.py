@@ -7,14 +7,51 @@ import pathlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 import nowplaying.db
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
+import nowplaying.wizard
 
 if TYPE_CHECKING:
     import nowplaying.config
+
+
+class _RemoteWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """Informational wizard page for the Remote (multi-PC) input plugin."""
+
+    def __init__(
+        self,
+        config: "nowplaying.config.ConfigFile",  # pylint: disable=unused-argument
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setTitle("Remote / Multi-PC Setup")
+        self.setSubTitle(
+            "What's Now Playing will receive track data from another PC "
+            "running WNP as the primary DJ system."
+        )
+        info = QLabel(
+            "No file path to configure here — the remote database is created "
+            "automatically.\n\n"
+            "On your primary DJ PC, install What's Now Playing, set it up with "
+            "your DJ software, and enable 'Remote Source' in its Outputs "
+            "settings to point it at this machine.\n\n"
+            "Click Next to continue."
+        )
+        info.setWordWrap(True)
+        layout = QVBoxLayout()
+        layout.addWidget(info)
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def commit(self) -> None:
+        """Remote has no configurable paths — nothing to write."""
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -27,6 +64,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Remote"
+        self.wizardpage = _RemoteWizardPage
         if os.environ.get("WNP_REMOTEDB_TEST_FILE"):
             self.remotedbfile = pathlib.Path(os.environ["WNP_REMOTEDB_TEST_FILE"])
         else:

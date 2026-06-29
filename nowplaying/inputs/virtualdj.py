@@ -12,9 +12,14 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 import nowplaying.utils
+import nowplaying.wizard
 import nowplaying.utils.sqlite
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
@@ -160,6 +165,47 @@ class VirtualDJFolderSAXHandler(xml.sax.ContentHandler):
                 self.content.append(entry)
 
 
+class _VirtualDJWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
+    """First-run wizard page for VirtualDJ directory configuration."""
+
+    def __init__(
+        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setTitle("VirtualDJ Setup")
+        self.setSubTitle("Confirm the locations of your VirtualDJ history and playlists folders.")
+
+        self._history_edit = nowplaying.wizard.WizardPage.PathEdit(
+            "Select VirtualDJ History Folder",
+            placeholder="VirtualDJ history directory…",
+            startdir=config.userdocs.joinpath("VirtualDJ", "History"),
+        )
+        self._playlist_edit = nowplaying.wizard.WizardPage.PathEdit(
+            "Select VirtualDJ Playlists Folder",
+            placeholder="VirtualDJ playlists directory…",
+            startdir=config.userdocs.joinpath("VirtualDJ"),
+        )
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("History directory:"))
+        layout.addWidget(self._history_edit)
+        layout.addWidget(QLabel("Playlists directory:"))
+        layout.addWidget(self._playlist_edit)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self._history_edit.setText(str(config.cparser.value("virtualdj/history", defaultValue="")))
+        self._playlist_edit.setText(
+            str(config.cparser.value("virtualdj/playlists", defaultValue=""))
+        )
+
+    def commit(self) -> None:
+        """Write the VirtualDJ directory paths to config."""
+        self.config.cparser.setValue("virtualdj/history", self._history_edit.text().strip())
+        self.config.cparser.setValue("virtualdj/playlists", self._playlist_edit.text().strip())
+
+
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """handler for NowPlaying"""
 
@@ -168,6 +214,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     ):
         super().__init__(config=config, m3udir=m3udir, qsettings=qsettings)
         self.displayname = "VirtualDJ"
+        self.wizardpage = _VirtualDJWizardPage
         # Separate databases for different data sources
         self.songs_databasefile = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
@@ -758,22 +805,17 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
     def on_playlistdir_button(self):
         """filename button clicked action"""
-        startdir = self.qwidget.playlistdir_lineedit.text() or str(
-            self.config.userdocs.joinpath("VirtualDJ")
+        self.uihelp.dir_picker_lineedit(
+            self.qwidget.playlistdir_lineedit,
+            startdir=self.config.userdocs.joinpath("VirtualDJ"),
         )
-        if filename := QFileDialog.getExistingDirectory(
-            self.qwidget, "Select directory", startdir
-        ):
-            self.qwidget.playlistdir_lineedit.setText(filename)
 
     def on_history_dir_button(self):
         """filename button clicked action"""
-        if self.qwidget.historydir_lineedit.text():
-            startdir = self.qwidget.historydir_lineedit.text()
-        else:
-            startdir = str(self.config.userdocs.joinpath("VirtualDJ", "History"))
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
-            self.qwidget.historydir_lineedit.setText(dirname)
+        self.uihelp.dir_picker_lineedit(
+            self.qwidget.historydir_lineedit,
+            startdir=self.config.userdocs.joinpath("VirtualDJ", "History"),
+        )
 
     def connect_settingsui(self, qwidget, uihelp):
         """connect m3u button to filename picker"""

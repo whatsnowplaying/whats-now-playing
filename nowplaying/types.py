@@ -3,8 +3,6 @@
 
 from typing import TYPE_CHECKING, TypedDict
 
-from PySide6.QtWidgets import QWizardPage  # pylint: disable=no-name-in-module
-
 if TYPE_CHECKING:
     import nowplaying.artistextras
     import nowplaying.inputs
@@ -178,15 +176,3 @@ class TrackRequestSetting(TypedDict, total=False):
     displayname: str
     playlist: str
     userimage: bytes
-
-
-class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
-    """Base class for plugin-provided first-run wizard pages.
-
-    Plugin files define a subclass of WizardPage, then set
-    self.wizardpage = _TheirPageClass in Plugin.__init__().
-    The install wizard instantiates it as plugin.wizardpage(config=...).
-    """
-
-    def commit(self) -> None:
-        """Write this page's settings to QSettings. Called when wizard is accepted."""
