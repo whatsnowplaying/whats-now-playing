@@ -14,10 +14,10 @@ import orjson
 
 # Core components
 from .client import DataCacheClient, FetchRequest, get_client, reset_client
-from .utils import redact_url
+from .utils import get_datacache_path, redact_url, run_datacache_maintenance
 from .pending import RequestQueue
 from .queue import RateLimiter, RateLimiterManager
-from .storage import CachedEntry, DataStorage, get_datacache_path, run_datacache_maintenance
+from .storage import CachedEntry, DataStorage
 
 # Public API
 __all__ = [

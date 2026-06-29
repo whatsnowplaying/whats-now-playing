@@ -15,12 +15,13 @@ import pytest
 import pytest_asyncio
 
 import nowplaying.datacache.storage
+import nowplaying.datacache.utils
 import nowplaying.utils.sqlite
 
 
 def test_get_datacache_path_default():
     """Test default datacache path"""
-    path = nowplaying.datacache.storage.get_datacache_path()
+    path = nowplaying.datacache.utils.get_datacache_path()
     assert path.name == "datacache.sqlite"
     assert "datacache" in str(path)
 
@@ -29,7 +30,7 @@ def test_get_datacache_path_custom():
     """Test custom datacache path"""
     with tempfile.TemporaryDirectory() as temp_dir:
         custom_path = Path(temp_dir)
-        path = nowplaying.datacache.storage.get_datacache_path(custom_path)
+        path = nowplaying.datacache.utils.get_datacache_path(custom_path)
         assert path.parent == custom_path
         assert path.name == "datacache.sqlite"
 
@@ -40,7 +41,7 @@ def test_run_datacache_maintenance():
         temp_path = Path(temp_dir)
 
         # Run maintenance (creates database if needed)
-        stats = nowplaying.datacache.storage.run_datacache_maintenance(temp_path)
+        stats = nowplaying.datacache.utils.run_datacache_maintenance(temp_path)
 
         assert "expired_cleaned" in stats
         assert "requests_cleaned" in stats
@@ -67,7 +68,7 @@ def test_maintenance_cleanup_expired():
         db_path = temp_path / "datacache.sqlite"
 
         # Let run_datacache_maintenance create the schema, then insert test rows directly
-        nowplaying.datacache.storage.run_datacache_maintenance(temp_path)
+        nowplaying.datacache.utils.run_datacache_maintenance(temp_path)
 
         now = int(time.time())
         # Write blob files so cleanup_expired can unlink them
@@ -123,7 +124,7 @@ def test_maintenance_cleanup_expired():
             )
 
         # Run maintenance again to trigger cleanup
-        stats = nowplaying.datacache.storage.run_datacache_maintenance(temp_path)
+        stats = nowplaying.datacache.utils.run_datacache_maintenance(temp_path)
 
         assert stats["expired_cleaned"] == 1
 

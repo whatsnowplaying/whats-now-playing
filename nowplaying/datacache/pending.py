@@ -11,7 +11,7 @@ import aiosqlite
 import orjson
 
 import nowplaying.utils.sqlite
-from .storage import _ensure_datacache_schema, get_datacache_path
+from .utils import ensure_datacache_schema, get_datacache_path
 
 
 class RequestQueue:
@@ -27,7 +27,7 @@ class RequestQueue:
         async with self._lock:
             if not self._initialized:
                 self.database_path.parent.mkdir(parents=True, exist_ok=True)
-                await asyncio.to_thread(_ensure_datacache_schema, self.database_path)
+                await asyncio.to_thread(ensure_datacache_schema, self.database_path)
                 self._initialized = True
 
     async def queue_request(

@@ -784,7 +784,7 @@ def test_most_vibrant_color(palette_str, expected):
 def test_build_embed_color(metadata, expected_color):
     """_build_embed sets embed color: first entry from lighting, or scan of display palette."""
     embed = DiscordSupport._build_embed("track", metadata=metadata)
-    assert embed.color == expected_color
+    assert embed.color == expected_color  # pylint: disable=comparison-with-callable
 
 
 @pytest.mark.parametrize("metadata", [{}, None])

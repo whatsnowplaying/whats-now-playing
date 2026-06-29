@@ -266,7 +266,8 @@ async def test_duplicate_artist_no_strip_when_no_dash(bootstrap):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("prioritize_network", [False, True])
 async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
-    """prioritizenetworkart stashes embedded art, lets plugins run, restores only if nothing found."""
+    """prioritizenetworkart stashes embedded art, lets plugins run,
+    restores only if nothing found."""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
