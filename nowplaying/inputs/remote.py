@@ -26,10 +26,11 @@ class _RemoteWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
     """Informational wizard page for the Remote (multi-PC) input plugin."""
 
     def __init__(
-        self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
+        self,
+        config: "nowplaying.config.ConfigFile",  # pylint: disable=unused-argument
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.config = config
         self.setTitle("Remote / Multi-PC Setup")
         self.setSubTitle(
             "What's Now Playing will receive track data from another PC "

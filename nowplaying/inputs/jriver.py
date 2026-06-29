@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 import lxml.etree
-from PySide6.QtGui import QIntValidator  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QFormLayout,
     QLabel,
@@ -45,10 +44,7 @@ class _JRiverWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
 
         self._host_edit = QLineEdit()
         self._host_edit.setPlaceholderText("localhost or IP address")
-        self._port_edit = QLineEdit()
-        self._port_edit.setPlaceholderText("52199")
-        self._port_edit.setMaximumWidth(100)
-        self._port_edit.setValidator(QIntValidator(1, 65535, self))
+        self._port_edit = nowplaying.wizard.WizardPage.port_edit("52199", width=100)
         self._user_edit = QLineEdit()
         self._user_edit.setPlaceholderText("optional")
         self._pass_edit = QLineEdit()

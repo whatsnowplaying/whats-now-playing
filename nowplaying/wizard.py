@@ -3,6 +3,7 @@
 
 import pathlib
 
+from PySide6.QtGui import QIntValidator  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QHBoxLayout,
     QLineEdit,
@@ -65,14 +66,24 @@ class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
 
         def _browse(self) -> None:
             start = self._edit.text() or self._startdir or str(pathlib.Path.home())
+            parent = self.window() or self
             if self._file_filter:
                 result = nowplaying.uihelp.UIHelp.open_file_dialog(
-                    self, self._title, start, self._file_filter
+                    parent, self._title, start, self._file_filter
                 )
             else:
-                result = nowplaying.uihelp.UIHelp.open_dir_dialog(self, self._title, start)
+                result = nowplaying.uihelp.UIHelp.open_dir_dialog(parent, self._title, start)
             if result:
                 self._edit.setText(result)
+
+    @staticmethod
+    def port_edit(placeholder: str = "", width: int = 120) -> QLineEdit:
+        """Return a QLineEdit pre-validated for TCP port numbers (1–65535)."""
+        edit = QLineEdit()
+        edit.setPlaceholderText(placeholder)
+        edit.setMaximumWidth(width)
+        edit.setValidator(QIntValidator(1, 65535))
+        return edit
 
     def commit(self) -> None:
         """Write this page's settings to QSettings. Called when wizard is accepted."""

@@ -12,10 +12,8 @@ import urllib.parse
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QIntValidator  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QFormLayout,
-    QLineEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -240,10 +238,7 @@ class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
             "Configure your DJ software to broadcast to this port."
         )
 
-        self._port_edit = QLineEdit()
-        self._port_edit.setPlaceholderText("8000")
-        self._port_edit.setMaximumWidth(120)
-        self._port_edit.setValidator(QIntValidator(1, 65535, self))
+        self._port_edit = nowplaying.wizard.WizardPage.port_edit("8000")
         self._port_edit.setText(
             config.cparser.value("icecast/port", type=str, defaultValue="8000")
         )
