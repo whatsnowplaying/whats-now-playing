@@ -11,7 +11,7 @@ import aiosqlite
 import orjson
 
 import nowplaying.utils.sqlite
-from .storage import _ensure_datacache_schema, get_datacache_path
+from .utils import _ensure_datacache_schema, get_datacache_path
 
 
 class RequestQueue:

@@ -120,57 +120,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
-        if self.metadata.get("artist") and self.metadata.get("album"):
-            # Normalize artist and album separately then join — mirrors queue_front_cover() in
-            # artistextras/__init__.py so the lookup key matches what network-art plugins store.
-            norm_artist = nowplaying.utils.normalize(
-                self.metadata["artist"], sizecheck=0, nospaces=True
-            )
-            norm_album = nowplaying.utils.normalize(
-                self.metadata["album"], sizecheck=0, nospaces=True
-            )
-            normalid = f"{norm_artist}_{norm_album}"
-            identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
-            storage = nowplaying.datacache.get_client().storage
-            if self.metadata.get("coverimageraw"):
-                logging.debug(
-                    "Placing provided front cover for %s (normalized key: %s)",
-                    identifier,
-                    normalid,
-                )
-                await storage.store(
-                    url=f"embedded://{normalid}/provided_0",
-                    identifier=normalid,
-                    data_type="front_cover",
-                    provider="embedded",
-                    data_value=self.metadata["coverimageraw"],
-                    ttl_seconds=30 * 24 * 3600,
-                    status_code=200,
-                )
-                # Store additional embedded covers from multi-image audio files
-                extra_covers = self.metadata.pop("_embedded_extra_covers", [])
-                for index, raw_data in enumerate(extra_covers, start=1):
-                    converted = nowplaying.utils.image2png(raw_data)
-                    if converted:
-                        await storage.store(
-                            url=f"embedded://{normalid}/provided_{index}",
-                            identifier=normalid,
-                            data_type="front_cover",
-                            provider="embedded",
-                            data_value=converted,
-                            ttl_seconds=30 * 24 * 3600,
-                            status_code=200,
-                        )
-            else:
-                self.metadata.pop("_embedded_extra_covers", None)
-                result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
-                if result:
-                    logging.debug("Restoring coverimageraw from datacache for %s", identifier)
-                    self.metadata["coverimageraw"] = result.data
-                    self.metadata["coverimagetype"] = "png"
-                    self.metadata["coverurl"] = "cover.png"
-                    if result.color_palette:
-                        self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+        await self._process_cover_images()
 
         self._fix_filename_stem()
         self._fix_artist_in_title()
@@ -192,6 +142,66 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             except Exception:  # pylint: disable=broad-except
                 logging.exception("Ignoring cover_colors re-extraction failure.")
 
+        self._finalize_metadata()
+        return self.metadata
+
+    async def _process_cover_images(self) -> None:
+        """Store embedded cover art in datacache or restore a cached image when none is embedded.
+
+        Normalize artist+album separately then join — mirrors queue_front_cover() in
+        artistextras/__init__.py so the lookup key matches what network-art plugins store.
+        """
+        if not (self.metadata.get("artist") and self.metadata.get("album")):
+            return
+        norm_artist = nowplaying.utils.normalize(
+            self.metadata["artist"], sizecheck=0, nospaces=True
+        )
+        norm_album = nowplaying.utils.normalize(self.metadata["album"], sizecheck=0, nospaces=True)
+        normalid = f"{norm_artist}_{norm_album}"
+        identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
+        storage = nowplaying.datacache.get_client().storage
+        if self.metadata.get("coverimageraw"):
+            logging.debug(
+                "Placing provided front cover for %s (normalized key: %s)",
+                identifier,
+                normalid,
+            )
+            await storage.store(
+                url=f"embedded://{normalid}/provided_0",
+                identifier=normalid,
+                data_type="front_cover",
+                provider="embedded",
+                data_value=self.metadata["coverimageraw"],
+                ttl_seconds=30 * 24 * 3600,
+                status_code=200,
+            )
+            # Store additional embedded covers from multi-image audio files
+            extra_covers = self.metadata.pop("_embedded_extra_covers", [])
+            for index, raw_data in enumerate(extra_covers, start=1):
+                converted = nowplaying.utils.image2png(raw_data)
+                if converted:
+                    await storage.store(
+                        url=f"embedded://{normalid}/provided_{index}",
+                        identifier=normalid,
+                        data_type="front_cover",
+                        provider="embedded",
+                        data_value=converted,
+                        ttl_seconds=30 * 24 * 3600,
+                        status_code=200,
+                    )
+        else:
+            self.metadata.pop("_embedded_extra_covers", None)
+            result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
+            if result:
+                logging.debug("Restoring coverimageraw from datacache for %s", identifier)
+                self.metadata["coverimageraw"] = result.data
+                self.metadata["coverimagetype"] = "png"
+                self.metadata["coverurl"] = "cover.png"
+                if result.color_palette:
+                    self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+
+    def _finalize_metadata(self) -> None:
+        """Apply terminal normalizations: publisher alias, dates, bios, dedup, and duration."""
         if "publisher" in self.metadata:
             if "label" not in self.metadata:
                 self.metadata["label"] = self.metadata["publisher"]
@@ -206,10 +216,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata["artistlongbio"] = self.metadata["artistshortbio"]
 
         self._uniqlists()
-
         self._strip_identifiers()
         self._fix_duration()
-        return self.metadata
 
     def _fix_filename_stem(self) -> None:
         """if no title, derive it (and possibly artist) from the filename stem"""

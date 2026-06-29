@@ -81,7 +81,7 @@ def validate_field_lengths(
     return validated_metadata, warnings
 
 
-class StaticContentHandler:
+class StaticContentHandler:  # pylint: disable=too-many-public-methods
     """Handler for static content endpoints"""
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -447,8 +447,8 @@ class StaticContentHandler:
         }
         if not accepted:
             response["message"] = (
-                f"Plugin version {plugin_version} is too old. "
-                f"Please reinstall from your WNP download to get version {LUMIA_MIN_PLUGIN_VERSION} or later."
+                f"Plugin version {plugin_version} is too old. Please reinstall from your"
+                f" WNP download to get version {LUMIA_MIN_PLUGIN_VERSION} or later."
             )
             logging.warning(
                 "Lumia plugin version %s rejected (minimum: %s)",
