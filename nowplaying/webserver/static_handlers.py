@@ -77,7 +77,7 @@ def validate_field_lengths(
     return validated_metadata, warnings
 
 
-class StaticContentHandler:
+class StaticContentHandler:  # pylint: disable=too-many-public-methods
     """Handler for static content endpoints"""
 
     def __init__(  # pylint: disable=too-many-arguments

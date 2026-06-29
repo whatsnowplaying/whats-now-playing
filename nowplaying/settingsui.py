@@ -11,7 +11,6 @@ import logging
 import os
 import pathlib
 import re
-import shutil
 from typing import TYPE_CHECKING, Any
 
 # pylint: disable=no-name-in-module
