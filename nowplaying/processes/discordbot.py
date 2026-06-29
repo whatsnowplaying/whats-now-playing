@@ -430,7 +430,7 @@ class DiscordSupport:
         except discord.HTTPException as error:
             logging.error("Failed to send message to Discord channel: %s", error)
 
-    async def _send_channel_message(
+    async def _send_channel_message(  # pylint: disable=too-many-arguments
         self,
         channel: discord.abc.Messageable,
         templateout: str,
