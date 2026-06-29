@@ -34,6 +34,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self.fnstr: str | None = None
         self.displayname: str = "TheAudioDB"
         self.priority: int = 50
+        self.requires_apikey: bool = False
 
     @staticmethod
     def _filter(text: str) -> str:

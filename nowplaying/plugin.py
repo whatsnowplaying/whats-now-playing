@@ -4,6 +4,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+import nowplaying.types
+
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
     from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
@@ -11,7 +13,7 @@ if TYPE_CHECKING:
     import nowplaying.config
 
 
-class WNPBasePlugin:
+class WNPBasePlugin:  # pylint: disable=too-many-instance-attributes
     """base class of plugins"""
 
     def __init__(
@@ -26,6 +28,7 @@ class WNPBasePlugin:
         self.uihelp: object | None = None
         self.displayname: str = ""
         self.priority: int = 0
+        self.wizardpage: type[nowplaying.types.WizardPage] | None = None
 
         if qsettings:
             self.defaults(qsettings)

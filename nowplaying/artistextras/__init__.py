@@ -48,6 +48,8 @@ class ArtistExtrasPlugin(WNPBasePlugin):
             self._datacache_client = nowplaying.datacache.get_client()
         return self._datacache_client
 
+    requires_apikey: bool = True
+
     #### Plug-in methods
 
     async def download_async(  #  pylint: disable=no-self-use,unused-argument

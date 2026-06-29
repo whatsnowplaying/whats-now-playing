@@ -167,7 +167,7 @@ class Plugin(IcecastPlugin):
                         if cmlpath.exists():
                             self.config.cparser.setValue("traktor/collections", str(cmlpath))
                             self.config.cparser.setValue("settings/input", "traktor")
-                            self.config.cparser.setValue("traktor/port", 8000)
+                            self.config.cparser.setValue("traktor/port", "8000")
                             return True
 
         return False

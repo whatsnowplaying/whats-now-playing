@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QSystemTrayIcon,
 )
 
+import nowplaying.installwizard
 import nowplaying.upgrade
 import nowplaying.upgrades
 import nowplaying.upgrades.background
@@ -190,6 +191,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             )
         nowplaying.utils.qt.focus_window(self._obs_export_dialog)
 
+    def _show_setup_wizard(self) -> None:
+        """Open the setup wizard, re-running it regardless of initialized state."""
+        wizard = nowplaying.installwizard.InstallWizard(self.config)
+        wizard.exec()
+
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         if not self.settingswindow:
@@ -217,6 +223,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self._show_settings)
         self.menu.addAction(self.settings_action)
+
+        self.wizard_action = QAction("Setup Wizard...")
+        self.wizard_action.triggered.connect(self._show_setup_wizard)
+        self.menu.addAction(self.wizard_action)
 
         self.obs_export_action = QAction("Export for OBS...")
         self.obs_export_action.triggered.connect(self._show_obs_export)

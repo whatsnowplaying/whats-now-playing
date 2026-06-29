@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """EarShot input plugin"""
 
+import pathlib
+import sys
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
@@ -23,6 +25,12 @@ class Plugin(nowplaying.inputs.remote.Plugin):
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "EarShot"
+
+    def install(self) -> bool:
+        """Detect WNP EarShot.app in /Applications on macOS."""
+        if sys.platform != "darwin":
+            return False
+        return pathlib.Path("/Applications/WNP EarShot.app").exists()
 
     def get_source_agent_data(self) -> dict:
         """EarShot preserves source_agent data set by the sender."""
