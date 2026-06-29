@@ -86,7 +86,7 @@ class _InputSourcePage(QWizardPage):
         self._button_group.buttonClicked.connect(self._on_selection_changed)
 
     def initializePage(self) -> None:  # pylint: disable=invalid-name
-        """Register the config page for whichever input is pre-selected on first show."""
+        """Register the config page for whichever input is preselected on first show."""
         self._on_selection_changed()
 
     def _on_selection_changed(self) -> None:
