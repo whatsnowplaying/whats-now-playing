@@ -257,7 +257,7 @@ class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
         self.config.cparser.setValue("icecast/port", self._port_edit.text().strip() or "8000")
 
 
-class Plugin(InputPlugin):
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """base class of input plugins"""
 
     def __init__(
@@ -318,6 +318,7 @@ class Plugin(InputPlugin):
         loop = asyncio.get_running_loop()
         logging.debug("Launching Icecast on %s", port)
         try:
+
             def protocol_factory() -> IcecastProtocol:
                 return IcecastProtocol(metadata_callback=self._metadata_callback)
 
@@ -328,7 +329,9 @@ class Plugin(InputPlugin):
 
     async def _restart_if_port_changed(self) -> None:
         """Restart the server if the configured port has changed since start."""
-        new_port: int = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)  # type: ignore[union-attr]
+        new_port: int = self.config.cparser.value(
+            self._port_config_key, type=int, defaultValue=8000
+        )  # type: ignore[union-attr]
         if new_port == self.current_port:
             return
         # If the last bind attempt failed, back off 30s before retrying so a
