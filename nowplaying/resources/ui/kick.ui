@@ -133,7 +133,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Authenticate with Kick</string>
+         <string>Auth Wizard...</string>
         </property>
        </widget>
       </item>

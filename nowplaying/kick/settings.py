@@ -9,6 +9,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QTimer, Slot  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-name-in-module
 
+import nowplaying.authwizard
 import nowplaying.config
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
@@ -35,7 +36,7 @@ class KickSettings:
     def connect(self, uihelp: Any, widget: Any) -> None:  # pylint: disable=unused-argument
         """connect kick"""
         self.widget = widget
-        widget.authenticate_button.clicked.connect(self.authenticate_oauth)
+        widget.authenticate_button.clicked.connect(self._launch_auth_wizard)
         widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
         widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
 
@@ -107,44 +108,13 @@ class KickSettings:
 
         # Note: redirect URI validation removed - it's auto-generated and not user-configurable
 
-    def authenticate_oauth(self) -> None:
-        """initiate OAuth2 authentication flow"""
+    def _launch_auth_wizard(self) -> None:
+        """Open the authentication wizard for Kick."""
         if not self.oauth:
-            logging.error("OAuth2 handler not initialized")
             return
-
-        # Update config with current form values
-        if self.widget:
-            self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
-            self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
-            # Redirect URI is set dynamically by webserver, not stored here
-            self.oauth.redirect_uri = self.widget.redirecturi_label.text().strip()
-
-        # Validate required fields
-        if not self.oauth.client_id:
-            self.widget.oauth_status_label.setText("Error: Client ID required")
-            return
-        if not self.oauth.client_secret:
-            self.widget.oauth_status_label.setText("Error: Client Secret required")
-            return
-        # Note: redirect URI is always valid since it's auto-generated
-
-        try:
-            # Open browser for authentication
-            if self.oauth.open_browser_for_auth():
-                self.widget.oauth_status_label.setText("Browser opened - complete authentication")
-                self.widget.authenticate_button.setText("Authentication in progress...")
-                self.widget.authenticate_button.setEnabled(False)
-
-                # Start checking for authentication completion
-                # Note: In a real implementation, you'd want to monitor the webserver
-                # for the OAuth callback and automatically update the status
-                logging.info("Kick OAuth2 authentication initiated")
-            else:
-                self.widget.oauth_status_label.setText("Failed to open browser")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Kick OAuth2 authentication error: %s", error)
-            self.widget.oauth_status_label.setText(f"Authentication error: {error}")
+        wizard = nowplaying.authwizard.AuthWizard(self.oauth.config, ["kick"])
+        wizard.exec()
+        self.update_oauth_status()
 
     def start_status_timer(self) -> None:
         """Start periodic status updates to catch automatic token refresh"""
@@ -182,11 +152,11 @@ class KickSettings:
         has_token = bool(cparser.value(ACCESS_TOKEN_KEY, defaultValue=""))
         if status == OAUTH_STATUS_AUTHENTICATED:
             self.widget.oauth_status_label.setText("Authenticated")
-            self.widget.authenticate_button.setText("Re-authenticate")
+            self.widget.authenticate_button.setText("Re-authenticate...")
             self.widget.authenticate_button.setEnabled(True)
         elif status == OAUTH_STATUS_EXPIRED:
             self.widget.oauth_status_label.setText("Token expired — re-authenticate")
-            self.widget.authenticate_button.setText("Authenticate with Kick")
+            self.widget.authenticate_button.setText("Auth Wizard...")
             self.widget.authenticate_button.setEnabled(True)
         elif has_token:
             self.widget.oauth_status_label.setText("Connecting...")
@@ -194,7 +164,7 @@ class KickSettings:
             self.widget.authenticate_button.setEnabled(False)
         else:
             self.widget.oauth_status_label.setText("Not authenticated")
-            self.widget.authenticate_button.setText("Authenticate with Kick")
+            self.widget.authenticate_button.setText("Auth Wizard...")
             self.widget.authenticate_button.setEnabled(True)
 
     def clear_authentication(self) -> None:

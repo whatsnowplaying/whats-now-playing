@@ -137,6 +137,14 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
             if op.discord_rp_check.isChecked():
                 cparser.setValue("discord/clientid", cp.discord_clientid.text().strip())
 
+        pending_oauth = []
+        if op.twitch_check.isChecked():
+            pending_oauth.append("twitch")
+        if op.kick_check.isChecked():
+            pending_oauth.append("kick")
+        if pending_oauth:
+            cparser.setValue("settings/pending_oauth", ",".join(pending_oauth))
+
         self.config.initialized = True
         self.config.save()
         logging.info("wizard: first-run setup complete")

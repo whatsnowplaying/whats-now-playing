@@ -6,21 +6,28 @@ from twitchAPI.type import AuthScope
 
 import nowplaying.oauth2
 
+# Bundled WNP Twitch application (public client — no secret, PKCE only)
+TWITCH_BUNDLED_CLIENT_ID = "l89y18ioij2pk7zgk7tzbenc39z2xn"
+
 # OAuth and API endpoints
 OAUTH_HOST = "https://id.twitch.tv"
 API_HOST = "https://api.twitch.tv/helix"
 
 # OAuth scopes - AuthScope enums for TwitchAPI library
 
-# Chat bot scopes (minimal permissions for dedicated bot accounts)
-CHAT_BOT_AUTH_SCOPES: list[AuthScope] = [
+# Common chat scopes needed by both broadcaster and bot accounts
+_CHAT_BASE_SCOPES: list[AuthScope] = [
     AuthScope.CHAT_READ,
     AuthScope.CHAT_EDIT,
+]
+
+# Chat bot scopes — USER_BOT allows a channel to designate this account as a trusted bot
+CHAT_BOT_AUTH_SCOPES: list[AuthScope] = _CHAT_BASE_SCOPES + [
     AuthScope.USER_BOT,
 ]
 
-# Broadcaster scopes (chat scopes + additional broadcaster permissions)
-BROADCASTER_AUTH_SCOPES: list[AuthScope] = CHAT_BOT_AUTH_SCOPES + [
+# Broadcaster scopes — chat read/send + broadcast management; no USER_BOT (wrong for own account)
+BROADCASTER_AUTH_SCOPES: list[AuthScope] = _CHAT_BASE_SCOPES + [
     AuthScope.CHANNEL_READ_REDEMPTIONS,
     AuthScope.CHANNEL_MANAGE_BROADCAST,
 ]
