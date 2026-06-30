@@ -269,6 +269,8 @@ class Plugin(InputPlugin):
         self.displayname: str = "Icecast"
         self.wizardpage = _IcecastWizardPage
         self.server: asyncio.Server | None = None
+        self.current_port: int | None = None
+        self._port_config_key: str = "icecast/port"
         self.mode: str | None = None
         self.lastmetadata: dict[str, str] = {}
         self._current_metadata: dict[str, str] = {}
@@ -304,10 +306,6 @@ class Plugin(InputPlugin):
 
     #### Data feed methods
 
-    async def getplayingtrack(self) -> TrackMetadata:
-        """give back the current metadata"""
-        return self._current_metadata.copy()  # type: ignore
-
     async def getrandomtrack(self, playlist: str) -> None:
         return None
 
@@ -315,17 +313,33 @@ class Plugin(InputPlugin):
 
     async def start_port(self, port: int) -> None:
         """start the icecast server on a particular port"""
-
         loop = asyncio.get_running_loop()
         logging.debug("Launching Icecast on %s", port)
         try:
-            # Create protocol factory that passes the metadata callback
             def protocol_factory() -> IcecastProtocol:
                 return IcecastProtocol(metadata_callback=self._metadata_callback)
 
             self.server = await loop.create_server(protocol_factory, "", port)
+            self.current_port = port
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Failed to launch icecast: %s", error)
+
+    async def _restart_if_port_changed(self) -> None:
+        """Restart the server if the configured port has changed since start."""
+        new_port: int = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)  # type: ignore[union-attr]
+        if new_port == self.current_port:
+            return
+        logging.info("Icecast port changed from %s to %s, restarting", self.current_port, new_port)
+        if self.server:
+            self.server.close()
+            await self.server.wait_closed()
+            self.server = None
+        await self.start_port(new_port)
+
+    async def getplayingtrack(self) -> TrackMetadata:
+        """give back the current metadata"""
+        await self._restart_if_port_changed()
+        return self._current_metadata.copy()  # type: ignore
 
     async def start(self) -> None:
         """any initialization before actual polling starts"""
