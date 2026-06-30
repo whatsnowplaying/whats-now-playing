@@ -8,6 +8,7 @@ import logging
 import logging.config
 import os
 import struct
+import time
 import urllib.parse
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -271,6 +272,7 @@ class Plugin(InputPlugin):
         self.server: asyncio.Server | None = None
         self.current_port: int | None = None
         self._port_config_key: str = "icecast/port"
+        self._port_retry_after: float = 0.0
         self.mode: str | None = None
         self.lastmetadata: dict[str, str] = {}
         self._current_metadata: dict[str, str] = {}
@@ -329,12 +331,18 @@ class Plugin(InputPlugin):
         new_port: int = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)  # type: ignore[union-attr]
         if new_port == self.current_port:
             return
+        # If the last bind attempt failed, back off 30s before retrying so a
+        # port held by another app that is shutting down doesn't spam the log.
+        if self.server is None and time.monotonic() < self._port_retry_after:
+            return
         logging.info("Icecast port changed from %s to %s, restarting", self.current_port, new_port)
         if self.server:
             self.server.close()
             await self.server.wait_closed()
             self.server = None
         await self.start_port(new_port)
+        if self.server is None:
+            self._port_retry_after = time.monotonic() + 30.0
 
     async def getplayingtrack(self) -> TrackMetadata:
         """give back the current metadata"""
@@ -343,7 +351,7 @@ class Plugin(InputPlugin):
 
     async def start(self) -> None:
         """any initialization before actual polling starts"""
-        port: int = self.config.cparser.value("icecast/port", type=int, defaultValue=8000)
+        port: int = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)
         await self.start_port(port)
 
     async def stop(self) -> None:
