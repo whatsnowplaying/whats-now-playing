@@ -15,7 +15,11 @@ from PySide6.QtWidgets import (
 )
 
 import nowplaying.config
-from nowplaying.installwizard._constants import PAGE_ARTISTEXTRAS, PAGE_INPUT_CONFIG
+from nowplaying.installwizard._constants import (
+    PAGE_ARTISTEXTRAS,
+    PAGE_INPUT_CONFIG,
+    PAGE_REMOTE_OUTPUT,
+)
 
 
 class _InputSourcePage(QWizardPage):
@@ -133,8 +137,10 @@ class _InputSourcePage(QWizardPage):
         return self.selected_short_name() is not None
 
     def nextId(self) -> int:  # pylint: disable=invalid-name
-        """Route to the plugin config page if one was registered, else artist extras."""
+        """Route to the plugin config page if registered; skip artist extras for DJ path."""
         wizard = self.wizard()
         if wizard and PAGE_INPUT_CONFIG in wizard.pageIds():
             return PAGE_INPUT_CONFIG
+        if wizard and getattr(wizard, "multipc_role", None) == "dj":
+            return PAGE_REMOTE_OUTPUT
         return PAGE_ARTISTEXTRAS

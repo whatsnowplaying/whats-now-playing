@@ -17,11 +17,19 @@ from nowplaying.installwizard._constants import (
     PAGE_FINISH,
     PAGE_INPUT,
     PAGE_INPUT_CONFIG,
+    PAGE_MULTIPC,
+    PAGE_MULTIPC_ROLE,
     PAGE_OUTPUTS,
+    PAGE_REMOTE_OUTPUT,
     PAGE_WELCOME,
 )
 from nowplaying.installwizard._finish import _FinishPage
 from nowplaying.installwizard._input_source import _InputSourcePage
+from nowplaying.installwizard._multipc import (
+    _MultiPcQuestionPage,
+    _MultiPcRolePage,
+    _RemoteOutputPage,
+)
 from nowplaying.installwizard._outputs import _OutputsPage
 from nowplaying.installwizard._welcome import _WelcomePage
 
@@ -29,16 +37,19 @@ __all__ = [
     "InstallWizard",
     "maybe_show_wizard",
     "PAGE_WELCOME",
+    "PAGE_MULTIPC",
+    "PAGE_MULTIPC_ROLE",
     "PAGE_INPUT",
     "PAGE_INPUT_CONFIG",
     "PAGE_ARTISTEXTRAS",
     "PAGE_OUTPUTS",
     "PAGE_CONFIGURE_OUTPUTS",
+    "PAGE_REMOTE_OUTPUT",
     "PAGE_FINISH",
 ]
 
 
-class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
+class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """First-run setup wizard; shown when config.initialized is False."""
 
     def __init__(
@@ -50,19 +61,31 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setMinimumSize(620, 520)
 
+        # Multi-PC state set by _MultiPcRolePage.validatePage()
+        self.multipc: bool = False
+        self.multipc_role: str | None = None  # 'dj', 'display', or None
+        self.after_input_config_page: int | None = None  # PAGE_REMOTE_OUTPUT for DJ
+
         self._welcome_page = _WelcomePage()
+        self._multipc_page = _MultiPcQuestionPage()
+        self._multipc_role_page = _MultiPcRolePage(config)
         self._input_page = _InputSourcePage(config)
         self._extras_page = _ArtistExtrasPage(config)
         self._outputs_page = _OutputsPage(config)
         self._configure_page = _ConfigureOutputsPage(self._outputs_page, config)
+        self._remote_output_page = _RemoteOutputPage(config)
         self._finish_page = _FinishPage()
 
         self.setPage(PAGE_WELCOME, self._welcome_page)
+        self.setPage(PAGE_MULTIPC, self._multipc_page)
+        self.setPage(PAGE_MULTIPC_ROLE, self._multipc_role_page)
         self.setPage(PAGE_INPUT, self._input_page)
         # PAGE_INPUT_CONFIG is reserved; populated dynamically by _InputSourcePage
+        # or _MultiPcRolePage (for the display machine path)
         self.setPage(PAGE_ARTISTEXTRAS, self._extras_page)
         self.setPage(PAGE_OUTPUTS, self._outputs_page)
         self.setPage(PAGE_CONFIGURE_OUTPUTS, self._configure_page)
+        self.setPage(PAGE_REMOTE_OUTPUT, self._remote_output_page)
         self.setPage(PAGE_FINISH, self._finish_page)
 
         self.setStartId(PAGE_WELCOME)
@@ -71,11 +94,24 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
 
     def _on_page_changed(self, page_id: int) -> None:
         if page_id == PAGE_FINISH:
-            self._finish_page.set_summary(
-                self._input_page.selected_display_name(),
-                self._extras_page.enabled_display_names(),
-                self._outputs_page.enabled_display_names(),
-            )
+            if self.multipc_role == "dj":
+                self._finish_page.set_summary(
+                    self._input_page.selected_display_name(),
+                    [],
+                    ["Remote Output (autodiscovery)"],
+                )
+            elif self.multipc_role == "display":
+                self._finish_page.set_summary(
+                    "Remote (receiving from DJ machine)",
+                    self._extras_page.enabled_display_names(),
+                    self._outputs_page.enabled_display_names(),
+                )
+            else:
+                self._finish_page.set_summary(
+                    self._input_page.selected_display_name(),
+                    self._extras_page.enabled_display_names(),
+                    self._outputs_page.enabled_display_names(),
+                )
 
     def _commit(self) -> None:  # pylint: disable=too-many-branches,too-many-statements
         """Persist all wizard choices to QSettings and mark initialized."""
@@ -85,11 +121,58 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
         if PAGE_INPUT_CONFIG in self.pageIds():
             self.page(PAGE_INPUT_CONFIG).commit()
 
+        if self.multipc_role == "dj":
+            self._commit_dj_machine(cparser)
+        elif self.multipc_role == "display":
+            self._commit_display_machine(cparser)
+        else:
+            self._commit_single_machine(cparser)
+
+        self.config.initialized = True
+        self.config.save()
+        logging.info("wizard: first-run setup complete (role=%s)", self.multipc_role or "single")
+
+    def _commit_dj_machine(self, cparser) -> None:  # pylint: disable=too-many-branches
+        """Commit settings for the DJ/source machine in a multi-PC setup."""
         short_name = self._input_page.selected_short_name()
         if short_name:
             cparser.setValue("settings/input", short_name)
             logging.info("wizard: set input source to %s", short_name)
 
+        # Artist extras off — the display machine handles metadata enrichment
+        for key in self.config.plugins.get("artistextras", {}):
+            sname = key.replace("nowplaying.artistextras.", "")
+            cparser.setValue(f"{sname}/enabled", False)
+
+        # Remote Output — the only output on a DJ machine
+        self._remote_output_page.commit()
+
+        # System notifications on so the DJ can see track changes going across
+        cparser.setValue("settings/notif", True)
+
+    def _commit_display_machine(self, cparser) -> None:  # pylint: disable=too-many-branches
+        """Commit settings for the display/streaming machine in a multi-PC setup."""
+        cparser.setValue("settings/input", "remote")
+        logging.info("wizard: set input source to remote")
+
+        self._commit_artist_extras(cparser)
+        self._commit_outputs(cparser)
+
+        # System notifications on so the operator can see incoming track changes
+        cparser.setValue("settings/notif", True)
+
+    def _commit_single_machine(self, cparser) -> None:  # pylint: disable=too-many-branches
+        """Commit settings for a standalone single-machine setup."""
+        short_name = self._input_page.selected_short_name()
+        if short_name:
+            cparser.setValue("settings/input", short_name)
+            logging.info("wizard: set input source to %s", short_name)
+
+        self._commit_artist_extras(cparser)
+        self._commit_outputs(cparser)
+
+    def _commit_artist_extras(self, cparser) -> None:
+        """Write artist extras selections to config."""
         for key in self.config.plugins.get("artistextras", {}):
             sname = key.replace("nowplaying.artistextras.", "")
             check = self._extras_page.enable_checks.get(sname)
@@ -98,7 +181,6 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
             edit = self._extras_page.apikey_edits.get(sname)
             if edit is not None:
                 cparser.setValue(f"{sname}/apikey", edit.text().strip())
-
         cparser.setValue(
             "artistextras/prioritizenetworkart",
             self._extras_page.prioritize_network.isChecked(),
@@ -109,6 +191,8 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
             self._extras_page.coverfornofanart.isChecked(),
         )
 
+    def _commit_outputs(self, cparser) -> None:
+        """Write outputs selections and credentials to config."""
         op = self._outputs_page
         cparser.setValue("weboutput/httpenabled", op.weboverlay_check.isChecked())
         cparser.setValue("obsws/enabled", op.obsws_check.isChecked())
@@ -144,10 +228,6 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
             pending_oauth.append("kick")
         if pending_oauth:
             cparser.setValue("settings/pending_oauth", ",".join(pending_oauth))
-
-        self.config.initialized = True
-        self.config.save()
-        logging.info("wizard: first-run setup complete")
 
 
 def maybe_show_wizard(config: nowplaying.config.ConfigFile) -> None:
