@@ -73,6 +73,7 @@ class _WebserverPollThread(QThread):  # pylint: disable=too-few-public-methods
         self._port = port
 
     def run(self) -> None:
+        """Poll the webserver port until it accepts connections, then emit ready."""
         for _ in range(60):
             try:
                 with socket.create_connection(("localhost", self._port), timeout=1.0):

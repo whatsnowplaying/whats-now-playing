@@ -241,7 +241,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to open browser for %s OAuth2: %s", self.config_prefix, error)
             return False
 
-    async def exchange_code_for_token(
+    async def exchange_code_for_token(  # pylint: disable=too-many-locals
         self, authorization_code: str, received_state: str | None = None
     ) -> dict[str, Any]:
         """Exchange authorization code for access token"""

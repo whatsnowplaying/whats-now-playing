@@ -571,7 +571,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         return web.Response(content_type="text/html", text=html)
 
     @staticmethod
-    async def _handle_implicit_token(  # pylint: disable=too-many-arguments
+    async def _handle_implicit_token(  # pylint: disable=too-many-arguments,too-many-locals
         request: web.Request,
         token_key: str,
         refresh_key: str,

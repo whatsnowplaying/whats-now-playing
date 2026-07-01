@@ -77,10 +77,12 @@ class _TwitchBroadcasterPage(QWizardPage):
         self.setLayout(layout)
 
     def initializePage(self) -> None:  # pylint: disable=invalid-name
+        """Start polling when the page is shown."""
         self._poll()
         self._timer.start(1000)
 
     def cleanupPage(self) -> None:  # pylint: disable=invalid-name
+        """Stop polling when the user navigates away."""
         self._timer.stop()
 
     def _copy_url(self) -> None:
@@ -118,6 +120,7 @@ class _TwitchBroadcasterPage(QWizardPage):
             self.completeChanged.emit()
 
     def isComplete(self) -> bool:  # pylint: disable=invalid-name
+        """Return True once a broadcaster access token has been saved."""
         self._config.get()
         return bool(self._config.cparser.value("twitchbot/accesstoken"))
 
@@ -153,10 +156,12 @@ class _TwitchChatPage(QWizardPage):
         self.setLayout(layout)
 
     def initializePage(self) -> None:  # pylint: disable=invalid-name
+        """Start polling when the page is shown."""
         self._poll()
         self._timer.start(1000)
 
     def cleanupPage(self) -> None:  # pylint: disable=invalid-name
+        """Stop polling when the user navigates away."""
         self._timer.stop()
 
     def _copy_url(self) -> None:
@@ -217,10 +222,12 @@ class _KickPage(QWizardPage):
         self.setLayout(layout)
 
     def initializePage(self) -> None:  # pylint: disable=invalid-name
+        """Start polling when the page is shown."""
         self._poll()
         self._timer.start(1000)
 
     def cleanupPage(self) -> None:  # pylint: disable=invalid-name
+        """Stop polling when the user navigates away."""
         self._timer.stop()
 
     def _open_browser(self) -> None:
@@ -251,11 +258,12 @@ class _KickPage(QWizardPage):
             self.completeChanged.emit()
 
     def isComplete(self) -> bool:  # pylint: disable=invalid-name
+        """Return True once a Kick access token has been saved."""
         self._config.get()
         return bool(self._config.cparser.value("kick/accesstoken"))
 
 
-class _FinishPage(QWizardPage):
+class _FinishPage(QWizardPage):  # pylint: disable=too-few-public-methods
     """Final page confirming authentication is complete."""
 
     def __init__(self, platforms: list[str], parent: QWidget | None = None) -> None:
@@ -275,7 +283,7 @@ class _FinishPage(QWizardPage):
         self.setLayout(layout)
 
 
-class AuthWizard(QWizard):
+class AuthWizard(QWizard):  # pylint: disable=too-few-public-methods
     """Step-by-step OAuth authorization wizard for Twitch and/or Kick.
 
     Pass ``platforms`` as a list containing 'twitch', 'kick', or both.

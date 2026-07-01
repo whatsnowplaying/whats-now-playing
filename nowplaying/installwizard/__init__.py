@@ -77,7 +77,7 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
                 self._outputs_page.enabled_display_names(),
             )
 
-    def _commit(self) -> None:
+    def _commit(self) -> None:  # pylint: disable=too-many-branches,too-many-statements
         """Persist all wizard choices to QSettings and mark initialized."""
         cparser = self.config.cparser
 

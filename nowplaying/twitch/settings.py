@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """twitch settings"""
 
-import logging
 import pathlib
 import time
 
