@@ -89,5 +89,13 @@ class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
         edit.setValidator(QIntValidator(1, 65535))
         return edit
 
+    def nextId(self) -> int:  # pylint: disable=invalid-name
+        """Route to the page the wizard set up for after input config, or the default."""
+        wizard = self.wizard()
+        override = getattr(wizard, "after_input_config_page", None)
+        if override is not None:
+            return override
+        return super().nextId()
+
     def commit(self) -> None:
         """Write this page's settings to QSettings. Called when wizard is accepted."""

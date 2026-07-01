@@ -5,6 +5,8 @@
 
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget, QWizardPage
 
+from nowplaying.installwizard._constants import PAGE_MULTIPC
+
 
 class _WelcomePage(QWizardPage):
     """Introductory page shown at wizard start."""
@@ -24,3 +26,7 @@ class _WelcomePage(QWizardPage):
         layout.addWidget(intro)
         layout.addStretch()
         self.setLayout(layout)
+
+    def nextId(self) -> int:  # pylint: disable=invalid-name,no-self-use
+        """Go to the multi-PC question before anything else."""
+        return PAGE_MULTIPC
