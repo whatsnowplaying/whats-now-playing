@@ -338,8 +338,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not pending:
             return
         port = int(str(self.config.cparser.value("weboutput/httpport", defaultValue="8899")))
-        self._oauth_poller = _WebserverPollThread(port, parent=None)
+        self._oauth_poller = _WebserverPollThread(port, parent=self.tray)
         self._oauth_poller.ready.connect(self._handle_pending_oauth)
+        self._oauth_poller.finished.connect(self._on_oauth_poller_finished)
         self._oauth_poller.start()
 
     def _handle_pending_oauth(self) -> None:
@@ -353,6 +354,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             return
         wizard = nowplaying.authwizard.AuthWizard(self.config, platforms)
         wizard.exec()
+
+    def _on_oauth_poller_finished(self) -> None:
+        """Drop our reference to the OAuth poller thread once it finishes."""
+        self._oauth_poller = None
 
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""

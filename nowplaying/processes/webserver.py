@@ -571,9 +571,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         return web.Response(content_type="text/html", text=html)
 
     @staticmethod
-    async def _handle_implicit_token(
+    async def _handle_implicit_token(  # pylint: disable=too-many-arguments
         request: web.Request,
         token_key: str,
+        refresh_key: str,
         state_config_key: str,
         service_name: str,
         template_prefix: str,
@@ -626,9 +627,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         config.cparser.remove(state_config_key)
         config.cparser.setValue(token_key, access_token)
         # Implicit flow has no refresh token; clear any stale one from a prior auth code flow
-        refresh_key = token_key.replace("accesstoken", "refreshtoken").replace(
-            "chattoken", "chatrefreshtoken"
-        )
         config.cparser.remove(refresh_key)
         config.save()
         logging.info("%s implicit: access token saved", service_name)
@@ -685,6 +683,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         return await self._handle_implicit_token(
             request,
             token_key="twitchbot/accesstoken",
+            refresh_key="twitchbot/refreshtoken",
             state_config_key="twitchbot/implicit_state_broadcaster",
             service_name="Twitch OAuth2",
             template_prefix="twitch_oauth",
@@ -695,6 +694,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         return await self._handle_implicit_token(
             request,
             token_key="twitchbot/chattoken",
+            refresh_key="twitchbot/chatrefreshtoken",
             state_config_key="twitchbot/implicit_state_chat",
             service_name="Twitch Chat OAuth2",
             template_prefix="twitch_oauth",

@@ -226,7 +226,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         }
         params |= self._get_additional_auth_params()
 
-        logging.info("Generated OAuth2 implicit grant URL for %s", self.config_prefix)
+        logging.debug("Generated OAuth2 implicit grant URL for %s", self.config_prefix)
         return f"{self.oauth_host}{self.authorize_endpoint}?{urllib.parse.urlencode(params)}"
 
     def open_browser_for_auth(self, scopes: list[str] | None = None) -> bool:

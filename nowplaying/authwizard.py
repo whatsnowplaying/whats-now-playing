@@ -50,8 +50,8 @@ class _TwitchBroadcasterPage(QWizardPage):
         )
 
         port = config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
-        has_custom_id = bool(config.cparser.value("twitchbot/clientid", defaultValue=""))
-        if port == 8899 and not has_custom_id:
+        self._has_custom_id = bool(config.cparser.value("twitchbot/clientid", defaultValue=""))
+        if port == 8899 and not self._has_custom_id:
             app_note = "✅ Using the bundled WNP Twitch app — no Client ID or Secret required."
         else:
             app_note = (
@@ -94,16 +94,22 @@ class _TwitchBroadcasterPage(QWizardPage):
                     "your broadcaster account is logged in, then authorize WNP."
                 )
             else:
-                self._status.setText(
-                    "Could not generate URL — check that your Client ID and "
-                    "Client Secret are saved in Settings."
-                )
+                if self._has_custom_id:
+                    self._status.setText(
+                        "Could not generate URL — check that your Client ID and "
+                        "Client Secret are saved in Settings."
+                    )
+                else:
+                    self._status.setText(
+                        "Could not generate URL — please try again, or check Settings "
+                        "if you have configured a custom Client ID."
+                    )
         except Exception:  # pylint: disable=broad-exception-caught
             logging.exception("authwizard: failed to generate Twitch broadcaster URL")
             self._status.setText("Error generating URL — see log for details.")
 
     def _poll(self) -> None:
-        self._config.cparser.sync()
+        self._config.get()
         if self._config.cparser.value("twitchbot/accesstoken"):
             username = str(self._config.cparser.value(BROADCASTER_USERNAME_KEY, defaultValue=""))
             label = f"✅ Authorized{' as ' + username if username else ''}."
@@ -112,7 +118,7 @@ class _TwitchBroadcasterPage(QWizardPage):
             self.completeChanged.emit()
 
     def isComplete(self) -> bool:  # pylint: disable=invalid-name
-        self._config.cparser.sync()
+        self._config.get()
         return bool(self._config.cparser.value("twitchbot/accesstoken"))
 
 
@@ -173,7 +179,7 @@ class _TwitchChatPage(QWizardPage):
             self._status.setText("Error generating URL — see log for details.")
 
     def _poll(self) -> None:
-        self._config.cparser.sync()
+        self._config.get()
         if self._config.cparser.value("twitchbot/chattoken"):
             username = str(self._config.cparser.value(CHAT_USERNAME_KEY, defaultValue=""))
             label = f"✅ Bot authorized{' as ' + username if username else ''}."
@@ -237,7 +243,7 @@ class _KickPage(QWizardPage):
             self._status.setText("Error opening browser — see log for details.")
 
     def _poll(self) -> None:
-        self._config.cparser.sync()
+        self._config.get()
         if self._config.cparser.value("kick/accesstoken"):
             self._status.setText("✅ Kick authorized.")
             self._auth_btn.setEnabled(False)
@@ -245,7 +251,7 @@ class _KickPage(QWizardPage):
             self.completeChanged.emit()
 
     def isComplete(self) -> bool:  # pylint: disable=invalid-name
-        self._config.cparser.sync()
+        self._config.get()
         return bool(self._config.cparser.value("kick/accesstoken"))
 
 

@@ -6,7 +6,10 @@ from twitchAPI.type import AuthScope
 
 import nowplaying.oauth2
 
-# Bundled WNP Twitch application (public client — no secret, PKCE only)
+# Public OAuth2 client identifier for the bundled WNP Twitch application.
+# This is NOT a secret — Twitch client IDs are public by design (analogous to
+# an app's bundle ID). The implicit grant flow used here has no client secret;
+# security comes from CSRF state validation and Twitch's redirect-URI allowlist.
 TWITCH_BUNDLED_CLIENT_ID = "l89y18ioij2pk7zgk7tzbenc39z2xn"
 
 # OAuth and API endpoints
