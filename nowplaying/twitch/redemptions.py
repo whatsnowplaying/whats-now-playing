@@ -110,11 +110,19 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
 
             await asyncio.sleep(4)
 
+            # Reload config so tokens saved by the webserver process are visible here
+            if self.config:
+                self.config.get()
+
             try:
                 if await self._setup_eventsub_connection():
                     loggedin = True
                 else:
-                    await asyncio.sleep(60)
+                    # Short retry if no token yet; longer back-off for connection failures
+                    has_token = bool(
+                        self.config and self.config.cparser.value("twitchbot/accesstoken")
+                    )
+                    await asyncio.sleep(10 if not has_token else 60)
             except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)

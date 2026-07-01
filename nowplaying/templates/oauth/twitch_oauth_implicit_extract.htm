@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Completing Twitch Authorization...</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px;
+                     border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .info { color: #9146ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="info">Completing Twitch authorization...</h2>
+        <p id="status">Extracting token, please wait.</p>
+    </div>
+    <script>
+        // The access token arrives in the URL fragment (#...) which is never sent
+        // to the server. Extract it here and forward it as a query parameter.
+        var fragment = window.location.hash.substring(1);
+        var params = new URLSearchParams(fragment);
+        var token = params.get('access_token');
+        var state = params.get('state');
+        var error = params.get('error');
+
+        if (error) {
+            var q = new URLSearchParams({error: error});
+            var desc = params.get('error_description');
+            if (desc) q.set('error_description', desc);
+            if (state) q.set('state', state);
+            window.location.replace('/{{ token_path }}?' + q.toString());
+        } else if (token) {
+            var q2 = new URLSearchParams({access_token: token});
+            if (state) q2.set('state', state);
+            window.location.replace('/{{ token_path }}?' + q2.toString());
+        } else {
+            document.getElementById('status').textContent =
+                'Error: no token received from Twitch. You may close this window and try again.';
+        }
+    </script>
+</body>
+</html>

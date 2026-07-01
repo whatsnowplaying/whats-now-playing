@@ -112,11 +112,13 @@ class _ConfigureOutputsPage(QWizardPage):
         self.twitch_channel.setText(
             str(self.config.cparser.value("twitchbot/channel", defaultValue="") or "")
         )
-        self.twitch_clientid.setPlaceholderText("Client ID from dev.twitch.tv")
+        self.twitch_clientid.setPlaceholderText(
+            "Optional — leave blank to use bundled app (port 8899)"
+        )
         self.twitch_clientid.setText(
             str(self.config.cparser.value("twitchbot/clientid", defaultValue="") or "")
         )
-        self.twitch_secret.setPlaceholderText("Client secret")
+        self.twitch_secret.setPlaceholderText("Optional — not required for public client apps")
         self.twitch_secret.setEchoMode(QLineEdit.EchoMode.Password)
         self.twitch_secret.setText(
             str(self.config.cparser.value("twitchbot/secret", defaultValue="") or "")

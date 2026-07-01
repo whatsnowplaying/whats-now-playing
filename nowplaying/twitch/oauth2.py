@@ -9,7 +9,11 @@ import requests
 
 import nowplaying.config
 import nowplaying.oauth2
-from nowplaying.twitch.constants import CHAT_BOT_SCOPE_STRINGS, TWITCH_SERVICE_CONFIG
+from nowplaying.twitch.constants import (
+    CHAT_BOT_SCOPE_STRINGS,
+    TWITCH_BUNDLED_CLIENT_ID,
+    TWITCH_SERVICE_CONFIG,
+)
 
 
 class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
@@ -17,6 +21,8 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None) -> None:
         super().__init__(config, TWITCH_SERVICE_CONFIG)
+        if not self.client_id:
+            self.client_id = TWITCH_BUNDLED_CLIENT_ID
 
     def _get_additional_auth_params(self) -> dict[str, str]:
         """Add Twitch-specific authorization parameters"""
@@ -66,24 +72,37 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
         }
 
     def get_auth_url(self, token_type: str = "broadcaster") -> str | None:
-        """Generate OAuth authentication URL for specified token type"""
-        # Validate configuration
-        if not self.client_id or not self.client_secret:
+        """Generate OAuth authentication URL for specified token type.
+
+        Uses implicit grant flow when no client_secret is configured (bundled app),
+        or auth code + PKCE flow when the user has provided their own credentials.
+        Existing setups with a client_secret are unaffected.
+        """
+        if not self.client_id:
             logging.error("OAuth2 configuration incomplete")
             return None
 
-        # Set appropriate redirect URI based on token type
         port = self.config.cparser.value("weboutput/httpport", type=int)
         if token_type == "chat":
             self.redirect_uri = f"http://localhost:{port}/twitchchatredirect"
+            scopes: list[str] | None = CHAT_BOT_SCOPE_STRINGS
         else:
             self.redirect_uri = f"http://localhost:{port}/twitchredirect"
+            scopes = None  # uses default broadcaster scopes
+
+        # Distinct config keys so broadcaster and chat states never collide
+        implicit_state_key = (
+            "twitchbot/implicit_state_chat"
+            if token_type == "chat"
+            else "twitchbot/implicit_state_broadcaster"
+        )
 
         try:
-            # Generate the auth URL with appropriate scopes
-            if token_type == "chat":
-                return self.get_authorization_url(CHAT_BOT_SCOPE_STRINGS)
-            return self.get_authorization_url()  # Uses broadcaster scopes by default
+            if self.client_secret:
+                # User provided their own credentials → auth code + PKCE (unchanged)
+                return self.get_authorization_url(scopes)
+            # Bundled app (no secret) → implicit grant; token arrives in URL fragment
+            return self.get_implicit_auth_url(scopes, state_key=implicit_state_key)
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to generate %s auth URL: %s", token_type, error)
             return None
@@ -155,16 +174,7 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
 
 async def main() -> None:
     """Example usage of TwitchOAuth2"""
-    # Initialize with config (will read twitchbot/clientid, twitchbot/secret from config)
     oauth = TwitchOAuth2()
-
-    # Check if configuration is present
-    if not oauth.client_id:
-        print("Error: twitchbot/clientid not configured")
-        return
-    if not oauth.client_secret:
-        print("Error: twitchbot/secret not configured")
-        return
 
     # Set redirect URI dynamically (required for authorization)
     port = oauth.config.cparser.value("weboutput/httpport", type=int)

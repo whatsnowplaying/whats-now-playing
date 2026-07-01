@@ -2,6 +2,7 @@
 """system tray"""
 
 import logging
+import socket
 import sqlite3
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QSystemTrayIcon,
 )
 
+import nowplaying.authwizard
 import nowplaying.installwizard
 import nowplaying.upgrade
 import nowplaying.upgrades
@@ -61,6 +63,27 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
         logging.debug("Background database vacuum complete")
 
 
+class _WebserverPollThread(QThread):  # pylint: disable=too-few-public-methods
+    """Polls the local webserver port until it accepts connections, then emits ready."""
+
+    ready = Signal()
+
+    def __init__(self, port: int, parent=None) -> None:
+        super().__init__(parent)
+        self._port = port
+
+    def run(self) -> None:
+        """Poll the webserver port until it accepts connections, then emit ready."""
+        for _ in range(60):
+            try:
+                with socket.create_connection(("localhost", self._port), timeout=1.0):
+                    self.ready.emit()
+                    return
+            except OSError:
+                self.sleep(1)
+        logging.warning("wizard: webserver did not start within 60s; skipping OAuth prompt")
+
+
 class Tray:  # pylint: disable=too-many-instance-attributes
     """System Tray object"""
 
@@ -78,6 +101,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.link_thread = None  # QThread for Twitch account linking
         self.vacuum_thread = None  # QThread for background database vacuum
         self._prefetch_worker = None  # QThread for background update pre-fetch
+        self._oauth_poller: _WebserverPollThread | None = None
         self._obs_export_dialog = None
 
         # Core initialization
@@ -304,6 +328,37 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Pre-fetch the next update archive in the background so the next
         # launch can skip the download step and install immediately.
         self._start_background_prefetch()
+
+        # If the first-run wizard configured Twitch/Kick, wait for the webserver
+        # to be ready, then prompt the user to complete OAuth.
+        self._schedule_oauth_prompt()
+
+    def _schedule_oauth_prompt(self) -> None:
+        """Start webserver polling if first-run wizard left a pending OAuth flag."""
+        pending = str(self.config.cparser.value("settings/pending_oauth", defaultValue=""))
+        if not pending:
+            return
+        port = int(str(self.config.cparser.value("weboutput/httpport", defaultValue="8899")))
+        self._oauth_poller = _WebserverPollThread(port, parent=self.tray)
+        self._oauth_poller.ready.connect(self._handle_pending_oauth)
+        self._oauth_poller.finished.connect(self._on_oauth_poller_finished)
+        self._oauth_poller.start()
+
+    def _handle_pending_oauth(self) -> None:
+        """Launch the auth wizard for platforms configured during first-run setup."""
+        pending = str(self.config.cparser.value("settings/pending_oauth", defaultValue=""))
+        if not pending:
+            return
+        self.config.cparser.remove("settings/pending_oauth")
+        platforms = [p.strip() for p in pending.split(",") if p.strip()]
+        if not platforms:
+            return
+        wizard = nowplaying.authwizard.AuthWizard(self.config, platforms)
+        wizard.exec()
+
+    def _on_oauth_poller_finished(self) -> None:
+        """Drop our reference to the OAuth poller thread once it finishes."""
+        self._oauth_poller = None
 
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""

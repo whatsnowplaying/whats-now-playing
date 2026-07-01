@@ -283,6 +283,12 @@ class TwitchLogin:
                     session_timeout=timeout,
                 )
 
+                # Implicit grant tokens have no refresh token; disable auto-refresh
+                # so the library doesn't reject the missing refresh_token.
+                # The token is valid for ~4 hours; re-auth is needed after expiry.
+                if not oauth_client.refresh_token:
+                    twitch.auto_refresh_auth = False
+
                 await twitch.set_user_authentication(
                     token=oauth_client.access_token,
                     refresh_token=oauth_client.refresh_token,
@@ -290,8 +296,9 @@ class TwitchLogin:
                     validate=False,
                 )
 
-                # Set up callback to save automatically refreshed tokens
-                twitch.user_auth_refresh_callback = self.save_refreshed_tokens
+                # Set up callback to save automatically refreshed tokens (auth code flow only)
+                if oauth_client.refresh_token:
+                    twitch.user_auth_refresh_callback = self.save_refreshed_tokens
 
                 return twitch
 

@@ -68,6 +68,9 @@
         <property name="enabled">
          <bool>false</bool>
         </property>
+        <property name="placeholderText">
+         <string>Optional — leave blank to use bundled app (port 8899 only)</string>
+        </property>
        </widget>
       </item>
       <item row="2" column="0">
@@ -76,7 +79,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Secret *</string>
+         <string>Client Secret</string>
         </property>
        </widget>
       </item>
@@ -88,6 +91,9 @@
         <property name="echoMode">
          <enum>QLineEdit::Password</enum>
         </property>
+        <property name="placeholderText">
+         <string>Optional — not required for public client apps</string>
+        </property>
        </widget>
       </item>
       <item row="3" column="0">
@@ -96,7 +102,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>OAuth Status</string>
+         <string>Broadcaster</string>
         </property>
        </widget>
       </item>
@@ -110,53 +116,36 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
-       <layout class="QHBoxLayout" name="auth_buttons_layout">
-        <item>
-         <widget class="QPushButton" name="copy_broadcaster_auth_button">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Copy Broadcaster Auth URL</string>
-          </property>
-          <property name="toolTip">
-           <string>Copy broadcaster authentication URL to clipboard. Use this for your main streaming account that will handle channel points redemptions and API access.</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="copy_chat_auth_button">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Copy Chat Bot Auth URL</string>
-          </property>
-          <property name="toolTip">
-           <string>Copy chat bot authentication URL to clipboard. Use this for a separate bot account that will only handle chat messages. Optional - leave empty to use broadcaster account for chat.</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="chatbot_username_label">
+      <item row="4" column="0">
+       <widget class="QLabel" name="chat_label">
         <property name="enabled">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="text">
-         <string>Account Name</string>
+         <string>Chat Bot</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLabel" name="chat_status_label">
+        <property name="text">
+         <string>Using broadcaster account</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
         </property>
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QLabel" name="chatbot_username_line">
-        <property name="text">
-         <string>autodetermined bot username</string>
+       <widget class="QPushButton" name="authenticate_button">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
-        <property name="textFormat">
-         <enum>Qt::PlainText</enum>
+        <property name="text">
+         <string>Auth Wizard...</string>
+        </property>
+        <property name="toolTip">
+         <string>Opens the wizard to authorize your Twitch accounts. Step 1: broadcaster account (required). Step 2: separate chat bot account (optional — skip to use the broadcaster account for chat).</string>
         </property>
        </widget>
       </item>
@@ -221,16 +210,10 @@ li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700&quot;&gt;Twitch.tv Integration Setup:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;1. Create a Twitch application at &lt;span style=&quot;font-weight: 700&quot;&gt;https://dev.twitch.tv/console&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;2. Copy the &lt;span style=&quot;font-weight: 700&quot;&gt;Client ID&lt;/span&gt; and &lt;span style=&quot;font-weight: 700&quot;&gt;Client Secret&lt;/span&gt; from your application&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;3. Set redirect URIs in your Twitch application to: &lt;span style=&quot;font-weight: 700&quot;&gt;http://localhost:8899/twitchredirect&lt;/span&gt; and &lt;span style=&quot;font-weight: 700&quot;&gt;http://localhost:8899/twitchchatredirect&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;4. Enter your channel name (username where you want to monitor/send messages)&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;5. Choose your authentication method:&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700&quot;&gt;Option A (Recommended):&lt;/span&gt; Use only &lt;span style=&quot;font-weight: 700&quot;&gt;Copy Broadcaster Auth URL&lt;/span&gt; for all features&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700&quot;&gt;Option B (Advanced):&lt;/span&gt; Use both buttons for separate bot/broadcaster accounts&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;6. Open each URL in your browser and complete the authorization&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700; color: #d32f2f&quot;&gt;⚠️ IMPORTANT:&lt;/span&gt;&lt;span style=&quot;color: #d32f2f&quot;&gt; For Option B, make sure you are logged into the correct account before using each URL: your main streaming account for broadcaster auth, and your bot account for chat auth.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;OAuth2 provides secure authentication. The broadcaster token handles channel points and API access, while the optional chat token is only for chat messages.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;1. Enter your Twitch channel name (your streaming username).&lt;/p&gt;
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;2. Click &lt;span style=&quot;font-weight: 700&quot;&gt;Auth Wizard&lt;/span&gt; and follow the steps to authorize your accounts.&lt;/p&gt;
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;The wizard has two steps: &lt;span style=&quot;font-weight: 700&quot;&gt;Broadcaster&lt;/span&gt; (required — handles chat, channel points, and stream title) and &lt;span style=&quot;font-weight: 700&quot;&gt;Chat Bot&lt;/span&gt; (optional — only needed if you want a separate bot account posting in chat).&lt;/p&gt;
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700&quot;&gt;Advanced:&lt;/span&gt; Client ID and Secret are only needed if you are running WNP on a port other than 8899 and need your own Twitch application. Leave blank to use the built-in WNP application.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
@@ -247,25 +230,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>clientid_label</receiver>
-   <slot>setEnabled(bool)</slot>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>secret_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>secret_label</receiver>
-   <slot>setEnabled(bool)</slot>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
    <receiver>channel_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>clientid_label</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
@@ -277,19 +248,31 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
+   <receiver>secret_label</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>secret_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
    <receiver>oauth_label</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>copy_broadcaster_auth_button</receiver>
+   <receiver>chat_label</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>copy_chat_auth_button</receiver>
+   <receiver>authenticate_button</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>

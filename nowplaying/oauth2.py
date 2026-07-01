@@ -34,6 +34,9 @@ class ServiceConfig(TypedDict):
     authorize_endpoint: str  # e.g., '/oauth/authorize' for Kick, '/oauth2/authorize' for Twitch
     revoke_endpoint: NotRequired[str]  # e.g., '/oauth/revoke' (optional)
     validate_endpoint: NotRequired[str]  # e.g., '/oauth2/validate' for Twitch (optional)
+    token_params_in_url: NotRequired[
+        bool
+    ]  # Send token params as URL query string (Twitch requires this)
 
 
 class OAuth2Client:  # pylint: disable=too-many-instance-attributes
@@ -64,6 +67,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         self.authorize_endpoint = service_config["authorize_endpoint"]
         self.revoke_endpoint = service_config.get("revoke_endpoint")
         self.validate_endpoint = service_config.get("validate_endpoint")
+        self.token_params_in_url: bool = service_config.get("token_params_in_url", False)
 
         # Read service-specific config
         self.client_id: str = self.config.cparser.value(f"{self.config_prefix}/clientid")
@@ -187,6 +191,44 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         logging.info("Generated OAuth2 authorization URL for %s", self.config_prefix)
         return auth_url
 
+    def get_implicit_auth_url(
+        self, scopes: list[str] | None = None, state_key: str | None = None
+    ) -> str:
+        """Generate auth URL for OAuth2 implicit grant flow (response_type=token).
+
+        Used when no client_secret is available. The access token is returned in the
+        URL fragment and must be extracted client-side via JavaScript. No refresh token
+        is issued; the token is valid until revoked.
+
+        Args:
+            scopes: OAuth scopes to request (defaults to service default_scopes)
+            state_key: Config key for storing the CSRF state value. Defaults to
+                ``{config_prefix}/implicit_state``. Callers should use distinct keys
+                when multiple implicit flows (e.g. broadcaster + chat) share a prefix.
+        """
+        validated_client_id = self.validate_client_id(self.client_id)
+        if not self.redirect_uri:
+            raise ValueError("Redirect URI is required")
+        if scopes is None:
+            scopes = self.default_scopes
+
+        state = secrets.token_urlsafe(32)
+        stored_key = state_key or f"{self.config_prefix}/implicit_state"
+        self.config.cparser.setValue(stored_key, state)
+        self.config.save()
+
+        params: dict[str, str] = {
+            "client_id": validated_client_id,
+            "response_type": "token",
+            "redirect_uri": self.redirect_uri,
+            "scope": " ".join(scopes),
+            "state": state,
+        }
+        params |= self._get_additional_auth_params()
+
+        logging.debug("Generated OAuth2 implicit grant URL for %s", self.config_prefix)
+        return f"{self.oauth_host}{self.authorize_endpoint}?{urllib.parse.urlencode(params)}"
+
     def open_browser_for_auth(self, scopes: list[str] | None = None) -> bool:
         """Open browser to initiate OAuth2 flow"""
         auth_url = self.get_authorization_url(scopes)
@@ -199,7 +241,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to open browser for %s OAuth2: %s", self.config_prefix, error)
             return False
 
-    async def exchange_code_for_token(
+    async def exchange_code_for_token(  # pylint: disable=too-many-locals
         self, authorization_code: str, received_state: str | None = None
     ) -> dict[str, Any]:
         """Exchange authorization code for access token"""
@@ -245,28 +287,31 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         token_data = {
             "grant_type": "authorization_code",
             "client_id": self.client_id,
-            "client_secret": self.client_secret,
             "code": authorization_code,
             "redirect_uri": self.redirect_uri,
             "code_verifier": self.code_verifier,
         }
+        if self.client_secret:
+            token_data["client_secret"] = self.client_secret
 
-        logging.debug(
-            "%s token exchange using redirect_uri: %s", self.config_prefix, self.redirect_uri
-        )
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-        }
+        token_url = f"{self.oauth_host}{self.token_endpoint}"
+        if self.token_params_in_url:
+            # Twitch requires params as URL query string (not POST body)
+            headers = {"Accept": "application/json"}
+            post_kwargs: dict = {"params": token_data, "headers": headers}
+        else:
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            }
+            post_kwargs = {"data": token_data, "headers": headers}
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.oauth_host}{self.token_endpoint}",
-                    data=token_data,
-                    headers=headers,
+                    token_url,
                     timeout=aiohttp.ClientTimeout(total=30),
+                    **post_kwargs,
                 ) as response:
                     if response.status == 200:
                         token_response: dict[str, Any] = await response.json()
@@ -313,9 +358,10 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         token_data = {
             "grant_type": "refresh_token",
             "client_id": self.client_id,
-            "client_secret": self.client_secret,
             "refresh_token": refresh_token,
         }
+        if self.client_secret:
+            token_data["client_secret"] = self.client_secret
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -510,8 +556,8 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
     def get_auth_url(self, token_type: str = "main") -> str | None:  # pylint: disable=unused-argument
         """Generate OAuth authentication URL for specified token type"""
         # Validate configuration
-        if not self.client_id or not self.client_secret:
-            logging.error("OAuth2 configuration incomplete")
+        if not self.client_id:
+            logging.error("OAuth2 configuration incomplete: client_id missing")
             return None
 
         # Set appropriate redirect URI based on token type
@@ -529,7 +575,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 
     def is_configuration_complete(self) -> bool:
         """Check if OAuth configuration is complete"""
-        return bool(self.client_id and self.client_secret)
+        return bool(self.client_id)
 
     def get_redirect_uri(self, token_type: str = "main") -> str:  # pylint: disable=unused-argument
         """Get the redirect URI for the specified token type"""

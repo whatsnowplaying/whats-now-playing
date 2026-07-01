@@ -77,7 +77,7 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
                 self._outputs_page.enabled_display_names(),
             )
 
-    def _commit(self) -> None:
+    def _commit(self) -> None:  # pylint: disable=too-many-branches,too-many-statements
         """Persist all wizard choices to QSettings and mark initialized."""
         cparser = self.config.cparser
 
@@ -136,6 +136,14 @@ class InstallWizard(QWizard):  # pylint: disable=too-few-public-methods
                 cparser.setValue("discord/channel_id", cp.discord_channel_id.text().strip())
             if op.discord_rp_check.isChecked():
                 cparser.setValue("discord/clientid", cp.discord_clientid.text().strip())
+
+        pending_oauth = []
+        if op.twitch_check.isChecked():
+            pending_oauth.append("twitch")
+        if op.kick_check.isChecked():
+            pending_oauth.append("kick")
+        if pending_oauth:
+            cparser.setValue("settings/pending_oauth", ",".join(pending_oauth))
 
         self.config.initialized = True
         self.config.save()

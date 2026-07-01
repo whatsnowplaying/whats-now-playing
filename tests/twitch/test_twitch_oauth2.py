@@ -10,7 +10,7 @@ import pytest
 from aioresponses import aioresponses
 
 import nowplaying.twitch.oauth2  # pylint: disable=import-error,no-name-in-module
-from nowplaying.twitch.constants import API_HOST, OAUTH_HOST
+from nowplaying.twitch.constants import API_HOST, OAUTH_HOST, TWITCH_BUNDLED_CLIENT_ID
 
 # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 
@@ -114,8 +114,9 @@ def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefine
 @pytest.mark.parametrize(
     "client_id,redirect_uri,expected_error",
     [
-        (None, "http://localhost:8899", "Client ID is required"),
-        ("", "http://localhost:8899", "Client ID is required"),  # Empty string
+        # None/empty → falls back to bundled client ID, so auth URL succeeds
+        (None, "http://localhost:8899", None),
+        ("", "http://localhost:8899", None),
         ("   ", "http://localhost:8899", "Client ID is required"),  # Whitespace only
         (
             "client with spaces",
@@ -168,8 +169,11 @@ def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-nam
         auth_url = oauth.get_authorization_url()
 
         assert auth_url.startswith("https://id.twitch.tv/oauth2/authorize?")
-        # Use trimmed client_id for URL validation since validation normalizes it
-        expected_client_id = client_id.strip() if client_id else client_id
+        # Blank/None → bundled client ID is used as fallback
+        if client_id and client_id.strip():
+            expected_client_id = client_id.strip()
+        else:
+            expected_client_id = TWITCH_BUNDLED_CLIENT_ID
         assert f"client_id={expected_client_id}" in auth_url
         assert "response_type=code" in auth_url
         encoded_uri = redirect_uri.replace(":", "%3A").replace("/", "%2F")
@@ -574,13 +578,11 @@ def test_missing_config_handling(bootstrap, invalid_config_key):  # pylint: disa
     # Set redirect URI directly (no longer from config)
     oauth.redirect_uri = "http://localhost"
 
-    # Should handle missing config gracefully
+    # Missing clientid → bundled ID used as fallback; missing secret is always fine
+    auth_url = oauth.get_authorization_url()
     if invalid_config_key == "twitchbot/clientid":
-        with pytest.raises(ValueError, match="Client ID is required"):
-            oauth.get_authorization_url()
+        assert f"client_id={TWITCH_BUNDLED_CLIENT_ID}" in auth_url
     else:
-        # Missing secret shouldn't prevent URL generation
-        auth_url = oauth.get_authorization_url()
         assert "client_id=test_client" in auth_url
 
 

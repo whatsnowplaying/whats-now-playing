@@ -556,8 +556,91 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             },
         )
 
+    @staticmethod
+    async def _serve_twitch_implicit_extract(
+        request: web.Request, token_path: str
+    ) -> web.Response:
+        """Serve the JS fragment-extraction page for Twitch implicit grant flow."""
+        jinja2_env = request.app[JINJA2_KEY]
+        try:
+            template = jinja2_env.get_template("oauth/twitch_oauth_implicit_extract.htm")
+            html = template.render(token_path=token_path)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Failed to render implicit extract template")
+            html = "<html><body><h1>Template Error</h1></body></html>"
+        return web.Response(content_type="text/html", text=html)
+
+    @staticmethod
+    async def _handle_implicit_token(  # pylint: disable=too-many-arguments,too-many-locals
+        request: web.Request,
+        token_key: str,
+        refresh_key: str,
+        state_config_key: str,
+        service_name: str,
+        template_prefix: str,
+        success_template: str | None = None,
+    ) -> web.Response:
+        """Store an access token received from the implicit grant flow JS redirect."""
+        config = request.app[CONFIG_KEY]
+        jinja2_env = request.app[JINJA2_KEY]
+        config.get()
+        params = dict(request.query)
+
+        def load_tmpl(name: str, **kwargs) -> str:
+            try:
+                return jinja2_env.get_template(f"oauth/{name}").render(**kwargs)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Template error: %s", name)
+                return "<html><body><h1>Template Error</h1></body></html>"
+
+        if error_code := params.get("error"):
+            error_description = params.get("error_description", "No description provided")
+            logging.warning(
+                "%s implicit error: %s - %s", service_name, error_code, error_description
+            )
+            html = load_tmpl(
+                f"{template_prefix}_error.htm",
+                error_code=error_code,
+                error_description=error_description,
+                service_name=service_name,
+            )
+            return web.Response(content_type="text/html", text=html)
+
+        access_token = params.get("access_token")
+        if not access_token:
+            logging.warning("%s implicit: no access_token received", service_name)
+            html = load_tmpl(f"{template_prefix}_no_code.htm", service_name=service_name)
+            return web.Response(content_type="text/html", text=html)
+
+        # CSRF state validation — fail closed: reject if either side is absent
+        expected_state = config.cparser.value(state_config_key)
+        received_state = params.get("state", "")
+        if (
+            not expected_state
+            or not received_state
+            or not secrets.compare_digest(received_state, str(expected_state))
+        ):
+            logging.warning("%s implicit: state mismatch/missing, possible CSRF", service_name)
+            html = load_tmpl(f"{template_prefix}_csrf_error.htm", service_name=service_name)
+            return web.Response(content_type="text/html", text=html, status=400)
+
+        config.cparser.remove(state_config_key)
+        config.cparser.setValue(token_key, access_token)
+        # Implicit flow has no refresh token; clear any stale one from a prior auth code flow
+        config.cparser.remove(refresh_key)
+        config.save()
+        logging.info("%s implicit: access token saved", service_name)
+
+        tmpl_name = success_template or f"{template_prefix}_success.htm"
+        html = load_tmpl(tmpl_name, service_name=service_name)
+        return web.Response(content_type="text/html", text=html)
+
     async def twitchredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
         """handle oauth2 redirect callbacks for Twitch broadcaster tokens"""
+        # Implicit grant: Twitch sends the token in the URL fragment, which browsers
+        # never include in HTTP requests, so the server sees no query params at all.
+        if not request.query.get("code") and not request.query.get("error"):
+            return await self._serve_twitch_implicit_extract(request, "twitchredirect_implicit")
         return await self._handle_oauth_redirect(
             request,
             {
@@ -575,6 +658,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     async def twitchchatredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
         """handle oauth2 redirect callbacks for Twitch chat tokens"""
+        if not request.query.get("code") and not request.query.get("error"):
+            return await self._serve_twitch_implicit_extract(
+                request, "twitchchatredirect_implicit"
+            )
         return await self._handle_oauth_redirect(
             request,
             {
@@ -589,6 +676,29 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 },
                 "success_template": "twitch_chat_oauth_success.htm",
             },
+        )
+
+    async def twitchredirect_implicit_handler(self, request: web.Request):  # pylint: disable=no-self-use
+        """Receive implicit grant token for Twitch broadcaster (forwarded by JS)."""
+        return await self._handle_implicit_token(
+            request,
+            token_key="twitchbot/accesstoken",
+            refresh_key="twitchbot/refreshtoken",
+            state_config_key="twitchbot/implicit_state_broadcaster",
+            service_name="Twitch OAuth2",
+            template_prefix="twitch_oauth",
+        )
+
+    async def twitchchatredirect_implicit_handler(self, request: web.Request):  # pylint: disable=no-self-use
+        """Receive implicit grant token for Twitch chat (forwarded by JS)."""
+        return await self._handle_implicit_token(
+            request,
+            token_key="twitchbot/chattoken",
+            refresh_key="twitchbot/chatrefreshtoken",
+            state_config_key="twitchbot/implicit_state_chat",
+            service_name="Twitch Chat OAuth2",
+            template_prefix="twitch_oauth",
+            success_template="twitch_chat_oauth_success.htm",
         )
 
     def create_runner(self):
@@ -621,7 +731,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/index.txt", self.static_handler.indextxt_handler),
                 web.get("/kickredirect", self.kickredirect_handler),
                 web.get("/twitchredirect", self.twitchredirect_handler),
+                web.get("/twitchredirect_implicit", self.twitchredirect_implicit_handler),
                 web.get("/twitchchatredirect", self.twitchchatredirect_handler),
+                web.get("/twitchchatredirect_implicit", self.twitchchatredirect_implicit_handler),
                 web.get("/request.htm", self.static_handler.requesterlaunch_htm_handler),
                 web.get("/internals", self.internals),
                 web.get("/v1/status", self.status),
