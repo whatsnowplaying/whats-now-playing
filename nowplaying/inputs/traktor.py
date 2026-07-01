@@ -137,6 +137,7 @@ class Plugin(IcecastPlugin):
         """no custom init"""
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Traktor"
+        self._port_config_key = "traktor/port"
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
         ).joinpath("traktor", "traktor.db")
