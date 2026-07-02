@@ -60,8 +60,9 @@ from nowplaying.upgrades import Version
     ],
 )
 def test_version_lt(lesser, greater):
+    """lesser is strictly less than greater, and not the reverse"""
     assert Version(lesser) < Version(greater)
-    assert not Version(greater) < Version(lesser)
+    assert Version(greater) >= Version(lesser)
 
 
 @pytest.mark.parametrize(
@@ -79,9 +80,10 @@ def test_version_lt(lesser, greater):
     ],
 )
 def test_version_eq(left, right):
+    """equal versions compare as equal and neither is less than the other"""
     assert Version(left) == Version(right)
-    assert not Version(left) < Version(right)
-    assert not Version(right) < Version(left)
+    assert Version(left) >= Version(right)
+    assert Version(right) >= Version(left)
 
 
 def test_version_hash_equal_versions_same_hash():
@@ -91,6 +93,7 @@ def test_version_hash_equal_versions_same_hash():
 
 
 def test_version_hash_unequal_versions_differ():
+    """unequal versions should have different hashes"""
     assert hash(Version("5.2.1")) != hash(Version("5.2.1-rc1"))
     assert hash(Version("5.2.1")) != hash(Version("5.2.1+10.gf95bd3f6"))
 
