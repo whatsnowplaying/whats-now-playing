@@ -161,7 +161,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-m
             if serato_plugin.detect():
                 return None
         except Exception:  # pylint: disable=broad-exception-caught
-            pass
+            logging.exception("serato3: serato4 detect() raised; treating as absent")
         return seratodir
 
     def detect(self) -> bool:
