@@ -113,7 +113,7 @@ class _SeratoLegacyWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=
         self.config.cparser.setValue("serato/url", self._url_edit.text().strip())
 
 
-class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """handler for NowPlaying"""
 
     def __init__(
