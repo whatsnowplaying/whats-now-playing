@@ -63,9 +63,9 @@ class _InputSourcePage(QWizardPage):
             display = plugin_obj.displayname
             detected = False
             try:
-                detected = bool(plugin_obj.install())
+                detected = bool(plugin_obj.detect())
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.exception("wizard: install() failed for %s", key)
+                logging.exception("wizard: detect() failed for %s", key)
 
             label = f"✓  {display}" if detected else f"    {display}"
             btn = QRadioButton(label)

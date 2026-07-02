@@ -262,6 +262,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             await self._http_session.close()
             self._http_session = None
 
+    def detect(self) -> bool:
+        """Return True if a Serato 4+ library can be found on this machine."""
+        return bool(self.detected_serato_library_path)
+
     def install(self) -> bool:
         """Auto-install for Serato 4"""
         serato_lib_path = self.detected_serato_library_path

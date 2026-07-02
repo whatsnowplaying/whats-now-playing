@@ -204,6 +204,10 @@ class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
         all_collections.sort(key=lambda p: p.stat().st_mtime)
         return all_collections[-1]
 
+    def detect(self) -> bool:
+        """Return True if a Traktor collection.nml can be found."""
+        return self._find_best_collection() is not None
+
     def install(self):
         """auto-install for Traktor; picks most-recently-used version when multiple installed"""
         best = self._find_best_collection()

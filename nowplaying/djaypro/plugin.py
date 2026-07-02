@@ -150,23 +150,29 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"djaypro/directory"})
 
-    def install(self) -> bool:
-        """locate djay Pro database directory"""
+    def _find_djaypro_dir(self) -> pathlib.Path | None:
+        """Return the djay Pro media library directory if it exists with a valid DB, else None."""
         music_dir = self.config.userdocs.parent.joinpath("Music")
-        # Try macOS path first
-        djaypro_dir = music_dir.joinpath("djay", "djay Media Library.djayMediaLibrary")
+        for candidate in [
+            music_dir.joinpath("djay", "djay Media Library.djayMediaLibrary"),
+            music_dir.joinpath("djay", "djay Media Library"),
+        ]:
+            if candidate.exists() and candidate.joinpath("MediaLibrary.db").exists():
+                return candidate
+        return None
 
-        if not djaypro_dir.exists():
-            # Try Windows path
-            djaypro_dir = music_dir.joinpath("djay", "djay Media Library")
+    def detect(self) -> bool:
+        """Return True if djay Pro is installed with a valid media library."""
+        return self._find_djaypro_dir() is not None
 
-        if djaypro_dir.exists():
-            dbfile = djaypro_dir.joinpath("MediaLibrary.db")
-            if dbfile.exists():
-                self.config.cparser.setValue("settings/input", "djaypro")
-                self.config.cparser.setValue("djaypro/directory", str(djaypro_dir))
-                return True
-        return False
+    def install(self) -> bool:
+        """Auto-install for djay Pro: detect and write default library path."""
+        djaypro_dir = self._find_djaypro_dir()
+        if djaypro_dir is None:
+            return False
+        self.config.cparser.setValue("settings/input", "djaypro")
+        self.config.cparser.setValue("djaypro/directory", str(djaypro_dir))
+        return True
 
     def _reset_meta(self):
         """reset the metadata"""

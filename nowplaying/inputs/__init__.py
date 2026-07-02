@@ -33,6 +33,10 @@ class InputPlugin(WNPBasePlugin):
 
     #### Autoinstallation methods ####
 
+    def detect(self) -> bool:  # pylint: disable=no-self-use
+        """return True if this DJ software is installed on the machine; no side-effects"""
+        return False
+
     def install(self) -> bool:  # pylint: disable=no-self-use
         """if a fresh install, run this"""
         return False
