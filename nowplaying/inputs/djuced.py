@@ -83,13 +83,13 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return frozenset({"djuced/directory"})
 
     def install(self) -> bool:
-        """locate Virtual DJ"""
+        """Auto-install for DJUCED: detect and write default library path."""
         djuceddir = self.config.userdocs.joinpath("DJUCED")
-        if djuceddir.exists():
-            self.config.cparser.value("settings/input", "djuced")
-            self.config.cparser.value("djuced/directory", str(djuceddir))
-            return True
-        return False
+        if not djuceddir.exists():
+            return False
+        self.config.cparser.setValue("settings/input", "djuced")
+        self.config.cparser.setValue("djuced/directory", str(djuceddir))
+        return True
 
     def _reset_meta(self):
         """reset the metadata"""
