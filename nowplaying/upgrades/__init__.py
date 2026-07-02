@@ -2,6 +2,7 @@
 """non-UI utility code for upgrade"""
 
 import copy
+import functools
 import logging
 import re
 import typing as t
@@ -43,6 +44,7 @@ VERSION_REGEX = re.compile(
 )
 
 
+@functools.total_ordering
 class Version:
     """process a version"""
 
@@ -61,22 +63,61 @@ class Version:
             if isinstance(value, str) and value.isdigit():
                 self.chunk[key] = int(value)
 
-        # Extract numeric part from commitnum for comparison (e.g., "16.g4b43e790" -> 16)
         if self.chunk.get("commitnum"):
             commit_str = str(self.chunk["commitnum"])
             leading = commit_str.split(".", maxsplit=1)[0]
-            if leading.isdigit():
-                self.chunk["commitnum_number"] = int(leading)
-            else:
-                self.chunk["commitnum_number"] = 0
+            self.chunk["commitnum_number"] = int(leading) if leading.isdigit() else 0
 
         if (
-            self.chunk.get("rc")
-            or self.chunk.get("preview")
-            or self.chunk.get("prerelease")
+            self.chunk.get("rc") is not None
+            or self.chunk.get("preview") is not None
+            or self.chunk.get("prerelease") is not None
             or self.chunk.get("commitnum")
         ):
             self.pre = True
+
+    def _sort_key(self) -> tuple[int, int, int, int, int]:
+        """Canonical sort key for total ordering.
+
+        Tiers (ascending):
+          0 — pre-release (rc, preview, or generic prerelease); rc and preview
+              are treated as equivalent — only the number distinguishes them.
+          1 — stable release
+          2 — dev build (commit on top of a release tag)
+        """
+        if self.chunk.get("commitnum"):
+            commitnum = int(self.chunk.get("commitnum_number") or 0)
+            return (self.major, self.minor, self.micro, 2, commitnum)
+        if not self.pre:
+            return (self.major, self.minor, self.micro, 1, 0)
+        # rc and preview share tier 0; the number is the sub-key.
+        # Use explicit None checks — rc0/preview0 are valid and int(0) is falsy.
+        # Generic prerelease strings (e.g. "alpha") have no number and all sort equally at 0;
+        # WNP only uses rc/preview so this is intentional.
+        rc = self.chunk.get("rc")
+        preview = self.chunk.get("preview")
+        if rc is not None:
+            pre_num = int(rc)
+        elif preview is not None:
+            pre_num = int(preview)
+        else:
+            pre_num = 0
+        return (self.major, self.minor, self.micro, 0, pre_num)
+
+    @property
+    def major(self) -> int:
+        """major version number"""
+        return int(self.chunk.get("major") or 0)
+
+    @property
+    def minor(self) -> int:
+        """minor version number"""
+        return int(self.chunk.get("minor") or 0)
+
+    @property
+    def micro(self) -> int:
+        """micro version number"""
+        return int(self.chunk.get("micro") or 0)
 
     def is_prerelease(self) -> bool:
         """if a pre-release, return True"""
@@ -85,109 +126,18 @@ class Version:
     def __str__(self) -> str:
         return self.textversion
 
-    def __lt__(  # pylint: disable=too-many-return-statements
-        self, other: t.Any
-    ) -> bool:
-        """version compare
-        do the easy stuff, major > minor > micro"""
-        for key in ["major", "minor", "micro"]:
-            if self.chunk.get(key) == other.chunk.get(key):
-                continue
-            return self.chunk.get(key) < other.chunk.get(key)
-
-        # rc/preview/prerelease < no rc/preview/prerelease
-        self_has_pre = (
-            self.chunk.get("rc") or self.chunk.get("preview") or self.chunk.get("prerelease")
-        )
-        other_has_pre = (
-            other.chunk.get("rc") or other.chunk.get("preview") or other.chunk.get("prerelease")
-        )
-
-        if self_has_pre:
-            if not other_has_pre:
-                return True
-
-            # Compare rc numbers if both have rc
-            if (
-                self.chunk.get("rc")
-                and other.chunk.get("rc")
-                and self.chunk.get("rc") != other.chunk.get("rc")
-            ):
-                return self.chunk.get("rc") < other.chunk.get("rc")
-            # Compare preview numbers if both have preview
-            if (
-                self.chunk.get("preview")
-                and other.chunk.get("preview")
-                and self.chunk.get("preview") != other.chunk.get("preview")
-            ):
-                return self.chunk.get("preview") < other.chunk.get("preview")
-            # Compare prerelease strings if both have prerelease
-            if (
-                self.chunk.get("prerelease")
-                and other.chunk.get("prerelease")
-                and self.chunk.get("prerelease") != other.chunk.get("prerelease")
-            ):
-                return self.chunk.get("prerelease") < other.chunk.get("prerelease")
-
-        # but commitnum > no commitnum at this point
-        if self.chunk.get("commitnum") and not other.chunk.get("commitnum"):
-            return False
-        if not self.chunk.get("commitnum") and other.chunk.get("commitnum"):
-            return True
-
-        if (
-            self.chunk.get("commitnum")
-            and other.chunk.get("commitnum")
-            and self.chunk.get("commitnum") != other.chunk.get("commitnum")
-        ):
-            # Compare numeric part of commitnum
-            return self.chunk.get("commitnum_number", 0) < other.chunk.get("commitnum_number", 0)
-
-        return False
-
-    def __le__(self, other: t.Any) -> bool:
-        """version less than or equal"""
-        return self == other or self < other
+    def __lt__(self, other: t.Any) -> bool:
+        if not isinstance(other, Version):
+            return NotImplemented
+        return self._sort_key() < other._sort_key()
 
     def __eq__(self, other: t.Any) -> bool:
-        """version equality"""
         if not isinstance(other, Version):
             return False
-        return (
-            self.chunk.get("major") == other.chunk.get("major")
-            and self.chunk.get("minor") == other.chunk.get("minor")
-            and self.chunk.get("micro") == other.chunk.get("micro")
-            and self.chunk.get("rc") == other.chunk.get("rc")
-            and self.chunk.get("preview") == other.chunk.get("preview")
-            and self.chunk.get("prerelease") == other.chunk.get("prerelease")
-            and self.chunk.get("commitnum") == other.chunk.get("commitnum")
-        )
-
-    def __ne__(self, other: t.Any) -> bool:
-        """version not equal"""
-        return not self == other
+        return self._sort_key() == other._sort_key()
 
     def __hash__(self) -> int:
-        """version hash"""
-        return hash(
-            (
-                self.chunk.get("major"),
-                self.chunk.get("minor"),
-                self.chunk.get("micro"),
-                self.chunk.get("rc"),
-                self.chunk.get("preview"),
-                self.chunk.get("prerelease"),
-                self.chunk.get("commitnum"),
-            )
-        )
-
-    def __gt__(self, other: t.Any) -> bool:
-        """version greater than"""
-        return not (self < other or self == other)
-
-    def __ge__(self, other: t.Any) -> bool:
-        """version greater than or equal"""
-        return not self < other
+        return hash(self._sort_key())
 
 
 def _is_prerelease(version: str) -> bool:
@@ -204,9 +154,9 @@ def _build_version_params(
     prefer_prerelease: opt-in flag from settings.  Sends `track=prerelease`
     even when the user is currently on a stable build, so stable users
     can subscribe to the prerelease track via the settings checkbox.
-    The auto-detection of `_is_prerelease(current_version)` still
-    applies: a user already running a prerelease keeps getting
-    prereleases regardless of the setting.
+    Auto-detection via Version.is_prerelease() still applies: a user
+    already running a prerelease keeps getting prereleases regardless
+    of the setting.
     """
     current_version = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
@@ -219,7 +169,7 @@ def _build_version_params(
         params["chipset"] = chipset
     if macos_version := platform_info.get("macos_version"):
         params["macos_version"] = macos_version
-    if _is_prerelease(current_version) or prefer_prerelease:
+    if Version(current_version).is_prerelease() or prefer_prerelease:
         params["track"] = "prerelease"
 
     return params
