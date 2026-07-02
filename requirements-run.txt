@@ -13,7 +13,7 @@ lxml==6.1.1
 netifaces-plus==0.12.5
 nltk==3.9.4
 orjson==3.11.9
-pillow==12.2.0
+pillow==12.3.0
 pillow_avif_plugin==1.5.5
 psutil==7.2.2
 puremagic<2; python_version < "3.12"
