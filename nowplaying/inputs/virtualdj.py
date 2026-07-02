@@ -531,28 +531,31 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"virtualdj/history", "virtualdj/playlists"})
 
-    def install(self) -> bool:
-        """locate Virtual DJ"""
-        # Check multiple possible VirtualDJ locations
-        possible_locations = [
-            # Traditional Documents/VirtualDJ location
+    def _find_vdj_dir(self) -> pathlib.Path | None:
+        """Return the first VirtualDJ directory found, or None."""
+        for vdjdir in [
             self.config.userdocs.joinpath("VirtualDJ"),
-            # Windows 11 AppData\Local\VirtualDJ location
             pathlib.Path(
                 QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
             ).parent.joinpath("VirtualDJ"),
-        ]
-
-        for vdjdir in possible_locations:
+        ]:
             if vdjdir.exists():
-                self.config.cparser.setValue("settings/input", "virtualdj")
-                self.config.cparser.setValue("virtualdj/history", str(vdjdir.joinpath("History")))
-                self.config.cparser.setValue(
-                    "virtualdj/playlists", str(vdjdir.joinpath("Playlists"))
-                )
-                return True
+                return vdjdir
+        return None
 
-        return False
+    def detect(self) -> bool:
+        """Return True if a VirtualDJ directory can be found."""
+        return self._find_vdj_dir() is not None
+
+    def install(self) -> bool:
+        """Auto-install for VirtualDJ: detect and write default history/playlists paths."""
+        vdjdir = self._find_vdj_dir()
+        if vdjdir is None:
+            return False
+        self.config.cparser.setValue("settings/input", "virtualdj")
+        self.config.cparser.setValue("virtualdj/history", str(vdjdir.joinpath("History")))
+        self.config.cparser.setValue("virtualdj/playlists", str(vdjdir.joinpath("Playlists")))
+        return True
 
     async def start(self) -> None:
         """setup the watcher to run in a separate thread"""

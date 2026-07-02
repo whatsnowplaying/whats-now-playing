@@ -26,11 +26,15 @@ class Plugin(nowplaying.inputs.remote.Plugin):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "EarShot"
 
-    def install(self) -> bool:
+    def detect(self) -> bool:
         """Detect WNP EarShot.app in /Applications on macOS."""
         if sys.platform != "darwin":
             return False
         return pathlib.Path("/Applications/WNP EarShot.app").exists()
+
+    def install(self) -> bool:
+        """Auto-install for EarShot — detection only, nothing to configure."""
+        return self.detect()
 
     def get_source_agent_data(self) -> dict:
         """EarShot preserves source_agent data set by the sender."""

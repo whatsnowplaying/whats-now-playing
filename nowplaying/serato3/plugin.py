@@ -113,7 +113,7 @@ class _SeratoLegacyWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=
         self.config.cparser.setValue("serato/url", self._url_edit.text().strip())
 
 
-class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """handler for NowPlaying"""
 
     def __init__(
@@ -149,29 +149,33 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"serato/libpath"})
 
-    def install(self):
-        """auto-install for Serato"""
+    def _find_serato3_dir(self) -> pathlib.Path | None:
+        """Return the _Serato_ directory if it exists and serato4 would not claim it."""
         seratodir = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.MusicLocation)[0]
         ).joinpath("_Serato_")
+        if not seratodir.exists():
+            return None
+        try:
+            serato_plugin = nowplaying.serato.plugin.Plugin(config=self.config)
+            if serato_plugin.detect():
+                return None
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("serato3: serato4 detect() raised; treating as absent")
+        return seratodir
 
-        if seratodir.exists():
-            # Check if this is actually Serato 4+ by trying the main serato plugin first
-            try:
-                serato_plugin = nowplaying.serato.plugin.Plugin(config=self.config)
-                if serato_plugin.install():
-                    # Modern Serato can handle this installation, defer to it
-                    return False
-            except (ImportError, Exception):  # pylint: disable=broad-exception-caught
-                # Modern Serato plugin not available or failed, continue with legacy
-                pass
+    def detect(self) -> bool:
+        """Return True if a legacy Serato 3 library exists and serato4 would not claim it."""
+        return self._find_serato3_dir() is not None
 
-            # This is legacy Serato (no master.sqlite or modern serato plugin unavailable)
-            self.config.cparser.setValue("settings/input", "serato3")
-            self.config.cparser.setValue("serato/libpath", str(seratodir))
-            return True
-
-        return False
+    def install(self):
+        """auto-install for Serato"""
+        seratodir = self._find_serato3_dir()
+        if seratodir is None:
+            return False
+        self.config.cparser.setValue("settings/input", "serato3")
+        self.config.cparser.setValue("serato/libpath", str(seratodir))
+        return True
 
     async def gethandler(self):
         """setup the SeratoHandler for this session"""
