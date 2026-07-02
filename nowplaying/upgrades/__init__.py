@@ -85,16 +85,15 @@ class Version:
           1 — stable release
           2 — dev build (commit on top of a release tag)
         """
-        major = int(self.chunk.get("major") or 0)
-        minor = int(self.chunk.get("minor") or 0)
-        micro = int(self.chunk.get("micro") or 0)
-
         if self.chunk.get("commitnum"):
-            return (major, minor, micro, 2, int(self.chunk.get("commitnum_number") or 0))
+            commitnum = int(self.chunk.get("commitnum_number") or 0)
+            return (self.major, self.minor, self.micro, 2, commitnum)
         if not self.pre:
-            return (major, minor, micro, 1, 0)
+            return (self.major, self.minor, self.micro, 1, 0)
         # rc and preview share tier 0; the number is the sub-key.
         # Use explicit None checks — rc0/preview0 are valid and int(0) is falsy.
+        # Generic prerelease strings (e.g. "alpha") have no number and all sort equally at 0;
+        # WNP only uses rc/preview so this is intentional.
         rc = self.chunk.get("rc")
         preview = self.chunk.get("preview")
         if rc is not None:
@@ -103,7 +102,7 @@ class Version:
             pre_num = int(preview)
         else:
             pre_num = 0
-        return (major, minor, micro, 0, pre_num)
+        return (self.major, self.minor, self.micro, 0, pre_num)
 
     @property
     def major(self) -> int:

@@ -92,10 +92,10 @@ def test_version_hash_equal_versions_same_hash():
     assert hash(Version("5.2.1")) == hash(Version("5.2.1"))
 
 
-def test_version_hash_unequal_versions_differ():
-    """unequal versions should have different hashes"""
-    assert hash(Version("5.2.1")) != hash(Version("5.2.1-rc1"))
-    assert hash(Version("5.2.1")) != hash(Version("5.2.1+10.gf95bd3f6"))
+def test_version_hash_unequal_versions_coexist_in_set():
+    """unequal versions must be distinguishable as distinct set members"""
+    assert len({Version("5.2.1"), Version("5.2.1-rc1")}) == 2
+    assert len({Version("5.2.1"), Version("5.2.1+10.gf95bd3f6")}) == 2
 
 
 def test_version_sortable():
