@@ -130,7 +130,7 @@ class TraktorSAXHandler(xml.sax.ContentHandler):
                 self.current_playlist = None
 
 
-class Plugin(IcecastPlugin):
+class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
     """base class of input plugins"""
 
     def __init__(self, config: "nowplaying.config.ConfigFile | None" = None, qsettings=None):
