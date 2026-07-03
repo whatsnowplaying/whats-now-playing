@@ -541,7 +541,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """connect m3u button to filename picker"""
         self.qwidget = qwidget
-        self.uihelp = uihelp
         qwidget.dir_button.clicked.connect(self.on_djuced_dir_button)
 
     def load_settingsui(self, qwidget: "QWidget"):
