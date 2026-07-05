@@ -16,6 +16,7 @@ if t.TYPE_CHECKING:
     import nowplaying.config
 
 UPDATE_CHECK_URL = "https://whatsnowplaying.com/api/v1/check-version"
+RELEASE_NOTES_URL = "https://whatsnowplaying.com/api/v1/release-notes"
 
 _PRERELEASE_MARKERS = ("-rc", "-preview", "+")
 

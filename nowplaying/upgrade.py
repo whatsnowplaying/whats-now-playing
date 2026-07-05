@@ -8,11 +8,16 @@ import pathlib
 import sys
 import webbrowser
 
-from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+import requests
+
+from PySide6.QtCore import Qt, QSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QLabel,
+    QScrollArea,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -24,6 +29,102 @@ import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 from nowplaying.upgrades.config import UpgradeConfig
 from nowplaying.upgrades.platform import PlatformDetector
 from nowplaying.upgrades.templates import UpgradeTemplates
+
+
+class ReleaseNotesDialog(QDialog):
+    """Modal child dialog showing aggregated release notes since from_version."""
+
+    def __init__(self, newversion: str, from_version: str, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setWindowTitle(f"What's New in v{newversion}")
+        self.resize(660, 540)
+
+        entries = self._fetch_entries(from_version) or []
+
+        content = QWidget()
+        clayout = QVBoxLayout(content)
+        clayout.setSpacing(12)
+        clayout.setContentsMargins(16, 16, 16, 16)
+
+        for i, entry in enumerate(entries):
+            if i > 0:
+                sep = QFrame()
+                sep.setFrameShape(QFrame.Shape.HLine)
+                sep.setFrameShadow(QFrame.Shadow.Sunken)
+                clayout.addWidget(sep)
+
+            ver = entry.get("version", "")
+            date = entry.get("date", "")
+            is_pre = entry.get("is_prerelease", False)
+            notes_text = (entry.get("notes") or "").replace("\r\n", "\n").strip()
+
+            pre_badge = (
+                " <span style='color:#b45309; font-size:small;'>(pre-release)</span>"
+                if is_pre
+                else ""
+            )
+            hdr = QLabel(
+                f"<span style='font-size:14pt; font-weight:bold;'>v{ver}</span>{pre_badge}"
+            )
+            hdr.setTextFormat(Qt.TextFormat.RichText)
+            clayout.addWidget(hdr)
+
+            if date:
+                date_lbl = QLabel(date)
+                date_lbl.setStyleSheet("color: gray;")
+                clayout.addWidget(date_lbl)
+
+            if notes_text:
+                browser = QTextBrowser()
+                browser.setOpenExternalLinks(True)
+                browser.setFrameShape(QFrame.Shape.NoFrame)
+                browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+                browser.setStyleSheet("QTextBrowser { background: transparent; border: none; }")
+                browser.setMarkdown(notes_text)
+                browser.document().documentLayout().documentSizeChanged.connect(
+                    lambda sz, b=browser: b.setFixedHeight(int(sz.height()) + 4)
+                )
+                clayout.addWidget(browser)
+
+        if not entries:
+            fallback = QLabel(
+                f"Release notes for v{newversion} could not be loaded.\n"
+                "Check the project's GitHub releases page for details."
+            )
+            fallback.setWordWrap(True)
+            clayout.addWidget(fallback)
+
+        clayout.addStretch()
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidget(content)
+
+        close_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        close_box.rejected.connect(self.reject)
+
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(scroll)
+        main_layout.addWidget(close_box)
+
+    @staticmethod
+    def _fetch_entries(from_version: str) -> list[dict] | None:
+        try:
+            response = requests.get(
+                nowplaying.upgrades.RELEASE_NOTES_URL,
+                params={"from_version": from_version},
+                timeout=5,
+            )
+            response.raise_for_status()
+            entries = response.json()
+            if not isinstance(entries, list):
+                logging.debug("Release notes API returned non-list for v%s", from_version)
+                return None
+            return entries
+        except Exception:  # pylint: disable=broad-except
+            logging.debug("Failed to fetch release notes since v%s", from_version, exc_info=True)
+            return None
 
 
 class _UpgradeAction(enum.Enum):
@@ -96,6 +197,8 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         super().__init__(parent)
         self.setWindowTitle("New Version Available!")
         self.action: _UpgradeAction = _UpgradeAction.LATER
+        self.newversion: str | None = None
+        self.oldversion: str | None = None
 
         self.buttonbox = QDialogButtonBox()
         # Caller is responsible for setting offer_auto_install only when
@@ -105,6 +208,8 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         if offer_auto_install:
             install_btn = self.buttonbox.addButton("Install Now", QDialogButtonBox.AcceptRole)
             install_btn.clicked.connect(self._install_now)
+        release_notes_btn = self.buttonbox.addButton("Release Notes", QDialogButtonBox.ActionRole)
+        release_notes_btn.clicked.connect(self._show_release_notes)
         downloads_btn = self.buttonbox.addButton("View Downloads", QDialogButtonBox.ActionRole)
         downloads_btn.clicked.connect(self._view_downloads)
         later_btn = self.buttonbox.addButton("Remind Me Later", QDialogButtonBox.RejectRole)
@@ -115,6 +220,10 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     def _install_now(self) -> None:
         self.action = _UpgradeAction.INSTALL_NOW
         self.accept()
+
+    def _show_release_notes(self) -> None:
+        if self.newversion and self.oldversion:
+            ReleaseNotesDialog(self.newversion, self.oldversion, parent=self).exec_()
 
     def _view_downloads(self) -> None:
         self.action = _UpgradeAction.VIEW_DOWNLOADS
@@ -130,6 +239,8 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         cached: bool = False,
     ) -> None:
         """fill in the upgrade versions and message"""
+        self.newversion = newversion
+        self.oldversion = oldversion
         messages = [
             f"Your version: {oldversion}",
             f"New version: {newversion}",
