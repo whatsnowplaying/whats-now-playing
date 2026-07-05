@@ -8,8 +8,6 @@ import pathlib
 import sys
 import webbrowser
 
-import requests
-
 from PySide6.QtCore import Qt, QSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QDialog,
@@ -31,7 +29,7 @@ from nowplaying.upgrades.platform import PlatformDetector
 from nowplaying.upgrades.templates import UpgradeTemplates
 
 
-class ReleaseNotesDialog(QDialog):
+class ReleaseNotesDialog(QDialog):  # pylint: disable=too-few-public-methods
     """Modal child dialog showing aggregated release notes since from_version."""
 
     def __init__(self, newversion: str, from_version: str, parent: QWidget | None = None):
@@ -39,7 +37,7 @@ class ReleaseNotesDialog(QDialog):
         self.setWindowTitle(f"What's New in v{newversion}")
         self.resize(660, 540)
 
-        entries = self._fetch_entries(from_version) or []
+        entries = nowplaying.upgrades.fetch_release_notes(from_version) or []
 
         content = QWidget()
         clayout = QVBoxLayout(content)
@@ -47,44 +45,7 @@ class ReleaseNotesDialog(QDialog):
         clayout.setContentsMargins(16, 16, 16, 16)
 
         for i, entry in enumerate(entries):
-            if i > 0:
-                sep = QFrame()
-                sep.setFrameShape(QFrame.Shape.HLine)
-                sep.setFrameShadow(QFrame.Shadow.Sunken)
-                clayout.addWidget(sep)
-
-            ver = entry.get("version", "")
-            date = entry.get("date", "")
-            is_pre = entry.get("is_prerelease", False)
-            notes_text = (entry.get("notes") or "").replace("\r\n", "\n").strip()
-
-            pre_badge = (
-                " <span style='color:#b45309; font-size:small;'>(pre-release)</span>"
-                if is_pre
-                else ""
-            )
-            hdr = QLabel(
-                f"<span style='font-size:14pt; font-weight:bold;'>v{ver}</span>{pre_badge}"
-            )
-            hdr.setTextFormat(Qt.TextFormat.RichText)
-            clayout.addWidget(hdr)
-
-            if date:
-                date_lbl = QLabel(date)
-                date_lbl.setStyleSheet("color: gray;")
-                clayout.addWidget(date_lbl)
-
-            if notes_text:
-                browser = QTextBrowser()
-                browser.setOpenExternalLinks(True)
-                browser.setFrameShape(QFrame.Shape.NoFrame)
-                browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-                browser.setStyleSheet("QTextBrowser { background: transparent; border: none; }")
-                browser.setMarkdown(notes_text)
-                browser.document().documentLayout().documentSizeChanged.connect(
-                    lambda sz, b=browser: b.setFixedHeight(int(sz.height()) + 4)
-                )
-                clayout.addWidget(browser)
+            self._build_entry(clayout, entry, add_separator=i > 0)
 
         if not entries:
             fallback = QLabel(
@@ -109,22 +70,42 @@ class ReleaseNotesDialog(QDialog):
         main_layout.addWidget(close_box)
 
     @staticmethod
-    def _fetch_entries(from_version: str) -> list[dict] | None:
-        try:
-            response = requests.get(
-                nowplaying.upgrades.RELEASE_NOTES_URL,
-                params={"from_version": from_version},
-                timeout=5,
+    def _build_entry(clayout: QVBoxLayout, entry: dict, *, add_separator: bool) -> None:
+        if add_separator:
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            sep.setFrameShadow(QFrame.Shadow.Sunken)
+            clayout.addWidget(sep)
+
+        ver = entry.get("version", "")
+        date = entry.get("date", "")
+        is_pre = entry.get("is_prerelease", False)
+        notes_text = (entry.get("notes") or "").replace("\r\n", "\n").strip()
+
+        pre_badge = (
+            " <span style='color:#b45309; font-size:small;'>(pre-release)</span>" if is_pre else ""
+        )
+        hdr = QLabel(f"<span style='font-size:14pt; font-weight:bold;'>v{ver}</span>{pre_badge}")
+        hdr.setTextFormat(Qt.TextFormat.RichText)
+        clayout.addWidget(hdr)
+
+        if date:
+            date_lbl = QLabel(date)
+            date_lbl.setStyleSheet("color: gray;")
+            clayout.addWidget(date_lbl)
+
+        if notes_text:
+            browser = QTextBrowser()
+            browser.setOpenExternalLinks(True)
+            browser.setFrameShape(QFrame.Shape.NoFrame)
+            browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            browser.setStyleSheet("QTextBrowser { background: transparent; border: none; }")
+            browser.setMarkdown(notes_text)
+            browser.document().documentLayout().documentSizeChanged.connect(
+                lambda sz, b=browser: b.setFixedHeight(int(sz.height()) + 4)
             )
-            response.raise_for_status()
-            entries = response.json()
-            if not isinstance(entries, list):
-                logging.debug("Release notes API returned non-list for v%s", from_version)
-                return None
-            return entries
-        except Exception:  # pylint: disable=broad-except
-            logging.debug("Failed to fetch release notes since v%s", from_version, exc_info=True)
-            return None
+            clayout.addWidget(browser)
+
 
 
 class _UpgradeAction(enum.Enum):

@@ -148,7 +148,7 @@ def up_to_date_response():
     }
 
 
-def _mock_response(data: dict, status_code: int = 200) -> MagicMock:
+def _mock_response(data: dict | list, status_code: int = 200) -> MagicMock:
     """Build a mock requests.Response"""
     mock = MagicMock()
     mock.status_code = status_code
@@ -353,3 +353,66 @@ def test_check_for_update_prerelease_running_ignores_setting(monkeypatch, up_to_
         sent_params = kwargs.get("params", {})
 
     assert sent_params.get("track") == "prerelease"
+
+
+# ---------------------------------------------------------------------------
+# fetch_release_notes
+# ---------------------------------------------------------------------------
+
+_SAMPLE_ENTRIES = [
+    {
+        "version": "5.2.2",
+        "date": "2026-06-20",
+        "is_prerelease": False,
+        "notes": "Security and polish release.",
+    },
+    {
+        "version": "5.2.1",
+        "date": "2026-05-21",
+        "is_prerelease": False,
+        "notes": "Reliability release.",
+    },
+]
+
+
+def test_fetch_release_notes_returns_entries():
+    """returns the list from a successful API response"""
+    with patch("requests.get", return_value=_mock_response(_SAMPLE_ENTRIES)):
+        result = nowplaying.upgrades.fetch_release_notes("5.2.0")
+    assert result == _SAMPLE_ENTRIES
+
+
+def test_fetch_release_notes_sends_from_version():
+    """passes from_version as a query parameter"""
+    with patch("requests.get", return_value=_mock_response(_SAMPLE_ENTRIES)) as mock_get:
+        nowplaying.upgrades.fetch_release_notes("5.1.0")
+        _, kwargs = mock_get.call_args
+    assert kwargs.get("params", {}).get("from_version") == "5.1.0"
+
+
+def test_fetch_release_notes_empty_list():
+    """returns an empty list when no releases are newer"""
+    with patch("requests.get", return_value=_mock_response([])):
+        result = nowplaying.upgrades.fetch_release_notes("5.2.2")
+    assert result == []
+
+
+def test_fetch_release_notes_non_list_returns_none():
+    """returns None when the API returns non-list JSON"""
+    with patch("requests.get", return_value=_mock_response({"error": "bad"})):
+        result = nowplaying.upgrades.fetch_release_notes("5.2.0")
+    assert result is None
+
+
+def test_fetch_release_notes_http_error():
+    """returns None on HTTP error"""
+    with patch("requests.get", return_value=_mock_response({}, status_code=500)):
+        result = nowplaying.upgrades.fetch_release_notes("5.2.0")
+    assert result is None
+
+
+def test_fetch_release_notes_network_failure():
+    """returns None on network failure"""
+    with patch("requests.get", side_effect=ConnectionError("network down")):
+        result = nowplaying.upgrades.fetch_release_notes("5.2.0")
+    assert result is None
