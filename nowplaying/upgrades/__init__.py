@@ -16,6 +16,31 @@ if t.TYPE_CHECKING:
     import nowplaying.config
 
 UPDATE_CHECK_URL = "https://whatsnowplaying.com/api/v1/check-version"
+RELEASE_NOTES_URL = "https://whatsnowplaying.com/api/v1/release-notes"
+
+
+def fetch_release_notes(from_version: str) -> list[dict] | None:
+    """Fetch aggregated release notes since from_version from the WNP API.
+
+    Returns a list of release entry dicts (version, date, is_prerelease, notes)
+    ordered newest-first, or None on any error.
+    """
+    try:
+        response = requests.get(
+            RELEASE_NOTES_URL,
+            params={"from_version": from_version},
+            timeout=5,
+        )
+        response.raise_for_status()
+        entries = response.json()
+        if not isinstance(entries, list):
+            logging.debug("Release notes API returned non-list for v%s", from_version)
+            return None
+        return entries
+    except Exception:  # pylint: disable=broad-except
+        logging.debug("Failed to fetch release notes since v%s", from_version, exc_info=True)
+        return None
+
 
 _PRERELEASE_MARKERS = ("-rc", "-preview", "+")
 
