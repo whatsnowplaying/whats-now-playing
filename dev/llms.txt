@@ -27,7 +27,12 @@
 > WebGL 3D GPU-rendered effects (spinning vinyl record textured with cover art,
 > animated EQ spectrum bars, cyberpunk scanline hologram with glitch text reveal,
 > floating particle field, rotating 3D cube textured with artist fanart, animated
-> wave boundary); anime.js motion effects (elastic scale, bounce, character stagger,
+> wave boundary); 13 full-screen dynamic background templates that automatically
+> adapt their color palette to cover art (plasma, aurora, voronoi, noise-field,
+> ripple with fluid refraction, magma rise, nebula, neon lightning, digital grid,
+> halftone dot matrix, flow field, geometric weave, gradient sweep) — every
+> background cross-fades to a new palette on each track change;
+> anime.js motion effects (elastic scale, bounce, character stagger,
 > explode, spin, slide); Typed.js realistic typewriter with mistakes (terminal,
 > amber, classic paper styles); Matrix digital rain with falling katakana; CSS
 > frosted-glass lower-thirds; artist fanart slideshows cycling through multiple

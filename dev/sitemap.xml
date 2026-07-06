@@ -91,6 +91,11 @@
         <changefreq>daily</changefreq>
     </url>
     <url>
+        <loc>http://whatsnowplaying.github.io/dev/gallery/dynamic-backgrounds/</loc>
+        <lastmod>2026-07-06</lastmod>
+        <changefreq>daily</changefreq>
+    </url>
+    <url>
         <loc>http://whatsnowplaying.github.io/dev/gallery/obswebsocket/</loc>
         <lastmod>2026-07-06</lastmod>
         <changefreq>daily</changefreq>
