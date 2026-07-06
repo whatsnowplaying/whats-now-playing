@@ -312,7 +312,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     async def websocket_artistfanart_streamer(self, request: web.Request):  # pylint: disable=too-many-branches
         """handle continually streamed updates"""
-        websocket = web.WebSocketResponse()
+        websocket = web.WebSocketResponse(heartbeat=30.0)
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
         endloop = False
@@ -429,7 +429,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
     async def websocket_streamer(self, request: web.Request):
         """handle continually streamed updates"""
 
-        websocket = web.WebSocketResponse()
+        websocket = web.WebSocketResponse(heartbeat=30.0)
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
 
@@ -489,7 +489,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     async def websocket_handler(self, request: web.Request):
         """handle inbound websockets"""
-        websocket = web.WebSocketResponse()
+        websocket = web.WebSocketResponse(heartbeat=30.0)
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
         try:

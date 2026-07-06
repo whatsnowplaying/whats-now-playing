@@ -44,7 +44,7 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
 
     async def websocket_images_handler(self, request: web.Request):  # pylint: disable=too-many-branches
         """handle Images WebSocket API"""
-        websocket = web.WebSocketResponse()
+        websocket = web.WebSocketResponse(heartbeat=30.0)
         await websocket.prepare(request)
         request.app[self.ws_key].add(websocket)
 
