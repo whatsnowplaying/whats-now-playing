@@ -2,9 +2,9 @@
 template_families:
   webgl_plasma:
     base: webgl-base
-    description: "Full-screen plasma background driven by cover art palette colors"
+    description: "Plasma"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -14,15 +14,15 @@ template_families:
     templates:
       ws-webgl-plasma-background:
         title: "WebGL Plasma Background"
-        description: "Full-screen animated plasma background using cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Overlapping sine waves"
+        body_layout: dynamic-bg-layout
         display_js: webgl-plasma
 
   webgl_aurora:
     base: webgl-base
-    description: "Full-screen aurora background driven by cover art palette colors"
+    description: "Aurora"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -32,15 +32,15 @@ template_families:
     templates:
       ws-webgl-aurora-background:
         title: "WebGL Aurora Background"
-        description: "Three drifting curtains of light tinted by cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Three drifting curtains of tinted light"
+        body_layout: dynamic-bg-layout
         display_js: webgl-aurora
 
   webgl_gradient_sweep:
     base: webgl-base
-    description: "Full-screen rotating gradient background driven by cover art palette colors"
+    description: "Rotating gradient"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -50,15 +50,15 @@ template_families:
     templates:
       ws-webgl-gradient-sweep-background:
         title: "WebGL Gradient Sweep Background"
-        description: "Smooth palette gradient that slowly rotates, driven by cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Smooth palette gradient that slowly rotates"
+        body_layout: dynamic-bg-layout
         display_js: webgl-gradient-sweep
 
   webgl_voronoi:
     base: webgl-base
-    description: "Full-screen Voronoi cell background driven by cover art palette colors"
+    description: "Voronoi cell background"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -68,15 +68,15 @@ template_families:
     templates:
       ws-webgl-voronoi-background:
         title: "WebGL Voronoi Background"
-        description: "Organic cellular regions each colored from the cover art palette"
-        body_layout: webgl-plasma-layout
+        description: "Organic cellular colored regions"
+        body_layout: dynamic-bg-layout
         display_js: webgl-voronoi
 
   webgl_noise_field:
     base: webgl-base
-    description: "Full-screen noise field background driven by cover art palette colors"
+    description: "Noise field"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -86,15 +86,15 @@ template_families:
     templates:
       ws-webgl-noise-field-background:
         title: "WebGL Noise Field Background"
-        description: "Domain-warped fractal noise producing organic swirling clouds from cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Domain-warped fractal noise, swirling clouds"
+        body_layout: dynamic-bg-layout
         display_js: webgl-noise-field
 
   webgl_ripple:
     base: webgl-base
-    description: "Full-screen ripple background driven by cover art palette colors"
+    description: "Ripples"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -104,15 +104,15 @@ template_families:
     templates:
       ws-webgl-ripple-background:
         title: "WebGL Ripple Background"
-        description: "Concentric rings from two drifting sources, colored by cover art palette"
-        body_layout: webgl-plasma-layout
+        description: "Concentric rings from two drifting sources"
+        body_layout: dynamic-bg-layout
         display_js: webgl-ripple
 
   webgl_magma_rise:
     base: webgl-base
-    description: "Full-screen magma rise background driven by cover art palette colors"
+    description: "Magma rise"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -122,15 +122,15 @@ template_families:
     templates:
       ws-webgl-magma-rise-background:
         title: "WebGL Magma Rise Background"
-        description: "Vertical heat columns drift upward from the bottom, driven by cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Vertical heat columns drift upward from the bottom"
+        body_layout: dynamic-bg-layout
         display_js: webgl-magma-rise
 
   webgl_nebula:
     base: webgl-base
-    description: "Full-screen cosmic nebula background driven by cover art palette colors"
+    description: "Cosmic nebula"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -140,15 +140,15 @@ template_families:
     templates:
       ws-webgl-nebula-background:
         title: "WebGL Nebula Background"
-        description: "Layered gas-cloud density noise with large-scale color regions, driven by cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Layered gas-cloud density noise with large color regions"
+        body_layout: dynamic-bg-layout
         display_js: webgl-nebula
 
   webgl_lightning:
     base: webgl-base
-    description: "Full-screen electric lightning background driven by cover art palette colors"
+    description: "Electric lightning"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -158,15 +158,15 @@ template_families:
     templates:
       ws-webgl-lightning-background:
         title: "WebGL Lightning Background"
-        description: "Razor-thin neon tendrils on a dark background, driven by cover art palette colors"
-        body_layout: webgl-plasma-layout
+        description: "Razor-thin neon tendrils on a dark background"
+        body_layout: dynamic-bg-layout
         display_js: webgl-lightning
 
   webgl_grid:
     base: webgl-base
-    description: "Full-screen digital grid background driven by cover art palette colors"
+    description: "Digital grid"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -176,15 +176,15 @@ template_families:
     templates:
       ws-webgl-grid-background:
         title: "WebGL Grid Background"
-        description: "Fine and coarse razor-sharp grid lines with palette-colored drifting sections"
-        body_layout: webgl-plasma-layout
+        description: "Fine razor-sharp grid lines with drifting sections"
+        body_layout: dynamic-bg-layout
         display_js: webgl-grid
 
   webgl_halftone:
     base: webgl-base
-    description: "Full-screen halftone dot matrix background driven by cover art palette colors"
+    description: "Halftone dot matrix"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -194,15 +194,15 @@ template_families:
     templates:
       ws-webgl-halftone-background:
         title: "WebGL Halftone Background"
-        description: "LED stadium / comic-book halftone dots whose size is driven by a slow plasma wave"
-        body_layout: webgl-plasma-layout
+        description: "Comic-book halftone dots driven by a slow plasma wave"
+        body_layout: dynamic-bg-layout
         display_js: webgl-halftone
 
   webgl_flow_field:
     base: webgl-base
-    description: "Full-screen flow field background driven by cover art palette colors"
+    description: "Flow field"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -212,15 +212,15 @@ template_families:
     templates:
       ws-webgl-flow-field-background:
         title: "WebGL Flow Field Background"
-        description: "Streamlines follow a noise-driven angle field, producing directed flowing strokes"
-        body_layout: webgl-plasma-layout
+        description: "Noise-driven directional streamlines"
+        body_layout: dynamic-bg-layout
         display_js: webgl-flow-field
 
   webgl_weave:
     base: webgl-base
-    description: "Full-screen geometric weave background driven by cover art palette colors"
+    description: "Geometric weave"
     common_css:
-      - webgl-plasma
+      - dynamic-bg
     common_js:
       - webgl-helpers
       - webgl-palette-bg
@@ -230,6 +230,6 @@ template_families:
     templates:
       ws-webgl-weave-background:
         title: "WebGL Weave Background"
-        description: "Three counter-rotating sine grids produce a Moiré textile interference pattern"
-        body_layout: webgl-plasma-layout
+        description: "Moiré textile interference from sine grids"
+        body_layout: dynamic-bg-layout
         display_js: webgl-weave
