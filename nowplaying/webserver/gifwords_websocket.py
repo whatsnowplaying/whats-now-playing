@@ -29,7 +29,7 @@ class GifwordsWebSocketHandler:
 
     async def websocket_gifwords_streamer(self, request: web.Request):
         """Handle gifwords WebSocket connection - just waits for broadcasts"""
-        websocket = web.WebSocketResponse()
+        websocket = web.WebSocketResponse(heartbeat=30.0)
         await websocket.prepare(request)
 
         # Get session ID from query parameters

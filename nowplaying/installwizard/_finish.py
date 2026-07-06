@@ -26,6 +26,10 @@ class _FinishPage(QWizardPage):
         layout.addStretch()
         self.setLayout(layout)
 
+    def nextId(self) -> int:  # pylint: disable=invalid-name,no-self-use
+        """Terminal page — returning -1 makes Qt show the Finish button."""
+        return -1
+
     def set_summary(
         self,
         input_display: str,
