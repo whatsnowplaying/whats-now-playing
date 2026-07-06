@@ -97,11 +97,11 @@ window.WNPPaletteBg = (function () {
 
         function parsePalette(str) {
             if (!str) return null;
-            const hexes = str.split(',').map(s => s.trim()).filter(Boolean);
-            if (!hexes.length) return null;
+            const valid = str.split(',').map(s => s.trim().replace('#', '')).filter(h => /^[0-9a-fA-F]{6}$/.test(h));
+            if (!valid.length) return null;
             const out = new Float32Array(18);
             for (let i = 0; i < 6; i++) {
-                const h = hexes[i % hexes.length].replace('#', '');
+                const h = valid[i % valid.length];
                 out[i*3]   = parseInt(h.slice(0, 2), 16) / 255;
                 out[i*3+1] = parseInt(h.slice(2, 4), 16) / 255;
                 out[i*3+2] = parseInt(h.slice(4, 6), 16) / 255;

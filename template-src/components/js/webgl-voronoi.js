@@ -32,7 +32,9 @@ const FRAG_SRC = WNPPaletteBg.GLSL + `
         }
 
         // Map nearest seed index to palette position [0, 1).
-        float pv = float(mi) / 5.0;
+        // Offset by 0.5 cell so seed 5 lands at 11/12 rather than 1.0,
+        // preventing fract() in sampleA/B from wrapping seed 5 onto seed 0.
+        float pv = (float(mi) + 0.5) / 6.0;
         vec3 col = mix(sampleA(pv), sampleB(pv), u_blend);
 
         // Darken at cell boundaries.
