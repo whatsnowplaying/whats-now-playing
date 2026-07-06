@@ -141,6 +141,8 @@ overlays using the Jinja2 template engine. Supports:
 * Real-time updates via WebSockets
 * Full HTML, CSS, and JavaScript customization
 * 42 bundled OBS browser overlay templates, including 7 animated WebGL/canvas effects
+* 13 full-screen [dynamic background templates](../gallery/dynamic-backgrounds.md) that
+  automatically adapt to cover art palette colors via WebGL
 * Access to all track metadata as template variables
 * Remote control APIs
 
