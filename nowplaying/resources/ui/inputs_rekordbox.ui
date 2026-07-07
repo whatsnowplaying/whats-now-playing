@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>inputs_rekordbox_ui</class>
+ <widget class="QWidget" name="inputs_rekordbox_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Rekordbox</string>
+  </property>
+  <widget class="QLabel" name="custom_key_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>14</y>
+     <width>120</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Custom Key:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="rekordbox_custom_key_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>10</y>
+     <width>460</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="echoMode">
+    <enum>QLineEdit::Password</enum>
+   </property>
+   <property name="placeholderText">
+    <string>Leave blank for automatic detection</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="artist_scope_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>50</y>
+     <width>120</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope:</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="rekordbox_artist_scope_combo">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>46</y>
+     <width>160</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="selected_playlists_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>90</y>
+     <width>120</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Selected Playlists:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="rekordbox_selected_playlists_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>86</y>
+     <width>460</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Comma-separated playlist names (e.g., House Classics, Tech House, Deep House)</string>
+   </property>
+  </widget>
+  <widget class="QTextBrowser" name="rekordbox_info_text">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>126</y>
+     <width>600</width>
+     <height>334</height>
+    </rect>
+   </property>
+   <property name="html">
+    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;/&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;Reads track data from &lt;b&gt;Rekordbox 6 or 7&lt;/b&gt;. Rekordbox must be running in &lt;b&gt;Performance Mode&lt;/b&gt; with track history enabled.&lt;/p&gt;
+&lt;p&gt;To reduce the delay before a track appears, lower &lt;b&gt;Playback Time Setting&lt;/b&gt; in Rekordbox under &lt;b&gt;Preferences &amp;gt; Advanced &amp;gt; Browse&lt;/b&gt;. The default is 1 minute; 30 seconds is a common DJ setting.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;Artist Query Scope&lt;/b&gt; controls where the plugin searches when checking if an artist is in your library (used by Guess Game and similar features).&lt;/p&gt;
+&lt;p&gt;Leave &lt;b&gt;Custom Key&lt;/b&gt; blank unless auto-detection fails.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
