@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>updates_ui</class>
+ <widget class="QWidget" name="updates_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Updates &amp; Backup</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Updates &amp; Backup</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
+   </property>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="prerelease_label">
+     <property name="text">
+      <string>**Software Updates**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="prerelease_checkbox">
+     <property name="text">
+      <string>Include pre-release versions when checking for updates</string>
+     </property>
+     <property name="toolTip">
+      <string>When enabled, the update check will surface pre-release (preview) builds in addition to stable releases.  Users already running a pre-release see them regardless of this setting.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="prefetch_checkbox">
+     <property name="text">
+      <string>Download updates in the background</string>
+     </property>
+     <property name="toolTip">
+      <string>When enabled, update archives are downloaded silently while the app is running so the next launch can install without waiting for a download.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="prefetch_bandwidth_layout">
+     <item>
+      <widget class="QLabel" name="prefetch_bandwidth_label">
+       <property name="text">
+        <string>Background download limit (KB/s, 0 = unlimited)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="prefetch_bandwidth_spinbox">
+       <property name="toolTip">
+        <string>Maximum download speed for background update pre-fetch. Set to 0 for unlimited. Useful during live sets to avoid network contention.</string>
+       </property>
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>100000</number>
+       </property>
+       <property name="singleStep">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="logging_header_label">
+     <property name="text">
+      <string>**Runtime Logging**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="logging_layout">
+     <item>
+      <widget class="QLabel" name="logging_combo_label">
+       <property name="text">
+        <string>Level</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="logging_combobox">
+       <item>
+        <property name="text">
+         <string>DEBUG</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>INFO</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>WARNING</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>ERROR</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>CRITICAL</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="config_backup_label">
+     <property name="text">
+      <string>**Configuration Backup**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="config_buttons_layout">
+     <item>
+      <widget class="QPushButton" name="export_config_button">
+       <property name="text">
+        <string>Export Configuration</string>
+       </property>
+       <property name="toolTip">
+        <string>Export all settings to a JSON file. WARNING: Contains sensitive data including API keys and passwords.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="import_config_button">
+       <property name="text">
+        <string>Import Configuration</string>
+       </property>
+       <property name="toolTip">
+        <string>Import settings from a JSON file. This will overwrite current settings.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="config_warning_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
+&lt;p&gt;&lt;span style=&quot; color:#c0392b; font-weight:600;&quot;&gt;⚠️ Exported configuration files contain sensitive data including API keys, tokens, and passwords. Store them securely and do not share them.&lt;/span&gt;&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

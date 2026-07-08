@@ -73,21 +73,24 @@
        </layout>
       </item>
       <item>
-       <widget class="QTextBrowser" name="query_help_label">
+       <widget class="QLabel" name="query_help_label">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="html">
-         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
 &lt;p&gt;Configure how artist queries from Twitch chat (!hasartist command) search your music library.&lt;/p&gt;
-&lt;p&gt;Choose &lt;span style=&quot;font-weight:600;&quot;&gt;Entire Library&lt;/span&gt; to search all tracks, or &lt;span style=&quot;font-weight:600;&quot;&gt;Selected Playlists&lt;/span&gt; to limit searches to specific crates.&lt;/p&gt;
+&lt;p&gt;Choose &lt;span style=&quot; font-weight:600;&quot;&gt;Entire Library&lt;/span&gt; to search all tracks, or &lt;span style=&quot; font-weight:600;&quot;&gt;Selected Playlists&lt;/span&gt; to limit searches to specific crates.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
         </property>
        </widget>
       </item>
@@ -104,6 +107,12 @@ p, li { white-space: pre-wrap; }
        <layout class="QHBoxLayout" name="additional_libs_row">
         <item>
          <widget class="QTextEdit" name="additional_libs_textedit">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>80</height>
+           </size>
+          </property>
           <property name="toolTip">
            <string>Additional Serato library paths (one per line). Used for external drives and multiple music collections.</string>
           </property>
@@ -139,20 +148,23 @@ p, li { white-space: pre-wrap; }
        </layout>
       </item>
       <item>
-       <widget class="QTextBrowser" name="additional_libs_help_label">
+       <widget class="QLabel" name="additional_libs_help_label">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="html">
-         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
-&lt;p&gt;Enter additional &lt;span style=&quot;font-style:italic;&quot;&gt;_Serato_&lt;/span&gt; folder paths (one per line) for external drives or multiple libraries.&lt;/p&gt;
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
+&lt;p&gt;Enter additional &lt;span style=&quot; font-style:italic;&quot;&gt;_Serato_&lt;/span&gt; folder paths (one per line) for external drives or multiple libraries.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
         </property>
        </widget>
       </item>

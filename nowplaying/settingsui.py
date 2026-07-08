@@ -169,6 +169,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         baseuis = [
             "general",
+            "updates",
             "source",
             "filter",
             "trackskip",
@@ -370,7 +371,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)
 
-    def _connect_general_widget(self, qobject):
+    def _connect_updates_widget(self, qobject):
         """connect the export/import buttons"""
         qobject.export_config_button.clicked.connect(self.on_export_config_button)
         qobject.import_config_button.clicked.connect(self.on_import_config_button)
@@ -430,13 +431,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             str(self.config.cparser.value("settings/delay"))
         )
         self.widgets["general"].notify_checkbox.setChecked(self.config.notif)
-        self.widgets["general"].prerelease_checkbox.setChecked(
+        self.widgets["updates"].prerelease_checkbox.setChecked(
             self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
         )
-        self.widgets["general"].prefetch_checkbox.setChecked(
+        self.widgets["updates"].prefetch_checkbox.setChecked(
             self.config.cparser.value("upgrades/prefetch_enabled", defaultValue=True, type=bool)
         )
-        self.widgets["general"].prefetch_bandwidth_spinbox.setValue(
+        self.widgets["updates"].prefetch_bandwidth_spinbox.setValue(
             self.config.cparser.value("upgrades/prefetch_bandwidth_kbps", defaultValue=0, type=int)
         )
 
@@ -663,7 +664,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             "settings/delay", self.widgets["general"].delay_lineedit.text()
         )
-        loglevel = self.widgets["general"].logging_combobox.currentText()
+        loglevel = self.widgets["updates"].logging_combobox.currentText()
 
         self._upd_conf_input()
 
@@ -672,15 +673,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         self.config.cparser.setValue(
             "upgrades/prefer_prerelease",
-            self.widgets["general"].prerelease_checkbox.isChecked(),
+            self.widgets["updates"].prerelease_checkbox.isChecked(),
         )
         self.config.cparser.setValue(
             "upgrades/prefetch_enabled",
-            self.widgets["general"].prefetch_checkbox.isChecked(),
+            self.widgets["updates"].prefetch_checkbox.isChecked(),
         )
         self.config.cparser.setValue(
             "upgrades/prefetch_bandwidth_kbps",
-            self.widgets["general"].prefetch_bandwidth_spinbox.value(),
+            self.widgets["updates"].prefetch_bandwidth_spinbox.value(),
         )
 
         self.config.put(

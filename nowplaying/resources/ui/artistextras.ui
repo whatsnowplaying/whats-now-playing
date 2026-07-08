@@ -55,21 +55,24 @@
     </layout>
    </item>
    <item>
-    <widget class="QTextBrowser" name="artistextras_desc_label">
+    <widget class="QLabel" name="artistextras_desc_label">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="html">
-      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
 &lt;p&gt;Banners, logos, and thumbnails are downloaded and configured prior to the track being announced.&lt;/p&gt;
 &lt;p&gt;Setting these values too high will result in missing artwork the first time an artist is picked. See the documentation for more details.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
      </property>
     </widget>
    </item>
