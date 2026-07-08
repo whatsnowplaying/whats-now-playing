@@ -427,24 +427,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.get()
         about_version_text(self.config, self.widgets["about"])
 
-        self.widgets["general"].delay_lineedit.setText(
-            str(self.config.cparser.value("settings/delay"))
-        )
-        self.widgets["general"].notify_checkbox.setChecked(self.config.notif)
-        self.widgets["updates"].prerelease_checkbox.setChecked(
-            self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
-        )
-        self.widgets["updates"].prefetch_checkbox.setChecked(
-            self.config.cparser.value("upgrades/prefetch_enabled", defaultValue=True, type=bool)
-        )
-        self.widgets["updates"].prefetch_bandwidth_spinbox.setValue(
-            self.config.cparser.value("upgrades/prefetch_bandwidth_kbps", defaultValue=0, type=int)
-        )
-
-        tray_theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
-        tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
-        self.widgets["general"].tray_icon_combobox.setCurrentIndex(tray_idx)
-
+        self._upd_win_general()
+        self._upd_win_updates()
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
@@ -458,6 +442,29 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         for key in _SETTINGSCLASS_KEYS:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
+
+    def _upd_win_general(self):
+        """update the general settings page to match config"""
+        self.widgets["general"].delay_lineedit.setText(
+            str(self.config.cparser.value("settings/delay"))
+        )
+        self.widgets["general"].notify_checkbox.setChecked(self.config.notif)
+
+        tray_theme = self.config.cparser.value("tray/icontheme", defaultValue="auto")
+        tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
+        self.widgets["general"].tray_icon_combobox.setCurrentIndex(tray_idx)
+
+    def _upd_win_updates(self):
+        """update the updates & backup settings page to match config"""
+        self.widgets["updates"].prerelease_checkbox.setChecked(
+            self.config.cparser.value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
+        )
+        self.widgets["updates"].prefetch_checkbox.setChecked(
+            self.config.cparser.value("upgrades/prefetch_enabled", defaultValue=True, type=bool)
+        )
+        self.widgets["updates"].prefetch_bandwidth_spinbox.setValue(
+            self.config.cparser.value("upgrades/prefetch_bandwidth_kbps", defaultValue=0, type=int)
+        )
 
     def _upd_win_artistextras(self):
         self.widgets["artistextras"].coverart_combobox.clear()
@@ -661,28 +668,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def upd_conf(self):
         """update the configuration"""
 
-        self.config.cparser.setValue(
-            "settings/delay", self.widgets["general"].delay_lineedit.text()
-        )
-        loglevel = self.widgets["updates"].logging_combobox.currentText()
+        self._upd_conf_general()
+        loglevel = self._upd_conf_updates()
 
         self._upd_conf_input()
-
-        tray_theme = TRAY_ICON_THEMES[self.widgets["general"].tray_icon_combobox.currentIndex()]
-        self.config.cparser.setValue("tray/icontheme", tray_theme)
-
-        self.config.cparser.setValue(
-            "upgrades/prefer_prerelease",
-            self.widgets["updates"].prerelease_checkbox.isChecked(),
-        )
-        self.config.cparser.setValue(
-            "upgrades/prefetch_enabled",
-            self.widgets["updates"].prefetch_checkbox.isChecked(),
-        )
-        self.config.cparser.setValue(
-            "upgrades/prefetch_bandwidth_kbps",
-            self.widgets["updates"].prefetch_bandwidth_spinbox.value(),
-        )
 
         self.config.put(
             initialized=True,
@@ -710,6 +699,34 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         # Link Twitch account to charts if authenticated (reuses systemtray logic)
         self.tray._link_twitch_to_charts()  # pylint: disable=protected-access
+
+    def _upd_conf_general(self):
+        """save the general settings page to config"""
+        self.config.cparser.setValue(
+            "settings/delay", self.widgets["general"].delay_lineedit.text()
+        )
+        tray_theme = TRAY_ICON_THEMES[self.widgets["general"].tray_icon_combobox.currentIndex()]
+        self.config.cparser.setValue("tray/icontheme", tray_theme)
+
+    def _upd_conf_updates(self):
+        """save the updates & backup settings page to config
+
+        Returns the selected log level so the caller can pass it to
+        config.put() alongside other cross-page settings.
+        """
+        self.config.cparser.setValue(
+            "upgrades/prefer_prerelease",
+            self.widgets["updates"].prerelease_checkbox.isChecked(),
+        )
+        self.config.cparser.setValue(
+            "upgrades/prefetch_enabled",
+            self.widgets["updates"].prefetch_checkbox.isChecked(),
+        )
+        self.config.cparser.setValue(
+            "upgrades/prefetch_bandwidth_kbps",
+            self.widgets["updates"].prefetch_bandwidth_spinbox.value(),
+        )
+        return self.widgets["updates"].logging_combobox.currentText()
 
     def _upd_conf_external_services(self):
         """Update external service configurations (Twitch, Kick, etc.)"""
