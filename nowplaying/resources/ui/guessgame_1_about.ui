@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>guessgame_1_about_ui</class>
+ <widget class="QWidget" name="guessgame_1_about_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>About</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>About</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
+   </property>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="about_text">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
+&lt;p&gt;&lt;b&gt;Guess Game&lt;/b&gt; creates a hangman-style game for your Twitch chat. Viewers type &lt;b&gt;!guess &amp;lt;letter/word&amp;gt;&lt;/b&gt; to play.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;Templates:&lt;/b&gt; twitchbot_guess.txt, twitchbot_mypoints.txt (customize in templates folder)&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;OBS Integration:&lt;/span&gt; Use &lt;span style=&quot; font-weight:600;&quot;&gt;Export for OBS&lt;/span&gt; from the system tray menu to generate a scene collection that includes Guess Game scenes.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;WNP Guess Game&lt;/span&gt; — full game overlay with leaderboard displays&lt;/li&gt;
+&lt;li&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;WNP Guess Game Basic&lt;/span&gt; — simplified overlay for smaller stream layouts&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;b&gt;Online Board:&lt;/b&gt; https://whatsnowplaying.com/guessgame/(your-twitch-username) (requires Charts API key)&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

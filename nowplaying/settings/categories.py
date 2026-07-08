@@ -52,7 +52,9 @@ class SettingsCategoryManager:
 
         # Core Settings
         self.categories.append(
-            SettingsCategory("core", "Core Settings", ["general", "source", "filter", "trackskip"])
+            SettingsCategory(
+                "core", "Core Settings", ["general", "updates", "source", "filter", "trackskip"]
+            )
         )
 
         # Output & Display

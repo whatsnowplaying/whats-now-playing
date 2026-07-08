@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>guessgame_2_advanced_ui</class>
- <widget class="QWidget" name="guessgame_2_advanced_ui">
+ <class>guessgame_3_scoring_ui</class>
+ <widget class="QWidget" name="guessgame_3_scoring_ui">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>575</height>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Advanced</string>
+   <string>Scoring</string>
   </property>
   <property name="displayName" stdset="0">
-   <string>Advanced</string>
+   <string>Scoring</string>
   </property>
   <layout class="QVBoxLayout" name="main_layout">
    <property name="margin">
@@ -226,97 +226,17 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="advanced_label">
-     <property name="text">
-      <string>**Advanced Options**</string>
+    <spacer>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <property name="textFormat">
-      <enum>Qt::MarkdownText</enum>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
      </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QCheckBox" name="auto_reveal_common_words_checkbox">
-     <property name="text">
-      <string>Auto-reveal common words (the, a, remix, feat, etc.)</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QCheckBox" name="time_bonus_enabled_checkbox">
-     <property name="text">
-      <string>Enable time bonus (faster solves = more points)</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QCheckBox" name="send_to_server_checkbox">
-     <property name="text">
-      <string>Send game state to charts server (for live display on profile)</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout">
-     <item>
-      <widget class="QLabel" name="grace_period_label">
-       <property name="text">
-        <string>Grace Period (seconds after game ends to accept delayed guesses):</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="grace_period_spinbox">
-       <property name="minimum">
-        <number>0</number>
-       </property>
-       <property name="maximum">
-        <number>60</number>
-       </property>
-       <property name="value">
-        <number>5</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QTextBrowser" name="obs_help_label">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="html">
-      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
-&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;OBS Integration:&lt;/span&gt; Use &lt;span style=&quot;font-weight:600;&quot;&gt;Export for OBS&lt;/span&gt; from the system tray menu to generate a scene collection that includes Guess Game scenes.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;WNP Guess Game&lt;/span&gt; — full game overlay with leaderboard displays&lt;/li&gt;
-&lt;li&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;WNP Guess Game Basic&lt;/span&gt; — simplified overlay for smaller stream layouts&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-    </widget>
+    </spacer>
    </item>
   </layout>
  </widget>

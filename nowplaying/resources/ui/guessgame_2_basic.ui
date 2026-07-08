@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>guessgame_1_basic_ui</class>
- <widget class="QWidget" name="guessgame_1_basic_ui">
+ <class>guessgame_2_basic_ui</class>
+ <widget class="QWidget" name="guessgame_2_basic_ui">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -289,23 +289,17 @@
     </widget>
    </item>
    <item>
-    <widget class="QTextBrowser" name="help_text">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
+    <spacer>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <property name="html">
-      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;p { margin: 3px 0; }&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
-&lt;p&gt;&lt;b&gt;Guess Game&lt;/b&gt; creates a hangman-style game for your Twitch chat. Viewers type &lt;b&gt;!guess &amp;lt;letter/word&amp;gt;&lt;/b&gt; to play.&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;Templates:&lt;/b&gt; twitchbot_guess.txt, twitchbot_mypoints.txt (customize in templates folder)&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;OBS Sources:&lt;/b&gt; http://localhost:8899/guessgame/guessgame.htm (game) and guessgame-leaderboard.htm?type=session (leaderboard)&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;Online Board:&lt;/b&gt; https://whatsnowplaying.com/guessgame/(your-twitch-username) (requires Charts API key)&lt;/p&gt;
-&lt;/body&gt;&lt;/html&gt;</string>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
      </property>
-    </widget>
+    </spacer>
    </item>
   </layout>
  </widget>
