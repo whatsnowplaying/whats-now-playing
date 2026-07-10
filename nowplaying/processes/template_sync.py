@@ -41,6 +41,17 @@ if TYPE_CHECKING:
     import nowplaying.datacache.client
 
 _MANIFEST_NAME = ".wnp_sync_manifest.json"
+
+
+def _safe_filename(name: str) -> bool:
+    """True when a server-supplied name is a plain filename.
+
+    Server data must never influence where we write or unlink: no path
+    separators, no traversal, no hidden files (our manifests are dotfiles).
+    """
+    return bool(name) and pathlib.PurePath(name).name == name and not name.startswith(".")
+
+
 _SYNC_TIMEOUT = 30.0
 _DOWNLOAD_TIMEOUT = 60.0
 _TTL = 7 * 24 * 3600
@@ -124,8 +135,14 @@ async def sync_from_charts(  # pylint: disable=too-many-locals
             return
 
     written_names = _assemble_templates(configs, downloaded, synced_dir)
-    _cleanup_stale(synced_dir, written_names)
-    _write_manifest(synced_dir, written_names)
+    # a template whose base download failed transiently is still listed on
+    # the server: keep serving the previous copy instead of unlinking it
+    expected_names = {
+        entry.get("name", "").strip() for entry in configs if entry.get("name", "").strip()
+    }
+    keep_names = written_names | (_read_manifest(synced_dir) & expected_names)
+    _cleanup_stale(synced_dir, keep_names)
+    _write_manifest(synced_dir, keep_names)
     logging.debug("Template sync: wrote %d template(s)", len(written_names))
 
 
@@ -133,9 +150,10 @@ async def _fetch_manifest(url: str, api_key: str) -> dict | None:
     ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     try:
         async with httpx.AsyncClient(verify=ssl_ctx, follow_redirects=True) as session:
+            headers = {"X-WNP-Charts-Key": api_key} if api_key else None
             resp = await session.get(
                 url,
-                headers={"X-WNP-Charts-Key": api_key},
+                headers=headers,
                 timeout=httpx.Timeout(_SYNC_TIMEOUT),
             )
             if resp.status_code == 401:
@@ -164,7 +182,8 @@ def _assemble_templates(
     for entry in configs:
         name = entry.get("name", "").strip()
         stem = entry.get("base_stem", "")
-        if not name or stem not in base_html:
+        if not _safe_filename(name) or stem not in base_html:
+            logging.warning("Template sync: rejecting unsafe template name %r", name)
             continue
         css_vars = entry.get("css_vars") or {}
         if not isinstance(css_vars, dict):
@@ -202,6 +221,8 @@ def _write_manifest(synced_dir: pathlib.Path, names: set[str]) -> None:
 
 def _cleanup_stale(synced_dir: pathlib.Path, current_names: set[str]) -> None:
     for stale_name in _read_manifest(synced_dir) - current_names:
+        if not _safe_filename(stale_name):
+            continue
         stale_path = synced_dir / f"{stale_name}.htm"
         if stale_path.exists():
             stale_path.unlink()
@@ -304,10 +325,11 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
 ) -> None:
     written = _read_base_sync_manifest(synced_dir)
     keep: dict[str, str] = {}
+    wanted: list[tuple[str, str]] = []
     for stem, info in templates.items():
         url = info.get("url", "")
         expected = info.get("checksum", "")
-        if not url or not expected or not allow_downloads:
+        if not _safe_filename(stem) or not url or not expected or not allow_downloads:
             continue
         name = f"{stem}.htm"
         current = nowplaying.utils.templatepaths.resolve_template(config, name)
@@ -322,6 +344,10 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
         if current and nowplaying.utils.templatepaths.is_user_template(config, current):
             logging.debug("Base template sync: %s is user-owned, skipping", name)
             continue
+        wanted.append((stem, url))
+
+    async def _download(stem: str, url: str) -> None:
+        name = f"{stem}.htm"
         try:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -331,14 +357,27 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
         except Exception:  # pylint: disable=broad-exception-caught
             logging.warning("Base template sync: failed to download %s", name)
 
-    # remove synced copies we wrote whose bundled stock has caught up
+    if wanted:
+        await asyncio.gather(*(_download(stem, url) for stem, url in wanted))
+
+    # remove synced copies we wrote ONLY when the bundled stock provably
+    # carries the same content; anything else keeps serving (a manifest
+    # without a version or an older server must never regress users)
     for stem, oldhash in written.items():
-        if stem in keep:
+        if stem in keep or not _safe_filename(stem):
             continue
         stale = synced_dir / f"{stem}.htm"
-        if stale.exists() and _sha256(stale) == oldhash:
+        if not stale.exists():
+            continue
+        if _sha256(stale) != oldhash:
+            # not the file we wrote; leave it, stop tracking it
+            continue
+        bundled = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR / f"{stem}.htm"
+        if bundled.exists() and _sha256(bundled) == oldhash:
             stale.unlink()
             logging.debug("Base template sync: removed %s (bundle current)", stale.name)
+        else:
+            keep[stem] = oldhash
 
     (synced_dir / _BASE_SYNC_MANIFEST).write_text(
         json.dumps(keep, sort_keys=True), encoding="utf-8"

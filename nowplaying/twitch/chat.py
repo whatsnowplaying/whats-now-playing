@@ -4,7 +4,6 @@
 
 import asyncio
 import datetime
-import fnmatch
 import logging
 import os
 import pathlib
@@ -17,11 +16,7 @@ from typing import Any
 import aiohttp  # pylint: disable=import-error
 import aiohttp.client_exceptions
 import jinja2  # pylint: disable=import-error
-from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
-    QCoreApplication,
-    QStandardPaths,
-    Slot,
-)
+from PySide6.QtCore import Slot  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QCheckBox,
     QDialog,
@@ -77,12 +72,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
         self.guessgame = nowplaying.guessgame.GuessGame(config=config, stopevent=stopevent)
         self.metadb = nowplaying.db.MetadataDB()
-        self.templatedir = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
-        ).joinpath(QCoreApplication.applicationName(), "templates")
-        template_search = (
-            nowplaying.utils.templatepaths.search_paths(config) if config else self.templatedir
-        )
+        template_search = nowplaying.utils.templatepaths.search_paths(config) if config else []
         self.jinja2 = self.setup_jinja2(template_search)
         self.jinja2ann = self.setup_jinja2(template_search)
         self.anndir: pathlib.Path | str | None = None
@@ -1110,9 +1100,6 @@ class TwitchChatSettings:
                 config.cparser.setValue("twitchbot/announce", "twitchbot_track.txt")
 
         for file in filelist:
-            if not fnmatch.fnmatch(file, "twitchbot_*.txt"):
-                continue
-
             # Skip help template files
             if "_help.txt" in file:
                 continue

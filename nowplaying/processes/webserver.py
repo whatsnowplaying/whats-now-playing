@@ -56,6 +56,7 @@ import nowplaying.oauth2
 import nowplaying.preview.sampledata
 import nowplaying.twitch.oauth2
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 import nowplaying.webserver.shutdown
 from nowplaying.types import TrackMetadata
 
@@ -762,6 +763,22 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
         return web.AppRunner(app)
 
+    @staticmethod
+    async def guessgame_file_handler(request: web.Request):
+        """Serve guessgame assets with per-file user-override fallback.
+
+        Resolves each file through the template chain (user guessgame/
+        overrides beat bundled stock), so customizing one file does not
+        hide the rest of the bundled set.
+        """
+        filename = request.match_info.get("filename", "")
+        resolved = nowplaying.utils.templatepaths.resolve_template(
+            request.app[CONFIG_KEY], f"guessgame/{filename}"
+        )
+        if not resolved:
+            return web.Response(status=404, text="Not found")
+        return web.FileResponse(resolved)
+
     async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
         """start our server"""
         self.runner = self.create_runner()
@@ -812,9 +829,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         app.router.add_static(
             "/editor/vendor/", path=template_dir / "vendor", name="editor_vendor"
         )
-        user_guessgame = app[CONFIG_KEY].templatedir / "guessgame"
-        guessgame_path = user_guessgame if user_guessgame.exists() else template_dir / "guessgame"
-        app.router.add_static("/guessgame/", path=guessgame_path, name="guessgame")
+        app.router.add_get("/guessgame/{filename}", self.guessgame_file_handler)
         metadb_path: str | None = None
         if self.testmode:
             metadb_path = app[CONFIG_KEY].cparser.value("testmode/metadbpath", defaultValue=None)

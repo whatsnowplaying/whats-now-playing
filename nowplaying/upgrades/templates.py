@@ -26,9 +26,11 @@ import json
 import logging
 import pathlib
 import shutil
+import sys
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
+    QSettings,
     QStandardPaths,
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
@@ -45,7 +47,7 @@ LAYOUT_VERSION = "6"
 ARCHIVE_NAME = "templates_pre6"
 
 # user-owned function subdirectories created in the new layout
-SUBDIRS = ("twitch", "kick", "setlist", "web", "synced", "guessgame")
+SUBDIRS = nowplaying.utils.templatepaths.USER_LAYOUT_SUBDIRS
 
 # directories never carried forward (bundle-only content)
 _SKIP_DIRS = {"vendor"}
@@ -53,6 +55,57 @@ _SKIP_DIRS = {"vendor"}
 # junk suffixes never carried forward (.new conflict files from the old
 # upgrade system, editor swap/backup files)
 _SKIP_SUFFIXES = (".new", ".swp", ".swo", "~")
+
+# pre-6.0 stock templates that no longer ship -> nearest 6.0 equivalent.
+# Applied ONCE here: config keys pointing at an unmodified (dropped) copy
+# are repointed; modified copies are carried and keep their references.
+# Post-migration these names simply do not exist anywhere.
+RETIRED_TEMPLATES = {
+    "ws-basicblack.htm": "ws-basic-text.htm",
+    "ws-basicblue.htm": "ws-basic-text.htm",
+    "ws-basicwhite.htm": "ws-basic-text.htm",
+    "ws-basicyellow.htm": "ws-basic-text.htm",
+    "ws-basic-web.htm": "ws-basic-text.htm",
+    "ws-explodeblack.htm": "ws-basic-text-explode.htm",
+    "ws-explodewhite.htm": "ws-basic-text-explode.htm",
+    "ws-slidedownup-black.htm": "ws-basic-text-slide.htm",
+    "ws-slidedownup-white.htm": "ws-basic-text-slide.htm",
+    "ws-spinblack.htm": "ws-basic-text-spin.htm",
+    "ws-spinwhite.htm": "ws-basic-text-spin.htm",
+    "ws-anime-bounce.htm": "ws-basic-text-anime-bounce.htm",
+    "ws-anime-elastic.htm": "ws-basic-text-anime-elastic.htm",
+    "ws-anime-stagger.htm": "ws-basic-text-anime-stagger.htm",
+    "ws-mtv-nofade.htm": "ws-mtv.htm",
+    "ws-mtv-cover-nofade.htm": "ws-mtv.htm",
+    "ws-mtv-cover-fade.htm": "ws-mtv-fade.htm",
+    "ws-cover-title-artist.htm": "ws-mtv.htm",
+    "ws-cookie-cutter-dj.htm": "ws-generic-dj.htm",
+    "ws-unoriginal-dj-clone.htm": "ws-generic-dj.htm",
+    "ws-basic-bro-vibes.htm": "ws-generic-dj.htm",
+    "ws-webgl-particles.htm": "ws-canvas-particles.htm",
+}
+
+# fallback for a dangling htm reference with no specific successor
+_DEFAULT_HTM = "ws-basic-text.htm"
+
+# every config key that may reference a template file
+_TEMPLATE_CONFIG_KEYS = (
+    "weboutput/htmltemplate",
+    "weboutput/artistbannertemplate",
+    "weboutput/artistlogotemplate",
+    "weboutput/artistthumbnailtemplate",
+    "weboutput/artistfanarttemplate",
+    "weboutput/gifwordstemplate",
+    "weboutput/requestertemplate",
+    "obsws/template",
+    "textoutput/txttemplate",
+    "twitchbot/announce",
+    "twitchbot/streamtitle",
+    "kick/announce",
+    "realtimesetlist/template",
+    "discord/template",
+    "discord/channel_template",
+)
 
 
 class TemplateDirMigration:  # pylint: disable=too-few-public-methods
@@ -93,10 +146,30 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             self._ensure_structure()
             return
 
-        archive = self._archive_old()
-        self._ensure_structure()
-        self._load_ledger()
-        self._carry_user_content(archive)
+        try:
+            archive = self._archive_old()
+        except OSError:
+            # Windows: OneDrive/AV can hold the directory even after
+            # retries.  The pre-6.0 layout still works through the
+            # resolution chain, so leave it and retry next launch.
+            logging.exception(
+                "Template migration: could not archive %s; retrying next launch",
+                self.usertemplatedir,
+            )
+            return
+
+        try:
+            self._ensure_structure(write_marker=False)
+            self._load_ledger()
+            self._carry_user_content(archive)
+            self._repoint_retired()
+            # marker written only after user content is carried, so a crash
+            # mid-migration re-runs instead of silently reverting to stock
+            self._write_marker()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Template migration failed mid-run; rolling back")
+            self._rollback(archive)
+            return
 
         logging.info(
             "Template migration: carried %d user file(s), dropped %d stock copy/copies; "
@@ -119,14 +192,36 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
 
     # ------------------------------------------------------------------
 
-    def _ensure_structure(self) -> None:
-        """Create the 6.0 layout directories and marker."""
+    def _ensure_structure(self, write_marker: bool = True) -> None:
+        """Create the 6.0 layout directories (and, by default, the marker)."""
         self.usertemplatedir.mkdir(parents=True, exist_ok=True)
         for subdir in SUBDIRS:
             self.usertemplatedir.joinpath(subdir).mkdir(exist_ok=True)
+        if write_marker:
+            self._write_marker()
+
+    def _write_marker(self) -> None:
         marker = self.usertemplatedir / LAYOUT_MARKER
         if not marker.exists():
             marker.write_text(LAYOUT_VERSION, encoding="utf-8")
+
+    def _rollback(self, archive: pathlib.Path) -> None:
+        """Best-effort restore of the pre-migration layout after a failure.
+
+        The partially-built new tree only contains copies of archive
+        content, so it is safe to discard before renaming the archive back.
+        """
+        try:
+            if self.usertemplatedir.exists():
+                shutil.rmtree(self.usertemplatedir)
+            nowplaying.utils.sqlite.retry_file_operation(
+                lambda: archive.rename(self.usertemplatedir)
+            )
+            logging.info("Template migration: rolled back; will retry next launch")
+        except OSError:
+            logging.exception(
+                "Template migration: rollback failed; original templates remain in %s", archive
+            )
 
     def _archive_old(self) -> pathlib.Path:
         """Rename the old templates directory aside; return the archive path."""
@@ -178,6 +273,50 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             return relpath
         return nowplaying.utils.templatepaths.classify_template_name(relpath.name)
 
+    def _repoint_retired(self) -> None:
+        """Repoint config keys referencing retired stock templates.
+
+        Only fires when the old copy was unmodified stock (dropped by the
+        carry pass); a carried customization keeps its reference and keeps
+        working through the resolution chain.
+        """
+        carried_names = {pathlib.PurePath(entry).name for entry in self.carried}
+        if sys.platform == "win32":
+            fmt = QSettings.IniFormat
+        else:
+            fmt = QSettings.NativeFormat
+        settings = QSettings(
+            fmt,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        for key in _TEMPLATE_CONFIG_KEYS:
+            value = settings.value(key)
+            if not value:
+                continue
+            oldname = pathlib.PurePath(str(value)).name
+            if oldname in carried_names or self._name_in_stock(oldname):
+                # carried customizations and still-shipping stock resolve
+                # through the chain; the reference keeps working
+                continue
+            newname = RETIRED_TEMPLATES.get(oldname)
+            if not newname:
+                if not oldname.endswith((".htm", ".html")):
+                    continue
+                newname = _DEFAULT_HTM
+            settings.setValue(key, newname)
+            logging.info(
+                "Template migration: %s repointed from retired %s to %s", key, oldname, newname
+            )
+        settings.sync()
+
+    def _name_in_stock(self, name: str) -> bool:
+        """True when a bare template name still ships in current stock."""
+        if (wnp_templates.BUNDLED_TEMPLATE_DIR / name).exists():
+            return True
+        return bool(self.bundledir and self.bundledir.joinpath("templates", name).exists())
+
     def _carry_user_content(self, archive: pathlib.Path) -> None:
         """Copy the user's own files from the archive into the new layout."""
         for oldpath in sorted(archive.rglob("*")):
@@ -194,7 +333,11 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
                 self.dropped.append(str(relpath))
                 continue
             dest = self.usertemplatedir / self._classify(relpath)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(oldpath, dest)
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(oldpath, dest)
+            except OSError:
+                logging.exception("Template migration: could not carry %s", relpath)
+                continue
             self.carried.append(str(relpath))
             logging.info("Template migration: carried %s -> %s", relpath, dest)

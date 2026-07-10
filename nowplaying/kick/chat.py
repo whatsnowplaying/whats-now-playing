@@ -9,7 +9,6 @@ from typing import Any
 
 import aiohttp
 import jinja2
-from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
@@ -32,12 +31,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent or asyncio.Event()
         self.watcher: Any = None
         self.metadb: nowplaying.db.MetadataDB = nowplaying.db.MetadataDB()
-        self.templatedir = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
-        ).joinpath(QCoreApplication.applicationName(), "templates")
-        template_search = (
-            nowplaying.utils.templatepaths.search_paths(config) if config else self.templatedir
-        )
+        template_search = nowplaying.utils.templatepaths.search_paths(config) if config else []
         self.jinja2: jinja2.Environment = self.setup_jinja2(template_search)
         self.jinja2ann: jinja2.Environment = self.setup_jinja2(template_search)
         self.anndir: pathlib.Path | None = None

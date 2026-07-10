@@ -150,10 +150,14 @@ errors logged and swallowed (offline-safe).
 
 `tools/build_templates.py` (run by builder.sh before PyInstaller):
 
-* copies `ws-*.htm` from the installed `wnp_templates` wheel into
-  `nowplaying/templates/`
 * downloads vendor files from `wnp_templates.VENDOR_FILES` CDN URLs into
   `nowplaying/templates/vendor/`
+* removes stale `ws-*.htm` leftovers from older build systems
+
+The frozen app gets stock web templates from the wnp_templates package
+data itself — `collect_data_files('wnp_templates')` in the PyInstaller
+spec — so no build-time htm copying exists; the wheel is the single
+source of truth.
 
 The PyInstaller spec entry `('nowplaying/templates/*', 'templates/')`
 copies matched directories recursively (verified against the shipped 5.2.0
@@ -179,6 +183,16 @@ One-time pass, using `updateshas.json` as the classifier:
 5. Rename the old directory to `templates_pre6` as the recovery archive
 6. Files that cannot be classified by pattern go to the top level of the
    new tree (still resolvable, still archived in `templates_pre6`)
+
+Retired pre-6.0 stock templates (the 22 superseded ws-* designs, e.g.
+`ws-basicblack.htm`, `ws-mtv-cover-fade.htm`) get one-time handling during
+migration: an unmodified copy is dropped and any config key referencing it
+is repointed to the nearest 6.0 equivalent (`RETIRED_TEMPLATES` in
+`nowplaying/upgrades/templates.py`); a customized copy is carried like any
+user file and keeps its references. Post-migration the retired names do
+not exist anywhere — no runtime aliases, no list entries. Users wanting an
+old design back copy it from `templates_pre6` into `templates/web/` or
+rebuild it in the charts template editor.
 
 After migration, `UpgradeTemplates`, the `.new` mechanism, and
 `updateshas.json` generation (`tools/updateshas.py`,

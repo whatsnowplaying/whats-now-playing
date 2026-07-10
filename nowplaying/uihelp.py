@@ -62,9 +62,12 @@ class TemplateChooserDialog(QDialog):  # pylint: disable=too-few-public-methods
         )
         self.customize_button = QPushButton("Customize a Copy")
         buttons.addButton(self.customize_button, QDialogButtonBox.ButtonRole.ActionRole)
+        self.browse_button = QPushButton("Browse…")
+        buttons.addButton(self.browse_button, QDialogButtonBox.ButtonRole.ActionRole)
         buttons.accepted.connect(self._accept_selection)
         buttons.rejected.connect(self.reject)
         self.customize_button.clicked.connect(self._customize_selection)
+        self.browse_button.clicked.connect(self._browse_external)
         layout.addWidget(buttons)
 
         self.listwidget.currentItemChanged.connect(self._selection_changed)
@@ -74,6 +77,8 @@ class TemplateChooserDialog(QDialog):  # pylint: disable=too-few-public-methods
     def _populate(self, current: str) -> None:
         self.listwidget.clear()
         current_name = pathlib.PurePath(current).name if current else ""
+        # chain precedence is enforced inside list_templates(); a name
+        # matching two patterns returns the identical path either way
         union: dict[str, pathlib.Path] = {}
         for pattern in self.patterns:
             union |= nowplaying.utils.templatepaths.list_templates(self.config, pattern)
@@ -99,6 +104,16 @@ class TemplateChooserDialog(QDialog):  # pylint: disable=too-few-public-methods
     def _accept_selection(self) -> None:
         if name := self._current_name():
             self.selected_name = name
+            self.accept()
+
+    def _browse_external(self) -> None:
+        """Pick a template file outside the chain; absolute paths stay honored."""
+        filters = " ".join(self.patterns)
+        result, _ = QFileDialog.getOpenFileName(
+            self, "Open template file", str(self.config.templatedir), filters
+        )
+        if result:
+            self.selected_name = result
             self.accept()
 
     def _customize_selection(self) -> None:

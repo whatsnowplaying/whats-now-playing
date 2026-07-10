@@ -17,6 +17,7 @@ Stock content never materializes in the user's directory; presence of a
 file outside synced/ means user intent.  See docs/dev/templates-6.0-spec.md.
 """
 
+import os
 import pathlib
 import shutil
 from typing import TYPE_CHECKING
@@ -26,10 +27,12 @@ import wnp_templates
 if TYPE_CHECKING:
     import nowplaying.config
 
-# user-owned function subdirectories searched after the templatedir root;
-# kept in sync with nowplaying.upgrades.templates.SUBDIRS (minus synced/,
-# which is machine-managed, and guessgame/, addressed by relative name)
+# user-owned function subdirectories searched after the templatedir root
+# (synced/ is machine-managed; guessgame/ is addressed by relative name)
 _USER_SUBDIRS = ("web", "twitch", "kick", "setlist")
+
+# full 6.0 user-layout directory set; the migration creates these
+USER_LAYOUT_SUBDIRS = _USER_SUBDIRS + ("synced", "guessgame")
 
 
 def search_paths(config: "nowplaying.config.ConfigFile") -> list[pathlib.Path]:
@@ -44,20 +47,52 @@ def search_paths(config: "nowplaying.config.ConfigFile") -> list[pathlib.Path]:
     return paths
 
 
+def _is_safe_relative_name(name: str) -> bool:
+    """Reject names that could escape a search root before any path math."""
+    if not name:
+        return False
+    pure = pathlib.PurePath(name)
+    if pure.is_absolute() or pure.drive:
+        return False
+    return ".." not in pure.parts
+
+
+def resolve_in_root(root: pathlib.Path, name: str) -> pathlib.Path | None:
+    """Safely resolve a relative template name inside a single root.
+
+    Returns the existing file, or None.  Names that escape the root
+    (``..``, absolute paths, symlink tricks) are rejected: hostile names
+    are dropped before any join, the normalized candidate must stay
+    prefixed by the root, and the fully resolved path (symlinks followed)
+    must still live inside it.
+    """
+    if not _is_safe_relative_name(name):
+        return None
+    try:
+        rootstr = str(root.resolve())
+    except OSError:
+        return None
+    candidate = os.path.normpath(os.path.join(rootstr, name))
+    if not candidate.startswith(rootstr + os.sep):
+        return None
+    try:
+        resolved = pathlib.Path(candidate).resolve()
+        resolved.relative_to(rootstr)
+    except (ValueError, OSError):
+        return None
+    if resolved.is_file():
+        return resolved
+    return None
+
+
 def resolve_template(config: "nowplaying.config.ConfigFile", name: str) -> pathlib.Path | None:
     """Resolve a relative template name through the chain.
 
-    Returns the first existing file, or None.  Names that escape a search
-    root (``..``, absolute paths, symlink tricks) are rejected per-root.
+    Returns the first existing file, or None.  See resolve_in_root() for
+    the escape handling applied per root.
     """
     for base in search_paths(config):
-        candidate = base / name
-        try:
-            resolved = candidate.resolve()
-            resolved.relative_to(base.resolve())
-        except (ValueError, OSError):
-            continue
-        if resolved.is_file():
+        if resolved := resolve_in_root(base, name):
             return resolved
     return None
 
@@ -101,6 +136,29 @@ def list_templates(
             if path.is_file() and path.name not in union:
                 union[path.name] = path
     return union
+
+
+def list_display_templates(
+    config: "nowplaying.config.ConfigFile", pattern: str = "*.htm"
+) -> list[tuple[str, pathlib.Path, bool]]:
+    """Ordered (name, path, is_synced) listing for template-picker UIs.
+
+    Charts-synced entries come first (flagged True), followed by the rest
+    of the chain union in name order.  Shared by the preview window and
+    the OBS export dialog so their listings cannot diverge.
+    """
+    synced_dir = pathlib.Path(config.templatedir) / "synced"
+    entries: list[tuple[str, pathlib.Path, bool]] = []
+    seen: set[str] = set()
+    if synced_dir.is_dir():
+        for path in sorted(synced_dir.glob(pattern)):
+            if path.is_file():
+                entries.append((path.name, path, True))
+                seen.add(path.name)
+    for name, path in sorted(list_templates(config, pattern).items()):
+        if name not in seen:
+            entries.append((name, path, False))
+    return entries
 
 
 def is_user_template(config: "nowplaying.config.ConfigFile", path: pathlib.Path) -> bool:

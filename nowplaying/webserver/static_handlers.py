@@ -49,10 +49,6 @@ INDEXREFRESH = (
 MAX_FIELD_LENGTH = 1000
 
 
-def _make_timing_script(hide_after: int, repeat_anim: int, delay_update: int) -> str:
-    return nowplaying.template_colors.make_timing_script(hide_after, repeat_anim, delay_update)
-
-
 _BUNDLED_TEMPLATE_DIR = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR
 
 
@@ -194,7 +190,9 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             delay_update = config.cparser.value(
                 f"weboutput/templates/{stem}/delay_update", type=int, defaultValue=0
             )
-            timing_script = _make_timing_script(hide_after, repeat_anim, delay_update)
+            timing_script = nowplaying.template_colors.make_timing_script(
+                hide_after, repeat_anim, delay_update
+            )
             if timing_script:
                 if "</body>" in htmloutput:
                     htmloutput = htmloutput.replace("</body>", timing_script + "</body>", 1)
@@ -221,14 +219,10 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         if not template_name or not template_name.endswith(".htm"):
             return web.Response(status=404, text="Template not found")
 
-        template_path = _BUNDLED_TEMPLATE_DIR / template_name
-        try:
-            template_path = template_path.resolve()
-            template_path.relative_to(_BUNDLED_TEMPLATE_DIR.resolve())
-        except ValueError:
-            return web.Response(status=403, text="Invalid template name")
-
-        if not template_path.exists():
+        template_path = nowplaying.utils.templatepaths.resolve_in_root(
+            _BUNDLED_TEMPLATE_DIR, template_name
+        )
+        if not template_path:
             return web.Response(status=404, text="Template not found")
 
         try:

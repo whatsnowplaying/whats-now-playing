@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 import nowplaying.obs.scenebuilder
+import nowplaying.utils.templatepaths
 import nowplaying.preview.window
 import nowplaying.template_colors
 import nowplaying.utils.qt
@@ -62,24 +63,20 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         Stock templates from templatedir follow; TEMPLATE_FAMILIES provides
         friendly display names where available, filename used for the rest.
         """
-        entries: list[tuple[str, str]] = []
-        templatedir = pathlib.Path(self.config.templatedir)
-
-        synced_dir = templatedir / "synced"
-        if synced_dir.exists():
-            for tmpl in sorted(synced_dir.glob("*.htm")):
-                entries.append((f"☁ {tmpl.stem}", f"synced/{tmpl.name}"))
-
         stem_to_label: dict[str, str] = {}
         for family, effects in nowplaying.template_colors.TEMPLATE_FAMILIES.items():
             for effect, stem in effects.items():
                 label = family if effect == "None" else f"{family} — {effect}"
                 stem_to_label[stem] = label
 
-        for tmpl in sorted(templatedir.glob("*.htm")):
-            label = stem_to_label.get(tmpl.stem, tmpl.name)
-            entries.append((label, tmpl.name))
-
+        entries: list[tuple[str, str]] = []
+        for name, tmpl, synced in nowplaying.utils.templatepaths.list_display_templates(
+            self.config
+        ):
+            if synced:
+                entries.append((f"☁ {tmpl.stem}", name))
+            else:
+                entries.append((stem_to_label.get(tmpl.stem, name), name))
         return entries
 
     def _setup_ui(self) -> None:
@@ -118,10 +115,12 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         first_bundled = -1
         for display, url_path in self._templates:
             combo.addItem(display, userData=url_path)
-            if first_bundled < 0 and not url_path.startswith("synced/"):
+            if first_bundled < 0 and not display.startswith("☁"):
                 first_bundled = combo.count() - 1
 
-        preselect = default_path.lstrip("/") or configured_name
+        # legacy configs may carry a synced/ URL prefix; names resolve
+        # through the chain now, so compare by bare name
+        preselect = default_path.lstrip("/").removeprefix("synced/") or configured_name
         matched = False
         if preselect:
             for i in range(combo.count()):

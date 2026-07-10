@@ -139,17 +139,9 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
 
     def populate_templates(self) -> None:
         """Fill the combobox with .htm templates from the resolution chain."""
-        templatedir = pathlib.Path(self.config.templatedir)
-        synced_dir = templatedir / "synced"
-        synced_templates = sorted(synced_dir.glob("*.htm")) if synced_dir.exists() else []
-        synced_names = {tmpl.name for tmpl in synced_templates}
-        stock_templates = [
-            path
-            for name, path in sorted(
-                nowplaying.utils.templatepaths.list_templates(self.config, "*.htm").items()
-            )
-            if name not in synced_names
-        ]
+        entries = nowplaying.utils.templatepaths.list_display_templates(self.config)
+        synced_templates = [path for _, path, synced in entries if synced]
+        stock_templates = [path for _, path, synced in entries if not synced]
 
         configured = self.config.cparser.value("weboutput/htmltemplate", defaultValue="")
         configured_name = pathlib.Path(configured).name if configured else ""

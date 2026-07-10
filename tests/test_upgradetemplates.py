@@ -200,6 +200,95 @@ def test_migration_idempotent(upgrade_bootstrap):  # pylint: disable=redefined-o
     assert (templatedir / "twitch" / "twitchbot_custom.txt").exists()
 
 
+def test_migration_repoints_retired_stock(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap, test_templates_with_line_endings
+):
+    """unmodified retired stock is dropped and config keys repoint to the successor"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    # version 3.1.2 stock ws-mtv-cover-fade.htm: ledger-matched AND retired
+    stock = pathlib.Path(test_templates_with_line_endings["windows"])
+    old_path = templatedir / "ws-mtv-cover-fade.htm"
+    shutil.copyfile(stock, old_path)
+    config.cparser.setValue("weboutput/htmltemplate", str(old_path))
+    config.cparser.sync()
+
+    _migrate(config, testpath)
+
+    config.cparser.sync()
+    assert config.cparser.value("weboutput/htmltemplate") == "ws-mtv-fade.htm"
+    assert not (templatedir / "web" / "ws-mtv-cover-fade.htm").exists()
+
+
+def test_migration_keeps_reference_to_modified_retired(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap,
+):
+    """a customized copy of a retired template is carried and stays referenced"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    old_path = templatedir / "ws-mtv-cover-fade.htm"
+    old_path.write_text("<html>my heavily customized overlay</html>")
+    config.cparser.setValue("weboutput/htmltemplate", str(old_path))
+    config.cparser.sync()
+
+    _migrate(config, testpath)
+
+    config.cparser.sync()
+    assert config.cparser.value("weboutput/htmltemplate") == str(old_path)
+    assert (templatedir / "web" / "ws-mtv-cover-fade.htm").exists()
+
+
+def test_migration_archive_failure_aborts_cleanly(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap, monkeypatch
+):
+    """a locked directory (rename failure) must not crash startup or lose data"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    keeper = templatedir / "twitchbot_custom.txt"
+    keeper.write_text("user content")
+
+    def _locked(_operation, **_kwargs):
+        raise OSError("simulated Windows sharing violation")
+
+    monkeypatch.setattr(
+        nowplaying.upgrades.templates.nowplaying.utils.sqlite, "retry_file_operation", _locked
+    )
+    _migrate(config, testpath)
+
+    assert keeper.exists(), "old layout must remain intact"
+    assert not (templatedir / nowplaying.upgrades.templates.LAYOUT_MARKER).exists(), (
+        "marker must not be written so the migration retries next launch"
+    )
+
+
+def test_migration_midrun_failure_rolls_back(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap, monkeypatch
+):
+    """a failure after archiving restores the original layout"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    keeper = templatedir / "twitchbot_custom.txt"
+    keeper.write_text("user content")
+
+    def _boom(_self, _archive):
+        raise OSError("simulated failure during carry")
+
+    monkeypatch.setattr(
+        nowplaying.upgrades.templates.TemplateDirMigration, "_carry_user_content", _boom
+    )
+    _migrate(config, testpath)
+
+    assert keeper.exists(), "rollback must restore the original layout"
+    assert not (templatedir / nowplaying.upgrades.templates.LAYOUT_MARKER).exists()
+    assert not templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME).exists(), (
+        "archive must be renamed back on rollback"
+    )
+
+
 def test_template_version_identification_with_line_endings(  # pylint: disable=redefined-outer-name
     test_templates_with_line_endings, getroot
 ):

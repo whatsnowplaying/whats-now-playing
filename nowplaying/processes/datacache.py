@@ -26,6 +26,12 @@ import nowplaying.processes.template_sync
 import nowplaying.utils
 
 
+def _log_task_exception(task: "asyncio.Task") -> None:
+    """Surface exceptions from fire-and-forget sync tasks."""
+    if not task.cancelled() and (exc := task.exception()):
+        logging.error("Template sync task failed: %s", exc, exc_info=exc)
+
+
 async def _run(
     stopevent: asyncio.Event,
     config: nowplaying.config.ConfigFile,
@@ -36,8 +42,16 @@ async def _run(
     client = nowplaying.datacache.client.DataCacheClient(cache_dir)
     await client.initialize()
     logging.info("DataCache worker started")
-    asyncio.create_task(nowplaying.processes.template_sync.sync_base_templates(config))
-    asyncio.create_task(nowplaying.processes.template_sync.sync_from_charts(config, client))
+    # hold references so the tasks cannot be garbage-collected mid-run;
+    # the done callback also surfaces any swallowed exceptions
+    background_tasks: set[asyncio.Task] = set()
+    for synctask in (
+        asyncio.create_task(nowplaying.processes.template_sync.sync_base_templates(config)),
+        asyncio.create_task(nowplaying.processes.template_sync.sync_from_charts(config, client)),
+    ):
+        background_tasks.add(synctask)
+        synctask.add_done_callback(background_tasks.discard)
+        synctask.add_done_callback(_log_task_exception)
 
     # Watch the pending_requests database for writes so new image downloads
     # queued by trackpoll wake the worker immediately instead of sleeping up to 30 s.
