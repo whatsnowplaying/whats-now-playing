@@ -2,11 +2,11 @@
 """Text Output Notification Plugin"""
 
 import logging
-import pathlib
 from typing import TYPE_CHECKING
 
 import nowplaying.preview.textwindow
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
@@ -82,9 +82,14 @@ class Plugin(NotificationPlugin):
         new_output_file: str | None = self.config.cparser.value(
             "textoutput/file", defaultValue=None
         )
-        new_template_file: str | None = self.config.cparser.value(
+        configured: str | None = self.config.cparser.value(
             "textoutput/txttemplate", defaultValue=None
         )
+        resolved = nowplaying.utils.templatepaths.resolve_configured(self.config, configured)
+        # configured-but-unresolvable keeps the raw value so TemplateHandler
+        # produces the visible "No template found" output instead of the
+        # silent artist-title fallback
+        new_template_file: str | None = str(resolved) if resolved else configured
 
         if not new_output_file:
             self.enabled = False
@@ -167,7 +172,11 @@ class Plugin(NotificationPlugin):
         output_file = qwidget.textoutput_lineedit.text().strip()
         template_file = qwidget.texttemplate_lineedit.text().strip()
 
-        if output_file and (template_file and not pathlib.Path(template_file).exists()):
+        if (
+            output_file
+            and template_file
+            and not nowplaying.utils.templatepaths.resolve_configured(self.config, template_file)
+        ):
             raise PluginVerifyError(f"Template file does not exist: {template_file}")
         # If no output file configured, don't require anything regardless of template
         # (template might be set by default but user doesn't want text output)
@@ -203,9 +212,7 @@ class Plugin(NotificationPlugin):
 
     def _on_template_selected(self, template_name: str) -> None:
         if self._settings_qwidget is not None:
-            self._settings_qwidget.texttemplate_lineedit.setText(
-                str(pathlib.Path(self.config.templatedir) / template_name)
-            )
+            self._settings_qwidget.texttemplate_lineedit.setText(template_name)
 
     def desc_settingsui(self, qwidget: "QWidget"):
         """Description for settings UI"""

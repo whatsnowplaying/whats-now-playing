@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import pathlib
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Slot  # pylint: disable=no-name-in-module
@@ -200,9 +199,7 @@ class DiscordSettings:
     @Slot(str)
     def _on_template_selected(self, template_name: str) -> None:
         if self._widget and self.config:
-            self._widget.template_lineedit.setText(
-                str(pathlib.Path(self.config.templatedir) / template_name)
-            )
+            self._widget.template_lineedit.setText(template_name)
 
     @Slot()
     def _on_channel_template_preview_button(self) -> None:
@@ -215,6 +212,4 @@ class DiscordSettings:
     @Slot(str)
     def _on_channel_template_selected(self, template_name: str) -> None:
         if self._widget and self.config:
-            self._widget.channel_template_lineedit.setText(
-                str(pathlib.Path(self.config.templatedir) / template_name)
-            )
+            self._widget.channel_template_lineedit.setText(template_name)

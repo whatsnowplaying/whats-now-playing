@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import jinja2
 
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
@@ -79,9 +80,10 @@ class Plugin(NotificationPlugin):
         if not self.config:
             return
 
-        new_template_file: str | None = self.config.cparser.value(
-            "realtimesetlist/template", defaultValue=None
+        resolved = nowplaying.utils.templatepaths.resolve_configured(
+            self.config, self.config.cparser.value("realtimesetlist/template", defaultValue=None)
         )
+        new_template_file: str | None = str(resolved) if resolved else None
         new_file_pattern: str | None = self.config.cparser.value(
             "realtimesetlist/filepattern", defaultValue=None
         )
@@ -197,7 +199,7 @@ class Plugin(NotificationPlugin):
                 raise PluginVerifyError(
                     "File pattern is required when real-time setlist is enabled"
                 )
-            if not pathlib.Path(template_path).exists():
+            if not nowplaying.utils.templatepaths.resolve_configured(self.config, template_path):
                 raise PluginVerifyError(f"Template file does not exist: {template_path}")
 
             # Test file pattern with strftime

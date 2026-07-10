@@ -31,6 +31,7 @@ import nowplaying.db
 import nowplaying.frozen
 import nowplaying.types
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 
 
 @dataclass
@@ -251,7 +252,13 @@ class DiscordSupport:
         self, metadb: nowplaying.db.MetadataDB, update_time: float
     ) -> float:
         """process metadata update and send to discord clients"""
-        template = self.config.cparser.value("discord/template") if self.config else None
+        template = (
+            nowplaying.utils.templatepaths.resolve_configured(
+                self.config, self.config.cparser.value("discord/template")
+            )
+            if self.config
+            else None
+        )
         if not template:
             return update_time
 
@@ -260,7 +267,7 @@ class DiscordSupport:
             return update_time
 
         self._apply_chat_defaults(metadata)
-        templateout = self._generate_template_output(template, metadata)
+        templateout = self._generate_template_output(str(template), metadata)
         await self._update_all_clients(templateout, metadata)
 
         return update_time
@@ -455,10 +462,12 @@ class DiscordSupport:
         await self._safe_update_client("bot", self._update_bot, templateout)
         await self._safe_update_client("ipc", self._update_ipc, templateout, metadata)
         if self.config and self.clients.bot:
-            channel_template: str | None = self.config.cparser.value("discord/channel_template")
+            channel_template = nowplaying.utils.templatepaths.resolve_configured(
+                self.config, self.config.cparser.value("discord/channel_template")
+            )
             try:
                 if channel_template:
-                    channel_out = self._generate_template_output(channel_template, metadata)
+                    channel_out = self._generate_template_output(str(channel_template), metadata)
                 else:
                     channel_out = templateout
             except Exception:  # pylint: disable=broad-except

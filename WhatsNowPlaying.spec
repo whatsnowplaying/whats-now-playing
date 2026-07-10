@@ -10,7 +10,7 @@ import os
 import platform
 import sys
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -165,6 +165,12 @@ for execname, execpy in executables.items():
                         ('nowplaying/resources/preview/*', 'resources/preview/'),
                         ('nowplaying/resources/tufup/*', 'resources/tufup/'),
                         ('nowplaying/templates/*', 'templates/')] +
+                       # wnp_templates package data (bundled/*.htm,
+                       # families.yaml, vendor.yaml) is not collected by
+                       # PyInstaller's static analysis; without this the
+                       # template registry and stock ws-* templates are
+                       # missing from the frozen app.
+                       collect_data_files('wnp_templates') +
                        _nltk_datas('punkt') +
                        _nltk_datas('punkt_tab'),
                  hiddenimports=ALL_PLUGIN_MODULES + [

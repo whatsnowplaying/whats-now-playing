@@ -28,11 +28,12 @@ import nowplaying.utils  # pylint: disable=import-error
             {"artist": "this is an artist", "title": "this is the title"},
             [("No template found", 0)],
         ),
-        # No template file (None) should show error message
+        # No template file (None): the 6.0 default resolves basic-plain.txt
+        # through the template chain, so a fresh config renders it
         (
             None,
             {"artist": "this is an artist", "title": "this is the title"},
-            [("No template found", 0)],
+            [("this is an artist - this is the title", 0)],
         ),
         # Track and disc handling - values should show
         ("tracktest.txt", {"track": "1", "disc": "1"}, [("Track: 1", 0), ("Disc: 1", 1)]),

@@ -24,7 +24,7 @@ class OBSSourceDef:
 
 
 DEFAULT_SOURCES: list[OBSSourceDef] = [
-    OBSSourceDef("Now Playing", "/", 1500, 200, "bottom"),
+    OBSSourceDef("Now Playing", "/ws-basic-text.htm", 1500, 200, "bottom"),
     OBSSourceDef("Artist Fan Art", "/ws-artistfanart-nofade.htm", 1920, 1080, "fill"),
     OBSSourceDef("Artist Banner", "/ws-artistbanner-nofade.htm", 1500, 300, "top"),
     OBSSourceDef("Artist Thumbnail", "/ws-artistthumb-nofade.htm", 200, 200, "center"),

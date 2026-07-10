@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
-"""Template upgrade logic"""
+"""One-time migration of the user's templates directory to the 6.0 layout.
+
+Pre-6.0, app-owned stock templates were copied into the user's templates
+directory at every startup, with a checksum ledger (updateshas.json) and
+``.new`` conflict files to manage upgrades.  6.0 serves stock from the
+bundle through the template resolution chain, so the user directory only
+contains files the user actually owns.
+
+This migration runs once:
+
+* untouched stock copies (hash matches any ledger version or current
+  bundled stock) are dropped — the chain serves them from the bundle
+* everything else is the user's work and is carried into the new layout,
+  classified by filename (twitchbot_* -> twitch/, kickbot_* -> kick/,
+  setlist-* -> setlist/, *.htm -> web/); subdirectory content keeps its
+  relative location
+* ``.new`` conflict files and vendor/ are not carried
+* the original directory is preserved as ``templates_pre6``
+
+A ``.wnp_layout`` marker file records the layout version so the
+migration never runs twice.
+"""
 
 import json
 import logging
@@ -12,22 +33,37 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
-import nowplaying.utils.qt
+import wnp_templates
 
-# Import unified checksum function and exclusion list
+import nowplaying.utils.qt
+import nowplaying.utils.sqlite
+import nowplaying.utils.templatepaths
 from nowplaying.utils.checksum import EXCLUDED_FILES, checksum
 
+LAYOUT_MARKER = ".wnp_layout"
+LAYOUT_VERSION = "6"
+ARCHIVE_NAME = "templates_pre6"
 
-class UpgradeTemplates:
-    """Upgrade templates"""
+# user-owned function subdirectories created in the new layout
+SUBDIRS = ("twitch", "kick", "setlist", "web", "synced", "guessgame")
+
+# directories never carried forward (bundle-only content)
+_SKIP_DIRS = {"vendor"}
+
+# junk suffixes never carried forward (.new conflict files from the old
+# upgrade system, editor swap/backup files)
+_SKIP_SUFFIXES = (".new", ".swp", ".swo", "~")
+
+
+class TemplateDirMigration:  # pylint: disable=too-few-public-methods
+    """Migrate the user's templates directory to the 6.0 layout."""
 
     def __init__(
         self,
         bundledir: str | pathlib.Path | None = None,
         testdir: str | pathlib.Path | None = None,
     ):
-        self.bundledir = pathlib.Path(bundledir)
-        self.apptemplatedir = self.bundledir.joinpath("templates")
+        self.bundledir = pathlib.Path(bundledir) if bundledir else None
         self.testdir = testdir
         if testdir:
             self.usertemplatedir = pathlib.Path(testdir).joinpath(
@@ -38,144 +74,127 @@ class UpgradeTemplates:
                 QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
                 QCoreApplication.applicationName(),
             ).joinpath("templates")
-        self.usertemplatedir.mkdir(parents=True, exist_ok=True)
-        self.alert = False
-        self.copied: list[str] = []
         self.oldshas: dict[str, dict[str, str]] = {}
+        self.carried: list[str] = []
+        self.dropped: list[str] = []
 
-        self.setup_templates()
+        self.run()
 
-        if self.alert and not self.testdir:
+    # ------------------------------------------------------------------
+
+    def run(self) -> None:
+        """Run the migration if the directory still has the pre-6.0 layout."""
+        marker = self.usertemplatedir / LAYOUT_MARKER
+        if marker.exists():
+            self._ensure_structure()
+            return
+
+        if not self.usertemplatedir.exists() or not any(self.usertemplatedir.iterdir()):
+            self._ensure_structure()
+            return
+
+        archive = self._archive_old()
+        self._ensure_structure()
+        self._load_ledger()
+        self._carry_user_content(archive)
+
+        logging.info(
+            "Template migration: carried %d user file(s), dropped %d stock copy/copies; "
+            "originals archived in %s",
+            len(self.carried),
+            len(self.dropped),
+            archive,
+        )
+        if self.carried and not self.testdir:  # pragma: no cover
             msgbox = QMessageBox()
-            msgbox.setText("Updated templates have been placed.")
+            msgbox.setText(
+                "Your templates folder has been reorganized for this release.\n"
+                f"Your customized templates were moved into place and the\n"
+                f"original folder was saved as {ARCHIVE_NAME}."
+            )
             msgbox.setModal(True)
             msgbox.setWindowTitle("What's Now Playing Templates")
             nowplaying.utils.qt.focus_window(msgbox)
             msgbox.exec()
 
-    def preload(self) -> None:
-        """preload the known hashes for bundled templates"""
+    # ------------------------------------------------------------------
+
+    def _ensure_structure(self) -> None:
+        """Create the 6.0 layout directories and marker."""
+        self.usertemplatedir.mkdir(parents=True, exist_ok=True)
+        for subdir in SUBDIRS:
+            self.usertemplatedir.joinpath(subdir).mkdir(exist_ok=True)
+        marker = self.usertemplatedir / LAYOUT_MARKER
+        if not marker.exists():
+            marker.write_text(LAYOUT_VERSION, encoding="utf-8")
+
+    def _archive_old(self) -> pathlib.Path:
+        """Rename the old templates directory aside; return the archive path."""
+        base = self.usertemplatedir.with_name(ARCHIVE_NAME)
+        archive = base
+        counter = 1
+        while archive.exists():
+            counter += 1
+            archive = base.with_name(f"{ARCHIVE_NAME}-{counter}")
+        nowplaying.utils.sqlite.retry_file_operation(lambda: self.usertemplatedir.rename(archive))
+        return archive
+
+    def _load_ledger(self) -> None:
+        """Load the historical stock-template checksum ledger."""
+        if not self.bundledir:
+            return
         shafile = self.bundledir.joinpath("resources", "updateshas.json")
-        if shafile.exists():
-            with open(shafile, encoding="utf-8") as fhin:
-                self.oldshas = json.loads(fhin.read())
-        else:
+        if not shafile.exists():
             logging.error("%s file is missing.", shafile)
+            return
+        try:
+            self.oldshas = json.loads(shafile.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            logging.exception("Cannot read %s", shafile)
 
-    def check_preload(self, filename: str, userhash: str) -> str | None:
-        """check if the given file matches a known hash"""
-        found = None
-        hexdigest = None
+    def _is_stock(self, relpath: pathlib.Path, filehash: str | None) -> bool:
+        """True when the file matches a known stock version (ledger or current)."""
+        if filehash is None:
+            return False
+        if versions := self.oldshas.get(relpath.as_posix()):
+            if filehash in versions.values():
+                return True
+        # also match current bundled stock (e.g. refreshed by an early sync)
+        if self.bundledir:
+            bundled = self.bundledir.joinpath("templates", relpath)
+            if bundled.exists() and checksum(bundled) == filehash:
+                return True
+        wheelstock = wnp_templates.BUNDLED_TEMPLATE_DIR / relpath.name
+        if wheelstock.exists() and checksum(wheelstock) == filehash:
+            return True
+        return False
 
-        if not self.oldshas:
-            logging.error("updateshas.json file was not loaded.")
-            return None
+    @staticmethod
+    def _classify(relpath: pathlib.Path) -> pathlib.Path:
+        """Return the new-layout relative path for a carried file."""
+        if len(relpath.parts) > 1:
+            # subdirectory content (guessgame/, oauth/, synced/, custom dirs)
+            # keeps its relative location
+            return relpath
+        return nowplaying.utils.templatepaths.classify_template_name(relpath.name)
 
-        if filename in self.oldshas:
-            for version, hexdigest in self.oldshas[filename].items():
-                if userhash == hexdigest:
-                    found = version
-        logging.debug(
-            "filename = %s, found = %s userhash = %s hexdigest = %s",
-            filename,
-            found,
-            userhash,
-            hexdigest,
-        )
-        return found
-
-    def setup_templates(self) -> None:
-        """copy templates to either existing or as a new one"""
-
-        self.preload()
-        self._process_template_directory(self.apptemplatedir, self.usertemplatedir)
-
-    def _process_template_directory(
-        self,
-        app_dir: str | pathlib.Path,
-        user_dir: pathlib.Path,
-    ) -> None:
-        """recursively process template directories"""
-
-        for apppath in pathlib.Path(app_dir).iterdir():
-            # Skip files/directories that shouldn't be copied
-            if apppath.name in EXCLUDED_FILES:
+    def _carry_user_content(self, archive: pathlib.Path) -> None:
+        """Copy the user's own files from the archive into the new layout."""
+        for oldpath in sorted(archive.rglob("*")):
+            if not oldpath.is_file():
                 continue
-
-            if apppath.is_dir():
-                # Handle subdirectories recursively
-                user_subdir = user_dir / apppath.name
-                user_subdir.mkdir(parents=True, exist_ok=True)
-                self._process_template_directory(apppath, user_subdir)
+            relpath = oldpath.relative_to(archive)
+            if oldpath.name in EXCLUDED_FILES:
                 continue
-
-            userpath = user_dir / apppath.name
-
-            if not userpath.exists():
-                shutil.copyfile(apppath, userpath)
-                # Use relative path for logging
-                relative_path = apppath.relative_to(self.apptemplatedir)
-                logging.info("Added %s to %s", relative_path, user_dir)
+            if oldpath.name.endswith(_SKIP_SUFFIXES):
                 continue
-
-            apphash = checksum(apppath)
-            userhash = checksum(userpath)
-
-            # Use relative path for logging/lookup
-            relative_path = apppath.relative_to(self.apptemplatedir)
-
-            # Debug: log actual paths being hashed
-            logging.debug(
-                "%s: apppath=%s (hash=%s), userpath=%s (hash=%s)",
-                relative_path,
-                apppath,
-                apphash,
-                userpath,
-                userhash,
-            )
-
-            # If either checksum failed, treat as different to trigger replacement
-            if apphash is None or userhash is None:
-                logging.warning(
-                    "Checksum failed for %s or %s, treating as different", apppath, userpath
-                )
-            elif apphash == userhash:
-                logging.debug("%s: user file matches current template, skipping", relative_path)
+            if relpath.parts[0] in _SKIP_DIRS:
                 continue
-
-            logging.debug("%s: user file differs from current template", relative_path)
-
-            # Check if user's file matches a known old version - if so, replace it
-            if version := self.check_preload(str(relative_path), userhash):
-                userpath.unlink()
-                shutil.copyfile(apppath, userpath)
-                logging.info("Replaced %s from %s with current version", relative_path, version)
+            if self._is_stock(relpath, checksum(oldpath)):
+                self.dropped.append(str(relpath))
                 continue
-
-            logging.debug("%s: user file is customized (not a known version)", relative_path)
-
-            # Check if .new file already exists and matches current template
-            destpath = userpath.with_suffix(".new")
-            if destpath.exists():
-                logging.debug("%s: .new file exists, checking if current", relative_path)
-                # Pass original file extension so .new file is checksummed the same way as template
-                newhash = checksum(destpath, treat_as_extension=apppath.suffix)
-                # Only skip if both checksums succeeded and match
-                if apphash is not None and newhash is not None and apphash == newhash:
-                    logging.debug(
-                        "%s: .new file already has current template, skipping alert", relative_path
-                    )
-                    continue
-                # If we can't checksum the .new file, or checksums don't match, overwrite it
-                logging.debug(
-                    "%s: .new file outdated, will overwrite (app=%s, new=%s)",
-                    relative_path,
-                    apphash,
-                    newhash,
-                )
-                destpath.unlink()
-
-            self.alert = True
-            logging.info("New version of %s copied to %s", relative_path, destpath)
-            shutil.copyfile(apppath, destpath)
-            self.copied.append(str(relative_path))
+            dest = self.usertemplatedir / self._classify(relpath)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(oldpath, dest)
+            self.carried.append(str(relpath))
+            logging.info("Template migration: carried %s -> %s", relpath, dest)

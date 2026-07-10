@@ -424,6 +424,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
                 break
             await asyncio.sleep(1)
+        # DB may have a cleared record (title=None) after a track ends; fall back to
+        # sample data in preview mode so the editor always shows something.
+        if preview and (not metadata or not metadata.get("title")):
+            metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
         if metadata:
             metadata.pop("dbid", None)
             if not websocket.closed:
@@ -748,6 +752,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get(
                     "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
                 ),
+                web.get(
+                    r"/editor/{template_name:.+\.htm}",
+                    self.static_handler.editor_template_handler,
+                ),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
             ]
@@ -801,7 +809,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         # Add static file serving for vendor files and guessgame templates
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
         app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
-        app.router.add_static("/guessgame/", path=template_dir / "guessgame", name="guessgame")
+        app.router.add_static(
+            "/editor/vendor/", path=template_dir / "vendor", name="editor_vendor"
+        )
+        user_guessgame = app[CONFIG_KEY].templatedir / "guessgame"
+        guessgame_path = user_guessgame if user_guessgame.exists() else template_dir / "guessgame"
+        app.router.add_static("/guessgame/", path=guessgame_path, name="guessgame")
         metadb_path: str | None = None
         if self.testmode:
             metadb_path = app[CONFIG_KEY].cparser.value("testmode/metadbpath", defaultValue=None)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test m3u"""
+"""tests for the 6.0 templates directory migration"""
 
 import base64
 import gzip
@@ -16,7 +16,6 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 import nowplaying.upgrades.templates  # pylint: disable=import-error
 import nowplaying.utils.checksum  # pylint: disable=import-error
-from nowplaying.utils.checksum import EXCLUDED_FILES  # pylint: disable=import-error
 
 # pylint: disable=line-too-long
 
@@ -31,15 +30,11 @@ WS_MTV_COVER_FADE_HTM_GZ = "H4sIAHLi5WgC/6VWW2/rNgx+H7D/wKkbkqAndnLaZG0u3cN2il26
 @pytest.fixture
 def test_templates_with_line_endings(tmp_path):
     """Create temporary test template files with specific line endings"""
-    # Decompress and write basic-web.htm with LF endings
     unix_file = tmp_path / "basic-web.htm"
-    unix_content = gzip.decompress(base64.b64decode(BASIC_WEB_HTM_GZ))
-    unix_file.write_bytes(unix_content)
+    unix_file.write_bytes(gzip.decompress(base64.b64decode(BASIC_WEB_HTM_GZ)))
 
-    # Decompress and write ws-mtv-cover-fade.htm with CRLF endings
     windows_file = tmp_path / "ws-mtv-cover-fade.htm"
-    windows_content = gzip.decompress(base64.b64decode(WS_MTV_COVER_FADE_HTM_GZ))
-    windows_file.write_bytes(windows_content)
+    windows_file.write_bytes(gzip.decompress(base64.b64decode(WS_MTV_COVER_FADE_HTM_GZ)))
 
     return {"unix": str(unix_file), "windows": str(windows_file)}
 
@@ -58,260 +53,178 @@ def upgrade_bootstrap(getroot):
         yield newpath, config
         os.chdir(old_cwd)
         config.cparser.clear()
-        config.cparser.sync()
-        if os.path.exists(config.cparser.fileName()):
-            os.unlink(config.cparser.fileName())
 
 
-def compare_content(srcdir, destdir, conflict=None):
-    """compare src templates to what was copied"""
-    _compare_directory_recursive(srcdir, destdir, conflict)
+def _templatedir(testpath) -> pathlib.Path:
+    return pathlib.Path(testpath) / "testsuite" / "templates"
 
 
-def _is_binary_file(filepath):
-    """Check if a file is binary by examining its extension or content"""
-    binary_extensions = {
-        ".woff",
-        ".woff2",
-        ".ttf",
-        ".eot",
-        ".ico",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-    }
-    if any(filepath.lower().endswith(ext) for ext in binary_extensions):
-        return True
-    return False
-
-
-def _compare_files(srcfn, destfn):
-    """Compare two files, handling both text and binary files"""
-    if _is_binary_file(srcfn):
-        # Binary comparison
-        with open(srcfn, "rb") as src, open(destfn, "rb") as dest:
-            return src.read() == dest.read()
-    else:
-        # Text comparison with UTF-8 encoding
-        try:
-            with (
-                open(srcfn, encoding="utf-8") as src,
-                open(destfn, encoding="utf-8") as dest,
-            ):
-                return list(src) == list(dest)
-        except UnicodeDecodeError:
-            # Fallback to binary comparison if UTF-8 fails
-            with open(srcfn, "rb") as src, open(destfn, "rb") as dest:
-                return src.read() == dest.read()
-
-
-def _compare_directory_recursive(srcdir, destdir, conflict=None):
-    """recursively compare directories
-
-    Extra files in destination directories are allowed (e.g., user-created templates
-    or .new files from previous upgrades). This function only validates that all
-    source files are correctly copied to the destination.
-    """
-    srctemplates = os.listdir(srcdir)
-    desttemplates = os.listdir(destdir)
-    filelist = []
-    for filename in srctemplates + desttemplates:
-        basefn = os.path.basename(filename)
-        filelist.append(basefn)
-
-    filelist = sorted(set(filelist))
-
-    for filename in filelist:
-        srcfn = os.path.join(srcdir, filename)
-        destfn = os.path.join(destdir, filename)
-
-        if ".new" in filename:
-            continue
-
-        # Skip files that are excluded from processing
-        if filename in EXCLUDED_FILES:
-            continue
-
-        # Handle directories recursively
-        if os.path.isdir(srcfn):
-            assert os.path.isdir(destfn), f"Expected {destfn} to be a directory"
-            _compare_directory_recursive(srcfn, destfn, conflict)
-            continue
-
-        # Handle files
-        if conflict and os.path.basename(srcfn) == os.path.basename(conflict):
-            newname = filename.replace(".txt", ".new")
-            newname = newname.replace(".htm", ".new")
-            newdestfn = os.path.join(destdir, newname)
-            assert filename and not _compare_files(srcfn, destfn)
-            assert filename and _compare_files(srcfn, newdestfn)
-        else:
-            assert filename and _compare_files(srcfn, destfn)
-
-
-def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
-    """check a blank dir"""
-    (testpath, config) = upgrade_bootstrap
-    bundledir = config.getbundledir()
-    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-    srcdir = os.path.join(bundledir, "templates")
-    destdir = os.path.join(testpath, "testsuite", "templates")
-    compare_content(srcdir, destdir)
-
-
-@pytest.mark.xfail(os.name == "posix", reason="Template upgrade conflicts on Linux")
-def test_upgrade_conflict(upgrade_bootstrap):  # pylint: disable=redefined-outer-name,too-many-locals
-    """different content of standard template should create new"""
-    (testpath, config) = upgrade_bootstrap
-    bundledir = config.getbundledir()
-    srcdir = os.path.join(bundledir, "templates")
-    destdir = os.path.join(testpath, "testsuite", "templates")
-    srctemplates = os.listdir(srcdir)
-    pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
-    touchfile = os.path.join(destdir, os.path.basename(srctemplates[0]))
-    pathlib.Path(touchfile).touch()
-    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-    compare_content(srcdir, destdir, touchfile)
-
-
-def test_upgrade_same(upgrade_bootstrap):  # pylint: disable=redefined-outer-name,too-many-locals
-    """if a file already exists it shouldn't get .new'd"""
-    (testpath, config) = upgrade_bootstrap
-    bundledir = config.getbundledir()
-    srcdir = os.path.join(bundledir, "templates")
-    destdir = os.path.join(testpath, "testsuite", "templates")
-    srctemplates = os.listdir(srcdir)
-    pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
-    num = 1
-    if srctemplates[num] == "vendor":
-        num = 2
-    print(srctemplates[num])
-    shutil.copyfile(
-        os.path.join(srcdir, srctemplates[num]),
-        os.path.join(destdir, os.path.basename(srctemplates[num])),
+def _migrate(config, testpath) -> None:
+    nowplaying.upgrades.templates.TemplateDirMigration(
+        bundledir=config.getbundledir(), testdir=testpath
     )
-    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-    compare_content(srcdir, destdir)
 
 
-def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-outer-name,too-many-locals
-    """custom .txt, .new from previous upgrade"""
+def test_migration_fresh(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    """no old dir: structure and marker created, nothing archived"""
     (testpath, config) = upgrade_bootstrap
-    bundledir = config.getbundledir()
-    srcdir = os.path.join(bundledir, "templates")
-    destdir = os.path.join(testpath, "testsuite", "templates")
-    pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
-        os.path.join(getroot, "tests", "templates", "songquotes.txt"),
-        os.path.join(destdir, "songquotes.new"),
-    )
-    touchfile = os.path.join(destdir, "songquotes.txt")
-    pathlib.Path(touchfile).touch()
-    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-    assert _compare_files(
-        os.path.join(srcdir, "songquotes.txt"), os.path.join(destdir, "songquotes.new")
-    )
-    compare_content(srcdir, destdir, conflict=touchfile)
+    _migrate(config, testpath)
+    templatedir = _templatedir(testpath)
+    assert (templatedir / nowplaying.upgrades.templates.LAYOUT_MARKER).exists()
+    for subdir in nowplaying.upgrades.templates.SUBDIRS:
+        assert (templatedir / subdir).is_dir()
+    assert not templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME).exists()
 
 
-def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
-    """test that subdirectories are properly handled"""
+def test_migration_marker_skips(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    """already-migrated dir is left alone"""
     (testpath, config) = upgrade_bootstrap
-    bundledir = config.getbundledir()
-    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-
-    # Check that oauth subdirectory was created
-    oauth_destdir = os.path.join(testpath, "testsuite", "templates", "oauth")
-    assert os.path.isdir(oauth_destdir), "oauth subdirectory should be created"
-
-    # Check that files in oauth subdirectory were copied
-    oauth_files = os.listdir(oauth_destdir)
-    assert len(oauth_files) > 0, "oauth subdirectory should contain files"
-
-    # Verify specific oauth template files exist
-    expected_oauth_files = [
-        "kick_oauth_csrf_error.htm",
-        "kick_oauth_error.htm",
-        "kick_oauth_invalid_session.htm",
-        "kick_oauth_no_code.htm",
-        "kick_oauth_success.htm",
-        "kick_oauth_token_error.htm",
-    ]
-
-    for expected_file in expected_oauth_files:
-        oauth_file_path = os.path.join(oauth_destdir, expected_file)
-        assert os.path.isfile(oauth_file_path), (
-            f"Expected {expected_file} to exist in oauth subdirectory"
-        )
-
-        # Verify content matches source
-        src_file_path = os.path.join(bundledir, "templates", "oauth", expected_file)
-        with open(src_file_path, encoding="utf-8") as src_file:
-            src_content = src_file.read()
-        with open(oauth_file_path, encoding="utf-8") as dest_file:
-            dest_content = dest_file.read()
-        assert src_content == dest_content, f"Content mismatch for {expected_file}"
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    (templatedir / nowplaying.upgrades.templates.LAYOUT_MARKER).write_text("6")
+    keeper = templatedir / "twitchbot_custom.txt"
+    keeper.write_text("my custom announce")
+    _migrate(config, testpath)
+    assert keeper.exists(), "already-migrated content must not move"
+    assert not templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME).exists()
 
 
-def test_template_version_identification_with_line_endings(  # pylint: disable=too-many-locals,redefined-outer-name
-    getroot, test_templates_with_line_endings
+def test_migration_stock_dropped(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    """an untouched stock copy is archived but not carried forward"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    stock_src = pathlib.Path(config.getbundledir()) / "templates" / "twitchbot_track.txt"
+    shutil.copyfile(stock_src, templatedir / "twitchbot_track.txt")
+    _migrate(config, testpath)
+    archive = templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME)
+    assert (archive / "twitchbot_track.txt").exists(), "original must be archived"
+    assert not (templatedir / "twitchbot_track.txt").exists()
+    assert not (templatedir / "twitch" / "twitchbot_track.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "filename,expected_subpath",
+    [
+        ("twitchbot_custom.txt", "twitch/twitchbot_custom.txt"),
+        ("kickbot_custom.txt", "kick/kickbot_custom.txt"),
+        ("setlist-custom.txt", "setlist/setlist-custom.txt"),
+        ("myoverlay.htm", "web/myoverlay.htm"),
+        ("mynotes.txt", "mynotes.txt"),
+    ],
+)
+def test_migration_custom_carried(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap, filename, expected_subpath
 ):
-    """test that we can identify template versions regardless of line endings"""
-    # Get test template files from fixture
+    """user files are carried into the new layout, classified by name"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    (templatedir / filename).write_text("user content that matches no ledger hash")
+    _migrate(config, testpath)
+    dest = templatedir / expected_subpath
+    assert dest.exists(), f"{filename} should be carried to {expected_subpath}"
+    assert dest.read_text() == "user content that matches no ledger hash"
+
+
+@pytest.mark.parametrize(
+    "relpath",
+    [
+        "twitchbot_track.txt.new",
+        "vendor/jquery.min.js",
+        ".ws-mtv.htm.swp",
+        "twitchbot_track.txt~",
+    ],
+)
+def test_migration_skips_junk(upgrade_bootstrap, relpath):  # pylint: disable=redefined-outer-name
+    """.new conflict files and vendor content are not carried"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    target = templatedir / relpath
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("leftover")
+    _migrate(config, testpath)
+    assert not list(_templatedir(testpath).rglob(pathlib.Path(relpath).name)), (
+        f"{relpath} should not be carried into the new layout"
+    )
+
+
+@pytest.mark.parametrize(
+    "relpath",
+    [
+        "guessgame/custom-board.htm",
+        "synced/my-named-template.htm",
+    ],
+)
+def test_migration_subdir_preserved(  # pylint: disable=redefined-outer-name
+    upgrade_bootstrap, relpath
+):
+    """customized subdirectory content keeps its relative location"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    target = templatedir / relpath
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("customized subdir content")
+    _migrate(config, testpath)
+    assert (_templatedir(testpath) / relpath).exists()
+
+
+def test_migration_archive_collision(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    """a leftover archive from an earlier run gets a numbered suffix"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    (templatedir / "mynotes.txt").write_text("user content")
+    stale_archive = templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME)
+    stale_archive.mkdir(parents=True)
+    _migrate(config, testpath)
+    assert stale_archive.with_name(f"{nowplaying.upgrades.templates.ARCHIVE_NAME}-2").exists(), (
+        "second archive should get a numbered suffix"
+    )
+    assert (templatedir / "mynotes.txt").exists()
+
+
+def test_migration_idempotent(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    """running twice must not archive or move anything the second time"""
+    (testpath, config) = upgrade_bootstrap
+    templatedir = _templatedir(testpath)
+    templatedir.mkdir(parents=True)
+    (templatedir / "twitchbot_custom.txt").write_text("user content")
+    _migrate(config, testpath)
+    _migrate(config, testpath)
+    archive_base = templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME)
+    assert archive_base.exists()
+    assert not archive_base.with_name(
+        f"{nowplaying.upgrades.templates.ARCHIVE_NAME}-2"
+    ).exists(), "second run must not create another archive"
+    assert (templatedir / "twitch" / "twitchbot_custom.txt").exists()
+
+
+def test_template_version_identification_with_line_endings(  # pylint: disable=redefined-outer-name
+    test_templates_with_line_endings, getroot
+):
+    """ledger hashes must match regardless of line endings (Unix vs Windows)"""
     unix_file = test_templates_with_line_endings["unix"]
     windows_file = test_templates_with_line_endings["windows"]
 
-    # Calculate checksums using our normalized function
     unix_checksum = nowplaying.utils.checksum.checksum(unix_file)
     windows_checksum = nowplaying.utils.checksum.checksum(windows_file)
 
-    # Verify checksums are valid SHA512 hashes
     assert isinstance(unix_checksum, str), "Unix file checksum should be a string"
     assert isinstance(windows_checksum, str), "Windows file checksum should be a string"
     assert len(unix_checksum) == 128, f"SHA512 should be 128 chars, got {len(unix_checksum)}"
     assert len(windows_checksum) == 128, f"SHA512 should be 128 chars, got {len(windows_checksum)}"
 
-    # Read raw binary content to check for line ending differences
-    with open(unix_file, "rb") as unix_fh:
-        unix_raw = unix_fh.read()
-    with open(windows_file, "rb") as windows_fh:
-        windows_raw = windows_fh.read()
+    shasfile = pathlib.Path(getroot) / "nowplaying" / "resources" / "updateshas.json"
+    assert shasfile.exists(), "ledger must ship with 6.0 to power the migration"
+    shas = json.loads(shasfile.read_text(encoding="utf-8"))
 
-    # Verify files have different line endings (for test validity)
-    unix_has_crlf = b"\r\n" in unix_raw
-    windows_has_crlf = b"\r\n" in windows_raw
-    assert not unix_has_crlf, "Unix test file should not have CRLF line endings"
-    assert windows_has_crlf, "Windows test file should have CRLF line endings"
-
-    # Load the existing SHA database to see if we can match these checksums
-    # This simulates the upgrade process trying to identify template versions
-    shas_file = os.path.join(getroot, "nowplaying", "resources", "updateshas.json")
-    if os.path.exists(shas_file):
-        with open(shas_file, encoding="utf-8") as shas_fh:
-            shas_data = json.load(shas_fh)
-
-        # Look for matches in the SHA database
-        unix_matches = []
-        windows_matches = []
-
-        for template_name, versions in shas_data.items():
-            for version, sha in versions.items():
-                if sha == unix_checksum:
-                    unix_matches.append((template_name, version))
-                if sha == windows_checksum:
-                    windows_matches.append((template_name, version))
-
-        # Verify specific version identification
-        assert ("basic-web.htm", "4.1.0-rc3") in unix_matches, (
-            f"basic-web.htm should be identified as version 4.1.0-rc3, got: {unix_matches}"
-        )
-        assert ("ws-mtv-cover-fade.htm", "3.1.2") in windows_matches, (
-            f"ws-mtv-cover-fade.htm should be identified as version 3.1.2, got: {windows_matches}"
-        )
-    else:
-        # If no SHA database exists, just verify the checksums are different
-        # (since these are different template files)
-        assert unix_checksum != windows_checksum, (
-            "These are different template files, so checksums should differ"
-        )
+    unix_found = windows_found = False
+    for versions in shas.values():
+        for sha in versions.values():
+            if sha == unix_checksum:
+                unix_found = True
+            if sha == windows_checksum:
+                windows_found = True
+    assert unix_found, "LF-ending template should match a ledger hash"
+    assert windows_found, "CRLF-ending template should match a ledger hash"
