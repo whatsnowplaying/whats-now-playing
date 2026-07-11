@@ -108,9 +108,9 @@ def test_migration_stock_dropped(upgrade_bootstrap):  # pylint: disable=redefine
     [
         ("twitchbot_custom.txt", "twitch/twitchbot_custom.txt"),
         ("kickbot_custom.txt", "kick/kickbot_custom.txt"),
-        ("setlist-custom.txt", "setlist/setlist-custom.txt"),
+        ("setlist-custom.txt", "plain/setlist-custom.txt"),
         ("myoverlay.htm", "web/myoverlay.htm"),
-        ("mynotes.txt", "mynotes.txt"),
+        ("mynotes.txt", "plain/mynotes.txt"),
     ],
 )
 def test_migration_custom_carried(  # pylint: disable=redefined-outer-name
@@ -181,7 +181,7 @@ def test_migration_archive_collision(upgrade_bootstrap):  # pylint: disable=rede
     assert stale_archive.with_name(f"{nowplaying.upgrades.templates.ARCHIVE_NAME}-2").exists(), (
         "second archive should get a numbered suffix"
     )
-    assert (templatedir / "mynotes.txt").exists()
+    assert (templatedir / "plain" / "mynotes.txt").exists()
 
 
 def test_migration_idempotent(upgrade_bootstrap):  # pylint: disable=redefined-outer-name

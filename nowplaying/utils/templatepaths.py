@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 # user-owned function subdirectories searched after the templatedir root
 # (synced/ is machine-managed; guessgame/ is addressed by relative name)
-_USER_SUBDIRS = ("web", "twitch", "kick", "setlist")
+_USER_SUBDIRS = ("web", "twitch", "kick", "plain")
 
 # full 6.0 user-layout directory set; the migration creates these
 USER_LAYOUT_SUBDIRS = _USER_SUBDIRS + ("synced", "guessgame")
@@ -180,7 +180,6 @@ def is_user_template(config: "nowplaying.config.ConfigFile", path: pathlib.Path)
 _PREFIX_CLASSIFY = (
     ("twitchbot_", "twitch"),
     ("kickbot_", "kick"),
-    ("setlist-", "setlist"),
 )
 
 
@@ -189,8 +188,12 @@ def classify_template_name(name: str) -> pathlib.Path:
     for prefix, subdir in _PREFIX_CLASSIFY:
         if name.startswith(prefix):
             return pathlib.Path(subdir) / name
-    if pathlib.PurePath(name).suffix.lower() in (".htm", ".html"):
+    suffix = pathlib.PurePath(name).suffix.lower()
+    if suffix in (".htm", ".html"):
         return pathlib.Path("web") / name
+    if suffix == ".txt":
+        # generic text templates, including setlist-*.txt
+        return pathlib.Path("plain") / name
     return pathlib.Path(name)
 
 

@@ -108,9 +108,10 @@ def test_list_display_templates_synced_first(chaincfg):
     [
         ("twitchbot_song.txt", "twitch/twitchbot_song.txt"),
         ("kickbot_song.txt", "kick/kickbot_song.txt"),
-        ("setlist-fancy.txt", "setlist/setlist-fancy.txt"),
+        ("setlist-fancy.txt", "plain/setlist-fancy.txt"),
+        ("basic-plain.txt", "plain/basic-plain.txt"),
         ("myoverlay.htm", "web/myoverlay.htm"),
-        ("notes.txt", "notes.txt"),
+        ("notes.md", "notes.md"),
     ],
 )
 def test_classify_template_name(name, expected):

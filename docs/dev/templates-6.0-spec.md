@@ -53,7 +53,7 @@ Additional problems:
 Documents/WhatsNowPlaying/templates/      <- user-owned content only
     twitch/                               <- twitchbot_*.txt overrides + user commands
     kick/                                 <- kickbot_*.txt overrides + user commands
-    setlist/                              <- setlist-*.txt overrides
+    plain/                                <- generic text templates incl. setlist-*.txt
     web/                                  <- ws-*.htm user overrides
     synced/                               <- charts-managed named templates
     guessgame/                            <- guessgame overrides (existing pattern)
