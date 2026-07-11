@@ -205,7 +205,7 @@ class TwitchSettings:
     def on_streamtitle_button(self) -> None:
         """Open template file picker for stream title"""
         self.uihelp.template_picker_lineedit(
-            self.widget.streamtitle_lineedit, limit="twitchbot_*.txt"
+            self.widget.streamtitle_lineedit, limit="twitch/*.txt"
         )
 
     @Slot()
@@ -214,7 +214,7 @@ class TwitchSettings:
         if self._streamtitle_preview_window is None:
             self._streamtitle_preview_window = nowplaying.preview.textwindow.TextPreviewWindow(
                 config=self.oauth.config,
-                glob_pattern="twitchbot_*.txt",
+                glob_pattern="twitch/*.txt",
                 config_key="twitchbot/streamtitle",
                 enable_select_button=True,
             )

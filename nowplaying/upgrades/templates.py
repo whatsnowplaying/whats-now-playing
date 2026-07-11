@@ -12,9 +12,10 @@ This migration runs once:
 * untouched stock copies (hash matches any ledger version or current
   bundled stock) are dropped — the chain serves them from the bundle
 * everything else is the user's work and is carried into the new layout,
-  classified by filename (twitchbot_* -> twitch/, kickbot_* -> kick/,
-  setlist-* -> setlist/, *.htm -> web/); subdirectory content keeps its
-  relative location
+  classified and renamed by filename (twitchbot_track.txt ->
+  twitch/track.txt, twitchbot_track_help.txt -> twitch/help/track.txt,
+  kickbot_* -> kick/, *.htm -> web/, other *.txt -> plain/);
+  subdirectory content keeps its relative location
 * ``.new`` conflict files and vendor/ are not carried
 * the original directory is preserved as ``templates_pre6``
 

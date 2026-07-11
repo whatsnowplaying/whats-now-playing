@@ -137,6 +137,9 @@ destination = "nowplaying/vendor"
 requirements = "vendor.txt"
 namespace = "nowplaying.vendor"
 
+[tool.vendoring.transformations]
+drop = ["*.dist-info"]
+
 [tool.versioningit]
 vcs = "git"
 

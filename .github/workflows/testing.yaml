@@ -135,7 +135,7 @@ jobs:
       - name: restore datacache
         uses: actions/cache@v6
         with:
-          path: ~\AppData\Local\whatsnowplaying\testsuite\datacache
+          path: ~\AppData\Local\whatsnowplaying\testsuite\cache\datacache
           key: datacache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ hashFiles('nowplaying/datacache/**') }}
       - name: tests
         shell: bash

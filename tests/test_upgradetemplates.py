@@ -94,7 +94,7 @@ def test_migration_stock_dropped(upgrade_bootstrap):  # pylint: disable=redefine
     (testpath, config) = upgrade_bootstrap
     templatedir = _templatedir(testpath)
     templatedir.mkdir(parents=True)
-    stock_src = pathlib.Path(config.getbundledir()) / "templates" / "twitchbot_track.txt"
+    stock_src = pathlib.Path(config.getbundledir()) / "templates" / "twitch" / "track.txt"
     shutil.copyfile(stock_src, templatedir / "twitchbot_track.txt")
     _migrate(config, testpath)
     archive = templatedir.with_name(nowplaying.upgrades.templates.ARCHIVE_NAME)
@@ -106,8 +106,8 @@ def test_migration_stock_dropped(upgrade_bootstrap):  # pylint: disable=redefine
 @pytest.mark.parametrize(
     "filename,expected_subpath",
     [
-        ("twitchbot_custom.txt", "twitch/twitchbot_custom.txt"),
-        ("kickbot_custom.txt", "kick/kickbot_custom.txt"),
+        ("twitchbot_custom.txt", "twitch/custom.txt"),
+        ("kickbot_custom.txt", "kick/custom.txt"),
         ("setlist-custom.txt", "plain/setlist-custom.txt"),
         ("myoverlay.htm", "web/myoverlay.htm"),
         ("mynotes.txt", "plain/mynotes.txt"),
@@ -197,7 +197,7 @@ def test_migration_idempotent(upgrade_bootstrap):  # pylint: disable=redefined-o
     assert not archive_base.with_name(
         f"{nowplaying.upgrades.templates.ARCHIVE_NAME}-2"
     ).exists(), "second run must not create another archive"
-    assert (templatedir / "twitch" / "twitchbot_custom.txt").exists()
+    assert (templatedir / "twitch" / "custom.txt").exists()
 
 
 def test_migration_repoints_retired_stock(  # pylint: disable=redefined-outer-name

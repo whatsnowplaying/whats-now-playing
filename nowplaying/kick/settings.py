@@ -207,7 +207,7 @@ class KickChatSettings:
     @Slot()
     def on_announce_button(self) -> None:
         """kick announce button clicked action"""
-        self.uihelp.template_picker_lineedit(self.widget.announce_lineedit, limit="kickbot_*.txt")
+        self.uihelp.template_picker_lineedit(self.widget.announce_lineedit, limit="kick/*.txt")
 
     @Slot()
     def on_announce_preview_button(self) -> None:
@@ -215,7 +215,7 @@ class KickChatSettings:
         if self._textpreview_window is None:
             self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
                 config=self.config,
-                glob_pattern="kickbot_*.txt",
+                glob_pattern="kick/*.txt",
                 config_key="kick/announce",
                 enable_select_button=True,
             )
@@ -230,7 +230,7 @@ class KickChatSettings:
     @Slot()
     def on_add_button(self) -> None:
         """kick add button clicked action"""
-        filename = self.uihelp.template_picker(limit="kickbot_*.txt")
+        filename = self.uihelp.template_picker(limit="kick/*.txt")
         if not filename:
             return
 
@@ -370,7 +370,7 @@ class KickChatSettings:
     def update_kickbot_commands(self, config: nowplaying.config.ConfigFile) -> None:
         """auto-discover kickbot templates and create default commands"""
         kickbot_templates = list(
-            nowplaying.utils.templatepaths.list_templates(config, "kickbot_*.txt").values()
+            nowplaying.utils.templatepaths.list_templates(config, "kick/*.txt").values()
         )
 
         if not kickbot_templates:
@@ -379,8 +379,7 @@ class KickChatSettings:
 
         # Create default command entries for templates that don't have config entries
         for template_path in kickbot_templates:
-            template_name = template_path.stem  # Remove .txt extension
-            command_name = template_name.replace("kickbot_", "")  # Convert kickbot_track -> track
+            command_name = template_path.stem
             group_name = f"kickbot-command-{command_name}"
 
             # Check if this command already exists

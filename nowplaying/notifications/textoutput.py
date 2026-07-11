@@ -186,7 +186,9 @@ class Plugin(NotificationPlugin):
         """Connect UI elements to their handlers"""
         self._settings_qwidget = qwidget
         qwidget.texttemplate_button.clicked.connect(
-            lambda: uihelp.template_picker_lineedit(qwidget.texttemplate_lineedit)
+            lambda: uihelp.template_picker_lineedit(
+                qwidget.texttemplate_lineedit, limit="plain/*.txt"
+            )
         )
         qwidget.textoutput_button.clicked.connect(
             lambda: self._on_file_save_button(qwidget, uihelp)

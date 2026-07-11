@@ -226,7 +226,7 @@ album, artwork, biographies, MusicBrainz IDs, timestamps, and more.
 Built-in templates ship inside the application and are always current with
 the release — nothing needs to be copied into your Documents folder. Your
 templates directory holds only files you create or customize, organized
-into `twitch/`, `kick/`, `setlist/`, and `web/` subfolders; a file there
+into `twitch/`, `kick/`, `plain/`, and `web/` subfolders; a file there
 overrides the built-in template of the same name. The template chooser in
 every settings page lists built-in and customized templates together, with
 a "Customize a Copy" button that places an editable copy in the right

@@ -5,7 +5,6 @@
 import asyncio
 import datetime
 import logging
-import os
 import pathlib
 import platform
 import socket
@@ -501,9 +500,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         is_help_request = len(commandlist) == 2 and commandlist[1].lower() == help_keyword
 
         if is_help_request:
-            cmdfile = f"twitchbot_{commandlist[0]}_{help_keyword}.txt"
+            cmdfile = f"twitch/help/{commandlist[0]}.txt"
         else:
-            cmdfile = f"twitchbot_{commandlist[0]}.txt"
+            cmdfile = f"twitch/{commandlist[0]}.txt"
 
         if not self.check_command_perms(msg.user.badges, commandlist[0]):
             return
@@ -548,7 +547,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         if self.config.cparser.value(
             "twitchbot/chatrequests", type=bool
         ) and self.config.cparser.value("twitchbot/chat", type=bool):
-            cmdfile = f"twitchbot_{command}.txt"
+            cmdfile = f"twitch/{command}.txt"
             await self._post_template(templatein=cmdfile, moremetadata=reqdata)
 
     async def handle_request(self, command: str, params, username: str):  # pylint: disable=unused-argument
@@ -690,7 +689,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         """Send game start announcement to chat"""
         try:
             template_file = nowplaying.utils.templatepaths.resolve_template(
-                self.config, "twitchbot_gamestart.txt"
+                self.config, "twitch/gamestart.txt"
             )
             if not template_file:
                 # Fallback default message if template doesn't exist
@@ -701,7 +700,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 )
             else:
                 # Render template
-                template = self.jinja2.get_template("twitchbot_gamestart.txt")
+                template = self.jinja2.get_template("twitch/gamestart.txt")
                 message = template.render(**metadata)
                 message = message.strip()
 
@@ -958,9 +957,7 @@ class TwitchChatSettings:
     @Slot()
     def on_announce_button(self):
         """twitchbot announce button clicked action"""
-        self.uihelp.template_picker_lineedit(
-            self.widget.announce_lineedit, limit="twitchbot_*.txt"
-        )
+        self.uihelp.template_picker_lineedit(self.widget.announce_lineedit, limit="twitch/*.txt")
 
     @Slot()
     def on_announce_preview_button(self):
@@ -968,7 +965,7 @@ class TwitchChatSettings:
         if self._textpreview_window is None:
             self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
                 config=self.config,
-                glob_pattern="twitchbot_*.txt",
+                glob_pattern="twitch/*.txt",
                 config_key="twitchbot/announce",
                 enable_select_button=True,
             )
@@ -1001,13 +998,11 @@ class TwitchChatSettings:
     @Slot()
     def on_add_button(self):
         """twitchbot add button clicked action"""
-        filename = self.uihelp.template_picker(limit="twitchbot_*.txt")
+        filename = self.uihelp.template_picker(limit="twitch/*.txt")
         if not filename:
             return
 
-        filename = os.path.basename(filename)
-        filename = filename.replace("twitchbot_", "")
-        command = filename.replace(".txt", "")
+        command = pathlib.PurePath(filename).stem
 
         self._twitchbot_command_load(command)
 
@@ -1088,23 +1083,19 @@ class TwitchChatSettings:
     @staticmethod
     def update_twitchbot_commands(config):
         """make sure all twitchbot_ files have a config entry"""
-        filelist = nowplaying.utils.templatepaths.list_templates(config, "twitchbot_*.txt")
+        filelist = nowplaying.utils.templatepaths.list_templates(config, "twitch/*.txt")
         existing = config.cparser.childGroups()
         alert = False
 
         if not config.cparser.value("twitchbot/chat", type=bool):
             anntemplstr = config.cparser.value("twitchbot/announce")
             if not anntemplstr and nowplaying.utils.templatepaths.resolve_template(
-                config, "twitchbot_track.txt"
+                config, "twitch/track.txt"
             ):
-                config.cparser.setValue("twitchbot/announce", "twitchbot_track.txt")
+                config.cparser.setValue("twitchbot/announce", "twitch/track.txt")
 
         for file in filelist:
-            # Skip help template files
-            if "_help.txt" in file:
-                continue
-
-            command = file.replace("twitchbot_", "").replace(".txt", "")
+            command = pathlib.PurePath(file).stem
             command = f"twitchbot-command-{command}"
 
             if command not in existing:

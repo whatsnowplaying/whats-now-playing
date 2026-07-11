@@ -272,7 +272,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("twitchbot/clientid", "")
         settings.setValue("twitchbot/secret", "")
         settings.setValue("twitchbot/streamtitle_enabled", False)
-        settings.setValue("twitchbot/streamtitle", "twitchbot_streamtitle.txt")
+        settings.setValue("twitchbot/streamtitle", "twitch/streamtitle.txt")
         settings.setValue("twitchbot/chat", False)
         settings.setValue("twitchbot/announce", "")
         settings.setValue("twitchbot/commandchar", "!")
@@ -286,7 +286,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("kick/clientid", "")
         settings.setValue("kick/secret", "")
         settings.setValue("kick/chat", False)
-        settings.setValue("kick/announce", "kickbot_track.txt")
+        settings.setValue("kick/announce", "kick/track.txt")
         settings.setValue("kick/announcedelay", 1.0)
 
     @staticmethod
