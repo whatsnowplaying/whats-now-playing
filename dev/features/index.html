@@ -3266,7 +3266,7 @@ overlays using the Jinja2 template engine. Supports:</p>
 <ul>
 <li>Real-time updates via WebSockets</li>
 <li>Full HTML, CSS, and JavaScript customization</li>
-<li>42 bundled OBS browser overlay templates, including 7 animated WebGL/canvas effects</li>
+<li>45 bundled OBS browser overlay templates, including animated WebGL/canvas effects</li>
 <li>13 full-screen <a href="../gallery/dynamic-backgrounds/">dynamic background templates</a> that
   automatically adapt to cover art palette colors via WebGL</li>
 <li>Access to all track metadata as template variables</li>
@@ -3338,6 +3338,17 @@ track. Features include:</p>
 <p>All outputs use the Jinja2 template engine with access to a rich set of
 <a href="../reference/templatevariables/">template variables</a> including artist, title,
 album, artwork, biographies, MusicBrainz IDs, timestamps, and more.</p>
+<p>Built-in templates ship inside the application and are always current with
+the release — nothing needs to be copied into your Documents folder. Your
+templates directory holds only files you create or customize, organized
+into <code>twitch/</code>, <code>kick/</code>, <code>setlist/</code>, and <code>web/</code> subfolders; a file there
+overrides the built-in template of the same name. The template chooser in
+every settings page lists built-in and customized templates together, with
+a "Customize a Copy" button that places an editable copy in the right
+folder. Template updates and designs saved in the online template editor
+arrive automatically in the <code>synced/</code> folder, and upgrading from an older
+release reorganizes your existing templates automatically (originals are
+kept in <code>templates_pre6</code>).</p>
 <h3 id="filters"><a href="../settings/filter/">Filters</a><a class="headerlink" href="#filters" title="Permanent link">&para;</a></h3>
 <p>Clean up track metadata before output:</p>
 <ul>

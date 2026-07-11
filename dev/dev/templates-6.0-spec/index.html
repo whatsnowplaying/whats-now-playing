@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/reference/templates/">
+        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/dev/templates-6.0-spec/">
       
       
-        <link rel="prev" href="../templatevariables/">
-      
-      
-        <link rel="next" href="../../gallery/">
       
       
         
@@ -26,7 +22,7 @@
         
           
         
-        <link rel="alternate" type="text/markdown" href="https://github.com/whatsnowplaying/whats-now-playing/raw/main/docs/reference/templates.md">
+        <link rel="alternate" type="text/markdown" href="https://github.com/whatsnowplaying/whats-now-playing/raw/main/docs/dev/templates-6.0-spec.md">
       
       
         
@@ -39,7 +35,7 @@
     
     
       
-        <title>Template Reference - What's Now Playing</title>
+        <title>Templates 6.0 Architecture Specification - What's Now Playing</title>
       
     
     
@@ -98,7 +94,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#template-reference" class="md-skip">
+        <a href="#templates-60-architecture-specification" class="md-skip">
           Skip to content
         </a>
       
@@ -138,7 +134,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Template Reference
+              Templates 6.0 Architecture Specification
             
           </span>
         </div>
@@ -2228,20 +2224,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
         
           
           <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
@@ -2262,7 +2256,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_15">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2280,7 +2274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -2308,7 +2302,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -2336,7 +2330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../templatevariables/" class="md-nav__link">
+      <a href="../../reference/templatevariables/" class="md-nav__link">
         
   
   
@@ -2361,37 +2355,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Template Reference
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/templates/" class="md-nav__link">
         
   
   
@@ -2407,169 +2374,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc">
-      
-        <li class="md-nav__item">
-  <a href="#basic-text" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Text
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#generic-dj" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generic DJ
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dynamic-backgrounds" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dynamic Backgrounds
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#artist-images" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Artist Images
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#artist-fanart" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Artist Fanart
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cover-art" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cover Art
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mtv" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MTV
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#frosted-glass" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Frosted Glass
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gifwords" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GIFWords
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#typing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Typing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#requests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Requests
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#webgl" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WebGL
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#canvas" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Canvas
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2848,46 +2652,6 @@
   
 
 
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="../.." class="md-path__link">
-        
-  <span class="md-ellipsis">
-    Home
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Reference
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -2896,350 +2660,264 @@
   
 
 
-<h1 id="template-reference">Template Reference<a class="headerlink" href="#template-reference" title="Permanent link">&para;</a></h1>
-<p>This document lists all available templates in <strong>What's Now Playing</strong>, organized by category
-with descriptions of their functionality.</p>
-<p>Templates are HTML files that control how track information is displayed in various outputs
-like OBS, Discord, web browsers,
-and text files. For template variables, see <a href="../templatevariables/">Template Variables</a>. For
-visual examples of templates in
-action, see the <a href="../../gallery/">Gallery</a>.</p>
-<h3 id="basic-text">Basic Text<a class="headerlink" href="#basic-text" title="Permanent link">&para;</a></h3>
-<p><em>Basic text display with optional animation effects</em></p>
+<h1 id="templates-60-architecture-specification">Templates 6.0 Architecture Specification<a class="headerlink" href="#templates-60-architecture-specification" title="Permanent link">&para;</a></h1>
+<p>Status: draft
+Target: 6.0.0 (breaking change release)
+Supersedes: the <code>template-sync</code> branch design; portions ported forward per the
+"Relationship to the template-sync branch" section below.</p>
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>The pre-6.0 template system mixes three owners in one flat directory
+(<code>Documents/WhatsNowPlaying/templates/</code>):</p>
+<ul>
+<li><strong>App-owned stock</strong> — copied there at startup by <code>UpgradeTemplates</code></li>
+<li><strong>Charts-owned sync output</strong> — named templates written to <code>synced/</code></li>
+<li><strong>User-owned customizations</strong> — hand edits, in place, indistinguishable from stale stock</li>
+</ul>
+<p>Because ownership is mixed, every upgrade needs a checksum ledger
+(<code>resources/updateshas.json</code>) to distinguish "stale stock copy" from "user
+edit", and the <code>.new</code>-file alert dance to avoid clobbering customizations.
+The charts sync mechanism added on the <code>template-sync</code> branch writes newer
+templates into the same directory, which the ledger cannot recognize —
+every synced file gets flagged as "customized" and produces <code>.new</code> spam on
+every launch.</p>
+<p>Additional problems:</p>
+<ul>
+<li>Stock htm templates became generated artifacts (built by wnp-templates)
+  but are still treated as hand-editable files</li>
+<li>30+ generated htm files, fonts, and jquery are copied into a folder that
+  OneDrive/iCloud syncs, causing Windows file-locking churn</li>
+<li><code>wnp_templates</code> package data (bundled htm, vendor.yaml) is not collected
+  by PyInstaller, so any runtime code path reading
+  <code>wnp_templates.BUNDLED_TEMPLATE_DIR</code> breaks in the frozen app</li>
+</ul>
+<h2 id="design-principles">Design Principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Ownership determines location.</strong> App-owned stock lives in the bundle
+   and never materializes in the user's Documents. Presence of a file in
+   the user tree <em>means</em> user intent.</li>
+<li><strong>The URL namespace is the API for htm content.</strong> OBS browser sources
+   point at <code>http://localhost:PORT/{name}.htm</code>. Name-based resolution keeps
+   every OBS scene working regardless of filesystem layout.</li>
+<li><strong>The filesystem is the API only for hand-edited files</strong> (txt chat
+   templates and user-created commands).</li>
+<li><strong>The bundle is the floor; charts sync is the updater.</strong> Every install
+   works offline out of the box; sync freshens web templates in the
+   background. (Templates + vendor are ~660 KB against a 320 MB
+   distribution — shipping them costs nothing.)</li>
+</ol>
+<h2 id="directory-layout">Directory Layout<a class="headerlink" href="#directory-layout" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>Documents/WhatsNowPlaying/templates/      &lt;- user-owned content only
+    twitch/                               &lt;- twitchbot_*.txt overrides + user commands
+    kick/                                 &lt;- kickbot_*.txt overrides + user commands
+    plain/                                &lt;- generic text templates incl. setlist-*.txt
+    web/                                  &lt;- ws-*.htm user overrides
+    synced/                               &lt;- charts-managed named templates
+    guessgame/                            &lt;- guessgame overrides (existing pattern)
+Documents/WhatsNowPlaying/templates_pre6/ &lt;- frozen archive created by migration
+</code></pre></div>
+<p>Files keep their current names inside the function subdirectories
+(<code>twitch/twitchbot_track.txt</code>, not <code>twitch/track.txt</code>) to minimize the
+config-migration surface.</p>
+<p>App-owned stock ships in the bundle at <code>bundledir/templates/</code> exactly as
+today (populated at build time; see "Build Pipeline").</p>
+<h2 id="resolution-chain">Resolution Chain<a class="headerlink" href="#resolution-chain" title="Permanent link">&para;</a></h2>
+<p>All template reads resolve a <em>name</em> through, in order:</p>
+<ol>
+<li><code>templatedir/</code> and <code>templatedir/{function}/</code> (user overrides and
+   user-created files — user files always win)</li>
+<li><code>templatedir/synced/</code> (charts-delivered: the user's named editor
+   designs and base template updates newer than the bundle)</li>
+<li><code>bundledir/templates/</code> (stock)</li>
+</ol>
+<p>Implementation notes:</p>
+<ul>
+<li>jinja2 <code>FileSystemLoader</code> accepts a list of search paths with
+  first-match-wins semantics — the txt chain is a loader-configuration
+  change, not a resolution framework</li>
+<li><code>webserver.py</code> guessgame handling (prefer user dir, fall back to bundle)
+  already implements this pattern; 6.0 makes it universal</li>
+<li>Vendor files (<code>/vendor/</code> route) are bundle-only. Fonts and JS libraries
+  do not change between template updates; there is no user-override case.</li>
+<li>Absolute paths stored in config are still honored when the file exists,
+  so templates kept entirely outside the chain keep working</li>
+</ul>
+<h2 id="content-classes">Content Classes<a class="headerlink" href="#content-classes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Effect</th>
-<th>Template</th>
+<th>Class</th>
+<th>Examples</th>
+<th>Stock location</th>
+<th>Customization model</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>None</td>
-<td><code>ws-basic-text.htm</code></td>
+<td>Generated web templates</td>
+<td><code>ws-*.htm</code></td>
+<td>bundle</td>
+<td>template editor + charts sync; hand-edit via copy-to-customize</td>
 </tr>
 <tr>
-<td>Fade</td>
-<td><code>ws-basic-text-fade.htm</code></td>
+<td>Chat/text templates</td>
+<td><code>twitchbot_*.txt</code>, <code>kickbot_*.txt</code>, <code>setlist-*.txt</code></td>
+<td>bundle</td>
+<td>hand-edit via copy-to-customize</td>
 </tr>
 <tr>
-<td>Explode</td>
-<td><code>ws-basic-text-explode.htm</code></td>
+<td>Command registries</td>
+<td><code>twitchbot_{cmd}.txt</code>, <code>kickbot_{cmd}.txt</code></td>
+<td>bundle + user union</td>
+<td>file presence registers command (see below)</td>
 </tr>
 <tr>
-<td>Spin</td>
-<td><code>ws-basic-text-spin.htm</code></td>
+<td>Charts named templates</td>
+<td><code>synced/*.htm</code></td>
+<td>charts server</td>
+<td>template editor on charts</td>
 </tr>
 <tr>
-<td>Slide</td>
-<td><code>ws-basic-text-slide.htm</code></td>
+<td>Infrastructure</td>
+<td><code>oauth/*.htm</code>, <code>whatsnowplaying-websocket.js</code>, <code>vendor/</code></td>
+<td>bundle</td>
+<td>none (bundle-only)</td>
 </tr>
 <tr>
-<td>Anime Elastic</td>
-<td><code>ws-basic-text-anime-elastic.htm</code></td>
-</tr>
-<tr>
-<td>Anime Bounce</td>
-<td><code>ws-basic-text-anime-bounce.htm</code></td>
-</tr>
-<tr>
-<td>Anime Stagger</td>
-<td><code>ws-basic-text-anime-stagger.htm</code></td>
+<td>Guessgame</td>
+<td><code>guessgame/*</code></td>
+<td>bundle</td>
+<td>existing override pattern</td>
 </tr>
 </tbody>
 </table>
-<h3 id="generic-dj">Generic DJ<a class="headerlink" href="#generic-dj" title="Permanent link">&para;</a></h3>
-<p><em>Generic DJ titlecard with album art and accent color</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-generic-dj.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="dynamic-backgrounds">Dynamic Backgrounds<a class="headerlink" href="#dynamic-backgrounds" title="Permanent link">&para;</a></h3>
-<p><em>Plasma</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Plasma</td>
-<td><code>ws-webgl-plasma-background.htm</code></td>
-</tr>
-<tr>
-<td>Aurora</td>
-<td><code>ws-webgl-aurora-background.htm</code></td>
-</tr>
-<tr>
-<td>Gradient Sweep</td>
-<td><code>ws-webgl-gradient-sweep-background.htm</code></td>
-</tr>
-<tr>
-<td>Voronoi</td>
-<td><code>ws-webgl-voronoi-background.htm</code></td>
-</tr>
-<tr>
-<td>Noise Field</td>
-<td><code>ws-webgl-noise-field-background.htm</code></td>
-</tr>
-<tr>
-<td>Ripple</td>
-<td><code>ws-webgl-ripple-background.htm</code></td>
-</tr>
-<tr>
-<td>Magma Rise</td>
-<td><code>ws-webgl-magma-rise-background.htm</code></td>
-</tr>
-<tr>
-<td>Nebula</td>
-<td><code>ws-webgl-nebula-background.htm</code></td>
-</tr>
-<tr>
-<td>Lightning</td>
-<td><code>ws-webgl-lightning-background.htm</code></td>
-</tr>
-<tr>
-<td>Grid</td>
-<td><code>ws-webgl-grid-background.htm</code></td>
-</tr>
-<tr>
-<td>Halftone</td>
-<td><code>ws-webgl-halftone-background.htm</code></td>
-</tr>
-<tr>
-<td>Flow Field</td>
-<td><code>ws-webgl-flow-field-background.htm</code></td>
-</tr>
-<tr>
-<td>Weave</td>
-<td><code>ws-webgl-weave-background.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="artist-images">Artist Images<a class="headerlink" href="#artist-images" title="Permanent link">&para;</a></h3>
-<p><em>Single artist image display (banner, logo, thumbnail)</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Banner</td>
-<td><code>ws-artistbanner-nofade.htm</code></td>
-</tr>
-<tr>
-<td>Logo</td>
-<td><code>ws-artistlogo-nofade.htm</code></td>
-</tr>
-<tr>
-<td>Thumbnail</td>
-<td><code>ws-artistthumb-nofade.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="artist-fanart">Artist Fanart<a class="headerlink" href="#artist-fanart" title="Permanent link">&para;</a></h3>
-<p><em>Artist fanart display with static, conditional, and slideshow modes</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-artistfanart-nofade.htm</code></td>
-</tr>
-<tr>
-<td>Conditional</td>
-<td><code>ws-artistfanart-conditional.htm</code></td>
-</tr>
-<tr>
-<td>Slideshow</td>
-<td><code>ws-artistfanart-slideshow.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="cover-art">Cover Art<a class="headerlink" href="#cover-art" title="Permanent link">&para;</a></h3>
-<p><em>Album cover art display, single and slideshow</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-justthecover.htm</code></td>
-</tr>
-<tr>
-<td>Slideshow</td>
-<td><code>ws-coverslideshow.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="mtv">MTV<a class="headerlink" href="#mtv" title="Permanent link">&para;</a></h3>
-<p><em>MTV-style layouts with customizable fade effects</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-mtv.htm</code></td>
-</tr>
-<tr>
-<td>Fade</td>
-<td><code>ws-mtv-fade.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="frosted-glass">Frosted Glass<a class="headerlink" href="#frosted-glass" title="Permanent link">&para;</a></h3>
-<p><em>Frosted glass overlay with blurred background</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-frosted-glass.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="gifwords">GIFWords<a class="headerlink" href="#gifwords" title="Permanent link">&para;</a></h3>
-<p><em>Animated GIF background with lyrics/words display</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fade</td>
-<td><code>ws-gifwords-fade.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="typing">Typing<a class="headerlink" href="#typing" title="Permanent link">&para;</a></h3>
-<p><em>Typewriter-style animated text display</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Classic</td>
-<td><code>ws-typing-classic.htm</code></td>
-</tr>
-<tr>
-<td>Amber</td>
-<td><code>ws-typing-amber.htm</code></td>
-</tr>
-<tr>
-<td>Terminal</td>
-<td><code>ws-typing-terminal.htm</code></td>
-</tr>
-<tr>
-<td>Matrix</td>
-<td><code>ws-typing-matrix.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="requests">Requests<a class="headerlink" href="#requests" title="Permanent link">&para;</a></h3>
-<p><em>Track request display overlay</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>None</td>
-<td><code>ws-requests.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="webgl">WebGL<a class="headerlink" href="#webgl" title="Permanent link">&para;</a></h3>
-<p><em>WebGL-rendered spinning vinyl record with cover art texture</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Vinyl</td>
-<td><code>ws-webgl-vinyl.htm</code></td>
-</tr>
-<tr>
-<td>Spectrum</td>
-<td><code>ws-webgl-spectrum.htm</code></td>
-</tr>
-<tr>
-<td>Hologram</td>
-<td><code>ws-webgl-hologram.htm</code></td>
-</tr>
-<tr>
-<td>Wave</td>
-<td><code>ws-webgl-wave.htm</code></td>
-</tr>
-<tr>
-<td>Cube</td>
-<td><code>ws-webgl-cube.htm</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="canvas">Canvas<a class="headerlink" href="#canvas" title="Permanent link">&para;</a></h3>
-<p><em>Canvas 2D floating particles over transparent stream background</em></p>
-<table>
-<thead>
-<tr>
-<th>Effect</th>
-<th>Template</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Particles</td>
-<td><code>ws-canvas-particles.htm</code></td>
-</tr>
-</tbody>
-</table>
+<h2 id="copy-to-customize">Copy-to-Customize<a class="headerlink" href="#copy-to-customize" title="Permanent link">&para;</a></h2>
+<h3 id="model-1-config-keyed-templates">Model 1: config-keyed templates<a class="headerlink" href="#model-1-config-keyed-templates" title="Permanent link">&para;</a></h3>
+<p>Settings rows that point a config key at a template file
+(<code>weboutput/htmltemplate</code>, <code>obsws/template</code>, <code>twitchbot/announce</code>,
+<code>twitchbot/streamtitle</code>, <code>kick/announce</code>, setlist format, discord) gain a
+"Customize..." action: copy the resolved stock file into the appropriate
+user subdirectory and repoint the config key. Pickers list the union of the
+chain with a stock/customized indicator.</p>
+<h3 id="model-2-filesystem-as-registry-twitchkick-commands">Model 2: filesystem-as-registry (twitch/kick commands)<a class="headerlink" href="#model-2-filesystem-as-registry-twitchkick-commands" title="Permanent link">&para;</a></h3>
+<p>Today <code>update_twitchbot_commands()</code> scans templatedir for
+<code>twitchbot_*.txt</code>; each file's existence registers a chat command. This
+pattern is preserved with one change: the scan becomes a <strong>union</strong> of
+<code>bundledir/templates/</code> stock and <code>templatedir/twitch/</code>, per-name user file
+wins. Users still add <code>!mycommand</code> by dropping <code>twitchbot_mycommand.txt</code>
+into their twitch directory (or via a UI action). Help files
+(<code>*_help.txt</code>) pair by naming convention and ride the same union.</p>
+<p>Semantic change: deleting a stock command's file no longer removes the
+command (the bundle copy resurfaces in the union). Disabling becomes a
+first-class toggle in the settings UI, backed by the existing
+<code>twitchbot-command-{name}/</code> permission config groups.</p>
+<h2 id="charts-sync-roles">Charts Sync Roles<a class="headerlink" href="#charts-sync-roles" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>sync_from_charts()</code> (requires API key): fetches the user's named
+  templates from the charts editor, assembles them, writes to
+  <code>templatedir/synced/</code>. Manifest file tracks written names for stale
+  cleanup. <strong>Unchanged from the template-sync branch.</strong></li>
+<li><code>sync_base_templates()</code> (public endpoint): downloads base <code>ws-*.htm</code>
+  files into <code>templatedir/synced/</code> — only when the server version differs
+  from what the chain currently serves and the current file is not a
+  user-owned override. A manifest (<code>.wnp_base_sync.json</code>) records what
+  this sync wrote; entries are removed once a newer app bundle serves the
+  same content. Sync never writes outside <code>synced/</code> — everything else in
+  the user tree is user-owned.</li>
+<li>Vendor assets (fonts, JS) are bundle-only for 6.0. Syncing them at
+  runtime is a possible future project (would need webserver vendor-route
+  changes to serve from a synced location).</li>
+</ul>
+<p>Both remain fire-and-forget background tasks started from datacache; all
+errors logged and swallowed (offline-safe).</p>
+<h2 id="build-pipeline">Build Pipeline<a class="headerlink" href="#build-pipeline" title="Permanent link">&para;</a></h2>
+<p><code>tools/build_templates.py</code> (run by builder.sh before PyInstaller):</p>
+<ul>
+<li>downloads vendor files from <code>wnp_templates.VENDOR_FILES</code> CDN URLs into
+  <code>nowplaying/templates/vendor/</code></li>
+<li>removes stale <code>ws-*.htm</code> leftovers from older build systems</li>
+</ul>
+<p>The frozen app gets stock web templates from the wnp_templates package
+data itself — <code>collect_data_files('wnp_templates')</code> in the PyInstaller
+spec — so no build-time htm copying exists; the wheel is the single
+source of truth.</p>
+<p>The PyInstaller spec entry <code>('nowplaying/templates/*', 'templates/')</code>
+copies matched directories recursively (verified against the shipped 5.2.0
+zip), so no spec change is required.</p>
+<p>Any runtime consumer of stock templates reads <code>bundledir/templates/</code>, never
+<code>wnp_templates</code> package data (which PyInstaller does not collect). The
+template editor endpoints on the <code>template-sync</code> branch that read
+<code>wnp_templates.BUNDLED_TEMPLATE_DIR</code> must be reworked to use the bundle
+path.</p>
+<h2 id="migration-60-first-launch">Migration (6.0 first launch)<a class="headerlink" href="#migration-60-first-launch" title="Permanent link">&para;</a></h2>
+<p>One-time pass, using <code>updateshas.json</code> as the classifier:</p>
+<ol>
+<li>Walk the existing flat <code>templates/</code> tree; hash every file</li>
+<li>Hash matches any known stock version in the ledger -&gt; untouched stock
+   copy -&gt; do not carry forward (bundle serves it)</li>
+<li>Hash matches nothing -&gt; user's work -&gt; move into the new structure
+   (classified by filename pattern: <code>twitchbot_*</code> -&gt; <code>twitch/</code>, etc.) and
+   rewrite any config keys pointing at the old absolute path</li>
+<li><code>*.new</code> files -&gt; delete</li>
+<li>Rename the old directory to <code>templates_pre6</code> as the recovery archive</li>
+<li>Files that cannot be classified by pattern go to the top level of the
+   new tree (still resolvable, still archived in <code>templates_pre6</code>)</li>
+</ol>
+<p>Retired pre-6.0 stock templates (the 22 superseded ws-* designs, e.g.
+<code>ws-basicblack.htm</code>, <code>ws-mtv-cover-fade.htm</code>) get one-time handling during
+migration: an unmodified copy is dropped and any config key referencing it
+is repointed to the nearest 6.0 equivalent (<code>RETIRED_TEMPLATES</code> in
+<code>nowplaying/upgrades/templates.py</code>); a customized copy is carried like any
+user file and keeps its references. Post-migration the retired names do
+not exist anywhere — no runtime aliases, no list entries. Users wanting an
+old design back copy it from <code>templates_pre6</code> into <code>templates/web/</code> or
+rebuild it in the charts template editor.</p>
+<p>After migration, <code>UpgradeTemplates</code>, the <code>.new</code> mechanism, and
+<code>updateshas.json</code> generation (<code>tools/updateshas.py</code>,
+<code>tools/regenerate_shas.sh</code>, the "Update shas" release step) are retired.
+The ledger file itself ships one final time in 6.0 to power the migration.</p>
+<h2 id="config-changes">Config Changes<a class="headerlink" href="#config-changes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Template-path config keys store bare names resolved through the chain;
+  absolute paths remain honored when the file exists (external templates)</li>
+<li>Defaults in <code>config.py</code> <code>_defaults_*()</code> change from
+  <code>templatedir.joinpath(...)</code> absolute paths to names</li>
+<li>Migration rewrites existing stored paths: dangling paths to stock -&gt;
+  name; paths to carried-forward customizations -&gt; new location</li>
+</ul>
+<h2 id="retired-components">Retired Components<a class="headerlink" href="#retired-components" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>UpgradeTemplates</code> (<code>nowplaying/upgrades/templates.py</code>) and the startup
+  copy-everything flow</li>
+<li><code>.new</code> conflict files and the "Updated templates have been placed" alert</li>
+<li><code>updateshas.json</code> ledger maintenance (kept read-only for migration)</li>
+<li>Runtime vendor download in <code>sync_base_templates()</code></li>
+<li><code>nowplaying/resources/templates/</code> (vestigial, zero references)</li>
+</ul>
+<h2 id="relationship-to-the-template-sync-branch">Relationship to the template-sync Branch<a class="headerlink" href="#relationship-to-the-template-sync-branch" title="Permanent link">&para;</a></h2>
+<p>Implementation restarts from <code>main</code> (32 commits ahead). Ported by diff from
+<code>template-sync</code>:</p>
+<ul>
+<li><code>nowplaying/processes/template_sync.py</code> — <code>sync_from_charts()</code> intact;
+  <code>sync_base_templates()</code> pruned of vendor download</li>
+<li>wnp-templates package switch — <code>template_colors.py</code> shim, dependency,
+  <code>template-src/</code> + old builder deletion, <code>docs/macros.py</code>, CI step removal</li>
+<li>New <code>tools/build_templates.py</code></li>
+<li>Review/cherry-pick: guessgame htm changes, <code>obs/exportdialog.py</code>,
+  <code>preview/window.py</code> fixes</li>
+</ul>
+<p>Prerequisite: main's 13 dynamic-background templates (commit <code>88ca7b5e</code>)
+must be ported into wnp-templates (release 0.1.3) before <code>template-src/</code>
+can be deleted, or they are lost.</p>
+<h2 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Whether a read-only <code>examples/</code> export should exist for the text-editor
+  crowd, or pickers + copy-to-customize are sufficient (current position:
+  no examples directory)</li>
+<li>Exact UI treatment of the stock/customized indicator and disable toggle
+  in twitch/kick settings</li>
+<li>Whether <code>synced/</code> should also participate in txt resolution (current
+  position: htm only)</li>
+</ul>
 
 
 
