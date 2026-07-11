@@ -52,10 +52,6 @@ class UpgradeConfig:
         self.testdir = testdir
         self.upgrade()
 
-    @staticmethod
-    def _getconfig() -> QSettings:
-        return get_user_settings()
-
     def _getoldconfig(self) -> QSettings:
         """Get QSettings for old app name for migration purposes"""
         return QSettings(
@@ -151,7 +147,7 @@ class UpgradeConfig:
 
     def backup_config(self) -> None:
         """back up the old config"""
-        config = self._getconfig()
+        config = get_user_settings()
         datestr = time.strftime("%Y%m%d-%H%M%S")
         if self.testdir:
             docpath = self.testdir
@@ -176,7 +172,7 @@ class UpgradeConfig:
         oldconfig = self._getoldconfig()
         oldpath = pathlib.Path(oldconfig.fileName())
 
-        config = self._getconfig()
+        config = get_user_settings()
         newpath = pathlib.Path(config.fileName())
 
         # Migrate from NowPlaying to WhatsNowPlaying if old exists and new doesn't
