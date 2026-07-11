@@ -181,12 +181,16 @@ class DiscordSettings:
     @Slot()
     def _on_template_button(self) -> None:
         if self._uihelp and self._widget:
-            self._uihelp.template_picker_lineedit(self._widget.template_lineedit)
+            self._uihelp.template_picker_lineedit(
+                self._widget.template_lineedit, limit="plain/*.txt"
+            )
 
     @Slot()
     def _on_channel_template_button(self) -> None:
         if self._uihelp and self._widget:
-            self._uihelp.template_picker_lineedit(self._widget.channel_template_lineedit)
+            self._uihelp.template_picker_lineedit(
+                self._widget.channel_template_lineedit, limit="plain/*.txt"
+            )
 
     @Slot()
     def _on_template_preview_button(self) -> None:

@@ -27,22 +27,32 @@ import wnp_templates
 if TYPE_CHECKING:
     import nowplaying.config
 
-# user-owned function subdirectories searched after the templatedir root
-# (synced/ is machine-managed; guessgame/ is addressed by relative name)
-_USER_SUBDIRS = ("web", "twitch", "kick", "plain")
+# subdirectories searched for BARE names (collision-free content):
+# web/ holds htm overrides (the URL namespace is bare), plain/ holds
+# generic text templates.  twitch/, kick/, guessgame/ content is
+# addressed by namespace-qualified relative names (twitch/track.txt)
+# and needs no bare-name search.
+_BARE_NAME_SUBDIRS = ("web", "plain")
 
 # full 6.0 user-layout directory set; the migration creates these
-USER_LAYOUT_SUBDIRS = _USER_SUBDIRS + ("synced", "guessgame")
+USER_LAYOUT_SUBDIRS = ("web", "plain", "twitch", "kick", "synced", "guessgame")
 
 
 def search_paths(config: "nowplaying.config.ConfigFile") -> list[pathlib.Path]:
-    """Return the ordered template search chain."""
+    """Return the ordered template search chain.
+
+    Namespace-qualified names (``twitch/track.txt``) resolve against the
+    tree roots; bare names additionally search the collision-free
+    subdirectories (web/, plain/) of both trees.
+    """
     templatedir = pathlib.Path(config.templatedir)
     paths = [templatedir]
-    paths.extend(templatedir / subdir for subdir in _USER_SUBDIRS)
+    paths.extend(templatedir / subdir for subdir in _BARE_NAME_SUBDIRS)
     paths.append(templatedir / "synced")
     if bundledir := config.getbundledir():
-        paths.append(pathlib.Path(bundledir) / "templates")
+        bundleroot = pathlib.Path(bundledir) / "templates"
+        paths.append(bundleroot)
+        paths.extend(bundleroot / subdir for subdir in _BARE_NAME_SUBDIRS)
     paths.append(wnp_templates.BUNDLED_TEMPLATE_DIR)
     return paths
 
@@ -115,8 +125,22 @@ def resolve_configured(
     if path.is_absolute():
         if path.is_file():
             return path
-        return resolve_template(config, path.name)
-    return resolve_template(config, value)
+        return _resolve_with_legacy_fallback(config, path.name)
+    if resolved := resolve_template(config, value):
+        return resolved
+    return _resolve_with_legacy_fallback(config, pathlib.PurePath(value).name)
+
+
+def _resolve_with_legacy_fallback(
+    config: "nowplaying.config.ConfigFile", name: str
+) -> pathlib.Path | None:
+    """Resolve a bare name, retrying via the legacy-name classification."""
+    if resolved := resolve_template(config, name):
+        return resolved
+    qualified = classify_template_name(name)
+    if qualified.as_posix() != name:
+        return resolve_template(config, qualified.as_posix())
+    return None
 
 
 def list_templates(
@@ -133,8 +157,11 @@ def list_templates(
         if not base.is_dir():
             continue
         for path in sorted(base.glob(pattern)):
-            if path.is_file() and path.name not in union:
-                union[path.name] = path
+            if not path.is_file():
+                continue
+            relname = path.relative_to(base).as_posix()
+            if relname not in union:
+                union[relname] = path
     return union
 
 
@@ -184,10 +211,22 @@ _PREFIX_CLASSIFY = (
 
 
 def classify_template_name(name: str) -> pathlib.Path:
-    """Return the user-tree relative path where a template named *name* belongs."""
+    """Return the layout-relative path where a template named *name* belongs.
+
+    Names that are already namespace-qualified pass through unchanged.
+    Legacy prefixed names are renamed into their command namespace
+    (``twitchbot_track.txt`` -> ``twitch/track.txt``,
+    ``twitchbot_track_help.txt`` -> ``twitch/help/track.txt``).
+    """
+    if "/" in name or "\\" in name:
+        return pathlib.Path(name)
     for prefix, subdir in _PREFIX_CLASSIFY:
         if name.startswith(prefix):
-            return pathlib.Path(subdir) / name
+            stripped = name[len(prefix) :]
+            if stripped.endswith("_help.txt"):
+                helpstem = stripped[: -len("_help.txt")]
+                return pathlib.Path(subdir) / "help" / f"{helpstem}.txt"
+            return pathlib.Path(subdir) / stripped
     suffix = pathlib.PurePath(name).suffix.lower()
     if suffix in (".htm", ".html"):
         return pathlib.Path("web") / name

@@ -51,8 +51,9 @@ Additional problems:
 
 ```text
 Documents/WhatsNowPlaying/templates/      <- user-owned content only
-    twitch/                               <- twitchbot_*.txt overrides + user commands
-    kick/                                 <- kickbot_*.txt overrides + user commands
+    twitch/                               <- command templates (track.txt = !track)
+    twitch/help/                          <- per-command help (help/track.txt)
+    kick/                                 <- kick command templates
     plain/                                <- generic text templates incl. setlist-*.txt
     web/                                  <- ws-*.htm user overrides
     synced/                               <- charts-managed named templates
@@ -60,9 +61,14 @@ Documents/WhatsNowPlaying/templates/      <- user-owned content only
 Documents/WhatsNowPlaying/templates_pre6/ <- frozen archive created by migration
 ```
 
-Files keep their current names inside the function subdirectories
-(`twitch/twitchbot_track.txt`, not `twitch/track.txt`) to minimize the
-config-migration surface.
+Command templates drop their legacy prefixes: the namespace directory
+carries the meaning (`twitch/track.txt`, not `twitch/twitchbot_track.txt`).
+Names are namespace-qualified relative paths resolved identically against
+the user tree and the bundle, which mirrors the same structure. Bare names
+remain for collision-free content (web htm — the URL namespace — and
+plain/ text), searched in those subdirectories of both trees. Help files
+live in a `help/` sub-namespace named for the command, decoupling them
+from the configurable help keyword and from command registration.
 
 App-owned stock ships in the bundle at `bundledir/templates/` exactly as
 today (populated at build time; see "Build Pipeline").
@@ -95,7 +101,7 @@ Implementation notes:
 | --- | --- | --- | --- |
 | Generated web templates | `ws-*.htm` | bundle | template editor + charts sync; hand-edit via copy-to-customize |
 | Chat/text templates | `twitchbot_*.txt`, `kickbot_*.txt`, `setlist-*.txt` | bundle | hand-edit via copy-to-customize |
-| Command registries | `twitchbot_{cmd}.txt`, `kickbot_{cmd}.txt` | bundle + user union | file presence registers command (see below) |
+| Command registries | `twitch/{cmd}.txt`, `kick/{cmd}.txt` | bundle + user union | file presence registers command (see below) |
 | Charts named templates | `synced/*.htm` | charts server | template editor on charts |
 | Infrastructure | `oauth/*.htm`, `whatsnowplaying-websocket.js`, `vendor/` | bundle | none (bundle-only) |
 | Guessgame | `guessgame/*` | bundle | existing override pattern |
@@ -113,13 +119,13 @@ chain with a stock/customized indicator.
 
 ### Model 2: filesystem-as-registry (twitch/kick commands)
 
-Today `update_twitchbot_commands()` scans templatedir for
-`twitchbot_*.txt`; each file's existence registers a chat command. This
-pattern is preserved with one change: the scan becomes a **union** of
-`bundledir/templates/` stock and `templatedir/twitch/`, per-name user file
-wins. Users still add `!mycommand` by dropping `twitchbot_mycommand.txt`
-into their twitch directory (or via a UI action). Help files
-(`*_help.txt`) pair by naming convention and ride the same union.
+`update_twitchbot_commands()` scans `twitch/*.txt` as a **union** of
+both trees; each file's stem registers a chat command (`twitch/track.txt`
+= `!track`), per-name user file wins. Users add `!mycommand` by dropping
+`twitch/mycommand.txt` into their tree (or via a UI action). Help lives
+in `twitch/help/{cmd}.txt` — the non-recursive registry glob can never
+see it, and the file is named for the command rather than the
+configurable help keyword.
 
 Semantic change: deleting a stock command's file no longer removes the
 command (the bundle copy resurfaces in the union). Disabling becomes a

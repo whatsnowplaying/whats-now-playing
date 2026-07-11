@@ -52,14 +52,25 @@ def test_resolve_in_root_rejects_symlink_escape(tmp_path):
 def test_resolve_in_root_legit(getroot):
     """plain names and subpaths inside the root resolve"""
     root = pathlib.Path(getroot) / "nowplaying" / "templates"
-    assert templatepaths.resolve_in_root(root, "twitchbot_track.txt")
+    assert templatepaths.resolve_in_root(root, "twitch/track.txt")
     assert templatepaths.resolve_in_root(root, "guessgame/guessgame.htm")
     assert templatepaths.resolve_in_root(root, "does-not-exist.txt") is None
 
 
-def test_chain_precedence_user_beats_synced_beats_bundle(chaincfg):
-    """user file wins over synced, synced wins over bundled stock"""
-    name = "twitchbot_track.txt"
+def test_chain_precedence_user_beats_bundle(chaincfg):
+    """a user file shadows bundled stock for the same qualified name"""
+    name = "twitch/track.txt"
+    bundled = templatepaths.resolve_template(chaincfg, name)
+    assert bundled and not templatepaths.is_user_template(chaincfg, bundled)
+
+    user_copy = chaincfg.templatedir / "twitch" / "track.txt"
+    user_copy.write_text("user version")
+    assert templatepaths.resolve_template(chaincfg, name) == user_copy
+
+
+def test_chain_precedence_bare_user_beats_synced_beats_bundle(chaincfg):
+    """bare names: user plain/ beats synced/ beats bundled plain/"""
+    name = "basic-plain.txt"
     bundled = templatepaths.resolve_template(chaincfg, name)
     assert bundled and not templatepaths.is_user_template(chaincfg, bundled)
 
@@ -67,32 +78,34 @@ def test_chain_precedence_user_beats_synced_beats_bundle(chaincfg):
     synced_copy.write_text("synced version")
     assert templatepaths.resolve_template(chaincfg, name) == synced_copy
 
-    user_copy = chaincfg.templatedir / "twitch" / name
+    user_copy = chaincfg.templatedir / "plain" / name
     user_copy.write_text("user version")
     assert templatepaths.resolve_template(chaincfg, name) == user_copy
 
 
 def test_resolve_configured_variants(chaincfg, tmp_path):
     """bare names, live absolute paths, and dangling absolute paths"""
+    assert templatepaths.resolve_configured(chaincfg, "twitch/track.txt")
+    # legacy flat name maps through classification
     assert templatepaths.resolve_configured(chaincfg, "twitchbot_track.txt")
     external = tmp_path / "external.txt"
     external.write_text("outside the chain")
     assert templatepaths.resolve_configured(chaincfg, str(external)) == external
     dangling = "/gone/away/twitchbot_track.txt"
     resolved = templatepaths.resolve_configured(chaincfg, dangling)
-    assert resolved and resolved.name == "twitchbot_track.txt"
+    assert resolved and resolved.name == "track.txt"
     assert templatepaths.resolve_configured(chaincfg, "") is None
     assert templatepaths.resolve_configured(chaincfg, None) is None
 
 
 def test_list_templates_union_and_shadowing(chaincfg):
     """union covers stock; a user override shadows the stock path"""
-    union = templatepaths.list_templates(chaincfg, "twitchbot_*.txt")
-    assert "twitchbot_track.txt" in union
-    override = chaincfg.templatedir / "twitch" / "twitchbot_track.txt"
+    union = templatepaths.list_templates(chaincfg, "twitch/*.txt")
+    assert "twitch/track.txt" in union
+    override = chaincfg.templatedir / "twitch" / "track.txt"
     override.write_text("mine")
-    union = templatepaths.list_templates(chaincfg, "twitchbot_*.txt")
-    assert union["twitchbot_track.txt"] == override
+    union = templatepaths.list_templates(chaincfg, "twitch/*.txt")
+    assert union["twitch/track.txt"] == override
 
 
 def test_list_display_templates_synced_first(chaincfg):
@@ -106,8 +119,10 @@ def test_list_display_templates_synced_first(chaincfg):
 @pytest.mark.parametrize(
     "name,expected",
     [
-        ("twitchbot_song.txt", "twitch/twitchbot_song.txt"),
-        ("kickbot_song.txt", "kick/kickbot_song.txt"),
+        ("twitchbot_song.txt", "twitch/song.txt"),
+        ("twitchbot_song_help.txt", "twitch/help/song.txt"),
+        ("kickbot_song.txt", "kick/song.txt"),
+        ("twitch/song.txt", "twitch/song.txt"),
         ("setlist-fancy.txt", "plain/setlist-fancy.txt"),
         ("basic-plain.txt", "plain/basic-plain.txt"),
         ("myoverlay.htm", "web/myoverlay.htm"),
@@ -121,10 +136,10 @@ def test_classify_template_name(name, expected):
 
 def test_customize_template(chaincfg):
     """stock copies into the user tree; existing copies are never overwritten"""
-    dest = templatepaths.customize_template(chaincfg, "twitchbot_track.txt")
-    assert dest == chaincfg.templatedir / "twitch" / "twitchbot_track.txt"
+    dest = templatepaths.customize_template(chaincfg, "twitch/track.txt")
+    assert dest == chaincfg.templatedir / "twitch" / "track.txt"
     dest.write_text("edited by user")
-    again = templatepaths.customize_template(chaincfg, "twitchbot_track.txt")
+    again = templatepaths.customize_template(chaincfg, "twitch/track.txt")
     assert again == dest
     assert dest.read_text() == "edited by user"
     assert templatepaths.customize_template(chaincfg, "no-such-template.txt") is None
@@ -138,5 +153,5 @@ def test_is_user_template(chaincfg):
     synced = chaincfg.templatedir / "synced" / "y.htm"
     synced.write_text("y")
     assert not templatepaths.is_user_template(chaincfg, synced)
-    bundled = templatepaths.resolve_template(chaincfg, "twitchbot_track.txt")
+    bundled = templatepaths.resolve_template(chaincfg, "twitch/track.txt")
     assert not templatepaths.is_user_template(chaincfg, bundled)

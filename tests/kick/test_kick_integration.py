@@ -36,13 +36,13 @@ def kick_templates(kick_integration_config):  # pylint: disable=redefined-outer-
     """Create test template files for integration tests."""
     config = kick_integration_config
     # Bootstrap fixture already sets up templatedir, just use it
-    config.templatedir.mkdir(parents=True, exist_ok=True)
+    (config.templatedir / "kick").mkdir(parents=True, exist_ok=True)
 
     templates = {
         "announce": config.templatedir / "kick_announce.txt",
-        "track": config.templatedir / "kickbot_track.txt",
-        "artist": config.templatedir / "kickbot_artist.txt",
-        "request": config.templatedir / "kickbot_request.txt",
+        "track": config.templatedir / "kick" / "track.txt",
+        "artist": config.templatedir / "kick" / "artist.txt",
+        "request": config.templatedir / "kick" / "request.txt",
     }
 
     templates["announce"].write_text("Now playing: {{artist}} - {{title}}")

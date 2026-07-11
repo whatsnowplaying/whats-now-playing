@@ -976,7 +976,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def on_obsws_template_button(self):
         """obsws template button clicked action"""
         if self.uihelp:
-            self.uihelp.template_picker_lineedit(self.widgets["obsws"].template_lineedit)
+            self.uihelp.template_picker_lineedit(
+                self.widgets["obsws"].template_lineedit, limit="plain/*.txt"
+            )
 
     @Slot()
     def on_html_template_button(self):

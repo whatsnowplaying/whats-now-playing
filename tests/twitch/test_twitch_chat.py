@@ -262,7 +262,7 @@ async def test_help_command_detection(bootstrap):
     # Should call _post_template with help template
     chat._post_template.assert_called_once()
     _, kwargs = chat._post_template.call_args
-    assert kwargs["templatein"] == "twitchbot_track_help.txt"
+    assert kwargs["templatein"] == "twitch/help/track.txt"
 
     stopevent.set()
 
@@ -289,7 +289,7 @@ async def test_help_command_case_insensitive(bootstrap):
         # Should call _post_template with help template
         chat._post_template.assert_called_with(
             msg=message,
-            templatein="twitchbot_track_help.txt",
+            templatein="twitch/help/track.txt",
             moremetadata={
                 "cmduser": "testuser",
                 "cmdchar": "!",
@@ -331,7 +331,7 @@ async def test_help_must_be_only_parameter(bootstrap):
         # Should use normal template, not help
         chat._post_template.assert_called_once()
         _, kwargs = chat._post_template.call_args
-        assert kwargs["templatein"] == "twitchbot_track.txt"
+        assert kwargs["templatein"] == "twitch/track.txt"
         chat._post_template.reset_mock()
 
     stopevent.set()
@@ -352,10 +352,10 @@ async def test_different_commands_help(bootstrap):
     user = MockUser("testuser")
 
     test_cases = [
-        ("!request help", "twitchbot_request_help.txt"),
-        ("!artistshortbio help", "twitchbot_artistshortbio_help.txt"),
-        ("!previoustrack help", "twitchbot_previoustrack_help.txt"),
-        ("!trackdetail help", "twitchbot_trackdetail_help.txt"),
+        ("!request help", "twitch/help/request.txt"),
+        ("!artistshortbio help", "twitch/help/artistshortbio.txt"),
+        ("!previoustrack help", "twitch/help/previoustrack.txt"),
+        ("!trackdetail help", "twitch/help/trackdetail.txt"),
     ]
 
     for command_text, expected_template in test_cases:
@@ -392,7 +392,7 @@ async def test_command_metadata_variables(bootstrap):
     _, kwargs = chat._post_template.call_args
 
     # Check template
-    assert kwargs["templatein"] == "twitchbot_song_help.txt"
+    assert kwargs["templatein"] == "twitch/help/song.txt"
 
     # Check metadata
     metadata = kwargs["moremetadata"]
@@ -426,7 +426,7 @@ async def test_configurable_help_keyword(bootstrap):
 
     chat._post_template.assert_called_once()
     _, kwargs = chat._post_template.call_args
-    assert kwargs["templatein"] == "twitchbot_track_aide.txt"
+    assert kwargs["templatein"] == "twitch/help/track.txt"
 
     chat._post_template.reset_mock()
 
@@ -436,6 +436,6 @@ async def test_configurable_help_keyword(bootstrap):
 
     chat._post_template.assert_called_once()
     _, kwargs = chat._post_template.call_args
-    assert kwargs["templatein"] == "twitchbot_track.txt"  # Normal template, not help
+    assert kwargs["templatein"] == "twitch/track.txt"  # Normal template, not help
 
     stopevent.set()
