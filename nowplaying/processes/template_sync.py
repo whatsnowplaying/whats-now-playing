@@ -326,6 +326,13 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
     written = _read_base_sync_manifest(synced_dir)
     keep: dict[str, str] = {}
     wanted: list[tuple[str, str]] = []
+    digests: dict[pathlib.Path, str] = {}
+
+    def _digest(path: pathlib.Path) -> str:
+        if path not in digests:
+            digests[path] = _sha256(path)
+        return digests[path]
+
     for stem, info in templates.items():
         url = info.get("url", "")
         expected = info.get("checksum", "")
@@ -333,12 +340,12 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
             continue
         name = f"{stem}.htm"
         current = nowplaying.utils.templatepaths.resolve_template(config, name)
-        if current and _sha256(current) == expected:
+        if current and _digest(current) == expected:
             if current.parent == synced_dir:
                 # bundled stock may have caught up (new app release);
                 # if so the synced copy is redundant — let cleanup drop it
                 bundled = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR / name
-                if not (bundled.exists() and _sha256(bundled) == expected):
+                if not (bundled.exists() and _digest(bundled) == expected):
                     keep[stem] = expected
             continue
         if current and nowplaying.utils.templatepaths.is_user_template(config, current):
@@ -369,11 +376,11 @@ async def _sync_base_htms(  # pylint: disable=too-many-branches,too-many-locals
         stale = synced_dir / f"{stem}.htm"
         if not stale.exists():
             continue
-        if _sha256(stale) != oldhash:
+        if _digest(stale) != oldhash:
             # not the file we wrote; leave it, stop tracking it
             continue
         bundled = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR / f"{stem}.htm"
-        if bundled.exists() and _sha256(bundled) == oldhash:
+        if bundled.exists() and _digest(bundled) == oldhash:
             stale.unlink()
             logging.debug("Base template sync: removed %s (bundle current)", stale.name)
         else:

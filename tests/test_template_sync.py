@@ -5,7 +5,6 @@
 
 import hashlib
 import json
-import pathlib
 import types
 
 import pytest
@@ -35,17 +34,13 @@ class _StubClient:  # pylint: disable=too-few-public-methods
 
 
 @pytest.fixture
-def syncdirs(tmp_path, getroot):
-    """fake config + user template tree"""
-    templatedir = tmp_path / "templates"
-    synced = templatedir / "synced"
+def syncdirs(bootstrap, tmp_path):
+    """conftest-bootstrapped config with an isolated user template tree"""
+    bootstrap.templatedir = tmp_path / "templates"
+    synced = bootstrap.templatedir / "synced"
     synced.mkdir(parents=True)
-    (templatedir / "web").mkdir()
-    config = types.SimpleNamespace(
-        templatedir=templatedir,
-        getbundledir=lambda: pathlib.Path(getroot) / "nowplaying",
-    )
-    return config, synced
+    (bootstrap.templatedir / "web").mkdir()
+    return bootstrap, synced
 
 
 def _wheel_hash(stem: str) -> str:
@@ -172,7 +167,7 @@ def test_safe_filename(name, expected):
 async def test_namedsync_transient_failure_keeps_previous(syncdirs, monkeypatch):
     """a transient base-download failure must not unlink a still-listed template"""
     config, synced = syncdirs
-    config.cparser = types.SimpleNamespace(value=lambda key, defaultValue=None: "k" * 32)
+    config.cparser.setValue("charts/charts_key", "k" * 32)
     monkeypatch.setattr(
         template_sync.nowplaying.utils.charts_api, "is_valid_api_key", lambda key: True
     )

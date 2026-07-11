@@ -5,7 +5,6 @@
 
 import pathlib
 import sys
-import types
 
 import pytest
 
@@ -13,15 +12,12 @@ from nowplaying.utils import templatepaths
 
 
 @pytest.fixture
-def chaincfg(tmp_path, getroot):
-    """config stub with a user tree and the repo bundle"""
-    templatedir = tmp_path / "templates"
+def chaincfg(bootstrap, tmp_path):
+    """conftest-bootstrapped config with an isolated user template tree"""
+    bootstrap.templatedir = tmp_path / "templates"
     for subdir in templatepaths.USER_LAYOUT_SUBDIRS:
-        (templatedir / subdir).mkdir(parents=True)
-    return types.SimpleNamespace(
-        templatedir=templatedir,
-        getbundledir=lambda: pathlib.Path(getroot) / "nowplaying",
-    )
+        (bootstrap.templatedir / subdir).mkdir(parents=True)
+    return bootstrap
 
 
 @pytest.mark.parametrize(

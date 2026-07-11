@@ -26,17 +26,17 @@ import json
 import logging
 import pathlib
 import shutil
-import sys
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
-    QSettings,
     QStandardPaths,
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
 import wnp_templates
 
+import nowplaying.upgrades.config
+import nowplaying.utils.config_json
 import nowplaying.utils.qt
 import nowplaying.utils.sqlite
 import nowplaying.utils.templatepaths
@@ -88,23 +88,18 @@ RETIRED_TEMPLATES = {
 # fallback for a dangling htm reference with no specific successor
 _DEFAULT_HTM = "ws-basic-text.htm"
 
-# every config key that may reference a template file
-_TEMPLATE_CONFIG_KEYS = (
-    "weboutput/htmltemplate",
-    "weboutput/artistbannertemplate",
-    "weboutput/artistlogotemplate",
-    "weboutput/artistthumbnailtemplate",
-    "weboutput/artistfanarttemplate",
-    "weboutput/gifwordstemplate",
-    "weboutput/requestertemplate",
-    "obsws/template",
-    "textoutput/txttemplate",
-    "twitchbot/announce",
-    "twitchbot/streamtitle",
-    "kick/announce",
-    "realtimesetlist/template",
-    "discord/template",
-    "discord/channel_template",
+# every config key that may reference a template file: the canonical
+# export/import path-key list plus keys it does not cover
+_TEMPLATE_CONFIG_KEYS = tuple(
+    sorted(
+        nowplaying.utils.config_json.PATH_KEYS
+        | {
+            "textoutput/txttemplate",
+            "twitchbot/streamtitle",
+            "realtimesetlist/template",
+            "discord/channel_template",
+        }
+    )
 )
 
 
@@ -281,16 +276,7 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
         working through the resolution chain.
         """
         carried_names = {pathlib.PurePath(entry).name for entry in self.carried}
-        if sys.platform == "win32":
-            fmt = QSettings.IniFormat
-        else:
-            fmt = QSettings.NativeFormat
-        settings = QSettings(
-            fmt,
-            QSettings.UserScope,
-            QCoreApplication.organizationName(),
-            QCoreApplication.applicationName(),
-        )
+        settings = nowplaying.upgrades.config.get_user_settings()
         for key in _TEMPLATE_CONFIG_KEYS:
             value = settings.value(key)
             if not value:

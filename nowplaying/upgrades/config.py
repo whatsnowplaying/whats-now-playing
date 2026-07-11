@@ -24,6 +24,22 @@ import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 from . import Version
 
 
+def get_user_settings() -> QSettings:
+    """Return the user-scope QSettings store for the current app identity.
+
+    Single home for the backend/format selection so every upgrade-time
+    settings consumer (UpgradeConfig, TemplateDirMigration) agrees with
+    what ConfigFile uses at runtime.
+    """
+    fmt = QSettings.IniFormat if sys.platform == "win32" else QSettings.NativeFormat
+    return QSettings(
+        fmt,
+        QSettings.UserScope,
+        QCoreApplication.organizationName(),
+        QCoreApplication.applicationName(),
+    )
+
+
 class UpgradeConfig:
     """methods to upgrade from old configs to new configs"""
 
@@ -36,13 +52,9 @@ class UpgradeConfig:
         self.testdir = testdir
         self.upgrade()
 
-    def _getconfig(self) -> QSettings:
-        return QSettings(
-            self.qsettingsformat,
-            QSettings.UserScope,
-            QCoreApplication.organizationName(),
-            QCoreApplication.applicationName(),
-        )
+    @staticmethod
+    def _getconfig() -> QSettings:
+        return get_user_settings()
 
     def _getoldconfig(self) -> QSettings:
         """Get QSettings for old app name for migration purposes"""
