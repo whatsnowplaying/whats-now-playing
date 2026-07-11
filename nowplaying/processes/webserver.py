@@ -56,6 +56,7 @@ import nowplaying.oauth2
 import nowplaying.preview.sampledata
 import nowplaying.twitch.oauth2
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 import nowplaying.webserver.shutdown
 from nowplaying.types import TrackMetadata
 
@@ -424,6 +425,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
                 break
             await asyncio.sleep(1)
+        # DB may have a cleared record (title=None) after a track ends; fall back to
+        # sample data in preview mode so the editor always shows something.
+        if preview and (not metadata or not metadata.get("title")):
+            metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
         if metadata:
             metadata.pop("dbid", None)
             if not websocket.closed:
@@ -748,11 +753,31 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get(
                     "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
                 ),
+                web.get(
+                    r"/editor/{template_name:.+\.htm}",
+                    self.static_handler.editor_template_handler,
+                ),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
             ]
         )
         return web.AppRunner(app)
+
+    @staticmethod
+    async def guessgame_file_handler(request: web.Request):
+        """Serve guessgame assets with per-file user-override fallback.
+
+        Resolves each file through the template chain (user guessgame/
+        overrides beat bundled stock), so customizing one file does not
+        hide the rest of the bundled set.
+        """
+        filename = request.match_info.get("filename", "")
+        resolved = nowplaying.utils.templatepaths.resolve_template(
+            request.app[CONFIG_KEY], f"guessgame/{filename}"
+        )
+        if not resolved:
+            return web.Response(status=404, text="Not found")
+        return web.FileResponse(resolved)
 
     async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
         """start our server"""
@@ -801,7 +826,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         # Add static file serving for vendor files and guessgame templates
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
         app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
-        app.router.add_static("/guessgame/", path=template_dir / "guessgame", name="guessgame")
+        app.router.add_static(
+            "/editor/vendor/", path=template_dir / "vendor", name="editor_vendor"
+        )
+        app.router.add_get("/guessgame/{filename}", self.guessgame_file_handler)
         metadb_path: str | None = None
         if self.testmode:
             metadb_path = app[CONFIG_KEY].cparser.value("testmode/metadbpath", defaultValue=None)

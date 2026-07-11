@@ -26,7 +26,7 @@ import nowplaying.upgrades.tufup_client
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 from nowplaying.upgrades.config import UpgradeConfig
 from nowplaying.upgrades.platform import PlatformDetector
-from nowplaying.upgrades.templates import UpgradeTemplates
+from nowplaying.upgrades.templates import TemplateDirMigration
 
 
 class ReleaseNotesDialog(QDialog):  # pylint: disable=too-few-public-methods
@@ -309,4 +309,4 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
         logging.error(error)
 
     UpgradeConfig()
-    UpgradeTemplates(bundledir=bundledir)
+    TemplateDirMigration(bundledir=bundledir)

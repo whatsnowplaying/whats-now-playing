@@ -24,6 +24,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 
 
 class OBSWebSocketHandler:  # pylint: disable=too-many-instance-attributes
@@ -113,8 +114,12 @@ class OBSWebSocketHandler:  # pylint: disable=too-many-instance-attributes
         if not metadata:
             return None
 
-        template = self.config.cparser.value("obsws/template")
-        if templatehandler := nowplaying.utils.TemplateHandler(filename=template):
+        template = nowplaying.utils.templatepaths.resolve_configured(
+            self.config, self.config.cparser.value("obsws/template")
+        )
+        if templatehandler := nowplaying.utils.TemplateHandler(
+            filename=str(template) if template else None
+        ):
             return templatehandler.generate(metadatadict=metadata)
 
         if clear:

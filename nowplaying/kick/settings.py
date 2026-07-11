@@ -3,7 +3,6 @@
 
 import logging
 import os
-import pathlib
 from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Slot  # pylint: disable=no-name-in-module
@@ -11,6 +10,7 @@ from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-
 
 import nowplaying.authwizard
 import nowplaying.config
+import nowplaying.utils.templatepaths
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
 import nowplaying.preview.textwindow
@@ -225,9 +225,7 @@ class KickChatSettings:
 
     @Slot(str)
     def _on_announce_template_selected(self, template_name: str) -> None:
-        self.widget.announce_lineedit.setText(
-            str(pathlib.Path(self.config.templatedir) / template_name)
-        )
+        self.widget.announce_lineedit.setText(template_name)
 
     @Slot()
     def on_add_button(self) -> None:
@@ -371,17 +369,12 @@ class KickChatSettings:
 
     def update_kickbot_commands(self, config: nowplaying.config.ConfigFile) -> None:
         """auto-discover kickbot templates and create default commands"""
-        template_dir = config.templatedir
-
-        if not template_dir.exists():
-            logging.debug("Template directory does not exist: %s", template_dir)
-            return
-
-        # Find all kickbot template files
-        kickbot_templates = list(template_dir.glob("kickbot_*.txt"))
+        kickbot_templates = list(
+            nowplaying.utils.templatepaths.list_templates(config, "kickbot_*.txt").values()
+        )
 
         if not kickbot_templates:
-            logging.debug("No kickbot templates found in %s", template_dir)
+            logging.debug("No kickbot templates found in template chain")
             return
 
         # Create default command entries for templates that don't have config entries

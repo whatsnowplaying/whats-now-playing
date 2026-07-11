@@ -3,11 +3,6 @@
 
 import pathlib
 
-from PySide6.QtCore import (  # pylint: disable=no-name-in-module
-    QCoreApplication,
-    QStandardPaths,
-)
-
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 
@@ -60,12 +55,7 @@ def test_get1(bootstrap):
     assert not config.initialized
     assert config.loglevel == "DEBUG"
     assert not config.notif
-    assert config.txttemplate == str(
-        pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(),
-        ).joinpath("templates", "basic-plain.txt")
-    )
+    assert config.txttemplate == "basic-plain.txt"
 
     config.cparser.setValue("settings/initialized", True)
     config.cparser.setValue("settings/loglevel", "invalid1")

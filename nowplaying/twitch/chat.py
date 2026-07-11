@@ -4,7 +4,6 @@
 
 import asyncio
 import datetime
-import fnmatch
 import logging
 import os
 import pathlib
@@ -17,11 +16,7 @@ from typing import Any
 import aiohttp  # pylint: disable=import-error
 import aiohttp.client_exceptions
 import jinja2  # pylint: disable=import-error
-from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
-    QCoreApplication,
-    QStandardPaths,
-    Slot,
-)
+from PySide6.QtCore import Slot  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QCheckBox,
     QDialog,
@@ -50,6 +45,7 @@ import nowplaying.trackrequests
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
     CHAT_OAUTH_STATUS_KEY,
@@ -76,11 +72,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
         self.guessgame = nowplaying.guessgame.GuessGame(config=config, stopevent=stopevent)
         self.metadb = nowplaying.db.MetadataDB()
-        self.templatedir = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
-        ).joinpath(QCoreApplication.applicationName(), "templates")
-        self.jinja2 = self.setup_jinja2(self.templatedir)
-        self.jinja2ann = self.setup_jinja2(self.templatedir)
+        template_search = nowplaying.utils.templatepaths.search_paths(config) if config else []
+        self.jinja2 = self.setup_jinja2(template_search)
+        self.jinja2ann = self.setup_jinja2(template_search)
         self.anndir: pathlib.Path | str | None = None
         self.twitch: Twitch = None
         self.twitchcustom = False
@@ -695,8 +689,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
     async def _send_game_announcement(self, metadata: dict):
         """Send game start announcement to chat"""
         try:
-            template_file = self.templatedir / "twitchbot_gamestart.txt"
-            if not template_file.exists():
+            template_file = nowplaying.utils.templatepaths.resolve_template(
+                self.config, "twitchbot_gamestart.txt"
+            )
+            if not template_file:
                 # Fallback default message if template doesn't exist
                 message = (
                     f"🎮 New guessing game started! Type !{metadata['guess_command']} "
@@ -724,8 +720,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             return variable
         return ""
 
-    def setup_jinja2(self, directory: str | pathlib.Path) -> jinja2.Environment:
-        """set up the environment"""
+    def setup_jinja2(
+        self, directory: str | pathlib.Path | list[pathlib.Path]
+    ) -> jinja2.Environment:
+        """set up the environment; a list of directories searches first-match-wins"""
         return jinja2.Environment(
             loader=jinja2.FileSystemLoader(directory), finalize=self._finalize, trim_blocks=True
         )
@@ -773,8 +771,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 logging.error("Announcement template is not defined.")
                 return
 
-            anntemplpath = pathlib.Path(anntemplstr)
-            if not anntemplpath.exists():
+            anntemplpath = nowplaying.utils.templatepaths.resolve_configured(
+                self.config, anntemplstr
+            )
+            if not anntemplpath:
                 logging.error("Announcement template %s does not exist.", anntemplstr)
                 return
 
@@ -870,8 +870,8 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 logging.debug("%s is not a file.", str(templatein))
                 return None
             return templatein.name
-        if not self.templatedir.joinpath(templatein).is_file():
-            logging.debug("%s is not a file.", templatein)
+        if not nowplaying.utils.templatepaths.resolve_template(self.config, templatein):
+            logging.debug("%s does not resolve to a template.", templatein)
             return None
         return templatein
 
@@ -978,9 +978,7 @@ class TwitchChatSettings:
 
     @Slot(str)
     def _on_announce_template_selected(self, template_name: str) -> None:
-        self.widget.announce_lineedit.setText(
-            str(pathlib.Path(self.config.templatedir) / template_name)
-        )
+        self.widget.announce_lineedit.setText(template_name)
 
     def _twitchbot_command_load(self, command=None, **kwargs):
         if not command:
@@ -1090,21 +1088,18 @@ class TwitchChatSettings:
     @staticmethod
     def update_twitchbot_commands(config):
         """make sure all twitchbot_ files have a config entry"""
-        filelist = os.listdir(config.templatedir)
+        filelist = nowplaying.utils.templatepaths.list_templates(config, "twitchbot_*.txt")
         existing = config.cparser.childGroups()
         alert = False
 
         if not config.cparser.value("twitchbot/chat", type=bool):
             anntemplstr = config.cparser.value("twitchbot/announce")
-            if not anntemplstr:
-                anntemplpath = config.templatedir.joinpath("twitchbot_track.txt")
-                if anntemplpath.exists():
-                    config.cparser.setValue("twitchbot/announce", str(anntemplpath))
+            if not anntemplstr and nowplaying.utils.templatepaths.resolve_template(
+                config, "twitchbot_track.txt"
+            ):
+                config.cparser.setValue("twitchbot/announce", "twitchbot_track.txt")
 
         for file in filelist:
-            if not fnmatch.fnmatch(file, "twitchbot_*.txt"):
-                continue
-
             # Skip help template files
             if "_help.txt" in file:
                 continue

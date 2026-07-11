@@ -3,13 +3,13 @@
 
 import asyncio
 import logging
-import pathlib
 from typing import Any
 
 import aiohttp
 import jinja2  # pylint: disable=import-error
 
 import nowplaying.db
+import nowplaying.utils.templatepaths
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
 
@@ -64,9 +64,11 @@ class TwitchBroadcaster:
         if not template_path_str:
             return
 
-        template_path = pathlib.Path(template_path_str)
-        if not template_path.is_file():
-            logging.warning("Stream title template not found: %s", template_path)
+        template_path = nowplaying.utils.templatepaths.resolve_configured(
+            self.config, template_path_str
+        )
+        if not template_path:
+            logging.warning("Stream title template not found: %s", template_path_str)
             return
 
         metadata = await self.metadb.read_last_meta_async()

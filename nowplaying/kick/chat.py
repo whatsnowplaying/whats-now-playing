@@ -9,7 +9,6 @@ from typing import Any
 
 import aiohttp
 import jinja2
-from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
@@ -17,6 +16,7 @@ import nowplaying.kick.constants
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 
 
 class KickChat:  # pylint: disable=too-many-instance-attributes
@@ -31,11 +31,9 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent or asyncio.Event()
         self.watcher: Any = None
         self.metadb: nowplaying.db.MetadataDB = nowplaying.db.MetadataDB()
-        self.templatedir = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
-        ).joinpath(QCoreApplication.applicationName(), "templates")
-        self.jinja2: jinja2.Environment = self.setup_jinja2(self.templatedir)
-        self.jinja2ann: jinja2.Environment = self.setup_jinja2(self.templatedir)
+        template_search = nowplaying.utils.templatepaths.search_paths(config) if config else []
+        self.jinja2: jinja2.Environment = self.setup_jinja2(template_search)
+        self.jinja2ann: jinja2.Environment = self.setup_jinja2(template_search)
         self.anndir: pathlib.Path | None = None
         self.oauth: nowplaying.kick.oauth2.KickOAuth2 | None = None
         self.tasks: set[asyncio.Task[Any]] = set()
@@ -241,8 +239,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             return variable
         return ""
 
-    def setup_jinja2(self, directory: pathlib.Path) -> jinja2.Environment:
-        """set up the jinja2 environment"""
+    def setup_jinja2(self, directory: pathlib.Path | list[pathlib.Path]) -> jinja2.Environment:
+        """set up the jinja2 environment; a list of directories searches first-match-wins"""
         return jinja2.Environment(
             loader=jinja2.FileSystemLoader(directory), finalize=self._finalize, trim_blocks=True
         )
@@ -320,8 +318,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             logging.debug("Kick announcement template is not defined.")
             return None
 
-        anntemplpath = pathlib.Path(anntemplstr)
-        if not anntemplpath.exists():
+        anntemplpath = nowplaying.utils.templatepaths.resolve_configured(self.config, anntemplstr)
+        if not anntemplpath:
             logging.error("Kick announcement template %s does not exist.", anntemplstr)
             return None
 

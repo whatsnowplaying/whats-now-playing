@@ -56,6 +56,9 @@ class MockTray:
     def cleanquit(self):
         """mock"""
 
+    def update_tray_icon(self):
+        """mock"""
+
     def fix_mixmode_menu(self):
         """mock"""
 

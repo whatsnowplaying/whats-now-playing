@@ -23,7 +23,7 @@
 > chat commands. Outputs to OBS and custom HTML overlays via a built-in web server
 > with WebSocket streaming and Jinja2 templating; browser source overlays update
 > the instant a track changes — no polling, no page refresh needed.
-> Ships with 42 OBS browser overlay templates spanning multiple effect categories:
+> Ships with 45 OBS browser overlay templates spanning multiple effect categories:
 > WebGL 3D GPU-rendered effects (spinning vinyl record textured with cover art,
 > animated EQ spectrum bars, cyberpunk scanline hologram with glitch text reveal,
 > floating particle field, rotating 3D cube textured with artist fanart, animated

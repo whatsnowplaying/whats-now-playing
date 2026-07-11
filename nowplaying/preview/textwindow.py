@@ -20,6 +20,7 @@ import nowplaying.db
 import nowplaying.preview.sampledata
 import nowplaying.types
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 
 
 class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
@@ -104,8 +105,14 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
     def populate_templates(self) -> None:
         """Fill the combobox with matching template files."""
-        templatedir = pathlib.Path(self.config.templatedir)
-        templates = sorted(templatedir.glob(self.glob_pattern))
+        templates = [
+            path
+            for _, path in sorted(
+                nowplaying.utils.templatepaths.list_templates(
+                    self.config, self.glob_pattern
+                ).items()
+            )
+        ]
 
         configured = self.config.cparser.value(self.config_key, defaultValue="")
         configured_name = pathlib.Path(configured).name if configured else ""
@@ -138,7 +145,7 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         name = self.template_combo.currentData()
         if not name:
             return None
-        return pathlib.Path(self.config.templatedir) / name
+        return nowplaying.utils.templatepaths.resolve_template(self.config, name)
 
     def _get_metadata(self) -> nowplaying.types.TrackMetadata:
         """Return live metadata if a track is playing and sample data not forced."""

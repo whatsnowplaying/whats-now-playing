@@ -140,7 +140,7 @@ overlays using the Jinja2 template engine. Supports:
 
 * Real-time updates via WebSockets
 * Full HTML, CSS, and JavaScript customization
-* 42 bundled OBS browser overlay templates, including 7 animated WebGL/canvas effects
+* 45 bundled OBS browser overlay templates, including animated WebGL/canvas effects
 * 13 full-screen [dynamic background templates](gallery/dynamic-backgrounds.md) that
   automatically adapt to cover art palette colors via WebGL
 * Access to all track metadata as template variables
@@ -222,6 +222,18 @@ Viewers can request tracks directly from Twitch chat:
 All outputs use the Jinja2 template engine with access to a rich set of
 [template variables](reference/templatevariables.md) including artist, title,
 album, artwork, biographies, MusicBrainz IDs, timestamps, and more.
+
+Built-in templates ship inside the application and are always current with
+the release — nothing needs to be copied into your Documents folder. Your
+templates directory holds only files you create or customize, organized
+into `twitch/`, `kick/`, `setlist/`, and `web/` subfolders; a file there
+overrides the built-in template of the same name. The template chooser in
+every settings page lists built-in and customized templates together, with
+a "Customize a Copy" button that places an editable copy in the right
+folder. Template updates and designs saved in the online template editor
+arrive automatically in the `synced/` folder, and upgrading from an older
+release reorganizes your existing templates automatically (originals are
+kept in `templates_pre6`).
 
 ### [Filters](settings/filter.md)
 

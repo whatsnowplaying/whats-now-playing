@@ -14,9 +14,9 @@ def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None
     """
     Generate SHA512 hash, normalizing line endings for text files.
 
-    This function is shared between tools/updateshas.py and
-    nowplaying/upgrades/templates.py to ensure consistent hashing
-    across platforms and use cases.
+    Must stay hash-compatible with the historical updateshas.json ledger:
+    the 6.0 template migration (nowplaying/upgrades/templates.py) compares
+    user files against ledger hashes generated with this normalization.
 
     Args:
         filename: Path to the file to checksum

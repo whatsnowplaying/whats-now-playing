@@ -983,7 +983,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """html template button clicked action"""
         if self.uihelp:
             self.uihelp.template_picker_lineedit(
-                self.widgets["webserver"].template_lineedit, limit="*.htm *.html"
+                self.widgets["webserver"].template_lineedit, limit=["*.htm", "*.html"]
             )
 
     @Slot()

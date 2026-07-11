@@ -2,3 +2,5 @@ properdocs==1.6.7
 mkdocs-materialx==10.1.8
 mike==2.2.0
 mkdocs-macros-plugin==1.5.0
+# docs/macros.py generates the template reference from wnp_templates
+wnp-templates @ https://github.com/whatsnowplaying/wnp-templates/releases/download/0.1.4/wnp_templates-0.1.4-py3-none-any.whl

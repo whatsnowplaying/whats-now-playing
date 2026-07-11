@@ -18,8 +18,10 @@ from aiohttp import web
 import nowplaying.db
 import nowplaying.hostmeta
 import nowplaying.preview.sampledata
+import nowplaying.template_colors
 import nowplaying.upgrades
 import nowplaying.utils
+import nowplaying.utils.templatepaths
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 from nowplaying.types import TrackMetadata
 
@@ -45,6 +47,9 @@ INDEXREFRESH = (
     "<body></body></html>\n"
 )
 MAX_FIELD_LENGTH = 1000
+
+
+_BUNDLED_TEMPLATE_DIR = nowplaying.template_colors.BUNDLED_TEMPLATE_DIR
 
 
 def validate_field_lengths(
@@ -121,9 +126,13 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
     async def gifwords_launch_htm_handler(self, request: web.Request):
         """handle gifwords output"""
         request.app[self.config_key].cparser.sync()
-        htmloutput = await self._htm_handler(
-            request, request.app[self.config_key].cparser.value("weboutput/gifwordstemplate")
+        template_path = nowplaying.utils.templatepaths.resolve_configured(
+            request.app[self.config_key],
+            request.app[self.config_key].cparser.value("weboutput/gifwordstemplate"),
         )
+        if not template_path:
+            return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
+        htmloutput = await self._htm_handler(request, str(template_path))
         return web.Response(content_type="text/html", text=htmloutput)
 
     async def requesterlaunch_htm_handler(self, request: web.Request):
@@ -136,15 +145,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         if not template_name or not template_name.endswith(".htm"):
             return web.Response(status=404, text="Template not found")
 
-        # Security: prevent directory traversal
-        if "/" in template_name or "\\" in template_name or ".." in template_name:
-            return web.Response(status=403, text="Invalid template name")
-
         config = request.app[self.config_key]
-        template_path = config.templatedir.joinpath(template_name)
-
-        if not template_path.exists():
-            logging.debug("Cannot load %s as a template", template_path.absolute())
+        # Resolve through the template chain: synced -> user -> bundled stock.
+        # Escape attempts are rejected per-root inside resolve_template().
+        template_path = nowplaying.utils.templatepaths.resolve_template(config, template_name)
+        if not template_path:
+            logging.debug("Cannot resolve %s as a template", template_name)
             return web.Response(status=404, text="Template not found")
 
         try:
@@ -173,9 +179,63 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
 
             templatehandler = nowplaying.utils.TemplateHandler(filename=str(template_path))
             htmloutput = templatehandler.generate(metadata)
+
+            stem = template_path.stem
+            hide_after = config.cparser.value(
+                f"weboutput/templates/{stem}/hide_after", type=int, defaultValue=0
+            )
+            repeat_anim = config.cparser.value(
+                f"weboutput/templates/{stem}/repeat_animation", type=int, defaultValue=0
+            )
+            delay_update = config.cparser.value(
+                f"weboutput/templates/{stem}/delay_update", type=int, defaultValue=0
+            )
+            timing_script = nowplaying.template_colors.make_timing_script(
+                hide_after, repeat_anim, delay_update
+            )
+            if timing_script:
+                if "</body>" in htmloutput:
+                    htmloutput = htmloutput.replace("</body>", timing_script + "</body>", 1)
+                else:
+                    logging.warning(
+                        "template %s has no </body>; appending timing script", template_name
+                    )
+                    htmloutput += timing_script
+
             return web.Response(content_type="text/html", text=htmloutput)
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("template_handler error for %s: %s", template_name, err)
+            return web.Response(status=500, text="Template error")
+
+    async def editor_template_handler(self, request: web.Request) -> web.Response:
+        """Serve a bundled stock template for the template editor.
+
+        Unlike template_handler, this always reads from the package's bundled
+        templates directory so the editor always sees the current stock template,
+        not the user's potentially-stale installed copy.  Sample data is always
+        injected so the editor has something to display.
+        """
+        template_name = request.match_info.get("template_name")
+        if not template_name or not template_name.endswith(".htm"):
+            return web.Response(status=404, text="Template not found")
+
+        template_path = nowplaying.utils.templatepaths.resolve_in_root(
+            _BUNDLED_TEMPLATE_DIR, template_name
+        )
+        if not template_path:
+            return web.Response(status=404, text="Template not found")
+
+        try:
+            config = request.app[self.config_key]
+            metadata = nowplaying.preview.sampledata.get_preview_metadata(config.getbundledir())
+            metadata.update(nowplaying.hostmeta.gethostmeta())
+            metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
+            metadata["session_id"] = str(uuid.uuid4())[:8]
+            templatehandler = nowplaying.utils.TemplateHandler(filename=str(template_path))
+            htmloutput = templatehandler.generate(metadata)
+            return web.Response(content_type="text/html", text=htmloutput)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.exception("editor_template_handler error for %s: %s", template_name, err)
             return web.Response(status=500, text="Template error")
 
     async def _htm_handler(
@@ -200,7 +260,11 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
     async def _metacheck_htm_handler(self, request: web.Request, cfgtemplate: str):  # pylint: disable=too-many-return-statements
         """handle static html files after checking metadata"""
         request.app[self.config_key].cparser.sync()
-        template = request.app[self.config_key].cparser.value(cfgtemplate)
+        configvalue = request.app[self.config_key].cparser.value(cfgtemplate)
+        template_path = nowplaying.utils.templatepaths.resolve_configured(
+            request.app[self.config_key], configvalue
+        )
+        template = str(template_path) if template_path else None
         source = os.path.basename(template) if template else "unknown"
         htmloutput = ""
         request.app[self.config_key].get()
@@ -214,7 +278,7 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 )
                 metadata.update(nowplaying.hostmeta.gethostmeta())
             metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
-            if not template or not os.path.exists(template):
+            if not template:
                 return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
             htmloutput = await self._htm_handler(request, template, metadata=metadata)
             return web.Response(content_type="text/html", text=htmloutput)
@@ -235,17 +299,9 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
 
         if not template:
             logging.warning(
-                "Template path missing or invalid for config key '%s', sending refresh",
+                "Config key '%s' value %r did not resolve to a template, sending refresh",
                 cfgtemplate,
-            )
-            return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
-
-        # Check if template file actually exists for better debugging
-        if not os.path.exists(template):
-            logging.error(
-                "Template file does not exist: '%s' (from config key '%s'), sending refresh",
-                template,
-                cfgtemplate,
+                configvalue,
             )
             return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
 
@@ -285,8 +341,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         if metadata:
             request.app[self.config_key].get()
             try:
+                txttemplate = nowplaying.utils.templatepaths.resolve_configured(
+                    request.app[self.config_key],
+                    request.app[self.config_key].cparser.value("textoutput/txttemplate"),
+                )
                 templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=request.app[self.config_key].cparser.value("textoutput/txttemplate")
+                    filename=str(txttemplate) if txttemplate else None
                 )
                 txtoutput = templatehandler.generate(metadata)
             except Exception as error:  # pylint: disable=broad-exception-caught

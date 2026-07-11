@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QWidget,
 )
 
+import nowplaying.utils.templatepaths
+
 # Background presets: (label, hex color)
 _BG_PRESETS: list[tuple[str, str]] = [
     ("Dark gray", "#1a1a1a"),
@@ -136,23 +138,26 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-m
         layout.addWidget(self.webview)
 
     def populate_templates(self) -> None:
-        """Fill the combobox with .htm files from the bundled template directory."""
-        templatedir = pathlib.Path(self.config.templatedir)
-        templates = sorted(templatedir.glob("*.htm"))
+        """Fill the combobox with .htm templates from the resolution chain."""
+        entries = nowplaying.utils.templatepaths.list_display_templates(self.config)
+        synced_templates = [path for _, path, synced in entries if synced]
+        stock_templates = [path for _, path, synced in entries if not synced]
 
         configured = self.config.cparser.value("weboutput/htmltemplate", defaultValue="")
         configured_name = pathlib.Path(configured).name if configured else ""
 
         self.template_combo.blockSignals(True)
         self.template_combo.clear()
-        if not templates:
+        if not stock_templates and not synced_templates:
             self.template_combo.addItem("(no templates found)", userData=None)
             self.template_combo.setEnabled(False)
             self.webview.setEnabled(False)
         else:
             self.template_combo.setEnabled(True)
             self.webview.setEnabled(True)
-            for tmpl in templates:
+            for tmpl in synced_templates:
+                self.template_combo.addItem(f"☁ {tmpl.stem}", userData=tmpl.name)
+            for tmpl in stock_templates:
                 self.template_combo.addItem(tmpl.name, userData=tmpl.name)
 
             # Preselect the currently configured template if it's in the list

@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <title>Guess Game</title>
     <style>
+        :root {
+            --wnp-gg-bg-active: rgba(30, 30, 50, 0.95);
+            --wnp-gg-bg-solved: rgba(30, 80, 30, 0.95);
+            --wnp-gg-bg-timeout: rgba(80, 30, 30, 0.95);
+            --wnp-gg-text: #ffffff;
+            --wnp-gg-label: #aaaaff;
+            --wnp-gg-timer: #ffaa00;
+            --wnp-gg-timer-low: #ff4444;
+            --wnp-gg-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -11,26 +22,26 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--wnp-gg-font-family);
             background: transparent;
-            color: #ffffff;
+            color: var(--wnp-gg-text);
             padding: 20px;
         }
 
         .game-container {
             max-width: 600px;
-            background: linear-gradient(135deg, rgba(30, 30, 50, 0.95), rgba(50, 30, 80, 0.95));
+            background: var(--wnp-gg-bg-active);
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
         }
 
         .game-container.solved {
-            background: linear-gradient(135deg, rgba(30, 80, 30, 0.95), rgba(50, 120, 50, 0.95));
+            background: var(--wnp-gg-bg-solved);
         }
 
         .game-container.timeout {
-            background: linear-gradient(135deg, rgba(80, 30, 30, 0.95), rgba(120, 50, 50, 0.95));
+            background: var(--wnp-gg-bg-timeout);
         }
 
         .game-container.hidden {
@@ -44,7 +55,7 @@
 
         .track-label {
             font-size: 14px;
-            color: #aaaaff;
+            color: var(--wnp-gg-label);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 8px;
@@ -54,7 +65,7 @@
             font-size: 32px;
             font-weight: bold;
             letter-spacing: 3px;
-            color: #ffffff;
+            color: var(--wnp-gg-text);
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             min-height: 48px;
             line-height: 48px;
@@ -63,13 +74,13 @@
         .timer {
             text-align: center;
             font-size: 28px;
-            color: #ffaa00;
+            color: var(--wnp-gg-timer);
             font-weight: bold;
             margin-top: 20px;
         }
 
         .timer.low {
-            color: #ff4444;
+            color: var(--wnp-gg-timer-low);
             animation: pulse 1s infinite;
         }
 
@@ -115,7 +126,7 @@
         <div class="status-message" id="statusMessage" style="display: none;"></div>
     </div>
 
-    <script src="guessgame-websocket.js"></script>
+    <script src="/guessgame/guessgame-websocket.js"></script>
     <script>
         let ws;
         const containerEl = document.getElementById('gameContainer');
@@ -204,8 +215,17 @@
             }
         }
 
-        // Connect on page load
-        connect();
+        // Connect on page load (skip WebSocket in preview mode)
+        if (window.location.search.includes('preview=1')) {
+            updateGameState({
+                status: 'active',
+                masked_track: '_ _ _ _ _ _',
+                masked_artist: '_ _ _ _ _ _',
+                time_remaining: 42
+            });
+        } else {
+            connect();
+        }
     </script>
 </body>
 </html>

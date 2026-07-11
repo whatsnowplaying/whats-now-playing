@@ -87,7 +87,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         )
         logging.info("configuration: %s", self.cparser.fileName())
         self.notif: bool = False
-        self.txttemplate: str = str(self.templatedir.joinpath("basic-plain.txt"))
+        self.txttemplate: str = "basic-plain.txt"
         self.loglevel: str = "DEBUG"
 
         self.plugins: dict[str, dict[str, ModuleType]] = {}
@@ -251,47 +251,28 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("obsws/port", "4455")
         settings.setValue("obsws/secret", "")
         settings.setValue("obsws/source", "")
-        settings.setValue("obsws/template", str(self.templatedir.joinpath("basic-plain.txt")))
+        settings.setValue("obsws/template", "basic-plain.txt")
 
-        settings.setValue(
-            "weboutput/htmltemplate", str(self.templatedir.joinpath("ws-frosted-glass.htm"))
-        )
-        settings.setValue(
-            "weboutput/artistbannertemplate",
-            str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")),
-        )
-        settings.setValue(
-            "weboutput/artistlogotemplate",
-            str(self.templatedir.joinpath("ws-artistlogo-nofade.htm")),
-        )
-        settings.setValue(
-            "weboutput/artistthumbnailtemplate",
-            str(self.templatedir.joinpath("ws-artistthumb-nofade.htm")),
-        )
-        settings.setValue(
-            "weboutput/artistfanarttemplate",
-            str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")),
-        )
-        settings.setValue(
-            "weboutput/gifwordstemplate", str(self.templatedir.joinpath("ws-gifwords-fade.htm"))
-        )
-        settings.setValue(
-            "weboutput/requestertemplate", str(self.templatedir.joinpath("ws-requests.htm"))
-        )
+        settings.setValue("weboutput/htmltemplate", "ws-frosted-glass.htm")
+        settings.setValue("weboutput/artistbannertemplate", "ws-artistbanner-nofade.htm")
+        settings.setValue("weboutput/artistlogotemplate", "ws-artistlogo-nofade.htm")
+        settings.setValue("weboutput/artistthumbnailtemplate", "ws-artistthumb-nofade.htm")
+        settings.setValue("weboutput/artistfanarttemplate", "ws-artistfanart-nofade.htm")
+        settings.setValue("weboutput/gifwordstemplate", "ws-gifwords-fade.htm")
+        settings.setValue("weboutput/requestertemplate", "ws-requests.htm")
         settings.setValue("weboutput/httpenabled", True)
         settings.setValue("weboutput/httpport", "8899")
         settings.setValue("weboutput/once", True)
 
-    def _defaults_chat_services(self, settings: QSettings) -> None:
+    @staticmethod
+    def _defaults_chat_services(settings: QSettings) -> None:
         """default values for chat services"""
         settings.setValue("twitchbot/enabled", False)
         settings.setValue("twitchbot/channel", "")
         settings.setValue("twitchbot/clientid", "")
         settings.setValue("twitchbot/secret", "")
         settings.setValue("twitchbot/streamtitle_enabled", False)
-        settings.setValue(
-            "twitchbot/streamtitle", str(self.templatedir.joinpath("twitchbot_streamtitle.txt"))
-        )
+        settings.setValue("twitchbot/streamtitle", "twitchbot_streamtitle.txt")
         settings.setValue("twitchbot/chat", False)
         settings.setValue("twitchbot/announce", "")
         settings.setValue("twitchbot/commandchar", "!")
@@ -305,7 +286,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("kick/clientid", "")
         settings.setValue("kick/secret", "")
         settings.setValue("kick/chat", False)
-        settings.setValue("kick/announce", str(self.templatedir.joinpath("kickbot_track.txt")))
+        settings.setValue("kick/announce", "kickbot_track.txt")
         settings.setValue("kick/announcedelay", 1.0)
 
     @staticmethod
