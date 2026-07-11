@@ -2707,17 +2707,23 @@ every launch.</p>
 </ol>
 <h2 id="directory-layout">Directory Layout<a class="headerlink" href="#directory-layout" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>Documents/WhatsNowPlaying/templates/      &lt;- user-owned content only
-    twitch/                               &lt;- twitchbot_*.txt overrides + user commands
-    kick/                                 &lt;- kickbot_*.txt overrides + user commands
+    twitch/                               &lt;- command templates (track.txt = !track)
+    twitch/help/                          &lt;- per-command help (help/track.txt)
+    kick/                                 &lt;- kick command templates
     plain/                                &lt;- generic text templates incl. setlist-*.txt
     web/                                  &lt;- ws-*.htm user overrides
     synced/                               &lt;- charts-managed named templates
     guessgame/                            &lt;- guessgame overrides (existing pattern)
 Documents/WhatsNowPlaying/templates_pre6/ &lt;- frozen archive created by migration
 </code></pre></div>
-<p>Files keep their current names inside the function subdirectories
-(<code>twitch/twitchbot_track.txt</code>, not <code>twitch/track.txt</code>) to minimize the
-config-migration surface.</p>
+<p>Command templates drop their legacy prefixes: the namespace directory
+carries the meaning (<code>twitch/track.txt</code>, not <code>twitch/twitchbot_track.txt</code>).
+Names are namespace-qualified relative paths resolved identically against
+the user tree and the bundle, which mirrors the same structure. Bare names
+remain for collision-free content (web htm — the URL namespace — and
+plain/ text), searched in those subdirectories of both trees. Help files
+live in a <code>help/</code> sub-namespace named for the command, decoupling them
+from the configurable help keyword and from command registration.</p>
 <p>App-owned stock ships in the bundle at <code>bundledir/templates/</code> exactly as
 today (populated at build time; see "Build Pipeline").</p>
 <h2 id="resolution-chain">Resolution Chain<a class="headerlink" href="#resolution-chain" title="Permanent link">&para;</a></h2>
@@ -2766,7 +2772,7 @@ today (populated at build time; see "Build Pipeline").</p>
 </tr>
 <tr>
 <td>Command registries</td>
-<td><code>twitchbot_{cmd}.txt</code>, <code>kickbot_{cmd}.txt</code></td>
+<td><code>twitch/{cmd}.txt</code>, <code>kick/{cmd}.txt</code></td>
 <td>bundle + user union</td>
 <td>file presence registers command (see below)</td>
 </tr>
@@ -2799,13 +2805,13 @@ today (populated at build time; see "Build Pipeline").</p>
 user subdirectory and repoint the config key. Pickers list the union of the
 chain with a stock/customized indicator.</p>
 <h3 id="model-2-filesystem-as-registry-twitchkick-commands">Model 2: filesystem-as-registry (twitch/kick commands)<a class="headerlink" href="#model-2-filesystem-as-registry-twitchkick-commands" title="Permanent link">&para;</a></h3>
-<p>Today <code>update_twitchbot_commands()</code> scans templatedir for
-<code>twitchbot_*.txt</code>; each file's existence registers a chat command. This
-pattern is preserved with one change: the scan becomes a <strong>union</strong> of
-<code>bundledir/templates/</code> stock and <code>templatedir/twitch/</code>, per-name user file
-wins. Users still add <code>!mycommand</code> by dropping <code>twitchbot_mycommand.txt</code>
-into their twitch directory (or via a UI action). Help files
-(<code>*_help.txt</code>) pair by naming convention and ride the same union.</p>
+<p><code>update_twitchbot_commands()</code> scans <code>twitch/*.txt</code> as a <strong>union</strong> of
+both trees; each file's stem registers a chat command (<code>twitch/track.txt</code>
+= <code>!track</code>), per-name user file wins. Users add <code>!mycommand</code> by dropping
+<code>twitch/mycommand.txt</code> into their tree (or via a UI action). Help lives
+in <code>twitch/help/{cmd}.txt</code> — the non-recursive registry glob can never
+see it, and the file is named for the command rather than the
+configurable help keyword.</p>
 <p>Semantic change: deleting a stock command's file no longer removes the
 command (the bundle copy resurfaces in the union). Disabling becomes a
 first-class toggle in the settings UI, backed by the existing
