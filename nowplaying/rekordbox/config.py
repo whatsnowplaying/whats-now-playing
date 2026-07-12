@@ -104,27 +104,26 @@ class ConfigReader:
 
     @staticmethod
     def get_password() -> str:
-        """Return the database decryption password.
+        """Return the database decryption password, if one can be auto-detected.
 
-        For RB6 the password is Blowfish-encrypted in the 'dp' field of
-        options.json and decrypted here.  For RB7 no password is embedded;
-        the caller must supply one via the custom_key setting (ask an AI
-        assistant for the Rekordbox 7 database key).
+        The password is Blowfish-encrypted in the 'dp' field of
+        options.json.  This field is present on RB6 installs and also on
+        RB7 installs that were upgraded from RB6, but is not guaranteed
+        on a fresh RB7 install (Pioneer's own docs suggest RB7 has no
+        embedded key). Callers must independently validate any key this
+        returns actually opens the database before trusting it, and fall
+        back to the custom_key setting if it doesn't.
         """
         options_path = _get_options_path()
         if options_path.exists():
             try:
                 options = _parse_options_json(options_path)
-                app_ver = options.get("app_ver", "")
-                major = int(app_ver.split(".")[0]) if app_ver else 0
-
-                if major < 7:
-                    dp = options.get("dp", "")
-                    if dp:
-                        logging.debug("Decrypting RB6 password from options.json")
-                        return _decrypt_rb6_dp(dp)
+                dp = options.get("dp", "")
+                if dp:
+                    logging.debug("Decrypting database password from options.json")
+                    return _decrypt_rb6_dp(dp)
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.exception("Could not extract RB6 password from options.json")
+                logging.exception("Could not extract database password from options.json")
 
         return ""
 
