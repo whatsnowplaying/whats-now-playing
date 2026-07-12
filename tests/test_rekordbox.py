@@ -2,6 +2,7 @@
 """Test Rekordbox plugin"""
 # pylint: disable=protected-access,missing-function-docstring,redefined-outer-name
 
+import base64
 import json
 import pathlib
 import sys
@@ -10,6 +11,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
+from Crypto.Cipher import Blowfish
 
 import nowplaying.rekordbox.config
 import nowplaying.rekordbox.database
@@ -17,6 +19,19 @@ import nowplaying.rekordbox.plugin
 import nowplaying.rekordbox.types
 
 _TEST_KEY = "0123456789abcdef" * 4  # valid 64-char hex key for tests
+
+
+def _make_dp_blob(plaintext: str) -> str:
+    """Encrypt plaintext the same way Rekordbox's options.json 'dp' field is
+    encrypted, so tests can exercise a real decrypt round-trip."""
+    magic = nowplaying.rekordbox.config._decode_secret(
+        nowplaying.rekordbox.config._RB6_MAGIC_BLOB
+    ).encode()
+    cipher = Blowfish.new(magic, Blowfish.MODE_ECB)
+    data = plaintext.encode("utf-8")
+    pad_len = 8 - (len(data) % 8)
+    padded = data + bytes([pad_len]) * pad_len
+    return base64.b64encode(cipher.encrypt(padded)).decode()
 
 
 class MockSqlCipher:  # pylint: disable=too-few-public-methods
@@ -238,8 +253,8 @@ def test_config_data_path_windows_fallback(monkeypatch):
     assert path.parts[-4:] == ("AppData", "Roaming", "Pioneer", "rekordbox")
 
 
-def test_config_get_password_rb7_fallback():
-    """get_password() returns empty string for RB7 (no embedded key)"""
+def test_config_get_password_missing_options_file():
+    """get_password() returns empty string when options.json doesn't exist"""
     config = nowplaying.rekordbox.config.ConfigReader()
     with unittest.mock.patch(
         "nowplaying.rekordbox.config._get_options_path",
@@ -249,8 +264,28 @@ def test_config_get_password_rb7_fallback():
     assert password == ""
 
 
-def test_config_get_password_rb7_from_options(tmp_path):
-    """get_password() returns empty string when options.json reports app_ver=7.x"""
+@pytest.mark.parametrize("app_ver", ["6.8.5", "7.1.4"])
+def test_config_get_password_decrypts_dp_regardless_of_version(tmp_path, app_ver):
+    """get_password() decrypts a valid 'dp' field regardless of app_ver.
+
+    RB6 and RB7 installs upgraded from RB6 both carry this field; only a
+    fresh RB7 install may lack it, which callers must handle separately
+    by validating the returned key actually opens the database.
+    """
+    options_file = tmp_path / "options.json"
+    options_file.write_text(
+        json.dumps({"options": [["dp", _make_dp_blob(_TEST_KEY)], ["app_ver", app_ver]]})
+    )
+    config = nowplaying.rekordbox.config.ConfigReader()
+    with unittest.mock.patch(
+        "nowplaying.rekordbox.config._get_options_path",
+        return_value=options_file,
+    ):
+        assert config.get_password() == _TEST_KEY
+
+
+def test_config_get_password_undecryptable_dp_returns_empty(tmp_path):
+    """get_password() gracefully returns empty string when 'dp' can't be decrypted"""
     options_file = tmp_path / "options.json"
     options_file.write_text(
         '{"options":[["db-path","/tmp/master.db"],["dp","ignored"],["app_ver","7.1.4"]]}'
@@ -359,8 +394,12 @@ def test_types_track_to_metadata():
 @pytest.mark.asyncio
 async def test_database_initialization(mock_database_path):
     config_reader = nowplaying.rekordbox.config.ConfigReader()
-    with unittest.mock.patch.object(
-        config_reader, "get_database_path", return_value=mock_database_path
+    mock_sq = MockSqlCipher()
+    with (
+        unittest.mock.patch.object(
+            config_reader, "get_database_path", return_value=mock_database_path
+        ),
+        unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sq),
     ):
         reader = nowplaying.rekordbox.database.DatabaseReader(config_reader)
         await reader.initialize(custom_key=_TEST_KEY)
@@ -424,6 +463,8 @@ async def test_database_get_random_track_from_playlist(mock_database_path):
 
 @pytest.mark.asyncio
 async def test_database_connection_failure(mock_database_path):
+    """A connection failure during the key-validation query now surfaces from
+    initialize() itself rather than later from get_recent_track()."""
     config_reader = nowplaying.rekordbox.config.ConfigReader()
     mock_sqlite = unittest.mock.Mock()
     mock_sqlite.connect.side_effect = Exception("Connection failed")
@@ -434,9 +475,8 @@ async def test_database_connection_failure(mock_database_path):
         unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite),
     ):
         reader = nowplaying.rekordbox.database.DatabaseReader(config_reader)
-        await reader.initialize(custom_key=_TEST_KEY)
         with pytest.raises(nowplaying.rekordbox.types.RekordboxError):
-            await reader.get_recent_track()
+            await reader.initialize(custom_key=_TEST_KEY)
 
 
 @pytest.mark.asyncio
@@ -567,6 +607,20 @@ async def test_plugin_get_random_track(rekordbox_plugin, mock_sqlcipher):
         random_track = await rekordbox_plugin.getrandomtrack("House Music")
         assert random_track == "Random Artist - Random Song"
         await rekordbox_plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_plugin_start_fails_when_key_does_not_validate(rekordbox_plugin):
+    """start() propagates a RekordboxError when the configured key can't
+    actually open the database, instead of silently reporting success."""
+    mock_sqlite = unittest.mock.Mock()
+    mock_sqlite.connect.side_effect = Exception("file is not a database")
+    with (
+        unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite),
+        pytest.raises(nowplaying.rekordbox.types.RekordboxError),
+    ):
+        await rekordbox_plugin.start(testmode=True)
+    assert not rekordbox_plugin._running
 
 
 @pytest.mark.asyncio

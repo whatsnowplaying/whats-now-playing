@@ -182,6 +182,8 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 await self.input.start()
             except Exception as error:  # pylint: disable=broad-except
                 logging.error("cannot start %s: %s", self.previousinput, error)
+                self.input = None
+                self.previousinput = None  # force input plugin restart on next iteration
                 return False
 
         await self._manage_earshot_plugin()
