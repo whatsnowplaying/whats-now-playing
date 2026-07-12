@@ -572,6 +572,8 @@ async def test_connect_to_device_failure_stops_keepalive(monkeypatch):
     writer = FailingWriter()
     _patch_open_connection(monkeypatch, reader, writer)
 
+    pre_tasks = set(asyncio.all_tasks())
+
     with pytest.raises(OSError):
         await manager.connect_to_device(device)
 
@@ -579,8 +581,9 @@ async def test_connect_to_device_failure_stops_keepalive(monkeypatch):
     assert not manager.connections
     assert not manager.tasks
     # The keepalive task must be fully finished before the exception
-    # propagates, not left pending in the event loop
-    leftover = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
+    # propagates, not left pending in the event loop; compare against a
+    # pre-call snapshot so unrelated runner tasks cannot flake this
+    leftover = [task for task in asyncio.all_tasks() - pre_tasks if not task.done()]
     assert not leftover
 
 
