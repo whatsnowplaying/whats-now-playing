@@ -73,15 +73,17 @@ class DatabaseReader:
         Raises:
             RekordboxError: If initialization fails
         """
+        no_key_error = RekordboxError(
+            "No database key configured. "
+            "Enter the Rekordbox 7 key in Settings → Input → Rekordbox. "
+            'Search: "what is the rekordbox 7 sqlcipher key for master.db"'
+        )
         try:
+            auto_detected = not custom_key
             self.encryption_key = custom_key or self.config_reader.get_password()
 
             if not self.encryption_key:
-                raise RekordboxError(
-                    "No database key configured. "
-                    "Enter the Rekordbox 7 key in Settings → Input → Rekordbox. "
-                    'Search: "what is the rekordbox 7 sqlcipher key for master.db"'
-                )
+                raise no_key_error
 
             # PRAGMA key cannot use parameterized queries (SQLCipher limitation).
             # Validate the key is a 64-character hex string before it reaches any SQL.
@@ -94,12 +96,44 @@ class DatabaseReader:
             if not self.database_path.exists():
                 raise RekordboxError(f"Rekordbox database not found: {self.database_path}")
 
+            try:
+                await asyncio.to_thread(self._validate_key_sync)
+            except RekordboxError as err:
+                self.encryption_key = None
+                if auto_detected:
+                    # Auto-detected key (e.g. a leftover RB6 'dp' field on an
+                    # upgraded install) didn't actually open the database -
+                    # this install needs a manually supplied key instead.
+                    raise no_key_error from err
+                raise
+
             logging.info("Successfully initialized Rekordbox database reader")
 
         except RekordboxError:
             raise
         except Exception as err:  # pylint: disable=broad-exception-caught
             raise RekordboxError(f"Failed to initialize database reader: {err}") from err
+
+    def _validate_key_sync(self) -> None:
+        """Confirm the configured key can actually decrypt the database.
+
+        PRAGMA key never fails on its own; SQLCipher only errors on the
+        first real query, so without this check a wrong key would surface
+        later as a confusing generic query failure instead of a clear,
+        actionable initialization error.
+        """
+
+        def _query() -> None:
+            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+                self._open_conn(conn)
+                conn.execute("SELECT count(*) FROM djmdContent").fetchone()
+
+        try:
+            nowplaying.utils.sqlite.retry_sqlite_operation(_query)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            raise RekordboxError(
+                f"Database key is incorrect or database is unreadable: {err}"
+            ) from err
 
     def _open_conn(self, conn):
         """Apply standard SQLCipher pragmas to an open connection."""
