@@ -19,6 +19,11 @@ MSG_SERVICE_ANNOUNCEMENT = 0x00000000
 MSG_REFERENCE = 0x00000001
 MSG_SERVICES_REQUEST = 0x00000002
 
+# Non-player StagelinQ processes that announce themselves on the network
+# but never offer the StateMap service (Engine OS runs several of these
+# alongside the actual player software)
+IGNORED_SOFTWARE_NAMES = {"OfflineAnalyzer", "SoundSwitchEmbedded"}
+
 # State message magic bytes
 STATE_SUBSCRIBE_MAGIC = b"\x00\x00\x07\xd2"
 STATE_EMIT_MAGIC = b"\x00\x00\x00\x00"

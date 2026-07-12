@@ -2,11 +2,16 @@
 """Tests for Denon DJ StagelinQ input plugin"""
 # pylint: disable=protected-access,redefined-outer-name
 
+import asyncio
+import struct
+
 import pytest
 
 import nowplaying.inputs.denon
 from nowplaying.denon import StagelinqError
+from nowplaying.denon.connection import ConnectionManager, _is_ignored_device
 from nowplaying.denon.protocol import StagelinqProtocol
+from nowplaying.denon.types import MSG_SERVICES_REQUEST, DenonDevice, DenonService
 
 
 @pytest.fixture
@@ -432,3 +437,201 @@ async def test_load_save_deckskip_settings(denon_plugin):
     assert not widget2.denon_deck2_skip_checkbox.isChecked()
     assert widget2.denon_deck3_skip_checkbox.isChecked()
     assert not widget2.denon_deck4_skip_checkbox.isChecked()
+
+
+class FakeStreamWriter:
+    """Minimal StreamWriter stand-in for connection tests"""
+
+    def __init__(self):
+        self.written = b""
+        self.closed = False
+
+    def write(self, data: bytes) -> None:
+        """collect written bytes"""
+        self.written += data
+
+    async def drain(self) -> None:
+        """no-op"""
+
+    def close(self) -> None:
+        """mark closed"""
+        self.closed = True
+
+    async def wait_closed(self) -> None:
+        """no-op"""
+
+    @staticmethod
+    def get_extra_info(_name: str) -> tuple[str, int]:
+        """fake socket address info"""
+        return ("127.0.0.1", 12345)
+
+
+def _make_test_device(token: bytes, software_name: str = "JP14") -> DenonDevice:
+    """Build a DenonDevice for connection tests"""
+    return DenonDevice(
+        ipaddr="127.0.0.1",
+        port=50010,
+        name="sc6000m",
+        software_name=software_name,
+        software_version="3.4.0",
+        token=token,
+    )
+
+
+def _patch_open_connection(monkeypatch, reader, writer):
+    """Patch asyncio.open_connection to return the given fake streams"""
+
+    async def fake_open_connection(_host, _port):
+        return reader, writer
+
+    monkeypatch.setattr(asyncio, "open_connection", fake_open_connection)
+
+
+@pytest.mark.asyncio
+async def test_connect_to_device_handles_device_services_request(monkeypatch):
+    """Test service reading survives the device sending its own ServicesRequest first"""
+    our_token = StagelinqProtocol.generate_token()
+    device_token = StagelinqProtocol.generate_token()
+    manager = ConnectionManager(our_token)
+    device = _make_test_device(device_token)
+
+    reader = asyncio.StreamReader()
+    # Device asks what services we offer before announcing its own
+    reader.feed_data(struct.pack(">I", MSG_SERVICES_REQUEST) + device_token)
+    reader.feed_data(StagelinqProtocol.create_service_announcement(device_token, "StateMap", 42))
+    reader.feed_data(StagelinqProtocol.create_reference_message(device_token, our_token))
+    writer = FakeStreamWriter()
+    _patch_open_connection(monkeypatch, reader, writer)
+
+    services = await manager.connect_to_device(device)
+
+    assert [(service.name, service.port) for service in services] == [("StateMap", 42)]
+    await manager.cleanup()
+
+
+@pytest.mark.asyncio
+async def test_connect_to_device_unknown_message_stops_cleanly(monkeypatch):
+    """Test an unknown message id stops parsing without discarding found services"""
+    our_token = StagelinqProtocol.generate_token()
+    device_token = StagelinqProtocol.generate_token()
+    manager = ConnectionManager(our_token)
+    device = _make_test_device(device_token)
+
+    reader = asyncio.StreamReader()
+    reader.feed_data(StagelinqProtocol.create_service_announcement(device_token, "StateMap", 42))
+    # Unknown message id: cannot be skipped safely, must stop parsing
+    reader.feed_data(struct.pack(">I", 0xDEADBEEF))
+    writer = FakeStreamWriter()
+    _patch_open_connection(monkeypatch, reader, writer)
+
+    services = await manager.connect_to_device(device)
+
+    assert [(service.name, service.port) for service in services] == [("StateMap", 42)]
+    await manager.cleanup()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_main_releases_connection(monkeypatch):
+    """Test disconnect_main cancels the keepalive task and closes the writer"""
+    our_token = StagelinqProtocol.generate_token()
+    device_token = StagelinqProtocol.generate_token()
+    manager = ConnectionManager(our_token)
+    device = _make_test_device(device_token)
+
+    reader = asyncio.StreamReader()
+    reader.feed_data(StagelinqProtocol.create_reference_message(device_token, our_token))
+    writer = FakeStreamWriter()
+    _patch_open_connection(monkeypatch, reader, writer)
+
+    await manager.connect_to_device(device)
+    assert manager.connections == [writer]
+    assert len(manager.tasks) == 1
+
+    await manager.disconnect_main()
+
+    assert writer.closed
+    assert not manager.connections
+    assert not manager.tasks
+
+
+@pytest.mark.asyncio
+async def test_connect_to_device_failure_stops_keepalive(monkeypatch):
+    """Test handshake failure cancels the keepalive task and closes the writer"""
+    our_token = StagelinqProtocol.generate_token()
+    device_token = StagelinqProtocol.generate_token()
+    manager = ConnectionManager(our_token)
+    device = _make_test_device(device_token)
+
+    class FailingWriter(FakeStreamWriter):
+        """Writer whose drain fails, aborting the handshake"""
+
+        async def drain(self) -> None:
+            raise OSError("handshake failure")
+
+    reader = asyncio.StreamReader()
+    writer = FailingWriter()
+    _patch_open_connection(monkeypatch, reader, writer)
+
+    with pytest.raises(OSError):
+        await manager.connect_to_device(device)
+
+    assert writer.closed
+    assert not manager.connections
+    assert not manager.tasks
+    # The keepalive task must be fully finished before the exception
+    # propagates, not left pending in the event loop
+    leftover = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
+    assert not leftover
+
+
+@pytest.mark.asyncio
+async def test_monitor_subscribes_expected_states(monkeypatch):
+    """Test StateMap subscriptions include audibility and device-identity states"""
+    our_token = StagelinqProtocol.generate_token()
+    device_token = StagelinqProtocol.generate_token()
+    manager = ConnectionManager(our_token)
+    device = _make_test_device(device_token)
+    service = DenonService(name="StateMap", port=50011)
+
+    reader = asyncio.StreamReader()
+    reader.feed_eof()
+    writer = FakeStreamWriter()
+    _patch_open_connection(monkeypatch, reader, writer)
+
+    await manager.monitor_state_changes(device, service, lambda state: None)
+
+    for state_path in [
+        "/Engine/Deck1/Track/ArtistName",
+        "/Engine/Deck4/ExternalMixerVolume",
+        "/Engine/Deck1/DeckIsMaster",
+        "/Client/Preferences/Player",
+        "/Engine/DeckCount",
+        "/Engine/Sync/Network/MasterStatus",
+        "/Mixer/CrossfaderPosition",
+    ]:
+        assert state_path.encode("utf-16be") in writer.written
+
+    await manager.cleanup()
+
+
+@pytest.mark.parametrize(
+    "software_name,expected",
+    [
+        ("JP14", False),
+        ("OfflineAnalyzer", True),
+        ("SoundSwitchEmbedded", True),
+    ],
+)
+def test_is_ignored_device(software_name, expected):
+    """Test non-player StagelinQ processes are filtered from discovery"""
+    token = StagelinqProtocol.generate_token()
+    device = _make_test_device(token, software_name=software_name)
+    assert _is_ignored_device(device) is expected
+
+
+def test_get_broadcast_addresses():
+    """Test broadcast address enumeration always includes the global broadcast"""
+    addresses = ConnectionManager._get_broadcast_addresses()
+    assert "255.255.255.255" in addresses
+    for address in addresses:
+        assert not address.startswith("127.")
