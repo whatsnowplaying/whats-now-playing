@@ -198,7 +198,7 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                                 return
 
                     # No devices found or connection failed, wait before trying again
-                    logging.debug("No devices found, retrying in 10 seconds...")
+                    logging.debug("No usable devices found, retrying in 10 seconds...")
                     await asyncio.sleep(10.0)
 
                 except Exception as err:  # pylint: disable=broad-exception-caught
@@ -229,7 +229,9 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     "StateMap service not available on device (found %d other services)",
                     len(services),
                 )
-                # Connection manager will handle cleanup
+                # Release the connection and its keepalive task; otherwise
+                # every failed attempt leaks a socket and a 250ms timer
+                await self.connection_manager.disconnect_main()
                 return False
 
             # Successfully connected
