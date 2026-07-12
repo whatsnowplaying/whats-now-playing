@@ -204,7 +204,7 @@
 &lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: palette(alternate-base); border: 1px solid palette(mid); border-radius: 4px; padding: 6px;</string>
+      <string notr="true">background-color: rgba(128, 128, 128, 40); border: 1px solid rgba(128, 128, 128, 110); border-radius: 4px; padding: 6px;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
