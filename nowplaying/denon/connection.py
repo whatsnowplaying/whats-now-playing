@@ -12,17 +12,26 @@ import logging
 import socket
 from collections.abc import Callable
 
+import netifaces
+
 import nowplaying.version  # pylint: disable=no-member,import-error,no-name-in-module
 
 from .protocol import StagelinqProtocol
 from .types import (
     DISCOVERY_PORT,
+    IGNORED_SOFTWARE_NAMES,
     MSG_REFERENCE,
     MSG_SERVICE_ANNOUNCEMENT,
+    MSG_SERVICES_REQUEST,
     DenonDevice,
     DenonService,
     DenonState,
 )
+
+
+def _is_ignored_device(device: DenonDevice) -> bool:
+    """True for non-player StagelinQ processes that never offer StateMap"""
+    return device.software_name in IGNORED_SOFTWARE_NAMES
 
 
 class ConnectionManager:
@@ -34,6 +43,8 @@ class ConnectionManager:
         self.state_service: DenonService | None = None
         self.connections: list[asyncio.StreamWriter] = []
         self.tasks: list[asyncio.Task] = []
+        self._main_writer: asyncio.StreamWriter | None = None
+        self._main_ref_task: asyncio.Task | None = None
 
     async def discover_devices(self, timeout: float) -> list[DenonDevice]:
         """Discover StagelinQ devices on the network"""
@@ -59,8 +70,16 @@ class ConnectionManager:
                         and device.token not in found_tokens
                         and device.token != self.manager.token
                     ):
-                        devices.append(device)
                         found_tokens.add(device.token)
+                        if _is_ignored_device(device):
+                            logging.debug(
+                                "Ignoring non-player StagelinQ service: %s (%s) at %s",
+                                device.name,
+                                device.software_name,
+                                addr[0],
+                            )
+                        else:
+                            devices.append(device)
                 except Exception as err:  # pylint: disable=broad-exception-caught
                     logging.debug("Failed to parse discovery message from %s: %s", addr, err)
 
@@ -96,13 +115,10 @@ class ConnectionManager:
         """Connect to device and get available services"""
         reader, writer = await asyncio.open_connection(device.ipaddr, device.port)
 
+        # Start reference message task to keep the connection alive
+        ref_task = asyncio.create_task(self._send_reference_messages(writer, device.token))
+
         try:
-            self.connections.append(writer)
-
-            # Start reference message task
-            ref_task = asyncio.create_task(self._send_reference_messages(writer, device.token))
-            self.tasks.append(ref_task)
-
             # Send services request
             services_msg = StagelinqProtocol.create_services_request(self.token)
             writer.write(services_msg)
@@ -136,25 +152,68 @@ class ConnectionManager:
                         if service:
                             services.append(service)
 
+                    elif msg_id == MSG_SERVICES_REQUEST:
+                        # Devices are peers: they ask what services we offer.
+                        # Consume the device's token and keep reading; we
+                        # offer no services of our own.
+                        await reader.readexactly(16)
+
                     elif msg_id == MSG_REFERENCE:
                         # End of service list
                         await reader.readexactly(40)  # Skip reference message data
                         break
 
+                    else:
+                        # Unknown message: length is unknowable, so the rest
+                        # of the stream cannot be parsed safely
+                        logging.warning(
+                            "Unknown StagelinQ message id 0x%08x from %s; "
+                            "stopping service read with %d service(s)",
+                            msg_id,
+                            device.ipaddr,
+                            len(services),
+                        )
+                        break
+
                 except asyncio.IncompleteReadError:
                     break
 
+            # Hand the live connection and its keepalive to the manager;
+            # callers that decide not to use this device must call
+            # disconnect_main() to release them
+            self._main_writer = writer
+            self._main_ref_task = ref_task
+            self.connections.append(writer)
+            self.tasks.append(ref_task)
             return services
 
         except Exception:
-            # Ensure writer is closed on any failure
+            # Ensure keepalive is stopped and writer is closed on any failure
+            ref_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ref_task
             with contextlib.suppress(Exception):
                 writer.close()
                 await writer.wait_closed()
-            # Remove from connections list if it was added
-            if writer in self.connections:
-                self.connections.remove(writer)
             raise
+
+    async def disconnect_main(self) -> None:
+        """Close the main device connection and stop its keepalive task"""
+        if self._main_ref_task:
+            self._main_ref_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._main_ref_task
+            if self._main_ref_task in self.tasks:
+                self.tasks.remove(self._main_ref_task)
+            self._main_ref_task = None
+
+        if self._main_writer:
+            with contextlib.suppress(Exception):
+                self._main_writer.close()
+                await self._main_writer.wait_closed()
+            if self._main_writer in self.connections:
+                self.connections.remove(self._main_writer)
+            self._main_writer = None
 
     async def monitor_state_changes(  # pylint: disable=too-many-locals
         self,
@@ -189,11 +248,27 @@ class ConnectionManager:
                         f"/Engine/Deck{deck}/Track/Genre",
                         f"/Engine/Deck{deck}/Track/SongLoaded",
                         f"/Mixer/CH{deck}faderPosition",
+                        # Effective per-deck audibility: Denon mixers and
+                        # all-in-one controllers push fader x crossfader into
+                        # the deck's own StateMap; standalone players never
+                        # emit /Mixer/ states at all
+                        f"/Engine/Deck{deck}/ExternalMixerVolume",
+                        f"/Engine/Deck{deck}/DeckIsMaster",
                     ]
                 )
 
             # Also subscribe to crossfader position
             state_paths.append("/Mixer/CrossfaderPosition")
+
+            # Device-level states: DJ-assigned player number (deck identity
+            # across multiple players), deck count, and sync-master status
+            state_paths.extend(
+                [
+                    "/Client/Preferences/Player",
+                    "/Engine/DeckCount",
+                    "/Engine/Sync/Network/MasterStatus",
+                ]
+            )
 
             for state_path in state_paths:
                 sub_msg = StagelinqProtocol.create_state_subscription(state_path)
@@ -230,6 +305,21 @@ class ConnectionManager:
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.debug("Announcement error: %s", err)
 
+    @staticmethod
+    def _get_broadcast_addresses() -> list[str]:
+        """Get broadcast addresses for all IPv4 interfaces plus the global broadcast"""
+        addresses = {"255.255.255.255"}
+        try:
+            # pylint: disable=no-member
+            for interface in netifaces.interfaces():
+                for addr_info in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):
+                    broadcast = addr_info.get("broadcast")
+                    if broadcast and not addr_info.get("addr", "").startswith("127."):
+                        addresses.add(broadcast)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("Failed to enumerate interface broadcast addresses")
+        return sorted(addresses)
+
     async def _announce_self(self) -> None:
         """Send UDP announcement to let devices know about us"""
         try:
@@ -240,10 +330,14 @@ class ConnectionManager:
                 nowplaying.version.__VERSION__,  # pylint:disable=no-member
             )
 
-            # Send to broadcast address
+            # The global broadcast address only goes out the default-route
+            # interface, so also send to each interface's subnet broadcast
+            # to reach devices on non-default networks
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.sendto(message, ("255.255.255.255", DISCOVERY_PORT))
+            for address in self._get_broadcast_addresses():
+                with contextlib.suppress(OSError):
+                    sock.sendto(message, (address, DISCOVERY_PORT))
             sock.close()
 
         except Exception as err:  # pylint: disable=broad-exception-caught
@@ -286,3 +380,5 @@ class ConnectionManager:
         self.connections.clear()
         self.device = None
         self.state_service = None
+        self._main_writer = None
+        self._main_ref_task = None
