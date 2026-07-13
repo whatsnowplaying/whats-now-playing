@@ -4,7 +4,7 @@ aiohttp==3.13.5
 httpx[http2]==0.28.1
 aiosqlite==0.22.1
 chardet<8 # required by requests
-charset-normalizer==3.4.7
+charset-normalizer==3.4.9
 defusedxml==0.7.1
 discord.py==2.7.1
 diskcache==5.6.3
