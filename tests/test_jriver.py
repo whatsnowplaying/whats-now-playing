@@ -9,12 +9,12 @@ from unittest.mock import MagicMock, patch
 import aiohttp
 import pytest
 import pytest_asyncio
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 import nowplaying.inputs.jriver  # pylint: disable=import-error,no-name-in-module
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="function")
 async def jriver_plugin_with_session():
     """Create JRiver plugin with real aiohttp session for testing"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
@@ -268,7 +268,7 @@ async def test_test_connection_success():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Alive",
             body="""<Response Status="OK">
@@ -292,7 +292,7 @@ async def test_test_connection_wrong_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Alive",
             body="""<Response Status="OK">
@@ -315,7 +315,7 @@ async def test_test_connection_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get("http://localhost:52199/MCWS/v1/Alive", status=404)
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
@@ -333,9 +333,9 @@ async def test_test_connection_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive", exception=Exception("Connection failed")
+            "http://localhost:52199/MCWS/v1/Alive", exception=True
         )
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
@@ -355,7 +355,7 @@ async def test_authenticate_success():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
         mock_resp.get(
             url,
@@ -395,7 +395,7 @@ async def test_authenticate_no_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
         mock_resp.get(
             url,
@@ -422,7 +422,7 @@ async def test_authenticate_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
         mock_resp.get(url, status=401)
 
@@ -449,8 +449,8 @@ async def test_getplayingtrack_success(jriver_plugin_with_session):  # pylint: d
     plugin.base_url = "http://localhost:52199/MCWS/v1"
     plugin.token = "testtoken"
 
-    with aioresponses() as mock_resp:
-        # aioresponses matches the URL pattern, including query parameters
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        # aiointercept matches the URL pattern, including query parameters
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken",
             body="""<Response Status="OK">
@@ -479,7 +479,7 @@ async def test_getplayingtrack_minimal_data():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Playback/Info",
             body="""
@@ -508,7 +508,7 @@ async def test_getplayingtrack_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", status=500)
 
         result = await plugin.getplayingtrack()
@@ -526,9 +526,9 @@ async def test_getplayingtrack_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", exception=Exception("Network error")
+            "http://localhost:52199/MCWS/v1/Playback/Info", exception=True
         )
 
         result = await plugin.getplayingtrack()
@@ -546,7 +546,7 @@ async def test_getplayingtrack_parse_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", body="invalid xml content")
 
         result = await plugin.getplayingtrack()
@@ -564,7 +564,7 @@ async def test_getplayingtrack_with_xml_declaration():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         # This simulates the actual JRiver response format with XML declaration
         jriver_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <Response Status="OK">
@@ -600,8 +600,8 @@ async def test_getplayingtrack_with_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        # aioresponses matches the exact URL including query parameters
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        # aiointercept matches the exact URL including query parameters
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123",
             body='<Response Status="OK"></Response>',
@@ -622,8 +622,8 @@ async def test_getplayingtrack_without_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        # aioresponses matches the exact URL without query parameters
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        # aiointercept matches the exact URL without query parameters
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Playback/Info",
             body='<Response Status="OK"></Response>',
@@ -644,8 +644,8 @@ async def test_getplayingtrack_with_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        # aioresponses matches the exact URL including query parameters
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        # aiointercept matches the exact URL including query parameters
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/Playback/Info?AccessKey=myaccesskey123",
             body='<Response Status="OK"></Response>',
@@ -667,8 +667,8 @@ async def test_getplayingtrack_with_token_and_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        # aioresponses matches the exact URL including query parameters
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        # aiointercept matches the exact URL including query parameters
         # Note: order of parameters in URL may vary, so we test the call was made correctly
         url = "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&AccessKey=myaccesskey123"  # pylint: disable=line-too-long
         mock_resp.get(url, body='<Response Status="OK"></Response>')
@@ -688,7 +688,7 @@ async def test_get_filename_with_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&AccessKey=myaccesskey123"
         mock_resp.get(
             url,
@@ -714,7 +714,7 @@ async def test_get_filename_with_token_and_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = (
             "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&"
             "Token=mytoken123&AccessKey=myaccesskey123"
@@ -865,7 +865,7 @@ async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disa
     plugin.base_url = "http://localhost:52199/MCWS/v1"
     plugin.token = "testtoken"
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&Token=testtoken",
             body="""<Response Status="OK">
@@ -889,7 +889,7 @@ async def test_get_filename_not_found():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
             body="""
@@ -915,7 +915,7 @@ async def test_get_filename_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get("http://localhost:52199/MCWS/v1/File/GetInfo?File=12345", status=404)
 
         result = await plugin._get_filename("12345")  # pylint: disable=protected-access
@@ -933,7 +933,7 @@ async def test_get_filename_mpl_format():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         # This simulates the actual JRiver MPL response format
         mpl_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <MPL Version="2.0" Title="MCWS - Files - 6096105472" PathSeparator="/">
@@ -963,7 +963,7 @@ async def test_get_filename_response_format():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         # Test the old Response format for backwards compatibility
         response_format = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <Response Status="OK">
@@ -990,16 +990,10 @@ async def test_test_connection_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive",
-            exception=aiohttp.ClientConnectorError(
-                connection_key=None, os_error=OSError("Connection refused")
-            ),
-        )
-
-        result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert not result
+    # No mock registered: nothing is listening on this port, so aiohttp raises a
+    # genuine ClientConnectorError, exercising that specific except branch.
+    result = await plugin._test_connection()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
@@ -1013,8 +1007,8 @@ async def test_test_connection_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/Alive", exception=aiohttp.ClientTimeout())
+    async with aiointercept(mock_external_urls=True) as mock_resp:
+        mock_resp.get("http://localhost:52199/MCWS/v1/Alive", exception=True)
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
         assert not result
@@ -1033,17 +1027,10 @@ async def test_authenticate_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(
-            url,
-            exception=aiohttp.ClientConnectorError(
-                connection_key=None, os_error=OSError("Connection refused")
-            ),
-        )
-
-        result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert not result
+    # No mock registered: nothing is listening on this port, so aiohttp raises a
+    # genuine ClientConnectorError, exercising that specific except branch.
+    result = await plugin._authenticate()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
@@ -1059,9 +1046,9 @@ async def test_authenticate_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(url, exception=aiohttp.ClientTimeout())
+        mock_resp.get(url, exception=True)
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
         assert not result
@@ -1078,16 +1065,10 @@ async def test_getplayingtrack_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info",
-            exception=aiohttp.ClientConnectorError(
-                connection_key=None, os_error=OSError("Connection refused")
-            ),
-        )
-
-        result = await plugin.getplayingtrack()
-        assert result is None
+    # No mock registered: nothing is listening on this port, so aiohttp raises a
+    # genuine ClientConnectorError, exercising that specific except branch.
+    result = await plugin.getplayingtrack()
+    assert result is None
 
     await plugin.session.close()
 
@@ -1101,9 +1082,9 @@ async def test_getplayingtrack_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", exception=aiohttp.ClientTimeout()
+            "http://localhost:52199/MCWS/v1/Playback/Info", exception=True
         )
 
         result = await plugin.getplayingtrack()
@@ -1121,7 +1102,7 @@ async def test_getplayingtrack_xml_none_safety():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         # Return completely empty response that will cause XML parsing error
         mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", body="")
 
@@ -1141,16 +1122,10 @@ async def test_get_filename_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
-            exception=aiohttp.ClientConnectorError(
-                connection_key=None, os_error=OSError("Connection refused")
-            ),
-        )
-
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result is None
+    # No mock registered: nothing is listening on this port, so aiohttp raises a
+    # genuine ClientConnectorError, exercising that specific except branch.
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result is None
 
     await plugin.session.close()
 
@@ -1164,10 +1139,10 @@ async def test_get_filename_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as mock_resp:
+    async with aiointercept(mock_external_urls=True) as mock_resp:
         mock_resp.get(
             "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
-            exception=aiohttp.ClientTimeout(),
+            exception=True,
         )
 
         result = await plugin._get_filename("12345")  # pylint: disable=protected-access
@@ -1188,7 +1163,7 @@ async def test_auto_recovery_success():
         patch.object(plugin, "_test_connection", return_value=True),
         patch.object(plugin, "_authenticate", return_value=True),
     ):
-        with aioresponses() as mock_resp:
+        async with aiointercept(mock_external_urls=True) as mock_resp:
             mock_resp.get(
                 "http://localhost:52199/MCWS/v1/Playback/Info",
                 body='<Response><Item Name="Artist">Test Artist</Item>'
@@ -1230,18 +1205,12 @@ async def test_connection_error_sets_failed_state():
     plugin.session = aiohttp.ClientSession()
     plugin._connection_failed = False  # pylint: disable=protected-access
 
-    with aioresponses() as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info",
-            exception=aiohttp.ClientConnectorError(
-                connection_key=None, os_error=OSError("Connection refused")
-            ),
-        )
+    # No mock registered: nothing is listening on this port, so aiohttp raises a
+    # genuine ClientConnectorError, exercising that specific except branch.
+    result = await plugin.getplayingtrack()
 
-        result = await plugin.getplayingtrack()
-
-        assert result is None
-        assert plugin._connection_failed  # pylint: disable=protected-access
+    assert result is None
+    assert plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 
