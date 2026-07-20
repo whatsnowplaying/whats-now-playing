@@ -10,6 +10,7 @@ import aiohttp
 import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
+from utils_aiohttp import simulate_client_exception
 
 import nowplaying.inputs.jriver  # pylint: disable=import-error,no-name-in-module
 
@@ -990,10 +991,12 @@ async def test_test_connection_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    # No mock registered: nothing is listening on this port, so aiohttp raises a
-    # genuine ClientConnectorError, exercising that specific except branch.
-    result = await plugin._test_connection()  # pylint: disable=protected-access
-    assert not result
+    connector_error = aiohttp.ClientConnectorError(
+        connection_key=None, os_error=OSError("Connection refused")
+    )
+    with simulate_client_exception(connector_error):
+        result = await plugin._test_connection()  # pylint: disable=protected-access
+        assert not result
 
     await plugin.session.close()
 
@@ -1007,9 +1010,7 @@ async def test_test_connection_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/Alive", exception=True)
-
+    with simulate_client_exception(TimeoutError("Request timed out")):
         result = await plugin._test_connection()  # pylint: disable=protected-access
         assert not result
 
@@ -1027,10 +1028,12 @@ async def test_authenticate_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    # No mock registered: nothing is listening on this port, so aiohttp raises a
-    # genuine ClientConnectorError, exercising that specific except branch.
-    result = await plugin._authenticate()  # pylint: disable=protected-access
-    assert not result
+    connector_error = aiohttp.ClientConnectorError(
+        connection_key=None, os_error=OSError("Connection refused")
+    )
+    with simulate_client_exception(connector_error):
+        result = await plugin._authenticate()  # pylint: disable=protected-access
+        assert not result
 
     await plugin.session.close()
 
@@ -1046,10 +1049,7 @@ async def test_authenticate_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(url, exception=True)
-
+    with simulate_client_exception(TimeoutError("Request timed out")):
         result = await plugin._authenticate()  # pylint: disable=protected-access
         assert not result
 
@@ -1065,10 +1065,12 @@ async def test_getplayingtrack_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    # No mock registered: nothing is listening on this port, so aiohttp raises a
-    # genuine ClientConnectorError, exercising that specific except branch.
-    result = await plugin.getplayingtrack()
-    assert result is None
+    connector_error = aiohttp.ClientConnectorError(
+        connection_key=None, os_error=OSError("Connection refused")
+    )
+    with simulate_client_exception(connector_error):
+        result = await plugin.getplayingtrack()
+        assert result is None
 
     await plugin.session.close()
 
@@ -1082,11 +1084,7 @@ async def test_getplayingtrack_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", exception=True
-        )
-
+    with simulate_client_exception(TimeoutError("Request timed out")):
         result = await plugin.getplayingtrack()
         assert result is None
 
@@ -1122,10 +1120,12 @@ async def test_get_filename_jriver_not_running():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    # No mock registered: nothing is listening on this port, so aiohttp raises a
-    # genuine ClientConnectorError, exercising that specific except branch.
-    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-    assert result is None
+    connector_error = aiohttp.ClientConnectorError(
+        connection_key=None, os_error=OSError("Connection refused")
+    )
+    with simulate_client_exception(connector_error):
+        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+        assert result is None
 
     await plugin.session.close()
 
@@ -1139,12 +1139,7 @@ async def test_get_filename_timeout():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
-            exception=True,
-        )
-
+    with simulate_client_exception(TimeoutError("Request timed out")):
         result = await plugin._get_filename("12345")  # pylint: disable=protected-access
         assert result is None
 
@@ -1205,12 +1200,14 @@ async def test_connection_error_sets_failed_state():
     plugin.session = aiohttp.ClientSession()
     plugin._connection_failed = False  # pylint: disable=protected-access
 
-    # No mock registered: nothing is listening on this port, so aiohttp raises a
-    # genuine ClientConnectorError, exercising that specific except branch.
-    result = await plugin.getplayingtrack()
+    connector_error = aiohttp.ClientConnectorError(
+        connection_key=None, os_error=OSError("Connection refused")
+    )
+    with simulate_client_exception(connector_error):
+        result = await plugin.getplayingtrack()
 
-    assert result is None
-    assert plugin._connection_failed  # pylint: disable=protected-access
+        assert result is None
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 
