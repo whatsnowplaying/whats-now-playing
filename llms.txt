@@ -21,9 +21,24 @@
 > WNP EarShot, an optional companion app using Shazam-based audio identification.
 > Includes built-in Twitch, Kick, and Discord bots for track announcements and
 > chat commands. Outputs to OBS and custom HTML overlays via a built-in web server
-> with Jinja2 templating. Ships with 42 OBS browser overlay templates (including
-> 7 WebGL/canvas animated effects) and 36 text templates for Twitch, Kick, and
-> plain text output, all ready to use out of the box.
+> with WebSocket streaming and Jinja2 templating; browser source overlays update
+> the instant a track changes — no polling, no page refresh needed.
+> Ships with 45 OBS browser overlay templates spanning multiple effect categories:
+> WebGL 3D GPU-rendered effects (spinning vinyl record textured with cover art,
+> animated EQ spectrum bars, cyberpunk scanline hologram with glitch text reveal,
+> floating particle field, rotating 3D cube textured with artist fanart, animated
+> wave boundary); 13 full-screen dynamic background templates that automatically
+> adapt their color palette to cover art (plasma, aurora, voronoi, noise-field,
+> ripple with fluid refraction, magma rise, nebula, neon lightning, digital grid,
+> halftone dot matrix, flow field, geometric weave, gradient sweep) — every
+> background cross-fades to a new palette on each track change;
+> anime.js motion effects (elastic scale, bounce, character stagger,
+> explode, spin, slide); Typed.js realistic typewriter with mistakes (terminal,
+> amber, classic paper styles); Matrix digital rain with falling katakana; CSS
+> frosted-glass lower-thirds; artist fanart slideshows cycling through multiple
+> images; and cover art slideshows using multiple simultaneous WebSocket streams.
+> Also includes 36 text templates for Twitch, Kick, and plain text output, all
+> ready to use out of the box.
 > OBS Scene Export generates a complete, ready-to-import OBS 28+ scene collection
 > with pre-configured browser sources in one click.
 > Supports two-computer DJ/streaming setups via automatic network discovery
@@ -53,6 +68,10 @@
 > - **EarShot always-accept**: When WNP EarShot (Shazam-based identification)
 >   is active alongside DJ software, it automatically overrides the active source
 >   when it identifies a different track, with no manual switching required.
+> - **Live-updating OBS overlays**: Browser source templates receive track data
+>   via WebSocket the moment a track changes — no polling or page refresh. Each
+>   template includes per-template timing metadata (`wnp-timing`) controlling
+>   reveal, hold, and hide phase durations independently.
 > - **Two-computer setup**: Remote Output sends live track data from the DJ
 >   machine to the streaming/OBS PC automatically over the local network via
 >   Bonjour/Zeroconf with no IP addresses or port forwarding needed.
@@ -73,3 +92,4 @@
 - [Recognition](https://whatsnowplaying.github.io/whats-now-playing/latest/recognition/): AcoustID and MusicBrainz track identification
 - [API Reference](https://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/): Web server REST API endpoints
 - [Charts](https://whatsnowplaying.github.io/whats-now-playing/latest/output/charts/): Community charts service at whatsnowplaying.com; includes chat token for Nightbot, StreamElements, and Streamlabs
+- [Lumia Stream](https://whatsnowplaying.github.io/whats-now-playing/latest/output/lumiastream/): Lumia Stream lighting integration; fires nowplaying-switchSong alert with track metadata on every track change
