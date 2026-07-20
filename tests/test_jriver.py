@@ -334,11 +334,7 @@ async def test_test_connection_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive", exception=True
-        )
-
+    with simulate_client_exception(Exception("Connection failed")):
         result = await plugin._test_connection()  # pylint: disable=protected-access
         assert not result
 
@@ -527,11 +523,7 @@ async def test_getplayingtrack_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", exception=True
-        )
-
+    with simulate_client_exception(Exception("Network error")):
         result = await plugin.getplayingtrack()
         assert result is None
 

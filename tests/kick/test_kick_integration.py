@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
+from utils_aiohttp import simulate_client_exception
 
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
@@ -299,10 +300,8 @@ async def test_error_handling_scenarios(  # pylint: disable=redefined-outer-name
         oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
         oauth.code_verifier = "test_verifier"
 
-        # Use aiointercept to mock network error
-        async with aiointercept(mock_external_urls=True) as mock:
-            mock.post(f"{OAUTH_HOST}/oauth/token", exception=True)
-
+        # Simulate a network error
+        with simulate_client_exception(Exception("Network error")):
             if expected_behavior == "raises_exception":
                 with pytest.raises(Exception):
                     await oauth.exchange_code_for_token("test_code")
@@ -430,13 +429,8 @@ async def test_network_timeouts(kick_integration_config):  # pylint: disable=red
     mock_oauth.get_stored_tokens.return_value = ("valid_token", "refresh_token")
     chat.oauth = mock_oauth
 
-    # Test timeout during message sending using aiointercept
-    async with aiointercept(mock_external_urls=True) as mock:
-        mock.post(
-            "https://api.kick.com/public/v1/chat",
-            exception=True,
-        )
-
+    # Test timeout during message sending
+    with simulate_client_exception(TimeoutError("Request timed out")):
         result = await chat._send_message("Test message")  # pylint: disable=protected-access
         assert result is False
 

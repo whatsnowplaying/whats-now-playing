@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
+from utils_aiohttp import simulate_client_exception
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
@@ -416,17 +417,13 @@ async def test_json_parsing_error(oauth_with_pkce, mock_responses):  # pylint: d
 
 
 @pytest.mark.asyncio
-async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_network_timeout(oauth_with_pkce):  # pylint: disable=redefined-outer-name
     """Test network timeout handling."""
     oauth = oauth_with_pkce
 
-    # aiointercept can only simulate a dropped connection, not a specific
-    # exception type, so this covers network failure generally rather than
-    # timeouts specifically.
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", exception=True)
-
-    with pytest.raises(Exception):
-        await oauth.exchange_code_for_token("test_code", oauth.state)
+    with simulate_client_exception(TimeoutError("Request timed out")):
+        with pytest.raises(TimeoutError):
+            await oauth.exchange_code_for_token("test_code", oauth.state)
 
 
 def test_pkce_parameter_uniqueness(configured_oauth):  # pylint: disable=redefined-outer-name

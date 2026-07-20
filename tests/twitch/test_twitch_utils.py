@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from aiointercept import aiointercept
+from utils_aiohttp import simulate_client_exception
 
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
@@ -401,11 +402,6 @@ async def test_get_user_image_error():
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "https://api.twitch.tv/helix/users?login=test_user",
-            exception=True,
-        )
-
+    with simulate_client_exception(Exception("Network error")):
         result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "test_user")
         assert result is None
