@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
-from utils_aiohttp import simulate_client_exception
+from utils_aiohttp import simulate_client_exception  # pylint: disable=import-error
 
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module

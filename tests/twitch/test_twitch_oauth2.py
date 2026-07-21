@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
-from utils_aiohttp import simulate_client_exception
+from utils_aiohttp import simulate_client_exception  # pylint: disable=import-error
 
 import nowplaying.twitch.oauth2  # pylint: disable=import-error,no-name-in-module
 from nowplaying.twitch.constants import API_HOST, OAUTH_HOST, TWITCH_BUNDLED_CLIENT_ID
