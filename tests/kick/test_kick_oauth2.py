@@ -7,8 +7,7 @@ import re
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
-from aiointercept import aiointercept
+from utils_aiohttp import simulate_client_exception  # pylint: disable=import-error
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
@@ -35,13 +34,6 @@ def oauth_with_pkce(configured_oauth):  # pylint: disable=redefined-outer-name
     oauth = configured_oauth
     oauth._generate_pkce_parameters()  # pylint: disable=protected-access
     return oauth
-
-
-@pytest_asyncio.fixture
-async def mock_responses():
-    """Fixture that provides aiointercept for mocking HTTP calls."""
-    async with aiointercept(mock_external_urls=True) as mock:
-        yield mock
 
 
 # Basic OAuth2 functionality tests
@@ -190,7 +182,7 @@ def test_open_browser_for_auth_scenarios(mock_open, configured_oauth, browser_su
 @pytest.mark.asyncio
 async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-outer-name
     configured_oauth,
-    mock_responses,
+    aiointercept_mock,
     has_verifier,
     state_matches,
     response_status,
@@ -208,7 +200,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     if should_succeed:
         # Success case - setup mock and verify result
-        mock_responses.post(
+        aiointercept_mock.post(
             f"{OAUTH_HOST}/oauth/token", status=response_status, payload=response_data
         )
 
@@ -219,7 +211,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     elif response_status != 200:
         # HTTP error case
-        mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body="Error")
+        aiointercept_mock.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body="Error")
 
         with pytest.raises(Exception):
             await oauth.exchange_code_for_token("test_code", test_state)
@@ -248,7 +240,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 async def test_refresh_access_token_scenarios(
     bootstrap,
     configured_oauth,
-    mock_responses,
+    aiointercept_mock,
     has_refresh_token,
     response_status,
     response_data,
@@ -264,7 +256,7 @@ async def test_refresh_access_token_scenarios(
         refresh_token = None
 
     if should_succeed:
-        mock_responses.post(
+        aiointercept_mock.post(
             f"{OAUTH_HOST}/oauth/token", status=response_status, payload=response_data
         )
 
@@ -275,7 +267,9 @@ async def test_refresh_access_token_scenarios(
     else:
         if has_refresh_token:
             # HTTP error case
-            mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body="Error")
+            aiointercept_mock.post(
+                f"{OAUTH_HOST}/oauth/token", status=response_status, body="Error"
+            )
 
         with pytest.raises((ValueError, Exception)):
             await oauth.refresh_access_token_async(refresh_token)
@@ -297,7 +291,7 @@ async def test_refresh_access_token_scenarios(
 @pytest.mark.asyncio
 async def test_validate_token_scenarios(
     configured_oauth,
-    mock_responses,
+    aiointercept_mock,
     response_status,  # pylint: disable=redefined-outer-name
     response_data,
     expected_result,
@@ -308,9 +302,9 @@ async def test_validate_token_scenarios(
     # Use the correct introspect endpoint and POST method
     introspect_url = "https://api.kick.com/public/v1/token/introspect"
     if response_status == 200:
-        mock_responses.post(introspect_url, status=response_status, payload=response_data)
+        aiointercept_mock.post(introspect_url, status=response_status, payload=response_data)
     else:
-        mock_responses.post(introspect_url, status=response_status, body="Error")
+        aiointercept_mock.post(introspect_url, status=response_status, body="Error")
 
     result = await oauth.validate_token_async("test_token")
     assert result == expected_result
@@ -368,7 +362,7 @@ def test_clear_stored_tokens(configured_oauth):  # pylint: disable=redefined-out
 )
 @pytest.mark.asyncio
 async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, too-many-arguments
-    bootstrap, mock_responses, has_client_id, has_token, response_status, should_clear_tokens
+    bootstrap, aiointercept_mock, has_client_id, has_token, response_status, should_clear_tokens
 ):
     """Test token revocation with various scenarios."""
     config = bootstrap
@@ -385,7 +379,7 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
         # Setup mock response for cases where we have credentials
         # Note: We need to use a regex pattern to match the URL with query parameters
         url_pattern = re.compile(rf"{re.escape(OAUTH_HOST)}/oauth/revoke\?.*")
-        mock_responses.post(url_pattern, status=response_status)
+        aiointercept_mock.post(url_pattern, status=response_status)
 
     # Should not raise exception in any case
     await oauth.revoke_token(token_to_revoke)
@@ -404,29 +398,25 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
 
 
 @pytest.mark.asyncio
-async def test_json_parsing_error(oauth_with_pkce, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_json_parsing_error(oauth_with_pkce, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test handling of JSON parsing errors."""
     oauth = oauth_with_pkce
 
     # Mock response with invalid JSON
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, body="invalid json content")
+    aiointercept_mock.post(f"{OAUTH_HOST}/oauth/token", status=200, body="invalid json content")
 
     with pytest.raises(Exception):
         await oauth.exchange_code_for_token("test_code")
 
 
 @pytest.mark.asyncio
-async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_network_timeout(oauth_with_pkce):  # pylint: disable=redefined-outer-name
     """Test network timeout handling."""
     oauth = oauth_with_pkce
 
-    # aiointercept can only simulate a dropped connection, not a specific
-    # exception type, so this covers network failure generally rather than
-    # timeouts specifically.
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", exception=True)
-
-    with pytest.raises(Exception):
-        await oauth.exchange_code_for_token("test_code", oauth.state)
+    with simulate_client_exception(TimeoutError("Request timed out")):
+        with pytest.raises(TimeoutError):
+            await oauth.exchange_code_for_token("test_code", oauth.state)
 
 
 def test_pkce_parameter_uniqueness(configured_oauth):  # pylint: disable=redefined-outer-name
