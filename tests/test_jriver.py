@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 import aiohttp
 import pytest
 import pytest_asyncio
-from aiointercept import aiointercept
 from utils_aiohttp import simulate_client_exception
 
 import nowplaying.inputs.jriver  # pylint: disable=import-error,no-name-in-module
@@ -260,7 +259,7 @@ async def test_start_session_kept_open_on_auth_failure(jriver_bootstrap):  # pyl
 
 
 @pytest.mark.asyncio
-async def test_test_connection_success():
+async def test_test_connection_success(aiointercept_mock):
     """Test successful connection test"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -269,22 +268,21 @@ async def test_test_connection_success():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive",
-            body="""<Response Status="OK">
-                        <Item Name="AccessKey">testkey</Item>
-                      </Response>""",
-        )
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Alive",
+        body="""<Response Status="OK">
+                    <Item Name="AccessKey">testkey</Item>
+                  </Response>""",
+    )
 
-        result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result
+    result = await plugin._test_connection()  # pylint: disable=protected-access
+    assert result
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_test_connection_wrong_access_key():
+async def test_test_connection_wrong_access_key(aiointercept_mock):
     """Test connection test with wrong access key"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -293,22 +291,21 @@ async def test_test_connection_wrong_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive",
-            body="""<Response Status="OK">
-                        <Item Name="AccessKey">correctkey</Item>
-                      </Response>""",
-        )
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Alive",
+        body="""<Response Status="OK">
+                    <Item Name="AccessKey">correctkey</Item>
+                  </Response>""",
+    )
 
-        result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert not result
+    result = await plugin._test_connection()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_test_connection_http_error():
+async def test_test_connection_http_error(aiointercept_mock):
     """Test connection test with HTTP error"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -316,11 +313,10 @@ async def test_test_connection_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/Alive", status=404)
+    aiointercept_mock.get("http://localhost:52199/MCWS/v1/Alive", status=404)
 
-        result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert not result
+    result = await plugin._test_connection()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
@@ -334,11 +330,7 @@ async def test_test_connection_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Alive", exception=True
-        )
-
+    with simulate_client_exception(Exception("Connection failed")):
         result = await plugin._test_connection()  # pylint: disable=protected-access
         assert not result
 
@@ -346,7 +338,7 @@ async def test_test_connection_network_error():
 
 
 @pytest.mark.asyncio
-async def test_authenticate_success():
+async def test_authenticate_success(aiointercept_mock):
     """Test successful authentication"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -356,20 +348,19 @@ async def test_authenticate_success():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(
-            url,
-            body="""
-              <Response Status="OK">
-                  <Item Name="Token">abc123token</Item>
-              </Response>
-              """,
-        )
+    url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
+    aiointercept_mock.get(
+        url,
+        body="""
+          <Response Status="OK">
+              <Item Name="Token">abc123token</Item>
+          </Response>
+          """,
+    )
 
-        result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result
-        assert plugin.token == "abc123token"
+    result = await plugin._authenticate()  # pylint: disable=protected-access
+    assert result
+    assert plugin.token == "abc123token"
 
     await plugin.session.close()
 
@@ -386,7 +377,7 @@ async def test_authenticate_no_credentials():
 
 
 @pytest.mark.asyncio
-async def test_authenticate_no_token():
+async def test_authenticate_no_token(aiointercept_mock):
     """Test authentication with no token in response"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -396,24 +387,23 @@ async def test_authenticate_no_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(
-            url,
-            body="""
-              <Response Status="OK">
-              </Response>
-              """,
-        )
+    url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
+    aiointercept_mock.get(
+        url,
+        body="""
+          <Response Status="OK">
+          </Response>
+          """,
+    )
 
-        result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert not result
+    result = await plugin._authenticate()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_authenticate_http_error():
+async def test_authenticate_http_error(aiointercept_mock):
     """Test authentication with HTTP error"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -423,12 +413,11 @@ async def test_authenticate_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
-        mock_resp.get(url, status=401)
+    url = "http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass"
+    aiointercept_mock.get(url, status=401)
 
-        result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert not result
+    result = await plugin._authenticate()  # pylint: disable=protected-access
+    assert not result
 
     await plugin.session.close()
 
@@ -444,35 +433,34 @@ async def test_getplayingtrack_no_base_url():
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_success(jriver_plugin_with_session):  # pylint: disable=redefined-outer-name
+async def test_getplayingtrack_success(jriver_plugin_with_session, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test successful getplayingtrack"""
     plugin = jriver_plugin_with_session
     plugin.base_url = "http://localhost:52199/MCWS/v1"
     plugin.token = "testtoken"
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # aiointercept matches the URL pattern, including query parameters
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken",
-            body="""<Response Status="OK">
-                        <Item Name="State">Playing</Item>
-                        <Item Name="Artist">The Beatles</Item>
-                        <Item Name="Album">Abbey Road</Item>
-                        <Item Name="Name">Come Together</Item>
-                        <Item Name="DurationMS">240000</Item>
-                      </Response>""",
-        )
+    # aiointercept matches the URL pattern, including query parameters
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken",
+        body="""<Response Status="OK">
+                    <Item Name="State">Playing</Item>
+                    <Item Name="Artist">The Beatles</Item>
+                    <Item Name="Album">Abbey Road</Item>
+                    <Item Name="Name">Come Together</Item>
+                    <Item Name="DurationMS">240000</Item>
+                  </Response>""",
+    )
 
-        result = await plugin.getplayingtrack()
+    result = await plugin.getplayingtrack()
 
-        assert result["artist"] == "The Beatles"
-        assert result["album"] == "Abbey Road"
-        assert result["title"] == "Come Together"
-        assert result["duration"] == 240  # 240000ms / 1000
+    assert result["artist"] == "The Beatles"
+    assert result["album"] == "Abbey Road"
+    assert result["title"] == "Come Together"
+    assert result["duration"] == 240  # 240000ms / 1000
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_minimal_data():
+async def test_getplayingtrack_minimal_data(aiointercept_mock):
     """Test getplayingtrack with minimal data"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -480,28 +468,27 @@ async def test_getplayingtrack_minimal_data():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info",
-            body="""
-              <Response Status="OK">
-                  <Item Name="Name">Unknown Track</Item>
-              </Response>
-              """,
-        )
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info",
+        body="""
+          <Response Status="OK">
+              <Item Name="Name">Unknown Track</Item>
+          </Response>
+          """,
+    )
 
-        result = await plugin.getplayingtrack()
+    result = await plugin.getplayingtrack()
 
-        assert result["title"] == "Unknown Track"
-        assert result.get("artist") is None
-        assert result.get("album") is None
-        assert result.get("duration") is None
+    assert result["title"] == "Unknown Track"
+    assert result.get("artist") is None
+    assert result.get("album") is None
+    assert result.get("duration") is None
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_http_error():
+async def test_getplayingtrack_http_error(aiointercept_mock):
     """Test getplayingtrack with HTTP error"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -509,11 +496,10 @@ async def test_getplayingtrack_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", status=500)
+    aiointercept_mock.get("http://localhost:52199/MCWS/v1/Playback/Info", status=500)
 
-        result = await plugin.getplayingtrack()
-        assert result is None
+    result = await plugin.getplayingtrack()
+    assert result is None
 
     await plugin.session.close()
 
@@ -527,11 +513,7 @@ async def test_getplayingtrack_network_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", exception=True
-        )
-
+    with simulate_client_exception(Exception("Network error")):
         result = await plugin.getplayingtrack()
         assert result is None
 
@@ -539,7 +521,7 @@ async def test_getplayingtrack_network_error():
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_parse_error():
+async def test_getplayingtrack_parse_error(aiointercept_mock):
     """Test getplayingtrack with XML parse error"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -547,17 +529,18 @@ async def test_getplayingtrack_parse_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", body="invalid xml content")
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info", body="invalid xml content"
+    )
 
-        result = await plugin.getplayingtrack()
-        assert result == {}  # Parse errors return empty dict, not None
+    result = await plugin.getplayingtrack()
+    assert result == {}  # Parse errors return empty dict, not None
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_with_xml_declaration():
+async def test_getplayingtrack_with_xml_declaration(aiointercept_mock):
     """Test getplayingtrack with XML encoding declaration (real JRiver format)"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -565,9 +548,8 @@ async def test_getplayingtrack_with_xml_declaration():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # This simulates the actual JRiver response format with XML declaration
-        jriver_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+    # This simulates the actual JRiver response format with XML declaration
+    jriver_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <Response Status="OK">
 <Item Name="ZoneID">0</Item>
 <Item Name="State">2</Item>
@@ -579,20 +561,20 @@ async def test_getplayingtrack_with_xml_declaration():
 <Item Name="Status">Playing</Item>
 </Response>"""
 
-        mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", body=jriver_response)
+    aiointercept_mock.get("http://localhost:52199/MCWS/v1/Playback/Info", body=jriver_response)
 
-        result = await plugin.getplayingtrack()
-        assert result is not None
-        assert result["artist"] == "Information Society"
-        assert result["album"] == "Don't Be Afraid"
-        assert result["title"] == "Are 'Friends' Electric? 2.0"
-        assert result["duration"] == 341  # 341342ms / 1000
+    result = await plugin.getplayingtrack()
+    assert result is not None
+    assert result["artist"] == "Information Society"
+    assert result["album"] == "Don't Be Afraid"
+    assert result["title"] == "Are 'Friends' Electric? 2.0"
+    assert result["duration"] == 341  # 341342ms / 1000
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_with_token():
+async def test_getplayingtrack_with_token(aiointercept_mock):
     """Test getplayingtrack includes token in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -601,20 +583,19 @@ async def test_getplayingtrack_with_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # aiointercept matches the exact URL including query parameters
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123",
-            body='<Response Status="OK"></Response>',
-        )
+    # aiointercept matches the exact URL including query parameters
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123",
+        body='<Response Status="OK"></Response>',
+    )
 
-        await plugin.getplayingtrack()
+    await plugin.getplayingtrack()
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_without_token():
+async def test_getplayingtrack_without_token(aiointercept_mock):
     """Test getplayingtrack without token"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -623,20 +604,19 @@ async def test_getplayingtrack_without_token():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # aiointercept matches the exact URL without query parameters
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info",
-            body='<Response Status="OK"></Response>',
-        )
+    # aiointercept matches the exact URL without query parameters
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info",
+        body='<Response Status="OK"></Response>',
+    )
 
-        await plugin.getplayingtrack()
+    await plugin.getplayingtrack()
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_with_access_key():
+async def test_getplayingtrack_with_access_key(aiointercept_mock):
     """Test getplayingtrack includes access_key in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -645,20 +625,19 @@ async def test_getplayingtrack_with_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # aiointercept matches the exact URL including query parameters
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info?AccessKey=myaccesskey123",
-            body='<Response Status="OK"></Response>',
-        )
+    # aiointercept matches the exact URL including query parameters
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Playback/Info?AccessKey=myaccesskey123",
+        body='<Response Status="OK"></Response>',
+    )
 
-        await plugin.getplayingtrack()
+    await plugin.getplayingtrack()
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_with_token_and_access_key():
+async def test_getplayingtrack_with_token_and_access_key(aiointercept_mock):
     """Test getplayingtrack includes both token and access_key in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -668,19 +647,18 @@ async def test_getplayingtrack_with_token_and_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # aiointercept matches the exact URL including query parameters
-        # Note: order of parameters in URL may vary, so we test the call was made correctly
-        url = "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&AccessKey=myaccesskey123"  # pylint: disable=line-too-long
-        mock_resp.get(url, body='<Response Status="OK"></Response>')
+    # aiointercept matches the exact URL including query parameters
+    # Note: order of parameters in URL may vary, so we test the call was made correctly
+    url = "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&AccessKey=myaccesskey123"  # pylint: disable=line-too-long
+    aiointercept_mock.get(url, body='<Response Status="OK"></Response>')
 
-        await plugin.getplayingtrack()
+    await plugin.getplayingtrack()
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_get_filename_with_access_key():
+async def test_get_filename_with_access_key(aiointercept_mock):
     """Test _get_filename includes access_key in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -689,23 +667,22 @@ async def test_get_filename_with_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&AccessKey=myaccesskey123"
-        mock_resp.get(
-            url,
-            body="""<Response Status="OK">
-                        <Item Name="Filename">test.mp3</Item>
-                      </Response>""",
-        )
+    url = "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&AccessKey=myaccesskey123"
+    aiointercept_mock.get(
+        url,
+        body="""<Response Status="OK">
+                    <Item Name="Filename">test.mp3</Item>
+                  </Response>""",
+    )
 
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result == "test.mp3"
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result == "test.mp3"
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_get_filename_with_token_and_access_key():
+async def test_get_filename_with_token_and_access_key(aiointercept_mock):
     """Test _get_filename includes both token and access_key in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -715,20 +692,19 @@ async def test_get_filename_with_token_and_access_key():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        url = (
-            "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&"
-            "Token=mytoken123&AccessKey=myaccesskey123"
-        )
-        mock_resp.get(
-            url,
-            body="""<Response Status="OK">
-                        <Item Name="Filename">test.mp3</Item>
-                      </Response>""",
-        )
+    url = (
+        "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&"
+        "Token=mytoken123&AccessKey=myaccesskey123"
+    )
+    aiointercept_mock.get(
+        url,
+        body="""<Response Status="OK">
+                    <Item Name="Filename">test.mp3</Item>
+                  </Response>""",
+    )
 
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result == "test.mp3"
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result == "test.mp3"
 
     await plugin.session.close()
 
@@ -860,29 +836,28 @@ def test_ipv6_url_construction():
 
 
 @pytest.mark.asyncio
-async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disable=redefined-outer-name
+async def test_get_filename_success(jriver_plugin_with_session, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test successful filename retrieval"""
     plugin = jriver_plugin_with_session
     plugin.base_url = "http://localhost:52199/MCWS/v1"
     plugin.token = "testtoken"
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&Token=testtoken",
-            body="""<Response Status="OK">
-                        <Item Name="FileKey">12345</Item>
-                        <Item Name="Name">Come Together</Item>
-                        <Item Name="Artist">The Beatles</Item>
-                        <Item Name="Filename">C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3</Item>
-                      </Response>""",
-        )
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&Token=testtoken",
+        body="""<Response Status="OK">
+                    <Item Name="FileKey">12345</Item>
+                    <Item Name="Name">Come Together</Item>
+                    <Item Name="Artist">The Beatles</Item>
+                    <Item Name="Filename">C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3</Item>
+                  </Response>""",
+    )
 
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result == "C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3"
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result == "C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3"
 
 
 @pytest.mark.asyncio
-async def test_get_filename_not_found():
+async def test_get_filename_not_found(aiointercept_mock):
     """Test filename retrieval when no filename in response"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -890,25 +865,24 @@ async def test_get_filename_not_found():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
-            body="""
-              <Response Status="OK">
-                  <Item Name="FileKey">12345</Item>
-                  <Item Name="Name">Come Together</Item>
-              </Response>
-              """,
-        )
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/File/GetInfo?File=12345",
+        body="""
+          <Response Status="OK">
+              <Item Name="FileKey">12345</Item>
+              <Item Name="Name">Come Together</Item>
+          </Response>
+          """,
+    )
 
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result is None
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result is None
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_get_filename_http_error():
+async def test_get_filename_http_error(aiointercept_mock):
     """Test filename retrieval with HTTP error"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -916,17 +890,16 @@ async def test_get_filename_http_error():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get("http://localhost:52199/MCWS/v1/File/GetInfo?File=12345", status=404)
+    aiointercept_mock.get("http://localhost:52199/MCWS/v1/File/GetInfo?File=12345", status=404)
 
-        result = await plugin._get_filename("12345")  # pylint: disable=protected-access
-        assert result is None
+    result = await plugin._get_filename("12345")  # pylint: disable=protected-access
+    assert result is None
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_get_filename_mpl_format():
+async def test_get_filename_mpl_format(aiointercept_mock):
     """Test _get_filename with MPL format response (real JRiver format)"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -934,9 +907,8 @@ async def test_get_filename_mpl_format():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # This simulates the actual JRiver MPL response format
-        mpl_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+    # This simulates the actual JRiver MPL response format
+    mpl_response = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <MPL Version="2.0" Title="MCWS - Files - 6096105472" PathSeparator="/">
 <Item>
 <Field Name="Key">477</Field>
@@ -947,16 +919,18 @@ async def test_get_filename_mpl_format():
 </Item>
 </MPL>"""
 
-        mock_resp.get("http://localhost:52199/MCWS/v1/File/GetInfo?File=477", body=mpl_response)
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/File/GetInfo?File=477", body=mpl_response
+    )
 
-        result = await plugin._get_filename("477")  # pylint: disable=protected-access
-        assert result == "/Users/aw/Music/Artist/Album/Song.mp3"
+    result = await plugin._get_filename("477")  # pylint: disable=protected-access
+    assert result == "/Users/aw/Music/Artist/Album/Song.mp3"
 
     await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_get_filename_response_format():
+async def test_get_filename_response_format(aiointercept_mock):
     """Test _get_filename with Response format (compatibility)"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -964,19 +938,20 @@ async def test_get_filename_response_format():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # Test the old Response format for backwards compatibility
-        response_format = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+    # Test the old Response format for backwards compatibility
+    response_format = """<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <Response Status="OK">
 <Item Name="FileKey">477</Item>
 <Item Name="Filename">/Users/aw/Music/Artist/Album/Song.mp3</Item>
 <Item Name="Name">Song Title</Item>
 </Response>"""
 
-        mock_resp.get("http://localhost:52199/MCWS/v1/File/GetInfo?File=477", body=response_format)
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/File/GetInfo?File=477", body=response_format
+    )
 
-        result = await plugin._get_filename("477")  # pylint: disable=protected-access
-        assert result == "/Users/aw/Music/Artist/Album/Song.mp3"
+    result = await plugin._get_filename("477")  # pylint: disable=protected-access
+    assert result == "/Users/aw/Music/Artist/Album/Song.mp3"
 
     await plugin.session.close()
 
@@ -1092,7 +1067,7 @@ async def test_getplayingtrack_timeout():
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_xml_none_safety():
+async def test_getplayingtrack_xml_none_safety(aiointercept_mock):
     """Test getplayingtrack with XML parsing error (safety check)"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -1100,13 +1075,12 @@ async def test_getplayingtrack_xml_none_safety():
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # Return completely empty response that will cause XML parsing error
-        mock_resp.get("http://localhost:52199/MCWS/v1/Playback/Info", body="")
+    # Return completely empty response that will cause XML parsing error
+    aiointercept_mock.get("http://localhost:52199/MCWS/v1/Playback/Info", body="")
 
-        result = await plugin.getplayingtrack()
-        # Should return empty dict when XML parsing fails, not crash
-        assert result == {}
+    result = await plugin.getplayingtrack()
+    # Should return empty dict when XML parsing fails, not crash
+    assert result == {}
 
     await plugin.session.close()
 
@@ -1147,7 +1121,7 @@ async def test_get_filename_timeout():
 
 
 @pytest.mark.asyncio
-async def test_auto_recovery_success():
+async def test_auto_recovery_success(aiointercept_mock):
     """Test successful auto-recovery when JRiver comes back online"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = "http://localhost:52199/MCWS/v1"
@@ -1158,19 +1132,18 @@ async def test_auto_recovery_success():
         patch.object(plugin, "_test_connection", return_value=True),
         patch.object(plugin, "_authenticate", return_value=True),
     ):
-        async with aiointercept(mock_external_urls=True) as mock_resp:
-            mock_resp.get(
-                "http://localhost:52199/MCWS/v1/Playback/Info",
-                body='<Response><Item Name="Artist">Test Artist</Item>'
-                '<Item Name="Name">Test Title</Item></Response>',
-            )
+        aiointercept_mock.get(
+            "http://localhost:52199/MCWS/v1/Playback/Info",
+            body='<Response><Item Name="Artist">Test Artist</Item>'
+            '<Item Name="Name">Test Title</Item></Response>',
+        )
 
-            result = await plugin.getplayingtrack()
+        result = await plugin.getplayingtrack()
 
-            assert result is not None
-            assert result["artist"] == "Test Artist"
-            assert result["title"] == "Test Title"
-            assert not plugin._connection_failed  # pylint: disable=protected-access
+        assert result is not None
+        assert result["artist"] == "Test Artist"
+        assert result["title"] == "Test Title"
+        assert not plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 

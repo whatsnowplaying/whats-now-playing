@@ -10,7 +10,6 @@ import tempfile
 import unittest.mock
 
 import pytest
-from aiointercept import aiointercept
 
 import nowplaying.inputs.serato
 import nowplaying.utils.sqlite
@@ -516,7 +515,7 @@ async def test_require_played_false_includes_unplayed(bootstrap, serato_master_d
 
 
 @pytest.mark.asyncio
-async def test_streaming_track_artwork(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+async def test_streaming_track_artwork(bootstrap, serato_master_db, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test that streaming tracks get coverimageraw from type_specific_data, not filename"""
     artwork_url = "https://example.com/artwork.jpg"
     type_specific_data = '{"cover_id": "' + artwork_url + '", "is_video": false}'
@@ -553,24 +552,23 @@ async def test_streaming_track_artwork(bootstrap, serato_master_db):  # pylint: 
 
         fake_image = b"\x89PNG\r\n\x1a\n"  # PNG magic bytes
 
-        async with aiointercept(mock_external_urls=True) as mock_resp:
-            mock_resp.get(artwork_url, status=200, body=fake_image)
+        aiointercept_mock.get(artwork_url, status=200, body=fake_image)
 
-            try:
-                track = await plugin.getplayingtrack()
+        try:
+            track = await plugin.getplayingtrack()
 
-                assert track is not None
-                assert track["artist"] == "Streaming Artist"
-                assert "filename" not in track
-                assert "_streaming_artwork_url" not in track
-                assert track.get("coverimageraw") == fake_image
+            assert track is not None
+            assert track["artist"] == "Streaming Artist"
+            assert "filename" not in track
+            assert "_streaming_artwork_url" not in track
+            assert track.get("coverimageraw") == fake_image
 
-            finally:
-                await plugin.stop()
+        finally:
+            await plugin.stop()
 
 
 @pytest.mark.asyncio
-async def test_streaming_track_is_video(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+async def test_streaming_track_is_video(bootstrap, serato_master_db, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test that streaming tracks with is_video=true set has_video on the track"""
     type_specific_data = '{"cover_id": "https://example.com/artwork.jpg", "is_video": true}'
 
@@ -601,14 +599,15 @@ async def test_streaming_track_is_video(bootstrap, serato_master_db):  # pylint:
         plugin.setmixmode("newest")
         await plugin.start()
 
-        async with aiointercept(mock_external_urls=True) as mock_resp:
-            mock_resp.get("https://example.com/artwork.jpg", status=200, body=b"\x89PNG\r\n\x1a\n")
+        aiointercept_mock.get(
+            "https://example.com/artwork.jpg", status=200, body=b"\x89PNG\r\n\x1a\n"
+        )
 
-            try:
-                track = await plugin.getplayingtrack()
+        try:
+            track = await plugin.getplayingtrack()
 
-                assert track is not None
-                assert track.get("has_video") is True
+            assert track is not None
+            assert track.get("has_video") is True
 
-            finally:
-                await plugin.stop()
+        finally:
+            await plugin.stop()

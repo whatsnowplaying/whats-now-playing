@@ -22,6 +22,7 @@ env:
 jobs:
   testing-macos:
     runs-on: macos-latest
+    timeout-minutes: 50
     permissions:
       contents: read
     steps:
@@ -86,6 +87,7 @@ jobs:
 
   testing-win:
     runs-on: windows-2025
+    timeout-minutes: 50
     permissions:
       contents: read
     env:
@@ -147,6 +149,7 @@ jobs:
 
   testing-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     permissions:
       contents: read
     strategy:

@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from aiointercept import aiointercept
 
 import nowplaying.notifications.remote
 
@@ -35,7 +34,7 @@ async def test_remote_plugin_disabled(remote_plugin):  # pylint: disable=redefin
 
 
 @pytest.mark.asyncio
-async def test_remote_plugin_no_secret(remote_plugin):  # pylint: disable=redefined-outer-name
+async def test_remote_plugin_no_secret(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """test remote plugin without secret configured"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
@@ -45,21 +44,20 @@ async def test_remote_plugin_no_secret(remote_plugin):  # pylint: disable=redefi
 
     metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
+    aiointercept_mock.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
 
-        await remote_plugin.notify_track_change(metadata)
+    await remote_plugin.notify_track_change(metadata)
 
-        # Verify the request was made
-        assert len(mock_resp.requests) == 1
-        first_key = list(mock_resp.requests.keys())[0]
-        request = mock_resp.requests[first_key][0]
-        # Should not have secret in the payload
-        assert "secret" not in await request.json()
+    # Verify the request was made
+    assert len(aiointercept_mock.requests) == 1
+    first_key = list(aiointercept_mock.requests.keys())[0]
+    request = aiointercept_mock.requests[first_key][0]
+    # Should not have secret in the payload
+    assert "secret" not in await request.json()
 
 
 @pytest.mark.asyncio
-async def test_remote_plugin_with_secret(remote_plugin):  # pylint: disable=redefined-outer-name
+async def test_remote_plugin_with_secret(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """test remote plugin with secret configured"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
@@ -69,21 +67,20 @@ async def test_remote_plugin_with_secret(remote_plugin):  # pylint: disable=rede
 
     metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 456})
+    aiointercept_mock.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 456})
 
-        await remote_plugin.notify_track_change(metadata)
+    await remote_plugin.notify_track_change(metadata)
 
-        # Verify the request was made with secret
-        assert len(mock_resp.requests) == 1
-        first_key = list(mock_resp.requests.keys())[0]
-        request = mock_resp.requests[first_key][0]
-        payload = await request.json()
-        assert payload["secret"] == "test_secret_123"  # pragma: allowlist secret
+    # Verify the request was made with secret
+    assert len(aiointercept_mock.requests) == 1
+    first_key = list(aiointercept_mock.requests.keys())[0]
+    request = aiointercept_mock.requests[first_key][0]
+    payload = await request.json()
+    assert payload["secret"] == "test_secret_123"  # pragma: allowlist secret
 
 
 @pytest.mark.asyncio
-async def test_remote_plugin_auth_failure(remote_plugin):  # pylint: disable=redefined-outer-name
+async def test_remote_plugin_auth_failure(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """test remote plugin with authentication failure"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
@@ -93,17 +90,16 @@ async def test_remote_plugin_auth_failure(remote_plugin):  # pylint: disable=red
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post(
-            "http://localhost:8899/v1/remoteinput", status=403, payload={"error": "Invalid secret"}
-        )
+    aiointercept_mock.post(
+        "http://localhost:8899/v1/remoteinput", status=403, payload={"error": "Invalid secret"}
+    )
 
-        # Should handle auth failure gracefully
-        await remote_plugin.notify_track_change(metadata)
+    # Should handle auth failure gracefully
+    await remote_plugin.notify_track_change(metadata)
 
 
 @pytest.mark.asyncio
-async def test_remote_plugin_server_error(remote_plugin):  # pylint: disable=redefined-outer-name
+async def test_remote_plugin_server_error(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """test remote plugin with server error"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
@@ -113,19 +109,18 @@ async def test_remote_plugin_server_error(remote_plugin):  # pylint: disable=red
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post(
-            "http://localhost:8899/v1/remoteinput",
-            status=500,
-            payload={"error": "Internal server error"},
-        )
+    aiointercept_mock.post(
+        "http://localhost:8899/v1/remoteinput",
+        status=500,
+        payload={"error": "Internal server error"},
+    )
 
-        # Should handle server error gracefully
-        await remote_plugin.notify_track_change(metadata)
+    # Should handle server error gracefully
+    await remote_plugin.notify_track_change(metadata)
 
 
 @pytest.mark.asyncio
-async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=redefined-outer-name
+async def test_remote_plugin_strips_blobs(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """test that remote plugin strips binary blob data and local system data"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
@@ -150,38 +145,37 @@ async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=red
         "discordguild": "My Discord Server",  # Should be kept
     }
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
+    aiointercept_mock.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 123})
 
-        await remote_plugin.notify_track_change(metadata)
+    await remote_plugin.notify_track_change(metadata)
 
-        # Verify blob data and local system data was stripped
-        first_key = list(mock_resp.requests.keys())[0]
-        request = mock_resp.requests[first_key][0]
-        payload = await request.json()
+    # Verify blob data and local system data was stripped
+    first_key = list(aiointercept_mock.requests.keys())[0]
+    request = aiointercept_mock.requests[first_key][0]
+    payload = await request.json()
 
-        # Binary blob fields should be stripped
-        assert "coverimageraw" not in payload
-        assert "artistthumbnailraw" not in payload
+    # Binary blob fields should be stripped
+    assert "coverimageraw" not in payload
+    assert "artistthumbnailraw" not in payload
 
-        # Local system fields should be stripped
-        assert "dbid" not in payload
-        assert "httpport" not in payload
-        assert "hostname" not in payload
-        assert "hostfqdn" not in payload
-        assert "hostip" not in payload
-        assert "ipaddress" not in payload
-        assert "previoustrack" not in payload
-        assert "cache_warmed" not in payload
+    # Local system fields should be stripped
+    assert "dbid" not in payload
+    assert "httpport" not in payload
+    assert "hostname" not in payload
+    assert "hostfqdn" not in payload
+    assert "hostip" not in payload
+    assert "ipaddress" not in payload
+    assert "previoustrack" not in payload
+    assert "cache_warmed" not in payload
 
-        # Track data should remain
-        assert payload["artist"] == "Test Artist"
-        assert payload["title"] == "Test Title"
+    # Track data should remain
+    assert payload["artist"] == "Test Artist"
+    assert payload["title"] == "Test Title"
 
-        # Streaming channel data should be kept (not stripped)
-        assert payload["twitchchannel"] == "teststreamer"
-        assert payload["kickchannel"] == "kickstreamer"
-        assert payload["discordguild"] == "My Discord Server"
+    # Streaming channel data should be kept (not stripped)
+    assert payload["twitchchannel"] == "teststreamer"
+    assert payload["kickchannel"] == "kickstreamer"
+    assert payload["discordguild"] == "My Discord Server"
 
 
 def test_remote_plugin_strip_blobs_static():
@@ -684,6 +678,7 @@ async def test_remote_notification_verify_settingsui_manual_valid():
 @pytest.mark.asyncio
 async def test_remote_sets_charts_submitted_flag_when_charts_enabled(
     remote_plugin,  # pylint: disable=redefined-outer-name
+    aiointercept_mock,
 ):
     """remote plugin sets remote_charts_submitted when client has charts enabled"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
@@ -695,18 +690,18 @@ async def test_remote_sets_charts_submitted_flag_when_charts_enabled(
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
-        await remote_plugin.notify_track_change(metadata)
+    aiointercept_mock.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
+    await remote_plugin.notify_track_change(metadata)
 
-        request = mock_resp.requests[list(mock_resp.requests.keys())[0]][0]
-        payload = await request.json()
-        assert payload.get("remote_charts_submitted") is True
+    request = aiointercept_mock.requests[list(aiointercept_mock.requests.keys())[0]][0]
+    payload = await request.json()
+    assert payload.get("remote_charts_submitted") is True
 
 
 @pytest.mark.asyncio
 async def test_remote_omits_charts_submitted_flag_when_charts_disabled(
     remote_plugin,  # pylint: disable=redefined-outer-name
+    aiointercept_mock,
 ):
     """remote plugin does not set remote_charts_submitted when client has charts disabled"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
@@ -717,9 +712,8 @@ async def test_remote_omits_charts_submitted_flag_when_charts_disabled(
 
     metadata = {"artist": "Test Artist", "title": "Test Title"}
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
-        await remote_plugin.notify_track_change(metadata)
+    aiointercept_mock.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
+    await remote_plugin.notify_track_change(metadata)
 
-        request = mock_resp.requests[list(mock_resp.requests.keys())[0]][0]
-        assert "remote_charts_submitted" not in await request.json()
+    request = aiointercept_mock.requests[list(aiointercept_mock.requests.keys())[0]][0]
+    assert "remote_charts_submitted" not in await request.json()
