@@ -5,7 +5,6 @@ import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from aiointercept import aiointercept
 from utils_aiohttp import simulate_client_exception  # pylint: disable=import-error
 
 import nowplaying.twitch.oauth2
@@ -352,46 +351,44 @@ async def test_cache_token_del(bootstrap):
 
 # User image retrieval tests using aiointercept
 @pytest.mark.asyncio
-async def test_get_user_image_success():
+async def test_get_user_image_success(aiointercept_mock):
     """Test successful user image retrieval."""
     mock_oauth = Mock()
     mock_oauth.access_token = "test_token"
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        # Mock user data response
-        mock_resp.get(
-            "https://api.twitch.tv/helix/users?login=test_user",
-            payload={"data": [{"profile_image_url": "https://example.com/image.png"}]},
-        )
+    # Mock user data response
+    aiointercept_mock.get(
+        "https://api.twitch.tv/helix/users?login=test_user",
+        payload={"data": [{"profile_image_url": "https://example.com/image.png"}]},
+    )
 
-        # Mock image response
-        mock_resp.get("https://example.com/image.png", body=b"fake_image_data")
+    # Mock image response
+    aiointercept_mock.get("https://example.com/image.png", body=b"fake_image_data")
 
-        with patch("nowplaying.utils.image2png", return_value=b"png_data") as mock_image2png:
-            result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "test_user")
+    with patch("nowplaying.utils.image2png", return_value=b"png_data") as mock_image2png:
+        result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "test_user")
 
-            assert result == b"png_data"
-            mock_image2png.assert_called_once_with(b"fake_image_data")
+        assert result == b"png_data"
+        mock_image2png.assert_called_once_with(b"fake_image_data")
 
 
 @pytest.mark.asyncio
-async def test_get_user_image_no_user():
+async def test_get_user_image_no_user(aiointercept_mock):
     """Test user image retrieval with no user found."""
     mock_oauth = Mock()
     mock_oauth.access_token = "test_token"
     mock_oauth.client_id = "test_client"
     mock_oauth.api_host = "https://api.twitch.tv/helix"
 
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.get(
-            "https://api.twitch.tv/helix/users?login=nonexistent_user",
-            payload={"data": []},  # No user found
-        )
+    aiointercept_mock.get(
+        "https://api.twitch.tv/helix/users?login=nonexistent_user",
+        payload={"data": []},  # No user found
+    )
 
-        result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "nonexistent_user")
-        assert result is None
+    result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "nonexistent_user")
+    assert result is None
 
 
 @pytest.mark.asyncio

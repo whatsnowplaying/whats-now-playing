@@ -6,8 +6,6 @@ import pathlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
-from aiointercept import aiointercept
 from utils_aiohttp import simulate_client_exception  # pylint: disable=import-error
 
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
@@ -63,29 +61,21 @@ def mock_chat_with_oauth(kick_integration_config):  # pylint: disable=redefined-
     return chat, stopevent
 
 
-@pytest_asyncio.fixture
-async def mock_aiohttp_success():
+@pytest.fixture
+def mock_aiohttp_success(aiointercept_mock):
     """Fixture that mocks successful aiohttp responses using aiointercept."""
-    async with aiointercept(mock_external_urls=True) as mock:
-        # Setup default success responses for common endpoints (repeat=True for multiple calls)
-        mock.post(
-            "https://api.kick.com/public/v1/chat",
-            status=200,
-            payload={"success": True},
-            repeat=True,
-        )
-        yield mock
-
-
-@pytest_asyncio.fixture
-async def mock_responses():
-    """Fixture that provides aiointercept for mocking HTTP calls."""
-    async with aiointercept(mock_external_urls=True) as mock:
-        yield mock
+    # Setup default success responses for common endpoints (repeat=True for multiple calls)
+    aiointercept_mock.post(
+        "https://api.kick.com/public/v1/chat",
+        status=200,
+        payload={"success": True},
+        repeat=True,
+    )
+    return aiointercept_mock
 
 
 @pytest.mark.asyncio
-async def test_full_authentication_flow(kick_integration_config, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_full_authentication_flow(kick_integration_config, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test complete OAuth2 authentication flow."""
     config = kick_integration_config
 
@@ -106,7 +96,7 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
         "refresh_token": "test_refresh_token",
     }
 
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_token_response)
+    aiointercept_mock.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_token_response)
 
     result = await oauth.exchange_code_for_token("test_auth_code", oauth.state)
 
@@ -129,7 +119,7 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
 
 
 @pytest.mark.asyncio
-async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_chat_with_oauth_integration(mock_chat_with_oauth, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test chat integration with OAuth2."""
     chat, _ = mock_chat_with_oauth
 
@@ -145,7 +135,7 @@ async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses)
         assert chat.authenticated
 
     # Mock message sending endpoint
-    mock_responses.post(
+    aiointercept_mock.post(
         "https://api.kick.com/public/v1/chat",
         status=200,
         payload={"data": {"is_sent": True}, "message": "OK"},
@@ -196,7 +186,7 @@ def test_settings_integration_scenarios(kick_integration_config, settings_type):
 
 
 @pytest.mark.asyncio
-async def test_token_refresh_integration(kick_integration_config, mock_responses):  # pylint: disable=redefined-outer-name
+async def test_token_refresh_integration(kick_integration_config, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test token refresh across components."""
     config = kick_integration_config
     config.cparser.setValue("kick/accesstoken", "expired_token")
@@ -210,7 +200,7 @@ async def test_token_refresh_integration(kick_integration_config, mock_responses
         "refresh_token": "new_refresh_token",
     }
 
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_refresh_response)
+    aiointercept_mock.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_refresh_response)
 
     result = await oauth.refresh_access_token_async("valid_refresh_token")
 
@@ -402,18 +392,17 @@ def test_ui_widget_integration_scenarios(widget_type):
 
 
 @pytest.mark.asyncio
-async def test_malformed_api_responses(kick_integration_config):  # pylint: disable=redefined-outer-name
+async def test_malformed_api_responses(kick_integration_config, aiointercept_mock):  # pylint: disable=redefined-outer-name
     """Test handling of malformed API responses."""
     config = kick_integration_config
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
     oauth.code_verifier = "test_verifier"
 
     # Test malformed JSON response using aiointercept
-    async with aiointercept(mock_external_urls=True) as mock:
-        mock.post(f"{OAUTH_HOST}/oauth/token", status=200, body="invalid json content")
+    aiointercept_mock.post(f"{OAUTH_HOST}/oauth/token", status=200, body="invalid json content")
 
-        with pytest.raises(Exception):
-            await oauth.exchange_code_for_token("test_code")
+    with pytest.raises(Exception):
+        await oauth.exchange_code_for_token("test_code")
 
 
 @pytest.mark.asyncio

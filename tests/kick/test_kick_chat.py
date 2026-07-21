@@ -7,7 +7,6 @@ import pathlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aiointercept import aiointercept
 
 import nowplaying.kick.chat  # pylint: disable=no-name-in-module
 import nowplaying.kick.constants
@@ -67,7 +66,7 @@ async def test_kickchat_authenticate(bootstrap, refresh_succeeds, expected_resul
 
 
 @pytest.mark.asyncio
-async def test_kickchat_send_message_success(bootstrap):
+async def test_kickchat_send_message_success(bootstrap, aiointercept_mock):
     """Test successful message sending."""
     config = bootstrap
     stopevent = asyncio.Event()
@@ -81,16 +80,15 @@ async def test_kickchat_send_message_success(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock successful API response
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post(
-            "https://api.kick.com/public/v1/chat",
-            status=200,
-            payload={"data": {"is_sent": True}, "message": "OK"},
-        )
+    aiointercept_mock.post(
+        "https://api.kick.com/public/v1/chat",
+        status=200,
+        payload={"data": {"is_sent": True}, "message": "OK"},
+    )
 
-        result = await chat._send_message("Test message")  # pylint: disable=protected-access
+    result = await chat._send_message("Test message")  # pylint: disable=protected-access
 
-        assert result is True
+    assert result is True
 
 
 @pytest.mark.asyncio
@@ -108,7 +106,7 @@ async def test_kickchat_send_message_not_authenticated(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_kickchat_send_message_api_error(bootstrap):
+async def test_kickchat_send_message_api_error(bootstrap, aiointercept_mock):
     """Test message sending with API error."""
     config = bootstrap
     stopevent = asyncio.Event()
@@ -122,20 +120,19 @@ async def test_kickchat_send_message_api_error(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock failed API response
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post(
-            "https://api.kick.com/public/v1/chat",
-            status=400,
-            payload={"message": "Invalid request"},
-        )
+    aiointercept_mock.post(
+        "https://api.kick.com/public/v1/chat",
+        status=400,
+        payload={"message": "Invalid request"},
+    )
 
-        result = await chat._send_message("Test message")  # pylint: disable=protected-access
+    result = await chat._send_message("Test message")  # pylint: disable=protected-access
 
-        assert result is False
+    assert result is False
 
 
 @pytest.mark.asyncio
-async def test_kickchat_send_message_token_expired(bootstrap):
+async def test_kickchat_send_message_token_expired(bootstrap, aiointercept_mock):
     """Test message sending with expired token."""
     config = bootstrap
     stopevent = asyncio.Event()
@@ -149,15 +146,14 @@ async def test_kickchat_send_message_token_expired(bootstrap):
     chat.oauth = mock_oauth
 
     # Mock 401 response (token expired)
-    async with aiointercept(mock_external_urls=True) as mock_resp:
-        mock_resp.post(
-            "https://api.kick.com/public/v1/chat", status=401, payload={"message": "Unauthorized"}
-        )
+    aiointercept_mock.post(
+        "https://api.kick.com/public/v1/chat", status=401, payload={"message": "Unauthorized"}
+    )
 
-        result = await chat._send_message("Test message")  # pylint: disable=protected-access
+    result = await chat._send_message("Test message")  # pylint: disable=protected-access
 
-        assert result is False
-        assert not chat.authenticated
+    assert result is False
+    assert not chat.authenticated
 
 
 @pytest.mark.asyncio

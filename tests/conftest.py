@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """pytest fixtures for the non-Qt test suite (tests/)"""
 
+import asyncio
 import pathlib
 import tempfile
 import unittest.mock
 
 import pytest
 import pytest_asyncio
+from aiointercept import aiointercept
 
 import nowplaying.apicache
 import nowplaying.bootstrap
@@ -48,6 +50,31 @@ async def shared_api_cache():
         _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache()
         await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
     yield _SHARED_CACHE_INSTANCE
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def _shared_aiointercept():
+    """One aiointercept(mock_external_urls=True) instance for the whole session.
+
+    aiointercept starts a background thread with its own event loop per
+    instantiation. On Windows (ProactorEventLoop) repeated start/stop cycles
+    across many tests have been observed to hang the test run after a
+    handful of uses, regardless of what a given test mocks. Tests share this
+    one instance instead of creating a fresh one each time; use the
+    aiointercept_mock fixture for a per-test-cleared view of it.
+    """
+    async with aiointercept(mock_external_urls=True) as mock:
+        yield mock
+
+
+@pytest_asyncio.fixture
+async def aiointercept_mock(_shared_aiointercept):  # pylint: disable=redefined-outer-name
+    """Function-scoped, auto-cleared view onto the shared aiointercept mock."""
+    _shared_aiointercept._caller_loop = asyncio.get_running_loop()  # pylint: disable=protected-access
+    try:
+        yield _shared_aiointercept
+    finally:
+        _shared_aiointercept.clear()
 
 
 @pytest_asyncio.fixture(loop_scope="session")
