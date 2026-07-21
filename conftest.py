@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """pytest fixtures"""
 
+import asyncio
 import contextlib
 import logging
 import os
@@ -13,6 +14,7 @@ import unittest.mock
 
 import pytest
 import pytest_asyncio
+from aiointercept import aiointercept
 from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
     QCoreApplication,
     QSettings,
@@ -207,6 +209,37 @@ async def shared_api_cache():
         await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
 
     yield _SHARED_CACHE_INSTANCE
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def _shared_aiointercept():
+    """One aiointercept(mock_external_urls=True) instance for the whole session.
+
+    aiointercept starts a background thread with its own event loop per
+    instantiation. On Windows (ProactorEventLoop) repeated start/stop cycles
+    across many tests have been observed to hang the test run after a
+    handful of uses, regardless of what a given test mocks. Tests share this
+    one instance instead of creating a fresh one each time; use the
+    aiointercept_mock fixture for a per-test-cleared view of it.
+
+    passthrough_unmatched=True is required here: this instance's DNS patch
+    stays installed for the entire session (not just the tests that use it),
+    so without it, any host a given test didn't explicitly register — e.g.
+    the real webserver tests spin up and connect to — gets silently
+    redirected into this mock's own dummy server instead of the real network.
+    """
+    async with aiointercept(mock_external_urls=True, passthrough_unmatched=True) as mock:
+        yield mock
+
+
+@pytest_asyncio.fixture
+async def aiointercept_mock(_shared_aiointercept):  # pylint: disable=redefined-outer-name
+    """Function-scoped, auto-cleared view onto the shared aiointercept mock."""
+    _shared_aiointercept._caller_loop = asyncio.get_running_loop()  # pylint: disable=protected-access
+    try:
+        yield _shared_aiointercept
+    finally:
+        _shared_aiointercept.clear()
 
 
 @pytest_asyncio.fixture(autouse=True)
