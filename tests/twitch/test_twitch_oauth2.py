@@ -328,7 +328,9 @@ async def test_validate_token_scenarios(
             f"{OAUTH_HOST}/oauth2/validate", status=response_status, payload=response_data
         )
     else:
-        aiointercept_mock.get(f"{OAUTH_HOST}/oauth2/validate", status=response_status, body="Error")
+        aiointercept_mock.get(
+            f"{OAUTH_HOST}/oauth2/validate", status=response_status, body="Error"
+        )
 
     result = await oauth.validate_token_async("test_token")
     assert result == expected_result

@@ -62,8 +62,14 @@ async def _shared_aiointercept():
     handful of uses, regardless of what a given test mocks. Tests share this
     one instance instead of creating a fresh one each time; use the
     aiointercept_mock fixture for a per-test-cleared view of it.
+
+    passthrough_unmatched=True is required here: this instance's DNS patch
+    stays installed for the entire session (not just the tests that use it),
+    so without it, any host a given test didn't explicitly register — e.g.
+    the real webserver tests spin up and connect to — gets silently
+    redirected into this mock's own dummy server instead of the real network.
     """
-    async with aiointercept(mock_external_urls=True) as mock:
+    async with aiointercept(mock_external_urls=True, passthrough_unmatched=True) as mock:
         yield mock
 
 
