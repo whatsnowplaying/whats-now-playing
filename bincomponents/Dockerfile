@@ -2,7 +2,7 @@
 # Ships libwebp.so.6, libtiff.so.5, glibc 2.28, Mesa 23.x natively —
 # no compatibility shims needed.  Binaries run on Ubuntu 22.04+
 # (glibc 2.34+) via backward glibc compatibility.
-FROM almalinux:8
+FROM almalinux:10
 
 # Enable EPEL (patchelf, xcb-util-*) and PowerTools/CRB (some devel headers)
 RUN dnf install -y epel-release dnf-plugins-core && \
