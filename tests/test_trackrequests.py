@@ -29,6 +29,88 @@ async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefine
     await asyncio.sleep(2)
 
 
+def test_track_id_stable_and_normalized():
+    """track_id is deterministic and ignores case/whitespace differences"""
+    trackid = nowplaying.trackrequests.Requests.track_id("The Beatles", "Hey Jude")
+    assert trackid == nowplaying.trackrequests.Requests.track_id("The Beatles", "Hey Jude")
+    assert trackid == nowplaying.trackrequests.Requests.track_id("the beatles", "  hey   jude ")
+
+
+def test_track_id_distinct_tracks():
+    """different artist/title pairs produce different ids"""
+    assert nowplaying.trackrequests.Requests.track_id(
+        "The Beatles", "Hey Jude"
+    ) != nowplaying.trackrequests.Requests.track_id("Radiohead", "Creep")
+
+
+def test_track_id_handles_missing_fields():
+    """track_id tolerates None and empty values without raising"""
+    assert nowplaying.trackrequests.Requests.track_id(
+        None, None
+    ) == nowplaying.trackrequests.Requests.track_id("", "")
+
+
+@pytest.mark.asyncio
+async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """enqueue_request with structured artist/title tags origin/platform and returns trackid"""
+    trackrequest = trackrequestbootstrap
+    result = await trackrequest.enqueue_request(
+        requester="viewer1",
+        request_origin="lumia",
+        user_platform="kick",
+        artist="Radiohead",
+        title="Creep",
+    )
+    assert result["accepted"] is True
+    assert result["deduped"] is False
+    assert result["track_id"] == trackrequest.track_id("Radiohead", "Creep")
+    assert result["request_origin"] == "lumia"
+    assert result["user_platform"] == "kick"
+
+
+@pytest.mark.asyncio
+async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """a second identical request from the same user within the window is deduped"""
+    trackrequest = trackrequestbootstrap
+    first = await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    assert first["deduped"] is False
+    second = await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    assert second["deduped"] is True
+    assert second["track_id"] == first["track_id"]
+
+
+@pytest.mark.asyncio
+async def test_enqueue_request_different_requester(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """the same song from a different requester is not deduped"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    second = await trackrequest.enqueue_request(
+        requester="viewer2", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    assert second["deduped"] is False
+
+
+@pytest.mark.asyncio
+async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """erase_all clears the whole request queue"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer2", request_origin="lumia", artist="Nirvana", title="Breed"
+    )
+    await trackrequest.erase_all()
+    remaining = [row async for row in trackrequest.get_all_generator()]
+    assert remaining == []
+
+
 @pytest.mark.asyncio
 async def test_trackrequest_artisttitlenoquote(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """artist - title"""
