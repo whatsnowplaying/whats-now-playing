@@ -114,17 +114,20 @@ artist
 """
 
 WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
+# These run only after user_track_request collapses whitespace to single spaces,
+# so separators are literal spaces rather than \s+/\s* next to a lazy capture
+# (that adjacency is a polynomial-ReDoS pattern; see CWE-1333).
 ARTIST_TITLE_RE = re.compile(
-    r'^\s*(?P<artist>.*?)\s+[-]+\s+"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$'
+    r'^(?P<artist>.*?) [-]+ "?(?P<title>.*?)"?(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_ARTIST_RE = re.compile(
-    r'^\s*"(?P<title>.*?)"\s+[-by]+\s+(?P<artist>.*?)\s*(?:for @(?P<requestedfor>\S+))?$'
+    r'^"(?P<title>.*?)" [-by]+ (?P<artist>.*?)(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
 
-# Bound parser input length: these patterns backtrack polynomially, so an
-# unbounded untrusted string (chat or the request API) could be a ReDoS vector.
+# Sane upper bound on request text from chat or the request API (defense in
+# depth; keeps stored requests reasonable and caps parser work).
 MAX_REQUEST_INPUT_LENGTH = 500
 
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
@@ -965,7 +968,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             user_input = user_input.replace("-", " - ")
         if user_input := WEIRDAL_RE.sub("Weird Al", user_input):
             weirdal = True
-        if user_input[0] != '"' and (atmatch := ARTIST_TITLE_RE.search(user_input)):
+        user_input = re.sub(r"\s+", " ", user_input).strip()
+        if not user_input.startswith('"') and (atmatch := ARTIST_TITLE_RE.search(user_input)):
             artist = atmatch.group("artist").strip()
             title = atmatch.group("title").strip()
             requestedfor = atmatch.group("requestedfor")
