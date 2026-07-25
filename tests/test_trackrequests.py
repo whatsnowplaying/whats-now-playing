@@ -112,6 +112,17 @@ async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.asyncio
+async def test_user_track_request_bounds_pathological_input(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """a long adversarial input is length-bounded so regex parsing can't ReDoS"""
+    trackrequest = trackrequestbootstrap
+    evil = " " * 50000 + "- x"
+    data = await asyncio.wait_for(
+        trackrequest.user_track_request({"displayname": "t"}, "user", evil), timeout=5
+    )
+    assert data["requester"] == "user"
+
+
+@pytest.mark.asyncio
 async def test_trackrequest_artisttitlenoquote(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """artist - title"""
 

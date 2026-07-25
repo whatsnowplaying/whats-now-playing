@@ -123,6 +123,10 @@ TITLE_ARTIST_RE = re.compile(
 TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
 
+# Bound parser input length: these patterns backtrack polynomially, so an
+# unbounded untrusted string (chat or the request API) could be a ReDoS vector.
+MAX_REQUEST_INPUT_LENGTH = 500
+
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
 
 GIFWORDS_TEXT = ["keywords", "requester", "requestdisplayname", "imageurl"]
@@ -951,6 +955,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
     ) -> TrackRequestResult:
         """generic request"""
         logging.debug("%s generic requested %s", user, user_input)
+        user_input = user_input[:MAX_REQUEST_INPUT_LENGTH]
         artist = None
         title = None
         requestedfor = None
