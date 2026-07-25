@@ -30,6 +30,7 @@ from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
 from nowplaying.webserver.guessgame_websocket import GuessgameWebSocketHandler
 from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
+from nowplaying.webserver.requests_handlers import RequestsHandler
 from nowplaying.webserver.static_handlers import StaticContentHandler
 
 #
@@ -137,6 +138,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             metadata_key=METADATA_KEY,
             http_session_key=HTTP_SESSION_KEY,
         )
+
+        self.requests_handler = RequestsHandler(config_key=CONFIG_KEY)
 
         while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             try:
@@ -742,6 +745,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/request.htm", self.static_handler.requesterlaunch_htm_handler),
                 web.get("/internals", self.internals),
                 web.get("/v1/status", self.status),
+                web.get("/v1/requests", self.requests_handler.get_requests_handler),
+                web.post("/v1/requests", self.requests_handler.post_requests_handler),
+                web.delete("/v1/requests", self.requests_handler.clear_requests_handler),
+                web.delete("/v1/requests/{reqid}", self.requests_handler.delete_request_handler),
                 web.get("/ws", self.websocket_handler),
                 web.get("/wsstream", self.websocket_streamer),
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),

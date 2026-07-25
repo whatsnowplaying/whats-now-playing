@@ -3,6 +3,7 @@
 # pylint: disable=too-many-lines
 
 import asyncio
+import hashlib
 import logging
 import pathlib
 import re
@@ -68,6 +69,8 @@ USERREQUEST_TEXT = [
     "user_input",
     "normalizedartist",
     "normalizedtitle",
+    "user_platform",
+    "request_origin",
 ]
 
 USERREQUEST_BLOB = ["userimage"]
@@ -111,14 +114,23 @@ artist
 """
 
 WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
+# These run only after user_track_request collapses whitespace to single spaces.
+# Separators are literal spaces (not \s+/\s* next to a lazy capture), and the
+# capture-plus-delimiter prefix is wrapped in an atomic group (?>...) so the
+# split commits to the first delimiter and can't backtrack across later ones.
+# Both avoid the polynomial-ReDoS pattern CodeQL flags (CWE-1333).
 ARTIST_TITLE_RE = re.compile(
-    r'^\s*(?P<artist>.*?)\s+[-]+\s+"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$'
+    r'^(?>(?P<artist>.*?) [-]+ )"?(?P<title>.*?)"?(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_ARTIST_RE = re.compile(
-    r'^\s*"(?P<title>.*?)"\s+[-by]+\s+(?P<artist>.*?)\s*(?:for @(?P<requestedfor>\S+))?$'
+    r'^(?>"(?P<title>.*?)" [-by]+ )(?P<artist>.*?)(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
+
+# Sane upper bound on request text from chat or the request API (defense in
+# depth; keeps stored requests reasonable and caps parser work).
+MAX_REQUEST_INPUT_LENGTH = 500
 
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
 
@@ -318,6 +330,12 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return text
         return ""
 
+    @staticmethod
+    def track_id(artist: str | None, title: str | None) -> str:
+        """stable per-track id shared with Lumia; derived from normalized artist + title"""
+        normalized = Requests._normalize(artist) + "|" + Requests._normalize(title)
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
     async def add_to_db(self, data: UserTrackRequest):
         """add an entry to the db"""
         if not self.databasefile.exists():
@@ -425,6 +443,24 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             nowplaying.utils.sqlite.retry_sqlite_operation(_do_erase)
         except sqlite3.OperationalError:
             logging.exception("Failed to erase request ID %s after retries", reqid)
+
+    async def erase_all(self):
+        """remove every entry from the request queue"""
+        if not self.databasefile.exists():
+            logging.error("%s does not exist, refusing to erase.", self.databasefile)
+            return
+
+        async def _do_erase_all():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute("DELETE FROM userrequest;")
+                await connection.commit()
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_erase_all)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase all requests after retries")
 
     async def erase_gifwords_id(self, reqid: int):
         """remove entry from gifwords"""
@@ -914,11 +950,17 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                     break
         return setting
 
-    async def user_track_request(
-        self, setting: TrackRequestSetting, user: str, user_input: str
+    async def user_track_request(  # pylint: disable=too-many-arguments
+        self,
+        setting: TrackRequestSetting,
+        user: str,
+        user_input: str,
+        request_origin: str = "wnp",
+        user_platform: str | None = "twitch",
     ) -> TrackRequestResult:
         """generic request"""
         logging.debug("%s generic requested %s", user, user_input)
+        user_input = user_input[:MAX_REQUEST_INPUT_LENGTH]
         artist = None
         title = None
         requestedfor = None
@@ -928,7 +970,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             user_input = user_input.replace("-", " - ")
         if user_input := WEIRDAL_RE.sub("Weird Al", user_input):
             weirdal = True
-        if user_input[0] != '"' and (atmatch := ARTIST_TITLE_RE.search(user_input)):
+        user_input = re.sub(r"\s+", " ", user_input).strip()
+        if not user_input.startswith('"') and (atmatch := ARTIST_TITLE_RE.search(user_input)):
             artist = atmatch.group("artist").strip()
             title = atmatch.group("title").strip()
             requestedfor = atmatch.group("requestedfor")
@@ -953,6 +996,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "displayname": setting.get("displayname"),
             "user_input": user_input,
             "userimage": setting.get("userimage"),
+            "request_origin": request_origin,
+            "user_platform": user_platform,
         }
 
         await self.add_to_db(data)
@@ -967,6 +1012,77 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             newdata |= data
 
         return newdata
+
+    async def _duplicate_request_exists(
+        self, username: str, artist: str | None, title: str | None, window_seconds: int
+    ) -> bool:
+        """true if the same user already requested this normalized track within the window"""
+        if not self.databasefile.exists():
+            return False
+        normalizedartist = self._normalize(artist)
+        normalizedtitle = self._normalize(title)
+        if not normalizedartist and not normalizedtitle:
+            return False
+
+        async def _do_lookup():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(
+                    "SELECT reqid FROM userrequest WHERE username=? AND normalizedartist=? "
+                    "AND normalizedtitle=? AND timestamp > datetime('now', ?) LIMIT 1",
+                    (
+                        username,
+                        normalizedartist,
+                        normalizedtitle,
+                        f"-{int(window_seconds)} seconds",
+                    ),
+                )
+                return await cursor.fetchone()
+
+        try:
+            row = await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_lookup)
+        except sqlite3.OperationalError:
+            logging.exception("Duplicate-request lookup failed")
+            return False
+        return row is not None
+
+    async def enqueue_request(  # pylint: disable=too-many-arguments
+        self,
+        requester: str,
+        request_origin: str,
+        user_platform: str | None = None,
+        query: str | None = None,
+        artist: str | None = None,
+        title: str | None = None,
+        dedup_window: int = 30,
+    ) -> TrackRequestResult:
+        """create a request from an external source via the generic parser"""
+        if artist and title:
+            user_input = f"{artist} - {title}"
+        elif query:
+            user_input = query
+        elif artist:
+            user_input = artist
+        elif title:
+            user_input = title
+        else:
+            return {"accepted": False, "reason": "empty request"}
+
+        if (
+            artist
+            and title
+            and await self._duplicate_request_exists(requester, artist, title, dedup_window)
+        ):
+            return {"accepted": True, "deduped": True, "track_id": self.track_id(artist, title)}
+
+        result = await self.user_track_request(
+            {}, requester, user_input, request_origin=request_origin, user_platform=user_platform
+        )
+        result["accepted"] = True
+        result["deduped"] = False
+        result["track_id"] = self.track_id(result.get("requestartist"), result.get("requesttitle"))
+        return result
 
     async def _klipy_request(self, search_terms: str) -> GifWordsTrackRequest:
         """get an image from klipy for a given set of terms"""

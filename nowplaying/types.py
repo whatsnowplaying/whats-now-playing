@@ -141,6 +141,8 @@ class UserTrackRequest(BaseTrackRequest, total=False):
     user_input: str
     normalizedartist: str
     normalizedtitle: str
+    user_platform: str | None
+    request_origin: str | None
 
     # Blob fields
     userimage: bytes | None
@@ -168,6 +170,10 @@ class TrackRequestResult(TypedDict, total=False):
     requesterimageraw: bytes | None
     requestartist: str | None
     requesttitle: str | None
+    accepted: bool
+    deduped: bool
+    track_id: str
+    reason: str
 
 
 class TrackRequestSetting(TypedDict, total=False):
