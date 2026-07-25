@@ -114,14 +114,16 @@ artist
 """
 
 WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
-# These run only after user_track_request collapses whitespace to single spaces,
-# so separators are literal spaces rather than \s+/\s* next to a lazy capture
-# (that adjacency is a polynomial-ReDoS pattern; see CWE-1333).
+# These run only after user_track_request collapses whitespace to single spaces.
+# Separators are literal spaces (not \s+/\s* next to a lazy capture), and the
+# capture-plus-delimiter prefix is wrapped in an atomic group (?>...) so the
+# split commits to the first delimiter and can't backtrack across later ones.
+# Both avoid the polynomial-ReDoS pattern CodeQL flags (CWE-1333).
 ARTIST_TITLE_RE = re.compile(
-    r'^(?P<artist>.*?) [-]+ "?(?P<title>.*?)"?(?: for @(?P<requestedfor>\S+))?$'
+    r'^(?>(?P<artist>.*?) [-]+ )"?(?P<title>.*?)"?(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_ARTIST_RE = re.compile(
-    r'^"(?P<title>.*?)" [-by]+ (?P<artist>.*?)(?: for @(?P<requestedfor>\S+))?$'
+    r'^(?>"(?P<title>.*?)" [-by]+ )(?P<artist>.*?)(?: for @(?P<requestedfor>\S+))?$'
 )
 TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
