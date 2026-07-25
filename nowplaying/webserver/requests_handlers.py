@@ -64,6 +64,8 @@ class RequestsHandler:
         """GET /v1/requests — the current queue snapshot for Lumia to mirror"""
         if not self._authorized(request, request.query.get("secret", "")):
             return web.json_response({"error": "Invalid or missing secret"}, status=403)
+        if not self._requests_enabled(request):
+            return web.json_response({"requests": []})
         reqs = self._requests(request)
         items = []
         async for row in reqs.get_all_generator():
@@ -87,6 +89,8 @@ class RequestsHandler:
         """DELETE /v1/requests/{reqid} — remove a single queue entry"""
         if not self._authorized(request, request.query.get("secret", "")):
             return web.json_response({"error": "Invalid or missing secret"}, status=403)
+        if not self._requests_enabled(request):
+            return web.json_response({"error": "Requests are disabled"}, status=403)
         try:
             reqid = int(request.match_info.get("reqid", ""))
         except ValueError:
@@ -98,5 +102,7 @@ class RequestsHandler:
         """DELETE /v1/requests — clear the entire queue"""
         if not self._authorized(request, request.query.get("secret", "")):
             return web.json_response({"error": "Invalid or missing secret"}, status=403)
+        if not self._requests_enabled(request):
+            return web.json_response({"error": "Requests are disabled"}, status=403)
         await self._requests(request).erase_all()
         return web.json_response({"cleared": True})

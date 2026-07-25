@@ -94,7 +94,7 @@ async def test_requests_authentication(
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 async def test_requests_disabled(getwebserver):  # pylint: disable=redefined-outer-name
-    """POST is refused when the request feature is disabled"""
+    """mutations are refused when disabled; the read returns an empty queue"""
     config, _ = getwebserver
     config.cparser.setValue("settings/requests", False)
     config.cparser.sync()
@@ -107,6 +107,17 @@ async def test_requests_disabled(getwebserver):  # pylint: disable=redefined-out
             timeout=aiohttp.ClientTimeout(total=10),
         ) as req:
             assert req.status == 403
+
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 403
+
+        async with session.get(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+            assert (await req.json())["requests"] == []
 
 
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
