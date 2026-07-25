@@ -28,6 +28,11 @@ async def test_requests_enqueue_and_list(getwebserver):  # pylint: disable=redef
     port = await _ready(config)
 
     async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
         async with session.post(
             f"http://localhost:{port}{REQUEST_URL}",
             json={
@@ -130,6 +135,11 @@ async def test_requests_delete_and_clear(getwebserver):  # pylint: disable=redef
     port = await _ready(config)
 
     async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
         for artist, title in (("Radiohead", "Creep"), ("Nirvana", "Breed")):
             async with session.post(
                 f"http://localhost:{port}{REQUEST_URL}",

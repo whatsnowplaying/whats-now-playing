@@ -54,6 +54,7 @@ def test_track_id_handles_missing_fields():
 async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """enqueue_request with structured artist/title tags origin/platform and returns trackid"""
     trackrequest = trackrequestbootstrap
+    await trackrequest.erase_all()
     result = await trackrequest.enqueue_request(
         requester="viewer1",
         request_origin="lumia",
@@ -72,6 +73,7 @@ async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: dis
 async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """a second identical request from the same user within the window is deduped"""
     trackrequest = trackrequestbootstrap
+    await trackrequest.erase_all()
     first = await trackrequest.enqueue_request(
         requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
     )
@@ -87,6 +89,7 @@ async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=
 async def test_enqueue_request_different_requester(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """the same song from a different requester is not deduped"""
     trackrequest = trackrequestbootstrap
+    await trackrequest.erase_all()
     await trackrequest.enqueue_request(
         requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
     )
