@@ -941,7 +941,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                     break
         return setting
 
-    async def user_track_request(
+    async def user_track_request(  # pylint: disable=too-many-arguments
         self,
         setting: TrackRequestSetting,
         user: str,
@@ -1036,7 +1036,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return False
         return row is not None
 
-    async def enqueue_request(
+    async def enqueue_request(  # pylint: disable=too-many-arguments
         self,
         requester: str,
         request_origin: str,
@@ -1046,7 +1046,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         title: str | None = None,
         dedup_window: int = 30,
     ) -> TrackRequestResult:
-        """create a request from an external source, reusing the generic parser; returns the trackid"""
+        """create a request from an external source via the generic parser"""
         if artist and title:
             user_input = f"{artist} - {title}"
         elif query:
