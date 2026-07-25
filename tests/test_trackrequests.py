@@ -24,7 +24,11 @@ async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefine
         getroot, playlistpath
     )
     config.cparser.sync()
-    yield nowplaying.trackrequests.Requests(stopevent=stopevent, config=config, testmode=True)
+    # upgrade=True forces a fresh request.db per test; it lives at a shared testsuite
+    # cache location and is otherwise never reset, so requests would leak across tests.
+    yield nowplaying.trackrequests.Requests(
+        stopevent=stopevent, config=config, testmode=True, upgrade=True
+    )
     stopevent.set()
     await asyncio.sleep(2)
 
@@ -54,7 +58,6 @@ def test_track_id_handles_missing_fields():
 async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """enqueue_request with structured artist/title tags origin/platform and returns trackid"""
     trackrequest = trackrequestbootstrap
-    await trackrequest.erase_all()
     result = await trackrequest.enqueue_request(
         requester="viewer1",
         request_origin="lumia",
@@ -73,7 +76,6 @@ async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: dis
 async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """a second identical request from the same user within the window is deduped"""
     trackrequest = trackrequestbootstrap
-    await trackrequest.erase_all()
     first = await trackrequest.enqueue_request(
         requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
     )
@@ -89,7 +91,6 @@ async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=
 async def test_enqueue_request_different_requester(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """the same song from a different requester is not deduped"""
     trackrequest = trackrequestbootstrap
-    await trackrequest.erase_all()
     await trackrequest.enqueue_request(
         requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
     )
@@ -112,6 +113,40 @@ async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-ou
     await trackrequest.erase_all()
     remaining = [row async for row in trackrequest.get_all_generator()]
     assert remaining == []
+
+
+@pytest.mark.asyncio
+async def test_erase_by_identity(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """erase_by_identity removes only the matching requester's request for a track"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer2", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Nirvana", title="Breed"
+    )
+    deleted = await trackrequest.erase_by_identity("Radiohead", "Creep", "viewer1")
+    assert deleted == 1
+    remaining = [row async for row in trackrequest.get_all_generator()]
+    assert len(remaining) == 2
+    assert not any(r["username"] == "viewer1" and r["title"] == "Creep" for r in remaining)
+
+
+@pytest.mark.asyncio
+async def test_erase_by_identity_requires_both(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """erase_by_identity refuses (deletes nothing) when artist or title is missing"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    assert await trackrequest.erase_by_identity("", "Creep", "viewer1") == 0
+    assert await trackrequest.erase_by_identity("Radiohead", "", "viewer1") == 0
+    assert await trackrequest.erase_by_identity("", "", "viewer1") == 0
+    remaining = [row async for row in trackrequest.get_all_generator()]
+    assert len(remaining) == 1
 
 
 @pytest.mark.asyncio

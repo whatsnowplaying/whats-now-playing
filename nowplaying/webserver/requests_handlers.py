@@ -99,10 +99,22 @@ class RequestsHandler:
         return web.json_response({"deleted": reqid})
 
     async def clear_requests_handler(self, request: web.Request) -> web.Response:
-        """DELETE /v1/requests — clear the entire queue"""
+        """DELETE /v1/requests — clear the queue, or one request when artist/title given"""
         if not self._authorized(request, request.query.get("secret", "")):
             return web.json_response({"error": "Invalid or missing secret"}, status=403)
         if not self._requests_enabled(request):
             return web.json_response({"error": "Requests are disabled"}, status=403)
+        artist = request.query.get("artist", "")
+        title = request.query.get("title", "")
+        requester = request.query.get("requester", "")
+        if artist and title:
+            deleted = await self._requests(request).erase_by_identity(artist, title, requester)
+            return web.json_response({"deleted": deleted})
+        if artist or title or requester:
+            # partial identity is ambiguous — don't guess, and don't fall through to clear-all
+            return web.json_response(
+                {"error": "artist and title are both required to delete a single request"},
+                status=400,
+            )
         await self._requests(request).erase_all()
         return web.json_response({"cleared": True})

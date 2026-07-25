@@ -500,14 +500,10 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             accepted = False
         t = nowplaying.version.__VERSION_TUPLE__
         wnp_version = f"{t[0]}.{t[1]}.{t[2]}"
-        config = request.app[self.config_key]
         response: dict = {
             "wnp_version": wnp_version,
             "min_plugin_version": LUMIA_MIN_PLUGIN_VERSION,
             "accepted": accepted,
-            "capabilities": {
-                "requests": config.cparser.value("settings/requests", type=bool),
-            },
         }
         if not accepted:
             response["message"] = (
