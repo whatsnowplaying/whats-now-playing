@@ -462,6 +462,41 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         except sqlite3.OperationalError:
             logging.exception("Failed to erase all requests after retries")
 
+    async def erase_by_identity(
+        self, artist: str | None, title: str | None, requester: str | None = None
+    ) -> int:
+        """remove requests matching a normalized artist/title (and requester, if given)"""
+        if not self.databasefile.exists():
+            logging.error("%s does not exist, refusing to erase.", self.databasefile)
+            return 0
+        normalizedartist = self._normalize(artist)
+        normalizedtitle = self._normalize(title)
+        if requester:
+            sql = (
+                "DELETE FROM userrequest "
+                "WHERE normalizedartist=? AND normalizedtitle=? AND username=?"
+            )
+            params = (normalizedartist, normalizedtitle, requester)
+        else:
+            sql = "DELETE FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?"
+            params = (normalizedartist, normalizedtitle)
+
+        async def _do_erase_by_identity():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(sql, params)
+                await connection.commit()
+                return cursor.rowcount
+
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                _do_erase_by_identity
+            )
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase requests by identity after retries")
+            return 0
+
     async def erase_gifwords_id(self, reqid: int):
         """remove entry from gifwords"""
         if not self.databasefile.exists():

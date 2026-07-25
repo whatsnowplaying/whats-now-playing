@@ -115,6 +115,27 @@ async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.asyncio
+async def test_erase_by_identity(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """erase_by_identity removes only the matching requester's request for a track"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.erase_all()
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer2", request_origin="lumia", artist="Radiohead", title="Creep"
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer1", request_origin="lumia", artist="Nirvana", title="Breed"
+    )
+    deleted = await trackrequest.erase_by_identity("Radiohead", "Creep", "viewer1")
+    assert deleted == 1
+    remaining = [row async for row in trackrequest.get_all_generator()]
+    assert len(remaining) == 2
+    assert not any(r["username"] == "viewer1" and r["title"] == "Creep" for r in remaining)
+
+
+@pytest.mark.asyncio
 async def test_user_track_request_bounds_pathological_input(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """a long adversarial input is length-bounded so regex parsing can't ReDoS"""
     trackrequest = trackrequestbootstrap
