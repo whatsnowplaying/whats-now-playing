@@ -6,7 +6,6 @@ import base64
 import ipaddress
 import logging
 import os
-import secrets
 import socket
 import urllib.parse
 import uuid
@@ -500,14 +499,10 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             accepted = False
         t = nowplaying.version.__VERSION_TUPLE__
         wnp_version = f"{t[0]}.{t[1]}.{t[2]}"
-        config = request.app[self.config_key]
         response: dict = {
             "wnp_version": wnp_version,
             "min_plugin_version": LUMIA_MIN_PLUGIN_VERSION,
             "accepted": accepted,
-            "capabilities": {
-                "requests": config.cparser.value("settings/requests", type=bool),
-            },
         }
         if not accepted:
             response["message"] = (
@@ -632,7 +627,7 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 return web.json_response({"error": "Missing secret in request"}, status=403)
 
             # Use constant-time comparison to prevent timing attacks
-            if not secrets.compare_digest(required_secret, provided_secret):
+            if not nowplaying.utils.secure_compare(required_secret, provided_secret):
                 logging.warning(
                     "Remote metadata submission with invalid secret from %s", request.remote
                 )

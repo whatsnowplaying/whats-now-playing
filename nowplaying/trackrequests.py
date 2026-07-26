@@ -425,11 +425,11 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
-    def erase_id(self, reqid: int):
-        """remove entry from requests"""
+    def erase_id(self, reqid: int) -> int:
+        """remove entry from requests; returns the number of rows removed"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
-            return
+            return 0
 
         def _do_erase():
             with nowplaying.utils.sqlite.sqlite_connection(
@@ -438,14 +438,16 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 cursor = connection.cursor()
                 cursor.execute("DELETE FROM userrequest WHERE reqid=?;", (reqid,))
                 connection.commit()
+                return cursor.rowcount
 
         try:
-            nowplaying.utils.sqlite.retry_sqlite_operation(_do_erase)
+            return nowplaying.utils.sqlite.retry_sqlite_operation(_do_erase)
         except sqlite3.OperationalError:
             logging.exception("Failed to erase request ID %s after retries", reqid)
+            return 0
 
-    async def erase_all(self):
-        """remove every entry from the request queue"""
+    async def erase_all_requests(self):
+        """remove every entry from the request queue (userrequest table only, not gifwords)"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
             return
@@ -461,6 +463,51 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_erase_all)
         except sqlite3.OperationalError:
             logging.exception("Failed to erase all requests after retries")
+
+    async def erase_by_identity(
+        self, artist: str | None, title: str | None, requester: str | None = None
+    ) -> int:
+        """remove requests matching a normalized artist AND title; returns rows removed.
+
+        When requester is given, only that requester's row is removed. When it is
+        omitted/empty, EVERY requester's row for that track is removed (a queue-owner
+        bulk clear for one song)."""
+        if not self.databasefile.exists():
+            logging.error("%s does not exist, refusing to erase.", self.databasefile)
+            return 0
+        normalizedartist = self._normalize(artist)
+        normalizedtitle = self._normalize(title)
+        if not normalizedartist or not normalizedtitle:
+            # identity requires both; refuse rather than match rows with empty fields
+            logging.warning(
+                "erase_by_identity needs both artist and title, got %r / %r", artist, title
+            )
+            return 0
+        if requester:
+            sql = (
+                "DELETE FROM userrequest "
+                "WHERE normalizedartist=? AND normalizedtitle=? AND username=?"
+            )
+            params = (normalizedartist, normalizedtitle, requester)
+        else:
+            sql = "DELETE FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?"
+            params = (normalizedartist, normalizedtitle)
+
+        async def _do_erase_by_identity():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(sql, params)
+                await connection.commit()
+                return cursor.rowcount
+
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                _do_erase_by_identity
+            )
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase requests by identity after retries")
+            return 0
 
     async def erase_gifwords_id(self, reqid: int):
         """remove entry from gifwords"""
@@ -1057,24 +1104,41 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         title: str | None = None,
         dedup_window: int = 30,
     ) -> TrackRequestResult:
-        """create a request from an external source via the generic parser"""
-        if artist and title:
-            user_input = f"{artist} - {title}"
-        elif query:
-            user_input = query
-        elif artist:
-            user_input = artist
-        elif title:
-            user_input = title
-        else:
-            return {"accepted": False, "reason": "empty request"}
+        """create a request from an external source.
 
-        if (
-            artist
-            and title
-            and await self._duplicate_request_exists(requester, artist, title, dedup_window)
-        ):
-            return {"accepted": True, "deduped": True, "track_id": self.track_id(artist, title)}
+        Structured artist+title are stored verbatim (NOT round-tripped through the chat
+        parser, which would redistribute an artist/title containing ' - '). A bare query
+        is parsed by the chat parser."""
+        if artist and title:
+            if await self._duplicate_request_exists(requester, artist, title, dedup_window):
+                return {
+                    "accepted": True,
+                    "deduped": True,
+                    "track_id": self.track_id(artist, title),
+                }
+            data: UserTrackRequest = {
+                "username": requester,
+                "artist": artist,
+                "title": title,
+                "type": "Generic",
+                "request_origin": request_origin,
+                "user_platform": user_platform,
+            }
+            await self.add_to_db(data)
+            return {
+                "accepted": True,
+                "deduped": False,
+                "track_id": self.track_id(artist, title),
+                "requester": requester,
+                "requestartist": artist,
+                "requesttitle": title,
+                "request_origin": request_origin,
+                "user_platform": user_platform,
+            }
+
+        user_input = query or artist or title
+        if not user_input:
+            return {"accepted": False, "reason": "empty request"}
 
         result = await self.user_track_request(
             {}, requester, user_input, request_origin=request_origin, user_platform=user_platform

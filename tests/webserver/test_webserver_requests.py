@@ -160,6 +160,9 @@ async def test_requests_delete_and_clear(getwebserver):  # pylint: disable=redef
             timeout=aiohttp.ClientTimeout(total=10),
         ) as req:
             assert req.status == 200
+            body = await req.json()
+            assert body["deleted"] == 1
+            assert body["request_id"] == victim
 
         async with session.get(
             f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
@@ -177,3 +180,106 @@ async def test_requests_delete_and_clear(getwebserver):  # pylint: disable=redef
         ) as req:
             items = (await req.json())["requests"]
             assert items == []
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_requests_delete_by_identity(getwebserver):  # pylint: disable=redefined-outer-name
+    """DELETE with artist/title/requester removes only that requester's request"""
+    config, _ = getwebserver
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+    port = await _ready(config)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
+        for requester in ("viewer1", "viewer2"):
+            async with session.post(
+                f"http://localhost:{port}{REQUEST_URL}",
+                json={"requester": requester, "artist": "Radiohead", "title": "Creep"},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as req:
+                assert req.status == 200
+
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}",
+            params={"artist": "Radiohead", "title": "Creep", "requester": "viewer1"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+            assert (await req.json())["deleted"] == 1
+
+        async with session.get(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            items = (await req.json())["requests"]
+            assert len(items) == 1
+            assert items[0]["requester"] == "viewer2"
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_requests_delete_partial_identity_rejected(getwebserver):  # pylint: disable=redefined-outer-name
+    """a partial identity (no artist+title) is a 400, never a broad delete or a clear-all"""
+    config, _ = getwebserver
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+    port = await _ready(config)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
+        async with session.post(
+            f"http://localhost:{port}{REQUEST_URL}",
+            json={"requester": "viewer1", "artist": "Radiohead", "title": "Creep"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}",
+            params={"requester": "viewer1"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 400
+
+        async with session.get(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert len((await req.json())["requests"]) == 1
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_requests_delete_no_match_404(getwebserver):  # pylint: disable=redefined-outer-name
+    """deleting a nonexistent request is a 404, not a silent deleted:0 — by id and by identity"""
+    config, _ = getwebserver
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+    port = await _ready(config)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}",
+            params={"artist": "Nobody", "title": "Nothing", "requester": "ghost"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 404
+
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}/999999",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 404

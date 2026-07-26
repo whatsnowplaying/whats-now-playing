@@ -40,7 +40,7 @@ pushes fail with "can not upload new objects to public fork".
 
 ## Architecture Overview
 
-This is a Python 3.10/Qt6 desktop application for streaming DJs to display "now
+This is a Python 3.11/Qt6 desktop application for streaming DJs to display "now
 playing" information from various DJ software.
 
 ### Core Components

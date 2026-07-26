@@ -116,7 +116,7 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
                 return
 
             # Use constant-time comparison to prevent timing attacks
-            if not secrets.compare_digest(required_secret, provided_secret):
+            if not nowplaying.utils.secure_compare(required_secret, provided_secret):
                 logging.warning(
                     "Remote metadata submission with invalid secret from %s", request.remote
                 )
