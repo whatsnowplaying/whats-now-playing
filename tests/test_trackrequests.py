@@ -25,14 +25,14 @@ async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefine
     )
     config.cparser.sync()
     # request.db lives at a shared testsuite cache location and is otherwise never reset,
-    # so give each test a clean slate. upgrade=True recreates the file; erase_all()
+    # so give each test a clean slate. upgrade=True recreates the file; erase_all_requests()
     # then guarantees empty rows even when the unlink was skipped (e.g. a locked file on
     # Windows only logs a warning). NOTE: safe only because the suite runs sequentially —
     # a pytest-xdist (-n) run would need per-worker isolation of this file.
     requests = nowplaying.trackrequests.Requests(
         stopevent=stopevent, config=config, testmode=True, upgrade=True
     )
-    await requests.erase_all()
+    await requests.erase_all_requests()
     yield requests
     stopevent.set()
     await asyncio.sleep(2)
@@ -106,8 +106,8 @@ async def test_enqueue_request_different_requester(trackrequestbootstrap):  # py
 
 
 @pytest.mark.asyncio
-async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    """erase_all clears the whole request queue"""
+async def test_erase_all_requests(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """erase_all_requests clears the whole request queue"""
     trackrequest = trackrequestbootstrap
     await trackrequest.enqueue_request(
         requester="viewer1", request_origin="lumia", artist="Radiohead", title="Creep"
@@ -115,7 +115,7 @@ async def test_erase_all(trackrequestbootstrap):  # pylint: disable=redefined-ou
     await trackrequest.enqueue_request(
         requester="viewer2", request_origin="lumia", artist="Nirvana", title="Breed"
     )
-    await trackrequest.erase_all()
+    await trackrequest.erase_all_requests()
     remaining = [row async for row in trackrequest.get_all_generator()]
     assert remaining == []
 

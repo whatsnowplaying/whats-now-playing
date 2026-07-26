@@ -446,8 +446,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             logging.exception("Failed to erase request ID %s after retries", reqid)
             return 0
 
-    async def erase_all(self):
-        """remove every entry from the request queue"""
+    async def erase_all_requests(self):
+        """remove every entry from the request queue (userrequest table only, not gifwords)"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
             return

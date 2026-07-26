@@ -2,12 +2,12 @@
 """aiohttp handlers for the Lumia song-request queue API"""
 
 import asyncio
-import secrets
 from typing import TYPE_CHECKING
 
 from aiohttp import web
 
 import nowplaying.trackrequests
+import nowplaying.utils
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -18,9 +18,18 @@ class RequestsHandler:
 
     def __init__(self, config_key: "web.AppKey[nowplaying.config.ConfigFile]"):
         self.config_key = config_key
+        self._requests_instance: "nowplaying.trackrequests.Requests | None" = None
 
     def _requests(self, request: web.Request) -> "nowplaying.trackrequests.Requests":
-        return nowplaying.trackrequests.Requests(request.app[self.config_key])
+        # Requests() runs a synchronous _migrate_db() (sqlite connect + PRAGMA, possibly
+        # ALTER) in its constructor, so build it once and reuse it rather than paying that
+        # cost on the event loop on every API hit. request.app[config_key] is a single
+        # stable object and Requests reads config live via cparser, so caching is safe.
+        if self._requests_instance is None:
+            self._requests_instance = nowplaying.trackrequests.Requests(
+                request.app[self.config_key]
+            )
+        return self._requests_instance
 
     def _authorized(self, request: web.Request, provided_secret: str) -> bool:
         """reuse the webserver's shared secret (empty key disables auth)"""
@@ -30,7 +39,7 @@ class RequestsHandler:
         )
         if not required:
             return True
-        return bool(provided_secret) and secrets.compare_digest(required, provided_secret)
+        return bool(provided_secret) and nowplaying.utils.secure_compare(required, provided_secret)
 
     def _requests_enabled(self, request: web.Request) -> bool:
         return request.app[self.config_key].cparser.value("settings/requests", type=bool)
@@ -120,5 +129,5 @@ class RequestsHandler:
                 {"error": "artist and title are both required to delete a single request"},
                 status=400,
             )
-        await self._requests(request).erase_all()
+        await self._requests(request).erase_all_requests()
         return web.json_response({"cleared": True})

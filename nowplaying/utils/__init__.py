@@ -6,6 +6,7 @@ import base64
 import io
 import logging
 import os
+import secrets
 import ssl
 import sys
 import time
@@ -38,6 +39,13 @@ TRANSPARENT_PNG = (
 )
 
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
+
+
+def secure_compare(left: str, right: str) -> bool:
+    """constant-time compare of two secrets, tolerating non-ASCII (compares utf-8 bytes).
+
+    secrets.compare_digest raises TypeError on non-ASCII str, so encode first."""
+    return secrets.compare_digest(str(left).encode("utf-8"), str(right).encode("utf-8"))
 
 
 def safe_stopevent_check(stopevent: asyncio.Event | None) -> bool:

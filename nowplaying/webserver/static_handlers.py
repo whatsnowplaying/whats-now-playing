@@ -6,7 +6,6 @@ import base64
 import ipaddress
 import logging
 import os
-import secrets
 import socket
 import urllib.parse
 import uuid
@@ -628,7 +627,7 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 return web.json_response({"error": "Missing secret in request"}, status=403)
 
             # Use constant-time comparison to prevent timing attacks
-            if not secrets.compare_digest(required_secret, provided_secret):
+            if not nowplaying.utils.secure_compare(required_secret, provided_secret):
                 logging.warning(
                     "Remote metadata submission with invalid secret from %s", request.remote
                 )

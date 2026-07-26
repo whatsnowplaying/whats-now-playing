@@ -626,7 +626,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         if (
             not expected_state
             or not received_state
-            or not secrets.compare_digest(received_state, str(expected_state))
+            or not nowplaying.utils.secure_compare(received_state, str(expected_state))
         ):
             logging.warning("%s implicit: state mismatch/missing, possible CSRF", service_name)
             html = load_tmpl(f"{template_prefix}_csrf_error.htm", service_name=service_name)
