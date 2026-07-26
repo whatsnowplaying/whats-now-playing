@@ -95,8 +95,10 @@ class RequestsHandler:
             reqid = int(request.match_info.get("reqid", ""))
         except ValueError:
             return web.json_response({"error": "invalid request id"}, status=400)
-        await asyncio.to_thread(self._requests(request).erase_id, reqid)
-        return web.json_response({"deleted": reqid})
+        deleted = await asyncio.to_thread(self._requests(request).erase_id, reqid)
+        if not deleted:
+            return web.json_response({"error": "no such request"}, status=404)
+        return web.json_response({"deleted": deleted, "request_id": reqid})
 
     async def clear_requests_handler(self, request: web.Request) -> web.Response:
         """DELETE /v1/requests — clear the queue, or one request when artist/title given"""
@@ -109,6 +111,8 @@ class RequestsHandler:
         requester = request.query.get("requester", "")
         if artist and title:
             deleted = await self._requests(request).erase_by_identity(artist, title, requester)
+            if not deleted:
+                return web.json_response({"error": "no matching request"}, status=404)
             return web.json_response({"deleted": deleted})
         if artist or title or requester:
             # partial identity is ambiguous — don't guess, and don't fall through to clear-all

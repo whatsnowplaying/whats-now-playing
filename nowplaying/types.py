@@ -174,6 +174,8 @@ class TrackRequestResult(TypedDict, total=False):
     deduped: bool
     track_id: str
     reason: str
+    request_origin: str | None
+    user_platform: str | None
 
 
 class TrackRequestSetting(TypedDict, total=False):
