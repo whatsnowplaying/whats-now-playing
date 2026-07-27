@@ -2926,11 +2926,14 @@ information and remote input functionality.</p>
 <p>All API endpoints are available at: <code>http://hostname:port/v1/</code></p>
 <p>Where <code>hostname</code> and <code>port</code> match your webserver configuration.</p>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p>Some endpoints require authentication via a secret key. When configured, include the secret in your request:</p>
-<ul>
-<li><strong>GET requests</strong>: Add <code>&amp;secret=your_api_key</code> to query parameters</li>
-<li><strong>POST requests</strong>: Include <code>"secret": "your_api_key"</code> in JSON body</li>
-</ul>
+<p>Some endpoints require authentication via a secret key, configured as the webserver's shared secret.
+When one is set, present it using the <code>X-WNP-Client-Auth</code> header:</p>
+<div class="highlight"><pre><span></span><code><span class="err">X-WNP-Client-Auth: your_api_key</span>
+</code></pre></div>
+<p>The header works on every authenticated endpoint and every method.</p>
+<p>Clients that cannot set request headers may instead pass the secret as a <code>secret</code> query parameter
+or JSON body field. Avoid this where you have the choice: query strings are recorded in webserver
+access logs, proxy logs, and browser history.</p>
 <h2 id="endpoints">Endpoints<a class="headerlink" href="#endpoints" title="Permanent link">&para;</a></h2>
 <h3 id="get-v1last">GET /v1/last<a class="headerlink" href="#get-v1last" title="Permanent link">&para;</a></h3>
 <p>Returns the currently playing track metadata.</p>
@@ -2947,18 +2950,22 @@ information and remote input functionality.</p>
 </code></pre></div>
 <h3 id="getpost-v1remoteinput">GET|POST /v1/remoteinput<a class="headerlink" href="#getpost-v1remoteinput" title="Permanent link">&para;</a></h3>
 <p>Accepts track metadata submissions from remote sources for the <a href="../../input/remote/">Remote Input</a> system.</p>
-<p><strong>Authentication</strong>: Optional secret key (if configured)</p>
+<p><strong>Authentication</strong>: Optional secret key (if configured) via the <code>X-WNP-Client-Auth</code> header</p>
 <p><strong>Methods</strong>: <code>GET</code>, <code>POST</code></p>
 <h4 id="post-request-json">POST Request (JSON)<a class="headerlink" href="#post-request-json" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;secret&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your_api_key&quot;</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="err">POST /v1/remoteinput</span>
+<span class="err">X-WNP-Client-Auth: your_api_key</span>
+<span class="err">Content-Type: application/json</span>
+
+<span class="err">{</span>
+<span class="err">  &quot;artist&quot;: &quot;Artist Name&quot;,</span>
+<span class="err">  &quot;title&quot;: &quot;Track Title&quot;,</span>
+<span class="err">  &quot;album&quot;: &quot;Album Name&quot;</span>
+<span class="err">}</span>
 </code></pre></div>
 <h4 id="get-request-query-parameters">GET Request (Query Parameters)<a class="headerlink" href="#get-request-query-parameters" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>/v1/remoteinput?artist=Artist%20Name&amp;title=Track%20Title&amp;album=Album%20Name&amp;secret=your_api_key
+<div class="highlight"><pre><span></span><code><span class="err">GET /v1/remoteinput?artist=Artist%20Name&amp;title=Track%20Title&amp;album=Album%20Name</span>
+<span class="err">X-WNP-Client-Auth: your_api_key</span>
 </code></pre></div>
 <h4 id="response-format">Response Format<a class="headerlink" href="#response-format" title="Permanent link">&para;</a></h4>
 <p><strong>Success (200)</strong>:</p>
