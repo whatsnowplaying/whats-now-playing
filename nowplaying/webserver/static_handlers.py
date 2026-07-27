@@ -22,6 +22,7 @@ import nowplaying.upgrades
 import nowplaying.utils
 import nowplaying.utils.templatepaths
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
+import nowplaying.webserver.auth
 from nowplaying.types import TrackMetadata
 
 # Minimum required versions for known remote agents.
@@ -616,27 +617,27 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         """Common processing for remote metadata submissions"""
         # Refresh config to get latest settings (important for testing)
         request.app[self.config_key].get()
-        if required_secret := request.app[self.config_key].cparser.value(
-            "remote/remote_key", type=str, defaultValue=""
-        ):
-            provided_secret = metadata.get("secret", "")
-            if not provided_secret:
-                logging.warning(
-                    "Remote metadata submission without secret from %s", request.remote
-                )
-                return web.json_response({"error": "Missing secret in request"}, status=403)
-
-            # Use constant-time comparison to prevent timing attacks
-            if not nowplaying.utils.secure_compare(required_secret, provided_secret):
-                logging.warning(
-                    "Remote metadata submission with invalid secret from %s", request.remote
-                )
-                return web.json_response({"error": "Invalid secret"}, status=403)
+        # Header is preferred; the metadata "secret" field is the legacy path
+        auth_result = nowplaying.webserver.auth.check_client_auth(
+            request,
+            request.app[self.config_key],
+            legacy_secret=str(metadata.get("secret", "")),
+            source="Remote metadata submission",
+        )
+        if auth_result == nowplaying.webserver.auth.AUTH_MISSING:
+            return web.json_response({"error": "Missing secret in request"}, status=403)
+        if auth_result != nowplaying.webserver.auth.AUTH_OK:
+            return web.json_response({"error": "Invalid secret"}, status=403)
 
         if upgrade_response := self._check_agent_version(metadata):
             return upgrade_response
 
-        logging.info("Got %s raw metadata from %s: %s ", source, request.host, metadata)
+        # Redact before logging: on GET the secret arrives as a query parameter,
+        # so logging the raw dict would write it to debug.log in the clear
+        loggable = dict(metadata)
+        if "secret" in loggable:
+            loggable["secret"] = "***REDACTED***"  # noqa: S105
+        logging.info("Got %s raw metadata from %s: %s ", source, request.host, loggable)
 
         # Start with a copy of the metadata
         clean_metadata: TrackMetadata = metadata.copy()

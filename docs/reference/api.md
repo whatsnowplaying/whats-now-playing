@@ -11,10 +11,18 @@ Where `hostname` and `port` match your webserver configuration.
 
 ## Authentication
 
-Some endpoints require authentication via a secret key. When configured, include the secret in your request:
+Some endpoints require authentication via a secret key, configured as the webserver's shared secret.
+When one is set, present it using the `X-WNP-Client-Auth` header:
 
-- **GET requests**: Add `&secret=your_api_key` to query parameters
-- **POST requests**: Include `"secret": "your_api_key"` in JSON body
+```http
+X-WNP-Client-Auth: your_api_key
+```
+
+The header works on every authenticated endpoint and every method.
+
+Clients that cannot set request headers may instead pass the secret as a `secret` query parameter
+or JSON body field. Avoid this where you have the choice: query strings are recorded in webserver
+access logs, proxy logs, and browser history.
 
 ## Endpoints
 
@@ -41,25 +49,29 @@ Returns the currently playing track metadata.
 
 Accepts track metadata submissions from remote sources for the [Remote Input](../input/remote.md) system.
 
-**Authentication**: Optional secret key (if configured)
+**Authentication**: Optional secret key (if configured) via the `X-WNP-Client-Auth` header
 
 **Methods**: `GET`, `POST`
 
 #### POST Request (JSON)
 
-```json
+```http
+POST /v1/remoteinput
+X-WNP-Client-Auth: your_api_key
+Content-Type: application/json
+
 {
   "artist": "Artist Name",
   "title": "Track Title",
-  "album": "Album Name",
-  "secret": "your_api_key"
+  "album": "Album Name"
 }
 ```
 
 #### GET Request (Query Parameters)
 
-```url
-/v1/remoteinput?artist=Artist%20Name&title=Track%20Title&album=Album%20Name&secret=your_api_key
+```http
+GET /v1/remoteinput?artist=Artist%20Name&title=Track%20Title&album=Album%20Name
+X-WNP-Client-Auth: your_api_key
 ```
 
 #### Response Format

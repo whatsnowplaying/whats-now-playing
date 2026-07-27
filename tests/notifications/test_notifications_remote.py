@@ -7,6 +7,7 @@ import pytest
 import pytest_asyncio
 
 import nowplaying.notifications.remote
+import nowplaying.webserver.auth
 
 
 @pytest_asyncio.fixture
@@ -54,11 +55,13 @@ async def test_remote_plugin_no_secret(remote_plugin, aiointercept_mock):  # pyl
     request = aiointercept_mock.requests[first_key][0]
     # Should not have secret in the payload
     assert "secret" not in await request.json()
+    # No key configured means no auth header either
+    assert nowplaying.webserver.auth.CLIENT_AUTH_HEADER not in request.headers
 
 
 @pytest.mark.asyncio
 async def test_remote_plugin_with_secret(remote_plugin, aiointercept_mock):  # pylint: disable=redefined-outer-name
-    """test remote plugin with secret configured"""
+    """the secret is sent as an auth header and never placed in the payload"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
     remote_plugin.config.cparser.setValue("remote/remote_port", 8899)
@@ -71,12 +74,15 @@ async def test_remote_plugin_with_secret(remote_plugin, aiointercept_mock):  # p
 
     await remote_plugin.notify_track_change(metadata)
 
-    # Verify the request was made with secret
+    # Verify the request carried the secret in the header, not the body
     assert len(aiointercept_mock.requests) == 1
     first_key = list(aiointercept_mock.requests.keys())[0]
     request = aiointercept_mock.requests[first_key][0]
-    payload = await request.json()
-    assert payload["secret"] == "test_secret_123"  # pragma: allowlist secret
+    assert (
+        request.headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER]
+        == "test_secret_123"  # pragma: allowlist secret
+    )
+    assert "secret" not in await request.json()
 
 
 @pytest.mark.asyncio

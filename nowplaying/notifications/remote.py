@@ -10,6 +10,7 @@ import aiohttp
 
 import nowplaying.db
 import nowplaying.mdns_discovery
+import nowplaying.webserver.auth
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
@@ -52,10 +53,7 @@ class Plugin(NotificationPlugin):
         if not self.enabled:
             return
 
-        # Prepare metadata with secret for authentication
         remote_data = self._strip_blobs_metadata(metadata)
-        if self.key:
-            remote_data["secret"] = self.key
 
         # Signal that the client already submitted to charts so the server skips it
         if (
@@ -65,16 +63,19 @@ class Plugin(NotificationPlugin):
         ):
             remote_data["remote_charts_submitted"] = True
 
-        # Prepare debug data without secret
-        debug_data = dict(remote_data)
-        if "secret" in debug_data:
-            debug_data["secret"] = "***REDACTED***"
+        # The shared secret travels in the auth header, never in the payload.
+        # This requires a 6.0-or-newer server; older servers only read a body field.
+        headers: dict[str, str] = {}
+        if self.key:
+            headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER] = self.key
 
         try:
             async with (
                 aiohttp.ClientSession() as session,
                 session.post(
-                    f"http://{self.server}:{self.port}/v1/remoteinput", json=remote_data
+                    f"http://{self.server}:{self.port}/v1/remoteinput",
+                    json=remote_data,
+                    headers=headers,
                 ) as response,
             ):
                 logging.debug("Sending to %s:%s", self.server, self.port)
@@ -86,7 +87,11 @@ class Plugin(NotificationPlugin):
                     except Exception as exc:  # pylint: disable=broad-except
                         logging.warning("Failed to parse remote server response: %s", exc)
                 elif response.status == 403:
-                    logging.error("Remote server authentication failed - check remote secret")
+                    logging.error(
+                        "Remote server rejected our secret. Check that both machines use the "
+                        "same secret, and that the remote server is running What's Now Playing "
+                        "6.0 or newer (older servers cannot read the auth header)."
+                    )
                 elif response.status == 405:
                     logging.error("Remote server method not allowed - check endpoint")
                 else:

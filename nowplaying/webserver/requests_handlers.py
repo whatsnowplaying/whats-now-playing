@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from aiohttp import web
 
 import nowplaying.trackrequests
-import nowplaying.utils
+import nowplaying.webserver.auth
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -32,14 +32,20 @@ class RequestsHandler:
         return self._requests_instance
 
     def _authorized(self, request: web.Request, provided_secret: str) -> bool:
-        """reuse the webserver's shared secret (empty key disables auth)"""
-        request.app[self.config_key].get()
-        required = request.app[self.config_key].cparser.value(
-            "remote/remote_key", type=str, defaultValue=""
+        """reuse the webserver's shared secret (empty key disables auth)
+
+        Prefers the X-WNP-Client-Auth header; provided_secret is the legacy
+        query-parameter or body value and is only used when the header is absent.
+        """
+        config = request.app[self.config_key]
+        config.get()
+        result = nowplaying.webserver.auth.check_client_auth(
+            request,
+            config,
+            legacy_secret=provided_secret,
+            source=f"Request queue API ({request.method} {request.path})",
         )
-        if not required:
-            return True
-        return bool(provided_secret) and nowplaying.utils.secure_compare(required, provided_secret)
+        return result == nowplaying.webserver.auth.AUTH_OK
 
     def _requests_enabled(self, request: web.Request) -> bool:
         return request.app[self.config_key].cparser.value("settings/requests", type=bool)
