@@ -15,6 +15,7 @@ from aiohttp import web
 import nowplaying.preview.imagedata
 import nowplaying.utils
 import nowplaying.version  # pylint: disable=no-name-in-module, import-error
+import nowplaying.webserver.auth
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -101,28 +102,24 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
 
         # Refresh config to get latest settings (important for testing)
         request.app[self.config_key].get()
-        if required_secret := request.app[self.config_key].cparser.value(
-            "remote/remote_key", type=str, defaultValue=""
-        ):
-            provided_secret = data.get("secret", "")
-            if not provided_secret:
-                logging.warning(
-                    "Remote metadata submission without secret from %s", request.remote
-                )
+        # Header (set during the WebSocket handshake) is preferred; the hello
+        # message "secret" field is the legacy path and the only option for
+        # browser clients, which cannot set custom handshake headers.
+        auth_result = nowplaying.webserver.auth.check_client_auth(
+            request,
+            request.app[self.config_key],
+            legacy_secret=str(data.get("secret") or ""),
+            source="Images WebSocket hello",
+        )
+        if auth_result != nowplaying.webserver.auth.AUTH_OK:
+            if auth_result == nowplaying.webserver.auth.AUTH_MISSING:
                 await self._send_images_error(
                     websocket, "MISSING_SECRET", "Missing secret in request"
                 )
-                await websocket.close()
-                return
-
-            # Use constant-time comparison to prevent timing attacks
-            if not nowplaying.utils.secure_compare(required_secret, provided_secret):
-                logging.warning(
-                    "Remote metadata submission with invalid secret from %s", request.remote
-                )
+            else:
                 await self._send_images_error(websocket, "INVALID_SECRET", "Invalid secret")
-                await websocket.close()
-                return
+            await websocket.close()
+            return
 
         await websocket.send_json(
             {

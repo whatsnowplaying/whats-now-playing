@@ -6,6 +6,7 @@ import sys
 import aiohttp
 import pytest
 
+import nowplaying.webserver.auth
 from tests.webserver.conftest import wait_for_webserver_content_update, wait_for_webserver_ready
 
 
@@ -94,16 +95,18 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "secret_config,request_secret,expected_status",
+    "secret_config,request_secret,auth_location,expected_status",
     [
-        (None, None, 200),  # No secret configured - should accept any request
-        ("test_secret", "test_secret", 200),  # Correct secret
-        ("test_secret", "wrong_secret", 403),  # Wrong secret
-        ("test_secret", None, 403),  # Missing secret when required
+        (None, None, None, 200),  # No secret configured - should accept any request
+        ("test_secret", "test_secret", "header", 200),  # Correct secret via header
+        ("test_secret", "wrong_secret", "header", 403),  # Wrong secret via header
+        ("test_secret", "test_secret", "body", 200),  # Correct secret via legacy body field
+        ("test_secret", "wrong_secret", "body", 403),  # Wrong secret via legacy body field
+        ("test_secret", None, None, 403),  # Missing secret when required
     ],
 )
 async def test_webserver_remote_input_authentication(
-    getwebserver, secret_config, request_secret, expected_status
+    getwebserver, secret_config, request_secret, auth_location, expected_status
 ):
     """test remote input endpoint authentication scenarios"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
@@ -121,13 +124,17 @@ async def test_webserver_remote_input_authentication(
 
     # Prepare test metadata
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
-    if request_secret:
+    headers = {}
+    if request_secret and auth_location == "header":
+        headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER] = request_secret
+    elif request_secret and auth_location == "body":
         test_metadata["secret"] = request_secret
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
             f"http://localhost:{port}/v1/remoteinput",
             json=test_metadata,
+            headers=headers,
             timeout=aiohttp.ClientTimeout(total=10),
         ) as req:
             assert req.status == expected_status
