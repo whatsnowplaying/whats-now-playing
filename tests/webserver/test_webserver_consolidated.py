@@ -95,7 +95,7 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "secret_config,request_secret,secret_location,expected_status",
+    "secret_config,request_secret,auth_location,expected_status",
     [
         (None, None, None, 200),  # No secret configured - should accept any request
         ("test_secret", "test_secret", "header", 200),  # Correct secret via header
@@ -106,7 +106,7 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
     ],
 )
 async def test_webserver_remote_input_authentication(
-    getwebserver, secret_config, request_secret, secret_location, expected_status
+    getwebserver, secret_config, request_secret, auth_location, expected_status
 ):
     """test remote input endpoint authentication scenarios"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
@@ -125,9 +125,9 @@ async def test_webserver_remote_input_authentication(
     # Prepare test metadata
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
     headers = {}
-    if request_secret and secret_location == "header":
+    if request_secret and auth_location == "header":
         headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER] = request_secret
-    elif request_secret and secret_location == "body":
+    elif request_secret and auth_location == "body":
         test_metadata["secret"] = request_secret
 
     async with aiohttp.ClientSession() as session:

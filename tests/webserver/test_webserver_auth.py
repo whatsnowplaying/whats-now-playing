@@ -7,7 +7,7 @@ from aiohttp import web
 
 import nowplaying.webserver.auth
 
-SECRET = "correct-horse-battery-staple"
+SECRET = "correct-horse-battery-staple"  # pragma: allowlist secret
 
 
 def _request(headers: dict[str, str] | None = None) -> web.Request:

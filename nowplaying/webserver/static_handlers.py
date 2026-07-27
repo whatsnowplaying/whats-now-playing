@@ -621,7 +621,7 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         auth_result = nowplaying.webserver.auth.check_client_auth(
             request,
             request.app[self.config_key],
-            legacy_secret=str(metadata.get("secret", "")),
+            legacy_secret=str(metadata.get("secret") or ""),
             source="Remote metadata submission",
         )
         if auth_result == nowplaying.webserver.auth.AUTH_MISSING:

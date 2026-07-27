@@ -108,7 +108,7 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
         auth_result = nowplaying.webserver.auth.check_client_auth(
             request,
             request.app[self.config_key],
-            legacy_secret=str(data.get("secret", "")),
+            legacy_secret=str(data.get("secret") or ""),
             source="Images WebSocket hello",
         )
         if auth_result != nowplaying.webserver.auth.AUTH_OK:

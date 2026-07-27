@@ -65,7 +65,7 @@ async def test_requests_enqueue_and_list(getwebserver):  # pylint: disable=redef
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "secret_config,request_secret,secret_location,expected_status",
+    "secret_config,request_secret,auth_location,expected_status",
     [
         (None, None, None, 200),
         ("test_secret", "test_secret", "header", 200),
@@ -76,7 +76,7 @@ async def test_requests_enqueue_and_list(getwebserver):  # pylint: disable=redef
     ],
 )
 async def test_requests_authentication(
-    getwebserver, secret_config, request_secret, secret_location, expected_status
+    getwebserver, secret_config, request_secret, auth_location, expected_status
 ):  # pylint: disable=redefined-outer-name
     """POST /v1/requests honors the shared secret via header or legacy body field"""
     config, _ = getwebserver
@@ -88,9 +88,9 @@ async def test_requests_authentication(
 
     body = {"requester": "viewer1", "artist": "Radiohead", "title": "Creep"}
     headers = {}
-    if request_secret and secret_location == "header":
+    if request_secret and auth_location == "header":
         headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER] = request_secret
-    elif request_secret and secret_location == "body":
+    elif request_secret and auth_location == "body":
         body["secret"] = request_secret
 
     async with aiohttp.ClientSession() as session:
