@@ -29,9 +29,49 @@ from nowplaying.types import TrackMetadata
 import nowplaying.datacache
 import nowplaying.datacache.colors
 
+# All cover art is one data_type: a track's embedded art is still a front cover,
+# and data_type drives eviction, TTL, and color extraction (see IMAGE_DATA_TYPES
+# and COLOR_EXTRACT_TYPES in datacache), so splitting it would need registering
+# in each of those.  What varies is the *subject* the art is filed under, which
+# is the identifier's job — hence the prefix below rather than a second type.
+COVER_DATA_TYPE = "front_cover"
+_TRACK_COVER_PREFIX = "track_"
+
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
+
+
+def cover_cache_key(metadata: TrackMetadata) -> tuple[str, str] | None:
+    """Return (datacache identifier, human-readable label) for a track's front cover.
+
+    Prefers artist+album, normalizing each part before joining — mirrors
+    queue_front_cover() in artistextras/__init__.py so embedded art and network art
+    share one entry.  Tracks with no album tag (promos, white labels, untagged rips)
+    fall back to artist+title behind a prefix, so their embedded art is still cached
+    and still found on replay without colliding with a same-named album: "Weezer"
+    the album and "Weezer" the track normalize identically.
+
+    Shared with trackpoll's late cover lookup so both sides agree on the key.
+
+    Returns None when there is nothing usable to key on.
+    """
+    artist = metadata.get("artist")
+    norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
+    if not norm_artist:
+        return None
+
+    if (album := metadata.get("album")) and (
+        norm_album := nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+    ):
+        return f"{norm_artist}_{norm_album}", f"{artist}_{album}"
+
+    if (title := metadata.get("title")) and (
+        norm_title := nowplaying.utils.normalize(title, sizecheck=0, nospaces=True)
+    ):
+        return f"{_TRACK_COVER_PREFIX}{norm_artist}_{norm_title}", f"{artist}_{title}"
+
+    return None
 
 
 def split_youtube_title(title: str) -> tuple[str, str]:
@@ -120,10 +160,16 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
-        await self._process_cover_images()
-
+        # Cover caching keys on title, so run it after the title fixups: otherwise an
+        # input plugin reporting "Artist - Title" keys under the raw string while a
+        # cleaner one keys under the stripped title, splitting one track across two
+        # entries.  _strip_identifiers() in _finalize_metadata() edits the title again
+        # later, so the key still is not the final title — but it cannot move past
+        # _process_plugins(), which expects cover art resolved before plugins run.
         self._fix_filename_stem()
         self._fix_artist_in_title()
+
+        await self._process_cover_images()
 
         await self._process_plugins(skipplugins)
 
@@ -146,19 +192,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         return self.metadata
 
     async def _process_cover_images(self) -> None:
-        """Store embedded cover art in datacache or restore a cached image when none is embedded.
-
-        Normalize artist+album separately then join — mirrors queue_front_cover() in
-        artistextras/__init__.py so the lookup key matches what network-art plugins store.
-        """
-        if not (self.metadata.get("artist") and self.metadata.get("album")):
+        """Store embedded cover art in datacache, or restore a cached image when none is
+        embedded."""
+        if not (cachekey := cover_cache_key(self.metadata)):
+            self.metadata.pop("_embedded_extra_covers", None)
             return
-        norm_artist = nowplaying.utils.normalize(
-            self.metadata["artist"], sizecheck=0, nospaces=True
-        )
-        norm_album = nowplaying.utils.normalize(self.metadata["album"], sizecheck=0, nospaces=True)
-        normalid = f"{norm_artist}_{norm_album}"
-        identifier = f"{self.metadata['artist']}_{self.metadata['album']}"
+        normalid, identifier = cachekey
         storage = nowplaying.datacache.get_client().storage
         if self.metadata.get("coverimageraw"):
             logging.debug(
@@ -169,7 +208,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             await storage.store(
                 url=f"embedded://{normalid}/provided_0",
                 identifier=normalid,
-                data_type="front_cover",
+                data_type=COVER_DATA_TYPE,
                 provider="embedded",
                 data_value=self.metadata["coverimageraw"],
                 ttl_seconds=30 * 24 * 3600,
@@ -183,7 +222,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     await storage.store(
                         url=f"embedded://{normalid}/provided_{index}",
                         identifier=normalid,
-                        data_type="front_cover",
+                        data_type=COVER_DATA_TYPE,
                         provider="embedded",
                         data_value=converted,
                         ttl_seconds=30 * 24 * 3600,
@@ -191,7 +230,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     )
         else:
             self.metadata.pop("_embedded_extra_covers", None)
-            result = await storage.retrieve_by_identifier(normalid, "front_cover", random=True)
+            result = await storage.retrieve_by_identifier(normalid, COVER_DATA_TYPE, random=True)
             if result:
                 logging.debug("Restoring coverimageraw from datacache for %s", identifier)
                 self.metadata["coverimageraw"] = result.data

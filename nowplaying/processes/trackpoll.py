@@ -21,6 +21,7 @@ import nowplaying.guessgame
 import nowplaying.datacache
 import nowplaying.inputs
 import nowplaying.metadata
+import nowplaying.metadata.processors
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
@@ -701,14 +702,20 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         if not self.currentmeta.get("coverimageraw"):
             storage = nowplaying.datacache.get_client().storage
-            artist = self.currentmeta.get("artist")
-            album = self.currentmeta.get("album")
-            if artist and album:
-                norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
-                norm_album = nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
+            # Shared with _process_cover_images() so both sides build the key the same
+            # way and album-less tracks get looked up here too.  They do not always
+            # agree on the *input*: that stores mid-pipeline, while currentmeta has
+            # been through _strip_identifiers().  So an album-less track whose title
+            # loses content to titlestripper() was stored under the unstripped title
+            # and will miss here.  Silent miss, never wrong art, and the album path is
+            # unaffected since it does not key on title.  Making it hit would mean
+            # carrying the computed identifier through as another temp key, or
+            # stripping before MusicBrainz sees the title -- neither is worth it for a
+            # fallback.
+            if cachekey := nowplaying.metadata.processors.cover_cache_key(self.currentmeta):
                 result = await storage.retrieve_by_identifier(
-                    f"{norm_artist}_{norm_album}",
-                    "front_cover",
+                    cachekey[0],
+                    nowplaying.metadata.processors.COVER_DATA_TYPE,
                     random=True,
                 )
                 if result:

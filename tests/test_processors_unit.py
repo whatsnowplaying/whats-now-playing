@@ -275,8 +275,8 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
 
     fake_image = b"fake-embedded-cover-bytes"
     metadatain = {
-        "artist": "Test Artist",
-        "title": "Test Song",
+        "artist": "WNP Mock Artist",
+        "title": "WNP Mock Song",
         "coverimageraw": fake_image,
         "_embedded_extra_covers": [fake_image],
     }
@@ -303,7 +303,70 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
     # In both cases the embedded art should be present: when toggle is off it
     # was never cleared; when toggle is on plugins found nothing so it was restored.
     assert metadataout.get("coverimageraw") == fake_image
-    # _embedded_extra_covers is only stripped by the stash block (prioritize_network=True)
-    # or by the datacache block which requires artist+album; no album here so False keeps it.
-    if prioritize_network:
-        assert "_embedded_extra_covers" not in metadataout
+    # Stripped either by the stash block (prioritize_network=True) or by the
+    # datacache block, which now handles album-less tracks via the artist+title key.
+    assert "_embedded_extra_covers" not in metadataout
+
+
+@pytest.mark.parametrize(
+    "metadata,expected_key",
+    [
+        # album present: key on artist+album so embedded and network art share an entry
+        (
+            {"artist": "WNP Mock Artist", "album": "WNP Mock Album", "title": "WNP Mock Song"},
+            "wnpmockartist_wnpmockalbum",
+        ),
+        # no album at all: fall back to a prefixed artist+title key
+        (
+            {"artist": "WNP Mock Artist", "title": "WNP Mock Song"},
+            "track_wnpmockartist_wnpmocksong",
+        ),
+        # empty album is treated as absent
+        (
+            {"artist": "WNP Mock Artist", "album": "", "title": "WNP Mock Song"},
+            "track_wnpmockartist_wnpmocksong",
+        ),
+        # a whitespace-only album normalizes to empty, so fall back rather than
+        # keying on the literal string "None"
+        (
+            {"artist": "WNP Mock Artist", "album": "  ", "title": "WNP Mock Song"},
+            "track_wnpmockartist_wnpmocksong",
+        ),
+    ],
+)
+def test_cover_cache_key(metadata, expected_key):
+    """cover art keys on artist+album, falling back to artist+title when album is missing"""
+    identifier, _label = nowplaying.metadata.processors.cover_cache_key(metadata)
+
+    assert identifier == expected_key
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"title": "WNP Mock Song"},  # no artist
+        {"artist": "WNP Mock Artist"},  # artist but nothing to pair it with
+        {"artist": "  ", "title": "WNP Mock Song"},  # artist normalizes to empty
+        {},
+    ],
+)
+def test_cover_cache_key_unusable(metadata):
+    """metadata with nothing to key on yields no cache key rather than a bogus one"""
+    assert nowplaying.metadata.processors.cover_cache_key(metadata) is None
+
+
+def test_cover_cache_key_selftitled_album_does_not_collide():
+    """A self-titled album and a same-named track must not share a key.
+
+    "Weezer"/"Weezer" and Michael Jackson's Bad/"Bad" normalize identically, so
+    without the track prefix an album-less track would read or overwrite the
+    album's cover art.
+    """
+    album_key, _ = nowplaying.metadata.processors.cover_cache_key(
+        {"artist": "Weezer", "album": "Weezer"}
+    )
+    track_key, _ = nowplaying.metadata.processors.cover_cache_key(
+        {"artist": "Weezer", "title": "Weezer"}
+    )
+
+    assert album_key != track_key
