@@ -308,51 +308,37 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
     assert "_embedded_extra_covers" not in metadataout
 
 
-def _processors(config):
-    """build a MetadataProcessors with plugins/network work disabled"""
-    config.cparser.setValue("acoustidmb/enabled", False)
-    config.cparser.setValue("musicbrainz/enabled", False)
-    return nowplaying.metadata.MetadataProcessors(config=config)
-
-
 @pytest.mark.parametrize(
-    "metadata,expected_key,expected_type",
+    "metadata,expected_key",
     [
-        # album present: key on artist+album so embedded and network art collide on purpose
+        # album present: key on artist+album so embedded and network art share an entry
         (
             {"artist": "WNP Mock Artist", "album": "WNP Mock Album", "title": "WNP Mock Song"},
             "wnpmockartist_wnpmockalbum",
-            nowplaying.metadata.processors.ALBUM_COVER_TYPE,
         ),
-        # no album at all: fall back to artist+title
+        # no album at all: fall back to a prefixed artist+title key
         (
             {"artist": "WNP Mock Artist", "title": "WNP Mock Song"},
-            "wnpmockartist_wnpmocksong",
-            nowplaying.metadata.processors.TRACK_COVER_TYPE,
+            "track_wnpmockartist_wnpmocksong",
         ),
         # empty album is treated as absent
         (
             {"artist": "WNP Mock Artist", "album": "", "title": "WNP Mock Song"},
-            "wnpmockartist_wnpmocksong",
-            nowplaying.metadata.processors.TRACK_COVER_TYPE,
+            "track_wnpmockartist_wnpmocksong",
         ),
-        # an album that normalizes away also falls back rather than keying on "None"
+        # a whitespace-only album normalizes to empty, so fall back rather than
+        # keying on the literal string "None"
         (
-            {"artist": "WNP Mock Artist", "album": "'", "title": "WNP Mock Song"},
-            "wnpmockartist_wnpmocksong",
-            nowplaying.metadata.processors.TRACK_COVER_TYPE,
+            {"artist": "WNP Mock Artist", "album": "  ", "title": "WNP Mock Song"},
+            "track_wnpmockartist_wnpmocksong",
         ),
     ],
 )
-def test_cover_cache_key(bootstrap, metadata, expected_key, expected_type):
+def test_cover_cache_key(metadata, expected_key):
     """cover art keys on artist+album, falling back to artist+title when album is missing"""
-    processors = _processors(bootstrap)
-    processors.metadata = metadata
+    identifier, _label = nowplaying.metadata.processors.cover_cache_key(metadata)
 
-    normalid, _identifier, cover_type = processors._cover_cache_key()  # pylint: disable=protected-access
-
-    assert normalid == expected_key
-    assert cover_type == expected_type
+    assert identifier == expected_key
 
 
 @pytest.mark.parametrize(
@@ -360,31 +346,27 @@ def test_cover_cache_key(bootstrap, metadata, expected_key, expected_type):
     [
         {"title": "WNP Mock Song"},  # no artist
         {"artist": "WNP Mock Artist"},  # artist but nothing to pair it with
-        {"artist": "'", "title": "WNP Mock Song"},  # artist normalizes away
+        {"artist": "  ", "title": "WNP Mock Song"},  # artist normalizes to empty
         {},
     ],
 )
-def test_cover_cache_key_unusable(bootstrap, metadata):
+def test_cover_cache_key_unusable(metadata):
     """metadata with nothing to key on yields no cache key rather than a bogus one"""
-    processors = _processors(bootstrap)
-    processors.metadata = metadata
-
-    assert processors._cover_cache_key() is None  # pylint: disable=protected-access
+    assert nowplaying.metadata.processors.cover_cache_key(metadata) is None
 
 
-def test_cover_cache_key_selftitled_album_does_not_collide(bootstrap):
-    """A self-titled album and a same-named track share a key but not a data_type.
+def test_cover_cache_key_selftitled_album_does_not_collide():
+    """A self-titled album and a same-named track must not share a key.
 
-    "Weezer"/"Weezer" and Michael Jackson's "Bad"/"Bad" would otherwise let an
-    album-less track overwrite or read the album's cover art.
+    "Weezer"/"Weezer" and Michael Jackson's Bad/"Bad" normalize identically, so
+    without the track prefix an album-less track would read or overwrite the
+    album's cover art.
     """
-    processors = _processors(bootstrap)
+    album_key, _ = nowplaying.metadata.processors.cover_cache_key(
+        {"artist": "Weezer", "album": "Weezer"}
+    )
+    track_key, _ = nowplaying.metadata.processors.cover_cache_key(
+        {"artist": "Weezer", "title": "Weezer"}
+    )
 
-    processors.metadata = {"artist": "Weezer", "album": "Weezer"}
-    album_key, _, album_type = processors._cover_cache_key()  # pylint: disable=protected-access
-
-    processors.metadata = {"artist": "Weezer", "title": "Weezer"}
-    track_key, _, track_type = processors._cover_cache_key()  # pylint: disable=protected-access
-
-    assert album_key == track_key
-    assert album_type != track_type
+    assert album_key != track_key
