@@ -12,12 +12,14 @@ import string
 import sys
 import textwrap
 
+import puremagic
 import url_normalize
 import wnpmb.artist_resolution
 import wnpmb.normalization
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.exceptions
 import nowplaying.hostmeta
 import nowplaying.metadata.biohistory
 import nowplaying.metadata.tinytag_runner
@@ -28,6 +30,7 @@ from nowplaying.types import TrackMetadata
 
 import nowplaying.datacache
 import nowplaying.datacache.colors
+import nowplaying.datacache.storage
 
 # All cover art is one data_type: a track's embedded art is still a front cover,
 # and data_type drives eviction, TTL, and color extraction (see IMAGE_DATA_TYPES
@@ -40,6 +43,32 @@ _TRACK_COVER_PREFIX = "track_"
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
+
+
+def cover_mime_type(image: bytes | None) -> str:
+    """Derive an image's MIME type from its bytes, defaulting to PNG.
+
+    Always derived, never taken from a declaration: an audio file's tag and a
+    remote submission are both content we did not create, and this value becomes a
+    response Content-Type.
+
+    Constrained to a bare image/<subtype> because puremagic reports non-image types
+    for short or odd input (b"\\x00\\x00\\x00" comes back as audio/x-sndr), and a
+    value carrying parameters makes aiohttp's Response(content_type=...) raise.
+    """
+    if image:
+        try:
+            detected = puremagic.from_string(image, mime=True)
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+            # Deliberately broad, matching the identical call in
+            # datacache.storage.store(): PureError is what puremagic documents, but
+            # this is fed arbitrary bytes and a detection failure must never be able
+            # to cost a track its artwork.
+            logging.debug("Unrecognized cover image format; assuming png", exc_info=True)
+        else:
+            if nowplaying.datacache.storage.is_image_mime(detected):
+                return detected.strip().lower()
+    return "image/png"
 
 
 def cover_cache_key(metadata: TrackMetadata) -> tuple[str, str] | None:
@@ -130,7 +159,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata["musicbrainzalbumid"] = raw[0]
 
         try:
-            for processor in "hostmeta", "tinytag", "image2png":
+            for processor in "hostmeta", "tinytag", "coverimagetype":
                 logging.debug("running %s", processor)
                 func = getattr(self, f"_process_{processor}")
                 func()
@@ -141,11 +170,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             "artistextras/prioritizenetworkart", type=bool
         )
         embedded_art_backup: bytes | None = None
+        embedded_type_backup: str | None = None
         if prioritize_network:
             logging.debug("prioritizenetworkart: stashing embedded cover art as fallback")
             embedded_art_backup = self.metadata.pop("coverimageraw", None)
+            # Stash the type with the bytes so restoring the art restores its label
+            # rather than leaving a network image's type attached to it.
+            embedded_type_backup = self.metadata.pop("coverimagetype", None)
             for key in (
-                "coverimagetype",
                 "coverurl",
                 "cover_palette",
                 "cover_palette_lighting",
@@ -176,8 +208,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if embedded_art_backup and not self.metadata.get("coverimageraw"):
             logging.debug("prioritizenetworkart: no network art found, restoring embedded cover")
             self.metadata["coverimageraw"] = embedded_art_backup
-            self.metadata["coverimagetype"] = "png"
-            self.metadata["coverurl"] = "cover.png"
+            # This art never reached datacache on this pass, so there is no cachekey to
+            # address it by; the singleton route is the honest answer.  Restore the
+            # stashed type, falling back to detection rather than claiming PNG.
+            self._set_cover_pointers(
+                None, mime_type=embedded_type_backup or cover_mime_type(embedded_art_backup)
+            )
 
         if prioritize_network:
             # If palette wasn't already supplied by the datacache hit, extract it now
@@ -190,6 +226,22 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         self._finalize_metadata()
         return self.metadata
+
+    def _set_cover_pointers(self, cachekey: str | None, mime_type: str | None = None) -> None:
+        """Record how consumers should fetch and interpret the current cover art.
+
+        coverurl points at the keyed route when we know the cache entry, so a client
+        asks for *this* track's art rather than whatever is playing by the time it
+        gets around to fetching.  Falls back to the singleton /cover.png when the art
+        never reached datacache (nothing to key on).
+
+        The type is only set from an authoritative source -- the file's own tag via
+        tinytag, or datacache's recorded mime_type.  Detection is left to
+        _process_coverimagetype() for the paths where nothing declares one.
+        """
+        if mime_type:
+            self.metadata["coverimagetype"] = mime_type
+        self.metadata["coverurl"] = f"/cover/{cachekey}" if cachekey else "cover.png"
 
     async def _process_cover_images(self) -> None:
         """Store embedded cover art in datacache, or restore a cached image when none is
@@ -205,39 +257,74 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 identifier,
                 normalid,
             )
-            await storage.store(
-                url=f"embedded://{normalid}/provided_0",
-                identifier=normalid,
-                data_type=COVER_DATA_TYPE,
-                provider="embedded",
-                data_value=self.metadata["coverimageraw"],
-                ttl_seconds=30 * 24 * 3600,
-                status_code=200,
-            )
-            # Store additional embedded covers from multi-image audio files
-            extra_covers = self.metadata.pop("_embedded_extra_covers", [])
-            for index, raw_data in enumerate(extra_covers, start=1):
-                converted = nowplaying.utils.image2png(raw_data)
-                if converted:
-                    await storage.store(
-                        url=f"embedded://{normalid}/provided_{index}",
-                        identifier=normalid,
-                        data_type=COVER_DATA_TYPE,
-                        provider="embedded",
-                        data_value=converted,
-                        ttl_seconds=30 * 24 * 3600,
-                        status_code=200,
-                    )
-        else:
-            self.metadata.pop("_embedded_extra_covers", None)
-            result = await storage.retrieve_by_identifier(normalid, COVER_DATA_TYPE, random=True)
-            if result:
-                logging.debug("Restoring coverimageraw from datacache for %s", identifier)
-                self.metadata["coverimageraw"] = result.data
-                self.metadata["coverimagetype"] = "png"
-                self.metadata["coverurl"] = "cover.png"
-                if result.color_palette:
-                    self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+            try:
+                stored = await storage.store(
+                    url=f"embedded://{normalid}/provided_0",
+                    identifier=normalid,
+                    data_type=COVER_DATA_TYPE,
+                    provider="embedded",
+                    data_value=self.metadata["coverimageraw"],
+                    ttl_seconds=30 * 24 * 3600,
+                    status_code=200,
+                )
+            except nowplaying.exceptions.ToxicContentError as err:
+                # Not an image, so it is not artwork -- drop it rather than hand it to
+                # templates or serve it from an image route.  Reachable from a remote
+                # submission, where coverurl names a URL we fetch and the submitter
+                # therefore chooses the body.  Then fall through to the restore below:
+                # datacache may hold real network art for this key, and one bad
+                # embedded image should not leave the track with no cover at all.
+                logging.warning("Discarding cover art for %s: %s", identifier, err)
+                self.metadata.pop("coverimageraw", None)
+                self.metadata.pop("coverimagetype", None)
+                self.metadata.pop("_embedded_extra_covers", None)
+            else:
+                if stored:
+                    # Type comes from the entry we just wrote, so the detection that
+                    # decided these bytes were an image is the same one that labels
+                    # them -- rather than two places agreeing separately.
+                    self._set_cover_pointers(stored.cachekey, mime_type=stored.mime_type)
+                await self._store_extra_covers(storage, normalid, identifier)
+                return
+
+        self.metadata.pop("_embedded_extra_covers", None)
+        result = await storage.retrieve_by_identifier(normalid, COVER_DATA_TYPE, random=True)
+        if result:
+            logging.debug("Restoring coverimageraw from datacache for %s", identifier)
+            self.metadata["coverimageraw"] = result.data
+            self._set_cover_pointers(result.cachekey, mime_type=result.mime_type)
+            if result.color_palette:
+                self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+
+    async def _store_extra_covers(
+        self,
+        storage: nowplaying.datacache.storage.DataStorage,
+        normalid: str,
+        identifier: str,
+    ) -> None:
+        """Cache additional embedded covers from multi-image audio files.
+
+        Stored as-is: these are kept for later random selection rather than served
+        now, so there is no reason to transcode them either.
+        """
+        extra_covers = self.metadata.pop("_embedded_extra_covers", [])
+        for index, raw_data in enumerate(extra_covers, start=1):
+            if not raw_data:
+                continue
+            try:
+                await storage.store(
+                    url=f"embedded://{normalid}/provided_{index}",
+                    identifier=normalid,
+                    data_type=COVER_DATA_TYPE,
+                    provider="embedded",
+                    data_value=raw_data,
+                    ttl_seconds=30 * 24 * 3600,
+                    status_code=200,
+                )
+            except nowplaying.exceptions.ToxicContentError as err:
+                # One bad extra should not cost the others, and none of them are in
+                # metadata, so there is nothing to discard here.
+                logging.warning("Skipping embedded cover %d for %s: %s", index, identifier, err)
 
     def _finalize_metadata(self) -> None:
         """Apply terminal normalizations: publisher alias, dates, bios, dedup, and duration."""
@@ -422,19 +509,26 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("TinyTag crashed: %s", err)
 
-    def _process_image2png(self) -> None:
-        # always convert to png
+    def _process_coverimagetype(self) -> None:
+        """Make sure cover art has a type recorded, rather than transcoding it to PNG.
 
-        if (
-            not self.metadata
-            or "coverimageraw" not in self.metadata
-            or not self.metadata["coverimageraw"]
-        ):
+        Album art is photographic and usually arrives as JPEG; re-encoding it to
+        lossless PNG inflated it several-fold for nothing.  The bytes are now kept as
+        they came and the type travels with them, so HTTP consumers can report it
+        honestly.  /wsstream is the exception -- its templates hardcode a
+        data:image/png prefix -- so it converts at serialization time instead.
+
+        tinytag already recorded the type for embedded art, and datacache records it
+        for anything it holds.  Only detect when neither did: inputs that hand over
+        raw bytes with no type (djuced, winmedia, remote submissions), where assuming
+        PNG is exactly the mislabelling this is meant to stop.
+        """
+        if not self.metadata or not self.metadata.get("coverimageraw"):
             return
 
-        self.metadata["coverimageraw"] = nowplaying.utils.image2png(self.metadata["coverimageraw"])
-        self.metadata["coverimagetype"] = "png"
-        self.metadata["coverurl"] = "cover.png"
+        if not self.metadata.get("coverimagetype"):
+            self.metadata["coverimagetype"] = cover_mime_type(self.metadata["coverimageraw"])
+        self.metadata.setdefault("coverurl", "cover.png")
 
     async def _process_cover_colors(self) -> None:
         if not self.metadata.get("coverimageraw"):

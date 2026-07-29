@@ -54,6 +54,10 @@ XYZ_URL = _artist_url("XYZ Nonexistent Artist XYZ")
 WNP_MOCK_ALBUM_URL = _album_url("WNP Mock Artist", "WNP Mock Album")
 COVER_IMAGE_URL = "https://lastfm.freetls.fastly.net/i/u/300x300/cover.jpg"
 
+# datacache refuses non-image bytes under an image data_type, so a fixture standing in
+# for downloaded cover art has to actually be an image.  A header is enough.
+MINIMAL_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+
 WNP_MOCK_ALBUM_RESPONSE = {
     "album": {
         "name": "WNP Mock Album",
@@ -490,7 +494,7 @@ async def test_lastfm_coverart_queued(bootstrap):  # pylint: disable=redefined-o
         mock_http.get(WNP_MOCK_ALBUM_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=b"fake_jpg"))
+        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",
@@ -611,7 +615,7 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):  # pylint: disable=re
         mock_http.get(mbid_url).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=b"fake_jpg"))
+        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",

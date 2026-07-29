@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 import aiohttp
 from aiohttp import web
 
+import nowplaying.datacache
+import nowplaying.datacache.storage
 import nowplaying.db
 import nowplaying.hostmeta
 import nowplaying.preview.sampledata
@@ -96,11 +98,13 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         remotedb_key: web.AppKey[nowplaying.db.MetadataDB],
         metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
         http_session_key: web.AppKey[aiohttp.ClientSession],
+        dc_storage_key: web.AppKey["nowplaying.datacache.DataStorage"],
     ):
         self.config_key = config_key
         self.metadb_key = metadb_key
         self.remotedb_key = remotedb_key
         self.metadata_key = metadata_key
+        self.dc_storage_key = dc_storage_key
         self.http_session_key = http_session_key
 
     async def index_htm_handler(self, request: web.Request):
@@ -427,17 +431,54 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
         image = nowplaying.utils.TRANSPARENT_PNG_BIN
+        # The placeholder is a PNG; a real image carries its own type, recorded
+        # when it was ingested.  Artist images that reach metadb are copies of the
+        # cover (see _artfallbacks in trackpoll), so coverimagetype covers them too.
+        content_type = "image/png"
         try:
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image: bytes = metadata[imgtype]
+                content_type = metadata.get("coverimagetype") or content_type
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("_image_handler: %s", err)
-        return web.Response(content_type="image/png", body=image)
+        return web.Response(content_type=content_type, body=image)
 
     async def cover_handler(self, request: web.Request):
         """handle cover image"""
         return await self._image_handler("coverimageraw", request)
+
+    async def cover_by_cachekey_handler(self, request: web.Request):
+        """GET /cover/{cachekey} -- serve a specific cached cover image.
+
+        Unlike /cover.png, which always serves whatever is playing right now, this
+        addresses one image so a client can request the art belonging to a specific
+        track.  That matters once more than one track can be on screen at a time,
+        and it removes the race where art advances between a client reading a frame
+        and fetching the picture named in it.
+
+        Answers 404 rather than the transparent PNG the singleton routes fall back
+        to: the caller supplied a key, so a miss means that key is stale and worth
+        knowing about, not that the track has no art.
+        """
+        cachekey = request.match_info.get("cachekey", "")
+        if not cachekey:
+            return web.Response(status=404, text="Not found")
+        try:
+            entry = await request.app[self.dc_storage_key].retrieve_by_cachekey(cachekey)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("cover_by_cachekey_handler: %s", cachekey)
+            return web.Response(status=404, text="Not found")
+        if not entry or not entry.data:
+            return web.Response(status=404, text="Not found")
+        # datacache derived the type from the bytes on store, and refuses to store a
+        # non-image under an image data_type -- but a cachekey names any entry, so
+        # decline to serve one whose type says it is not a picture rather than
+        # handing back cached JSON from an image route.
+        if not nowplaying.datacache.storage.is_image_mime(entry.mime_type):
+            logging.warning("Refusing non-image cache entry %s: %s", cachekey, entry.mime_type)
+            return web.Response(status=404, text="Not found")
+        return web.Response(content_type=entry.mime_type, body=entry.data)
 
     async def artistbanner_handler(self, request: web.Request):
         """handle artist banner image"""
@@ -475,6 +516,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             "filename",  # Security: Never accept filenames from remote sources
             "track_received",  # System-generated timestamp, not user-provided
             "version",  # System-generated version, not user-provided
+            # Security: derived from the bytes we hold and becomes a response
+            # Content-Type. A submitter also controls coverurl, which we fetch, so
+            # accepting this would let one party pick both the body and how a
+            # browser interprets it. Tracks with nothing to key on skip the
+            # datacache store that would otherwise overwrite it.
+            "coverimagetype",
         }
         return {k: v for k, v in metadata.items() if k not in excluded_fields}
 
@@ -651,7 +698,8 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         clean_metadata = self._filter_excluded_fields(clean_metadata)
 
         # If coverurl is an HTTP URL, fetch the image (coverurl in METADATALIST passes filtering)
-        # processors.py will overwrite coverurl with "cover.png" once coverimageraw is set
+        # processors.py sets coverurl once coverimageraw is set: the keyed /cover/
+        # route when the art reaches datacache, else cover.png
         cover_url = clean_metadata.get("coverurl", "")
         if isinstance(cover_url, str) and cover_url.startswith("http"):
             cover_bytes = await self._fetch_cover_url(request, cover_url)

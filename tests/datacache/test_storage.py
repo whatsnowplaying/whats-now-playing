@@ -6,6 +6,7 @@ and randomimage support.
 """
 
 import asyncio
+import logging
 import tempfile
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ import pytest_asyncio
 
 import nowplaying.datacache.storage
 import nowplaying.datacache.utils
+import nowplaying.exceptions
 import nowplaying.utils.sqlite
 
 
@@ -190,7 +192,8 @@ async def test_store_and_retrieve_by_url(temp_storage):  # pylint: disable=redef
         ttl_seconds=3600,
         metadata=metadata,
     )
-    assert success is True
+    # store() returns the stored entry, carrying the cachekey and detected mime_type
+    assert success is not None and success.cachekey
 
     # Retrieve by URL
     result = await temp_storage.retrieve_by_url(url)
@@ -406,7 +409,8 @@ async def test_data_serialization_json(temp_storage):  # pylint: disable=redefin
         data_value=orjson.dumps(test_data),
         ttl_seconds=3600,
     )
-    assert success is True
+    # store() returns the stored entry, carrying the cachekey and detected mime_type
+    assert success is not None and success.cachekey
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
@@ -427,7 +431,8 @@ async def test_data_serialization_binary(temp_storage):  # pylint: disable=redef
         data_value=test_data,
         ttl_seconds=3600,
     )
-    assert success is True
+    # store() returns the stored entry, carrying the cachekey and detected mime_type
+    assert success is not None and success.cachekey
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
@@ -684,3 +689,223 @@ async def test_retrieve_returns_none_when_db_missing(bootstrap):  # pylint: disa
         # retrieve_by_url must not raise — it should return None and log an error
         result = await storage.retrieve_by_url(url)
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_store_returns_cachekey_usable_for_retrieval(temp_storage):  # pylint: disable=redefined-outer-name
+    """The cachekey store() hands back addresses that exact entry.
+
+    This is what lets the metadata pipeline put a /cover/{cachekey} URL in a track's
+    metadata: it needs a handle for the art it just stored.
+    """
+    stored = await temp_storage.store(
+        url="embedded://wnpmockartist_wnpmockalbum/provided_0",
+        identifier="wnpmockartist_wnpmockalbum",
+        data_type="front_cover",
+        provider="embedded",
+        data_value=b"\x89PNG\r\n\x1a\ncover-bytes",
+        ttl_seconds=3600,
+    )
+
+    assert stored is not None and stored.cachekey
+    entry = await temp_storage.retrieve_by_cachekey(stored.cachekey)
+    assert entry is not None
+    assert entry.data == b"\x89PNG\r\n\x1a\ncover-bytes"
+
+
+@pytest.mark.asyncio
+async def test_random_retrieval_reports_cachekey(temp_storage):  # pylint: disable=redefined-outer-name
+    """A randomly-retrieved entry carries the cachekey it was stored under.
+
+    The cover restore path reads art back with random=True and needs the key so it
+    can point coverurl at the keyed route rather than the singleton /cover.png.
+    """
+    stored = await temp_storage.store(
+        url="embedded://wnpmockartist_wnpmockalbum/provided_0",
+        identifier="wnpmockartist_wnpmockalbum",
+        data_type="front_cover",
+        provider="embedded",
+        data_value=b"\xff\xd8\xff\xe0jpeg-cover-bytes",
+        ttl_seconds=3600,
+    )
+
+    entry = await temp_storage.retrieve_by_identifier(
+        "wnpmockartist_wnpmockalbum", "front_cover", random=True
+    )
+
+    assert entry is not None
+    assert entry.cachekey == stored.cachekey
+    # mime_type is detected on store, so consumers never have to sniff it again
+    assert entry.mime_type == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_store_keeps_source_bytes_untranscoded(temp_storage):  # pylint: disable=redefined-outer-name
+    """Cover art is stored exactly as supplied rather than converted to PNG.
+
+    Album art is usually JPEG; the old pipeline re-encoded it to lossless PNG, which
+    inflated it for no benefit.  Only /wsstream converts now, at serialization time.
+    """
+    jpeg_bytes = b"\xff\xd8\xff\xe0" + b"jpeg-payload" * 8
+    stored = await temp_storage.store(
+        url="embedded://wnpmockartist_wnpmockalbum/provided_0",
+        identifier="wnpmockartist_wnpmockalbum",
+        data_type="front_cover",
+        provider="embedded",
+        data_value=jpeg_bytes,
+        ttl_seconds=3600,
+    )
+    assert stored is not None
+
+    entry = await temp_storage.retrieve_by_cachekey(stored.cachekey)
+    assert entry is not None
+    assert entry.data == jpeg_bytes
+    assert entry.mime_type == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_store_returns_the_row_cachekey_not_a_generated_one(temp_storage):  # pylint: disable=redefined-outer-name
+    """store() reports the cachekey actually on the row, including on upsert.
+
+    store() generates a UUID before knowing whether it will insert or update. The
+    UPDATE deliberately preserves the original key -- clients hold key lists from
+    get_cache_keys_for_identifier -- so reporting the generated one would hand back a
+    key present in no row. embedded://.../provided_0 is stable per track, so every
+    replay after the first takes the upsert path.
+    """
+    url = "embedded://wnpmockartist_wnpmockalbum/provided_0"
+    common = {
+        "url": url,
+        "identifier": "wnpmockartist_wnpmockalbum",
+        "data_type": "front_cover",
+        "provider": "embedded",
+        "ttl_seconds": 3600,
+    }
+
+    first = await temp_storage.store(**common, data_value=b"\x89PNG\r\n\x1a\nfirst")
+    second = await temp_storage.store(**common, data_value=b"\xff\xd8\xff\xe0second")
+    assert first is not None and second is not None
+
+    assert second.cachekey == first.cachekey, "the upsert preserves the original key"
+
+    # And the reported key resolves to the current bytes, not a phantom row
+    entry = await temp_storage.retrieve_by_cachekey(second.cachekey)
+    assert entry is not None, "store() returned a cachekey that is not in the database"
+    assert entry.data == b"\xff\xd8\xff\xe0second"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("data_type", sorted(nowplaying.datacache.storage.IMAGE_DATA_TYPES))
+async def test_store_refuses_non_image_under_image_type(temp_storage, data_type):  # pylint: disable=redefined-outer-name
+    """Non-image bytes are refused for every image data_type.
+
+    This is the single chokepoint: these bytes would be served with their detected
+    type as Content-Type and rendered by templates. A remote submission supplies
+    coverurl, which the webserver fetches, so the body is whoever's URL that was.
+    Refusing here means later reads can assume image data_types hold images.
+    """
+    with pytest.raises(nowplaying.exceptions.ToxicContentError):
+        await temp_storage.store(
+            url=f"https://example.com/not-an-image-{data_type}",
+            identifier="wnpmockartist_wnpmockalbum",
+            data_type=data_type,
+            provider="test",
+            data_value=b"<html><script>alert(1)</script></html>",
+            ttl_seconds=3600,
+        )
+
+
+@pytest.mark.asyncio
+async def test_store_refusal_leaves_nothing_behind(temp_storage):  # pylint: disable=redefined-outer-name
+    """A refused store must not leave a retrievable entry."""
+    url = "https://example.com/toxic.png"
+    with pytest.raises(nowplaying.exceptions.ToxicContentError):
+        await temp_storage.store(
+            url=url,
+            identifier="wnpmockartist_wnpmockalbum",
+            data_type="front_cover",
+            provider="test",
+            data_value=b"this is definitely not an image",
+            ttl_seconds=3600,
+        )
+
+    assert await temp_storage.retrieve_by_url(url) is None
+    assert (
+        await temp_storage.retrieve_by_identifier(
+            "wnpmockartist_wnpmockalbum", "front_cover", random=True
+        )
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_store_allows_non_image_under_non_image_type(temp_storage):  # pylint: disable=redefined-outer-name
+    """The image filter is scoped to image data_types, not applied to everything.
+
+    API responses and MusicBrainz payloads are JSON by design; rejecting them would
+    disable caching for most of the application.
+    """
+    stored = await temp_storage.store(
+        url="apicache://theaudiodb/wnpmockartist/search",
+        identifier="wnpmockartist",
+        data_type="api_response",
+        provider="theaudiodb",
+        data_value=orjson.dumps({"artists": []}),
+        ttl_seconds=3600,
+    )
+
+    assert stored is not None and stored.cachekey
+    entry = await temp_storage.retrieve_by_cachekey(stored.cachekey)
+    assert entry is not None
+    assert entry.cachekey == stored.cachekey, "retrieve_by_cachekey should echo the given key"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("data_type", sorted(nowplaying.datacache.storage.IMAGE_DATA_TYPES))
+async def test_negative_cache_survives_the_image_filter(temp_storage, data_type):  # pylint: disable=redefined-outer-name
+    """A recorded 404 stores for image data_types even though b"" is not an image.
+
+    Negative entries are b"" with status_code=404, which puremagic cannot identify.
+    If the image filter judged them as content they would all be refused, the
+    status_code != 200 retrieval guard would have no row to suppress retries with,
+    and every track would re-ask the provider for art it has already said it lacks.
+    """
+    url = f"https://example.com/missing-{data_type}.jpg"
+    stored = await temp_storage.store(
+        url=url,
+        identifier="wnpmockartist",
+        data_type=data_type,
+        provider="test",
+        data_value=b"",
+        ttl_seconds=3600,
+        status_code=404,
+    )
+
+    assert stored is not None, "negative caching must not be refused by the image filter"
+    entry = await temp_storage.retrieve_by_url(url)
+    assert entry is not None
+    assert entry.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_negative_cache_skips_color_extraction(temp_storage, caplog):  # pylint: disable=redefined-outer-name
+    """A recorded 404 must not be handed to the colour extractor.
+
+    front_cover is in COLOR_EXTRACT_TYPES, so a negative entry used to spawn
+    extraction on b'', which Pillow cannot open -- logging a full traceback at ERROR
+    for every provider miss.
+    """
+    caplog.set_level(logging.DEBUG)
+    await temp_storage.store(
+        url="https://example.com/missing-cover.jpg",
+        identifier="wnpmockartist",
+        data_type="front_cover",
+        provider="test",
+        data_value=b"",
+        ttl_seconds=3600,
+        status_code=404,
+    )
+    # Extraction is fire-and-forget, so give a spawned task a chance to run and fail
+    await asyncio.sleep(0)
+
+    assert not [r for r in caplog.records if "palette" in r.getMessage().lower()]

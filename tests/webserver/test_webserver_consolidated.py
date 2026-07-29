@@ -410,3 +410,30 @@ async def test_webserver_preview_uses_live_metadata(getwebserver):
             text = await req.text()
             assert "Live Artist" in text
             assert "Live Title" in text
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_cover_by_cachekey_unknown_key_is_404(getwebserver):
+    """An unknown cachekey is refused rather than answered with a placeholder.
+
+    /cover.png falls back to a transparent PNG so template code stays simple, but a
+    caller of the keyed route supplied a key: a miss means that key is stale, and
+    saying so lets the client go re-read the frame instead of rendering nothing.
+
+    The hit path is covered at the storage layer in tests/datacache/test_storage.py;
+    seeding the webserver subprocess's datacache from here is not worth the wiring.
+    """
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(
+            f"http://localhost:{port}/cover/not-a-real-cachekey",
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as req,
+    ):
+        assert req.status == 404

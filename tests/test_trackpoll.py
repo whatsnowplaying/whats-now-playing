@@ -14,6 +14,11 @@ import pytest_asyncio  # pylint: disable=import-error
 
 import nowplaying.processes.trackpoll  # pylint: disable=import-error
 
+# datacache refuses non-image bytes under an image data_type, so fixtures that get
+# stored as artwork have to actually be images.  Headers are enough for puremagic.
+MINIMAL_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+MINIMAL_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+
 
 @pytest_asyncio.fixture(loop_scope="function")
 async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefined-outer-name
@@ -468,7 +473,7 @@ async def test_artfallbacks_front_cover_from_imagecache(
 ):  # pylint: disable=redefined-outer-name,unused-argument
     """front_cover in datacache is used before falling back to artist images"""
     tptest = trackpoll_testmode
-    cover_bytes = b"fake_cover_png"
+    cover_bytes = MINIMAL_PNG
     # Pre-populate via client.storage — _artfallbacks uses get_client().storage
     # _artfallbacks builds identifier as normalize(artist)_normalize(album)
     await isolated_datacache_client.storage.store(
@@ -495,7 +500,7 @@ async def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
 ):
     """artist fallback image used when datacache has no front_cover"""
     tptest = trackpoll_testmode
-    fanart_bytes = b"fake_fanart_png"
+    fanart_bytes = MINIMAL_JPEG
     # Pre-populate via client.storage — _artfallbacks uses get_client().storage
     await isolated_datacache_client.storage.store(
         url="http://example.com/fanart.jpg",

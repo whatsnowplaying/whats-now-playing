@@ -67,12 +67,22 @@ playing" information from various DJ software.
 
 **Key Subsystems:**
 
-- Template system for customizable output formatting
+- Template system for customizable output formatting. **As of 6.0.0 the overlay
+  templates live in the separate `wnp-templates` package, not in this repo.**
+  `nowplaying/templates/` holds only the guessgame and oauth pages, the chat
+  command namespaces (`plain/`, `twitch/`, `kick/`), vendored assets, and
+  `whatsnowplaying-websocket.js`. Grep the installed `wnp_templates` package
+  (or the `../wnp-templates` checkout) when looking for anything that renders
+  now-playing data. Note the asymmetry: the `.htm` files ship in that package
+  and sync from the charts manifest via `processes/template_sync.py`, while
+  `whatsnowplaying-websocket.js` is served out of WNP's own bundle, so it
+  always matches the running version.
 - SQLite database for metadata caching (`db.py`)
 - SQLite retry utilities (`nowplaying/utils/sqlite.py`) for handling database
   locking and Windows file permission issues with exponential backoff
-- API response caching system (`apicache.py`) with TTL support for external
-  services
+- Unified caching for external API responses and images (`nowplaying/datacache/`)
+  with TTL support. **Replaced both `apicache.py` and `imagecache.py` in 6.0.0**;
+  see `nowplaying/datacache/CLAUDE.md` for the module's own documentation
 - WebSocket server for real-time data streaming
 - Track request system for audience interaction
 - Async Wikipedia/Wikidata client (`wikiclient.py`) optimized for live
@@ -281,7 +291,7 @@ developing:
 - Configuration-aware selective fetching (only fetches bio/images if enabled)
 - Combined API requests to reduce call count by 40-60%
 - Reduced timeouts (5s) and image limits (5 max) for live performance
-- Uses existing `apicache.py` system for response caching
+- Uses the `datacache` system for response caching
 - Provides both async interface and sync compatibility wrapper
 - SSL certificate handling for reliability across environments
 
@@ -313,7 +323,7 @@ developing:
 - Full async/await support with aiohttp for non-blocking API calls
 - Proper SSL certificate verification with Python 3.11.12 + aiohttp 3.12.0
 - XML response parsing with error handling for API reliability
-- Integrates with existing `apicache.py` system for response caching via
+- Integrates with the `datacache` system for response caching via
   `musicbrainz.py`
 - Eliminates large vendored dependency while maintaining full functionality
 
@@ -353,42 +363,40 @@ developing:
   settings
 - Clients maintain backward compatibility with existing sync interfaces where
   needed
-- All leverage existing `apicache.py` system for response caching
+- All leverage the `datacache` system for response caching
 - Performance optimizations are automatic - no manual configuration required
 
-**API Response Caching (`apicache.py`):**
+**Caching (`nowplaying/datacache/`):**
 
-- Fast SQLite-based cache for external API responses with TTL support using
-  aiosqlite
-- Comprehensive caching integration across all artistextras plugins
-- Provides `cached_fetch()` unified interface for consistent caching patterns
-- Provider-specific TTL settings configured in `apicache.py`
-- Advanced duplicate artist handling with unique cache key strategies:
+`apicache.py` and `imagecache.py` were both replaced by datacache in 6.0.0.
+`apicache.py` still exists on disk but nothing uses it; `_upgrade_to_5_3_0` in
+`upgrades/config.py` deletes the old databases. Read
+`nowplaying/datacache/CLAUDE.md` before working in here — it covers rate
+limiting, the pending queue, and the multiprocess design.
 
-  - **Discogs**: Artist+album combination caching with object reconstruction
-    for search results
-  - **TheAudioDB**: Two-level caching (search results + individual artist IDs)
-    to prevent collisions
-  - **FanartTV**: MusicBrainz ID-based caching (optimal - globally unique
-    identifiers)
-  - **Wikimedia**: Wikidata entity+language caching with WikiPage object
-    reconstruction
+The storage model, which is what most callers need:
 
-- Artist name normalization for consistent cache lookups (handles case
-  variations like "sELF" vs "Self")
-- JSON serialization with custom object reconstruction to preserve API client
-  object behavior
-- Race condition prevention with proper async database initialization
-- Cache statistics and cleanup capabilities for maintenance
-- Thread-safe with asyncio.Lock for concurrent access
-- Global instance available via `get_cache_instance()` for application-wide
-  use
-- Cache files stored in Qt standard cache location, not in project directory
-- Binary data serialization support with base64 encoding for MusicBrainz
-  cover art data
-- SQLite VACUUM operations on application shutdown to reclaim disk space
-- GUI "Clear Cache" button in Artist Extras settings clears both API cache and
-  image cache files
+- One SQLite store for both API responses and images, keyed by `url` (primary
+  key), with `identifier` + `data_type` as the lookup axis and a `cachekey`
+  UUID as an opaque public handle
+- `data_type` is the *kind* of thing (`front_cover`, `artistthumbnail`,
+  `artistfanart`, `artistbanner`, `artistlogo`) and drives eviction
+  (`IMAGE_DATA_TYPES`), TTL doubling, and colour extraction
+  (`COLOR_EXTRACT_TYPES`). Adding a new one means registering it in each of
+  those, so prefer namespacing the `identifier` when what varies is the
+  *subject* rather than the kind
+- `identifier` is normalized (`nowplaying.utils.normalize`, re-exported from
+  the external `wnpmb` package) so lookups survive case and punctuation
+  variation. Note it returns `str | None`
+- Content ≤16 KB is stored inline; larger content goes to a blob file whose
+  path is recorded on the row
+- `store()` returns the entry's `cachekey`, and re-storing a URL rotates it, so
+  a given key always maps to the same bytes for as long as it resolves
+- `mime_type` is detected on store and returned on retrieval — take it from the
+  entry rather than sniffing the bytes again
+- `cached_fetch()` remains the unified fetch-or-cache entry point
+- Cache files live in the Qt standard cache location, not the project directory
+- GUI "Clear Cache" button in Artist Extras settings clears the datacache
 
 **Duplicate Artist Resolution:**
 

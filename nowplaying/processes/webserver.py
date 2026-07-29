@@ -137,6 +137,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             remotedb_key=REMOTEDB_KEY,
             metadata_key=METADATA_KEY,
             http_session_key=HTTP_SESSION_KEY,
+            dc_storage_key=DC_STORAGE_KEY,
         )
 
         self.requests_handler = RequestsHandler(config_key=CONFIG_KEY)
@@ -296,9 +297,19 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     @staticmethod
     def _base64ifier(metadata: TrackMetadata):
-        """replace all the binary data with base64 data"""
+        """replace all the binary data with base64 data
+
+        Cover art is converted to PNG here and nowhere else.  The metadata pipeline
+        keeps source bytes, but /wsstream's templates hardcode a data:image/png
+        prefix and users customize copies WNP cannot update, so this stream owes
+        them actual PNG.  Converting at serialization keeps that promise without
+        making every other consumer pay for a transcode -- and costs nothing when
+        no one is connected, since this only runs to build a frame.
+        """
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
+                if key == "coverimageraw":
+                    metadata[key] = nowplaying.utils.image2png(metadata[key]) or metadata[key]
                 newkey = key.replace("raw", "base64")
                 metadata[newkey] = base64.b64encode(metadata[key]).decode("utf-8")
                 del metadata[key]
@@ -725,6 +736,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.post("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.get("/cover.png", self.static_handler.cover_handler),
+                web.get("/cover/{cachekey}", self.static_handler.cover_by_cachekey_handler),
                 web.get("/artistfanart.htm", self.static_handler.artistfanartlaunch_htm_handler),
                 web.get("/artistbanner.png", self.static_handler.artistbanner_handler),
                 web.get("/artistbanner.htm", self.static_handler.artistbanner_htm_handler),

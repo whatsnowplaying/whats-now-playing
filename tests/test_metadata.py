@@ -58,8 +58,10 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout["albumartist"] == "Nine Inch Nails"
     assert metadataout["artist"] == "Nine Inch Nails"
     assert metadataout["artistwebsites"] == ["https://www.nin.com/"]
-    assert metadataout["coverimagetype"] == "png"
-    assert metadataout["coverurl"] == "cover.png"
+    # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
+    # names the cached entry so a client fetches this track's art specifically.
+    assert metadataout["coverimagetype"] == "image/jpeg"
+    assert metadataout["coverurl"].startswith("/cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -89,8 +91,10 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     assert metadataout["albumartist"] == "Nine Inch Nails"
     assert metadataout["artistwebsites"] == ["https://www.nin.com/"]
     assert metadataout["artist"] == "Nine Inch Nails"
-    assert metadataout["coverimagetype"] == "png"
-    assert metadataout["coverurl"] == "cover.png"
+    # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
+    # names the cached entry so a client fetches this track's art specifically.
+    assert metadataout["coverimagetype"] == "image/jpeg"
+    assert metadataout["coverurl"].startswith("/cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -120,8 +124,10 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     assert metadataout["albumartist"] == "Nine Inch Nails"
     assert metadataout["artistwebsites"] == ["https://www.nin.com/"]
     assert metadataout["artist"] == "Nine Inch Nails"
-    assert metadataout["coverimagetype"] == "png"
-    assert metadataout["coverurl"] == "cover.png"
+    # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
+    # names the cached entry so a client fetches this track's art specifically.
+    assert metadataout["coverimagetype"] == "image/jpeg"
+    assert metadataout["coverurl"].startswith("/cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -149,8 +155,10 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     assert metadataout["album"] == "Ghosts I-IV"
     assert metadataout["albumartist"] == "Nine Inch Nails"
     assert metadataout["artist"] == "Nine Inch Nails"
-    assert metadataout["coverimagetype"] == "png"
-    assert metadataout["coverurl"] == "cover.png"
+    # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
+    # names the cached entry so a client fetches this track's art specifically.
+    assert metadataout["coverimagetype"] == "image/jpeg"
+    assert metadataout["coverurl"].startswith("/cover/")
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
     assert metadataout["title"] == "15 Ghosts II"
