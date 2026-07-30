@@ -9,15 +9,17 @@ the protocol handler, connection manager, and metadata processor.
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING
 
+import nowplaying.upgrades
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
 
 from .connection import ConnectionManager
 from .metadata import MetadataProcessor
 from .protocol import StagelinqProtocol
-from .types import DenonDevice, DenonService, DenonState
+from .types import DenonDevice, DenonState
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
@@ -25,6 +27,9 @@ if TYPE_CHECKING:
 
     import nowplaying.config
     import nowplaying.uihelp
+
+# Seconds before retrying a device that failed to connect or had no StateMap
+FAILURE_BACKOFF_SECONDS = 30.0
 
 
 class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -44,9 +49,13 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.metadata_processor = MetadataProcessor(config)
 
         # Plugin state
-        self.current_device: DenonDevice | None = None
-        self.current_service: DenonService | None = None
         self._discovery_timeout = 5.0
+        # tokens with a connection attempt currently in flight
+        self._attempting: set[bytes] = set()
+        # monotonic deadline before which a failed device is not retried
+        self._backoff_until: dict[bytes, float] = {}
+        # references to in-flight setup/cleanup tasks; pruned on reconcile
+        self._setup_tasks: set[asyncio.Task] = set()
 
     def install(self) -> bool:
         """Auto-install detection - StagelinQ devices are network-based"""
@@ -56,8 +65,21 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def get_source_agent_data(self) -> dict:
         """Return source agent data including device software version from StagelinQ discovery."""
         data = super().get_source_agent_data()
-        if self.current_device and self.current_device.software_version:
-            data["source_agent_version"] = self.current_device.software_version
+        # Devices can run mixed firmware; report the lowest version present
+        # so the choice is deterministic rather than connection-order luck
+        versions = [
+            conn.device.software_version
+            for conn in self.connection_manager.active.values()
+            if conn.device.software_version
+        ]
+        if versions:
+            try:
+                lowest = min(versions, key=nowplaying.upgrades.Version)
+            except ValueError:
+                # Firmware strings are not guaranteed to parse as semver;
+                # fall back to lexicographic, still deterministic
+                lowest = min(versions)
+            data["source_agent_version"] = lowest
         return data
 
     def defaults(self, qsettings: "QSettings | None"):
@@ -166,8 +188,8 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to start Denon plugin: %s", err)
 
     async def _find_and_connect(self):
-        """Find devices and connect to the first available one"""
-        try:  # pylint: disable=too-many-nested-blocks
+        """Continuously discover devices and connect to any new ones"""
+        try:
             while True:
                 try:
                     self._discovery_timeout = self.config.cparser.value(
@@ -178,45 +200,67 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     devices = await self.connection_manager.discover_devices(
                         self._discovery_timeout
                     )
-
-                    if devices:
-                        logging.info("Found %d Denon device(s)", len(devices))
-
-                        # Give devices time to receive multiple announcements before connecting
-                        # The devices need to know who we are first
-                        logging.debug("Waiting for devices to receive our announcements...")
-                        await asyncio.sleep(3.0)  # Wait longer for devices to trust us
-
-                        # Try each device until we find one with StateMap
-                        for device in devices:
-                            logging.debug(
-                                "Trying device: %s (%s)", device.name, device.software_name
-                            )
-                            success = await self._connect_and_monitor_device(device)
-                            if success:
-                                # Successfully connected, exit the retry loop
-                                return
-
-                    # No devices found or connection failed, wait before trying again
-                    logging.debug("No devices found, retrying in 10 seconds...")
+                    logging.debug(
+                        "Discovery pass found %d connectable device(s); %d connected",
+                        len(devices),
+                        len(self.connection_manager.active),
+                    )
+                    self._reconcile_devices(devices)
                     await asyncio.sleep(10.0)
 
-                except Exception as err:  # pylint: disable=broad-exception-caught
-                    logging.error("Error in device discovery: %s", err)
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logging.exception("Error in device discovery")
                     await asyncio.sleep(10.0)
         except asyncio.CancelledError:
             logging.debug("Device discovery cancelled")
             raise
 
+    def _reconcile_devices(self, devices: list[DenonDevice]) -> None:
+        """Spawn connection attempts for newly discovered devices"""
+        self._setup_tasks = {task for task in self._setup_tasks if not task.done()}
+        now = time.monotonic()
+
+        for device in devices:
+            if device.token in self.connection_manager.active:
+                continue
+            if device.token in self._attempting:
+                continue
+            if now < self._backoff_until.get(device.token, 0.0):
+                continue
+
+            logging.info(
+                "Discovered Denon device: %s (%s) at %s",
+                device.name,
+                device.software_name,
+                device.ipaddr,
+            )
+            self._attempting.add(device.token)
+            self._setup_tasks.add(asyncio.create_task(self._setup_device(device)))
+
+    async def _setup_device(self, device: DenonDevice) -> None:
+        """Run one connection attempt, applying backoff on failure"""
+        try:
+            if not await self._connect_and_monitor_device(device):
+                self._backoff_until[device.token] = time.monotonic() + FAILURE_BACKOFF_SECONDS
+                logging.info("Will retry %s in %.0f seconds", device.name, FAILURE_BACKOFF_SECONDS)
+            else:
+                self._backoff_until.pop(device.token, None)
+        finally:
+            self._attempting.discard(device.token)
+
     async def _connect_and_monitor_device(self, device: DenonDevice) -> bool:
         """Connect to a device and start monitoring. Returns True on success."""
         try:
+            # Devices only trust peers whose announcements they have seen;
+            # we broadcast every second from startup and discovery itself
+            # takes several seconds, so a short settle is enough
+            await asyncio.sleep(1.0)
             logging.info("Connecting to Denon device: %s at %s", device.name, device.ipaddr)
 
             # Get available services
             services = await self.connection_manager.connect_to_device(device)
 
-            logging.debug("Device offers %d services:", len(services))
+            logging.debug("Device %s offers %d services:", device.name, len(services))
             for service in services:
                 logging.debug("  - %s on port %d", service.name, service.port)
 
@@ -226,51 +270,71 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             )
             if not state_service:
                 logging.warning(
-                    "StateMap service not available on device (found %d other services)",
+                    "StateMap service not available on %s (found %d other services)",
+                    device.name,
                     len(services),
                 )
-                # Connection manager will handle cleanup
+                # Release the connection and its keepalive task; otherwise
+                # every failed attempt leaks a socket and a 250ms timer
+                await self.connection_manager.disconnect_device(device.token)
                 return False
 
             # Successfully connected
-            self.current_device = device
-            self.current_service = state_service
+            self.metadata_processor.register_device(device)
 
-            # Start monitoring track states
+            # Start monitoring track states, tagging updates with the
+            # emitting device so multi-device state stays separated
             monitor_task = asyncio.create_task(
                 self.connection_manager.monitor_state_changes(
-                    device, state_service, self._on_state_update
+                    device,
+                    state_service,
+                    lambda state: self._on_state_update(device.token, state),
                 )
             )
-            monitor_task.add_done_callback(self._on_monitor_task_done)
-            self.connection_manager.tasks.append(monitor_task)
+            monitor_task.add_done_callback(lambda task: self._on_monitor_task_done(task, device))
+            if conn := self.connection_manager.active.get(device.token):
+                conn.monitor_task = monitor_task
 
             logging.info("Successfully connected to %s", device.name)
             return True
 
         except Exception as err:  # pylint: disable=broad-exception-caught
-            logging.debug("Failed to connect to device %s: %s", device.name, err)
+            logging.warning("Failed to connect to device %s: %s", device.name, err)
+            await self.connection_manager.disconnect_device(device.token)
             return False
 
-    def _on_state_update(self, state: DenonState) -> None:
+    def _on_state_update(self, token: bytes, state: DenonState) -> None:
         """Handle state updates from the connection manager"""
-        self.metadata_processor.update_state(state)
+        self.metadata_processor.update_state(token, state)
 
-    def _on_monitor_task_done(self, task):
-        """Called when monitoring task finishes (due to connection loss)"""
-        if not task.cancelled():
-            # Task finished due to error, not cancellation
-            logging.info("Connection lost, will attempt to reconnect")
-            self.current_device = None
-            self.current_service = None
+    def _on_monitor_task_done(self, task, device: DenonDevice):
+        """Called when a device's monitoring task finishes (connection loss)"""
+        if task.cancelled():
+            return
 
-            # Start reconnection task
-            reconnect_task = asyncio.create_task(self._find_and_connect())
-            self.connection_manager.tasks.append(reconnect_task)
+        # Retrieve the exception so asyncio does not later emit a spurious
+        # "Task exception was never retrieved" traceback into user logs
+        if exc := task.exception():
+            logging.debug("Monitor for %s ended with: %s", device.name, exc)
+
+        logging.info("Connection lost to %s; will reconnect on next discovery", device.name)
+        self.metadata_processor.unregister_device(device.token)
+
+        # Close out the device's remaining connection state; the ongoing
+        # discovery loop reconnects it once it reannounces. Keep a task
+        # reference so it is neither garbage-collected nor orphaned.
+        cleanup_task = asyncio.create_task(self.connection_manager.disconnect_device(device.token))
+        self._setup_tasks.add(cleanup_task)
 
     async def stop(self):
         """Stop the plugin and cleanup"""
         logging.info("Stopping Denon StagelinQ plugin")
+        for task in self._setup_tasks:
+            task.cancel()
+        if self._setup_tasks:
+            await asyncio.gather(*self._setup_tasks, return_exceptions=True)
+        self._setup_tasks.clear()
+        self._attempting.clear()
         await self.connection_manager.cleanup()
 
     async def getrandomtrack(self, playlist: str) -> str | None:
