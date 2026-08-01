@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://whatsnowplaying.com/sitemap.xml
+X-llms-txt: https://whatsnowplaying.com/llms.txt
