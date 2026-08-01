@@ -353,7 +353,12 @@ class MetadataProcessor:
 
     @staticmethod
     def _state_field(states: dict[str, Any], key: str, field: str) -> Any:
-        """Read one field out of a state value dict, or None"""
+        """Read one field out of a state value dict, or None.
+
+        Falsy values deliberately collapse to None: in StagelinQ, an empty
+        string means "no track loaded" and a BPM of 0 means "not analyzed",
+        so they are treated as absent rather than published as data.
+        """
         data = states.get(key)
         if isinstance(data, dict):
             return data.get(field) or None

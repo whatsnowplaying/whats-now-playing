@@ -326,6 +326,7 @@ class ConnectionManager:
             if writer:
                 with contextlib.suppress(Exception):
                     writer.close()
+                    await writer.wait_closed()
 
     async def send_announcements(self) -> None:
         """Continuously announce ourselves to devices"""
