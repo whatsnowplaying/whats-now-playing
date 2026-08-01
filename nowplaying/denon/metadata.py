@@ -56,6 +56,20 @@ class MetadataProcessor:
         for key in [key for key in self._deck_play_times if key[0] == token]:
             del self._deck_play_times[key]
 
+    def clear_devices(self) -> None:
+        """Drop all device state, e.g. on plugin stop.
+
+        The monitor-done callback deliberately skips unregistration for
+        cancelled tasks (shutdown is not a connection loss), so a stopped
+        plugin must clear explicitly or a later restart of the same
+        instance would compute now-playing from stale devices.
+        """
+        self._devices.clear()
+        self._device_info.clear()
+        self._emv_active.clear()
+        self._deck_play_times.clear()
+        self._warned_dup_players.clear()
+
     def update_state(self, token: bytes, state: DenonState) -> None:
         """Update a device's state store with new StagelinQ data"""
         states = self._devices.setdefault(token, {})

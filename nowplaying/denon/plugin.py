@@ -336,6 +336,7 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._setup_tasks.clear()
         self._attempting.clear()
         await self.connection_manager.cleanup()
+        self.metadata_processor.clear_devices()
 
     async def getrandomtrack(self, playlist: str) -> str | None:
         """Get random track from playlist - not supported by StagelinQ"""

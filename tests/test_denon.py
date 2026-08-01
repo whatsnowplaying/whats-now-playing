@@ -483,6 +483,29 @@ async def test_get_all_decks_includes_paused(denon_plugin):
 
 
 @pytest.mark.asyncio
+async def test_stop_clears_metadata_state(denon_plugin):
+    """Test plugin stop drops device state so a restart cannot see stale decks"""
+    processor = denon_plugin.metadata_processor
+    processor.register_device(_make_test_device(DEVICE_TOKEN_1))
+    _feed_states(
+        processor,
+        DEVICE_TOKEN_1,
+        {
+            "/Engine/Deck1/Play": {"state": True},
+            "/Engine/Deck1/Track/ArtistName": {"string": "Stale Artist"},
+            "/Engine/Deck1/Track/SongName": {"string": "Stale Song"},
+        },
+    )
+    assert processor.get_playing_track() is not None
+
+    await denon_plugin.stop()
+
+    assert processor.get_playing_track() is None
+    assert not processor._devices
+    assert not processor._deck_play_times
+
+
+@pytest.mark.asyncio
 async def test_unregister_device_clears_state(denon_plugin):
     """Test device unregistration removes its decks from consideration"""
     processor = denon_plugin.metadata_processor
