@@ -431,9 +431,6 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
         image = nowplaying.utils.TRANSPARENT_PNG_BIN
-        # The placeholder is a PNG; a real image carries its own type, recorded
-        # when it was ingested.  Artist images that reach metadb are copies of the
-        # cover (see _artfallbacks in trackpoll), so coverimagetype covers them too.
         try:
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if metadata and metadata.get(imgtype):
@@ -707,10 +704,18 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # Field whitelist - based on what remote.py actually sends
         clean_metadata = self._filter_excluded_fields(clean_metadata)
 
-        # If coverurl is an HTTP URL, fetch the image (coverurl in METADATALIST passes filtering)
-        # processors.py sets coverurl once coverimageraw is set: the keyed /cover/
-        # route when the art reaches datacache, else cover.png
-        cover_url = clean_metadata.get("coverurl", "")
+        # processors.py sets coverurl once coverimageraw is set: the keyed cover/{key}
+        # route when the art reaches datacache, else cover.png.  Both are relative.
+        #
+        # Read and drop in one step, whatever shape the value is.  It came from the
+        # submitter, and templates use coverurl as an img src in an OBS browser source,
+        # so any surviving value is a fetch the DJ's overlay performs.  Only http is
+        # worth fetching ourselves, but the ones that are not are the dangerous ones to
+        # leave behind: "//evil.example/x.png" resolves against the browser source's own
+        # scheme, and a data: URI renders directly.  Neither produces coverimageraw, so
+        # _process_coverimagetype would return early and never overwrite it.  processors
+        # supplies the real value once it knows whether the art reached the cache.
+        cover_url = clean_metadata.pop("coverurl", "")
         if isinstance(cover_url, str) and cover_url.startswith("http"):
             cover_bytes = await self._fetch_cover_url(request, cover_url)
             if cover_bytes:
@@ -722,12 +727,6 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 clean_metadata["coverimageraw"] = cover_bytes
             else:
                 logging.debug("Cover art fetch returned nothing for coverurl from %s", source)
-            # The URL has served its purpose, and it came from the submitter. Templates
-            # use coverurl as an img src in an OBS browser source, so leaving a remote
-            # host here would have the DJ's overlay fetch from it -- on a failed fetch
-            # too, where nothing downstream would overwrite it. processors sets the
-            # real value once it knows whether the art reached the cache.
-            clean_metadata.pop("coverurl", None)
 
         # Strip null bytes from all string fields (radiologik and other sources may send them)
         for key, value in clean_metadata.items():

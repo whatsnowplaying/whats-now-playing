@@ -308,15 +308,21 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         """
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
-                if key == "coverimageraw" and (
-                    converted := nowplaying.utils.image2png(metadata[key])
-                ):
+                # Every blob, not just the cover.  _artfallbacks copies coverimageraw
+                # into artistlogoraw and artistthumbnailraw, and the cover is now source
+                # bytes rather than a transcoded PNG -- so converting only the cover
+                # would send its own copies as JPEG under the same hardcoded
+                # data:image/png prefix.  Anything already PNG short-circuits on the
+                # magic bytes, including the transparent placeholder.
+                if converted := nowplaying.utils.image2png(metadata[key]):
                     metadata[key] = converted
-                    # coverimagetype rides in this same frame now that it is in
-                    # METADATALIST, so leaving it would advertise image/jpeg beside
-                    # base64 that is PNG.  On conversion failure the original bytes go
-                    # out, so the recorded type is still the true one.
-                    metadata["coverimagetype"] = "image/png"
+                    if key == "coverimageraw":
+                        # The only blob with a type field, and it travels in this same
+                        # frame now that it is in METADATALIST -- so leaving it would
+                        # advertise image/jpeg beside base64 holding PNG.  On conversion
+                        # failure the original bytes go out and the recorded type is
+                        # still the true one.
+                        metadata["coverimagetype"] = "image/png"
                 newkey = key.replace("raw", "base64")
                 metadata[newkey] = base64.b64encode(metadata[key]).decode("utf-8")
                 del metadata[key]
