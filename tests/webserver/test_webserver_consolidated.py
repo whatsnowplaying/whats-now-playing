@@ -153,6 +153,58 @@ async def test_webserver_remote_input_authentication(
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "submitted_coverurl",
+    [
+        # protocol-relative: resolves against the browser source's own scheme, and
+        # skips the http fetch, so nothing sets coverimageraw to trigger an overwrite
+        "//evil.example/x.png",
+        # renders directly from an img src, no fetch at all
+        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=",
+        "ftp://evil.example/x.png",
+        "javascript:alert(1)",
+    ],
+)
+async def test_webserver_remote_input_drops_submitted_coverurl(getwebserver, submitted_coverurl):
+    """a submitted coverurl must never survive into the metadata templates render
+
+    Templates use coverurl as an img src inside an OBS browser source, so a value that
+    outlives the handler is a fetch the DJ's overlay performs on the submitter's behalf.
+    processors.py supplies the real relative value once it knows where the art landed.
+    """
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    webserver_ready = await wait_for_webserver_ready(port, timeout=10.0)
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    test_metadata = {
+        "artist": "Test Artist",
+        "title": "Test Title",
+        "filename": "test.mp3",
+        "coverurl": submitted_coverurl,
+    }
+
+    async with (
+        aiohttp.ClientSession() as session,
+        session.post(
+            f"http://localhost:{port}/v1/remoteinput",
+            json=test_metadata,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req,
+    ):
+        assert req.status == 200
+        processed = (await req.json())["processed_metadata"]
+
+    # no art was fetched, so processors never assigns a replacement -- the key should
+    # simply be gone rather than carrying the submitted value forward
+    assert processed.get("coverurl", "") != submitted_coverurl
+    assert "coverimageraw" not in processed
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "method,expected_status",
     [
         ("GET", 200),  # GET with query parameters
