@@ -909,3 +909,46 @@ async def test_negative_cache_skips_color_extraction(temp_storage, caplog):  # p
     await asyncio.sleep(0)
 
     assert not [r for r in caplog.records if "palette" in r.getMessage().lower()]
+
+
+@pytest.mark.parametrize(
+    "image,expected",
+    [
+        (b"\xff\xd8\xff\xe0" + b"payload" * 4, "image/jpeg"),
+        (b"\x89PNG\r\n\x1a\n" + b"payload" * 4, "image/png"),
+        # unrecognizable, empty, and absent all fall back rather than raising
+        (b"not an image at all", "image/png"),
+        (b"", "image/png"),
+        (None, "image/png"),
+    ],
+)
+def test_image_mime_type(image, expected):
+    """type is detected from the bytes, defaulting to png when unknown"""
+    assert nowplaying.datacache.storage.image_mime_type(image) == expected
+
+
+@pytest.mark.parametrize(
+    "value,acceptable",
+    [
+        ("image/png", True),
+        ("image/jpeg", True),
+        ("IMAGE/PNG", True),
+        # not an image
+        ("text/html", False),
+        ("audio/x-sndr", False),
+        ("application/json", False),
+        # unusable as a Content-Type even where the bytes might be fine:
+        # aiohttp raises on a charset parameter, and separators could split the header
+        ("image/png; charset=utf-8", False),
+        ("image/png,text/html", False),
+        ("image/png\r\nX-Evil: 1", False),
+        # degenerate
+        ("image/", False),
+        ("", False),
+        (None, False),
+        (123, False),
+    ],
+)
+def test_is_image_mime(value, acceptable):
+    """the single definition of an acceptable image Content-Type"""
+    assert nowplaying.datacache.storage.is_image_mime(value) is acceptable

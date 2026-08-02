@@ -439,7 +439,13 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image: bytes = metadata[imgtype]
-                content_type = metadata.get("coverimagetype") or content_type
+                # Checked rather than trusted.  Every writer of coverimagetype
+                # currently constrains it, but that invariant is spread across the
+                # pipeline plus a remote deny-list, and the cost of one drifting is a
+                # 500 -- Response(content_type=...) raises on a value carrying
+                # parameters. A wrong-but-usable label only mislabels an image.
+                if nowplaying.datacache.storage.is_image_mime(metadata.get("coverimagetype")):
+                    content_type = str(metadata["coverimagetype"])
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("_image_handler: %s", err)
         return web.Response(content_type=content_type, body=image)
@@ -467,8 +473,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         try:
             entry = await request.app[self.dc_storage_key].retrieve_by_cachekey(cachekey)
         except Exception:  # pylint: disable=broad-exception-caught
-            logging.exception("cover_by_cachekey_handler: %s", cachekey)
-            return web.Response(status=404, text="Not found")
+            # 500, not 404: the key may be perfectly good and the cache unreadable.
+            # Answering 404 would tell a client to go re-read the frame for a fresh
+            # key, which cannot help, and would hide a broken cache from whoever is
+            # reading the logs.
+            logging.exception("cover lookup failed for %s", cachekey)
+            return web.Response(status=500, text="Cache unavailable")
         if not entry or not entry.data:
             return web.Response(status=404, text="Not found")
         # datacache derived the type from the bytes on store, and refuses to store a

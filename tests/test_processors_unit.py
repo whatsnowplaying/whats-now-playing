@@ -372,22 +372,6 @@ def test_cover_cache_key_selftitled_album_does_not_collide():
     assert album_key != track_key
 
 
-@pytest.mark.parametrize(
-    "image,expected",
-    [
-        (b"\xff\xd8\xff\xe0" + b"payload" * 4, "image/jpeg"),
-        (b"\x89PNG\r\n\x1a\n" + b"payload" * 4, "image/png"),
-        # unrecognizable and empty both fall back rather than raising
-        (b"not an image at all", "image/png"),
-        (b"", "image/png"),
-        (None, "image/png"),
-    ],
-)
-def test_cover_mime_type(image, expected):
-    """cover art type is detected from the bytes, defaulting to png when unknown"""
-    assert nowplaying.metadata.processors.cover_mime_type(image) == expected
-
-
 @pytest.mark.asyncio
 async def test_cover_art_is_not_transcoded(bootstrap):
     """The pipeline records the cover's type instead of re-encoding it to PNG.

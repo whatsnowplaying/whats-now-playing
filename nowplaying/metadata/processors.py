@@ -12,7 +12,6 @@ import string
 import sys
 import textwrap
 
-import puremagic
 import url_normalize
 import wnpmb.artist_resolution
 import wnpmb.normalization
@@ -43,32 +42,6 @@ _TRACK_COVER_PREFIX = "track_"
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
-
-
-def cover_mime_type(image: bytes | None) -> str:
-    """Derive an image's MIME type from its bytes, defaulting to PNG.
-
-    Always derived, never taken from a declaration: an audio file's tag and a
-    remote submission are both content we did not create, and this value becomes a
-    response Content-Type.
-
-    Constrained to a bare image/<subtype> because puremagic reports non-image types
-    for short or odd input (b"\\x00\\x00\\x00" comes back as audio/x-sndr), and a
-    value carrying parameters makes aiohttp's Response(content_type=...) raise.
-    """
-    if image:
-        try:
-            detected = puremagic.from_string(image, mime=True)
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            # Deliberately broad, matching the identical call in
-            # datacache.storage.store(): PureError is what puremagic documents, but
-            # this is fed arbitrary bytes and a detection failure must never be able
-            # to cost a track its artwork.
-            logging.debug("Unrecognized cover image format; assuming png", exc_info=True)
-        else:
-            if nowplaying.datacache.storage.is_image_mime(detected):
-                return detected.strip().lower()
-    return "image/png"
 
 
 def cover_cache_key(metadata: TrackMetadata) -> tuple[str, str] | None:
@@ -212,7 +185,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             # address it by; the singleton route is the honest answer.  Restore the
             # stashed type, falling back to detection rather than claiming PNG.
             self._set_cover_pointers(
-                None, mime_type=embedded_type_backup or cover_mime_type(embedded_art_backup)
+                None,
+                mime_type=embedded_type_backup
+                or nowplaying.datacache.storage.image_mime_type(embedded_art_backup),
             )
 
         if prioritize_network:
@@ -527,7 +502,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         if not self.metadata.get("coverimagetype"):
-            self.metadata["coverimagetype"] = cover_mime_type(self.metadata["coverimageraw"])
+            self.metadata["coverimagetype"] = nowplaying.datacache.storage.image_mime_type(
+                self.metadata["coverimageraw"]
+            )
         self.metadata.setdefault("coverurl", "cover.png")
 
     async def _process_cover_colors(self) -> None:

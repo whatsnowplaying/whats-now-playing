@@ -61,19 +61,47 @@ IMAGE_DATA_TYPES: frozenset[str] = frozenset(
 )
 
 
-def is_image_mime(mime_type: str | None) -> bool:
+def is_image_mime(mime_type: object) -> bool:
     """True when mime_type is a bare image/<subtype>.
 
     Parameters are refused as well as non-image types: a value carrying a charset
     makes aiohttp's Response(content_type=...) raise, so it is unusable as a
     Content-Type even when the bytes themselves are fine.
+
+    Takes object rather than str | None because callers pass values straight out of
+    metadata dicts, where nothing has checked the type yet.
     """
-    if not mime_type:
+    if not isinstance(mime_type, str) or not mime_type:
         return False
     candidate = mime_type.strip().lower()
     if not candidate.startswith("image/") or candidate == "image/":
         return False
     return not any(char in candidate for char in ';,\r\n "\\')
+
+
+def image_mime_type(image: bytes | None) -> str:
+    """Derive an image's MIME type from its bytes, defaulting to PNG.
+
+    Lives here beside is_image_mime so that detection and the definition of an
+    acceptable image type stay together: this and store() are the only places that
+    call puremagic, and both defer to the same predicate for what is usable.
+
+    Always derived, never taken from a declaration -- an audio file's tag and a
+    remote submission are both content we did not create, and callers put this in a
+    response Content-Type.
+    """
+    if image:
+        try:
+            detected = puremagic.from_string(image, mime=True)
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+            # Deliberately broad, matching store(): PureError is what puremagic
+            # documents, but this takes arbitrary bytes and a detection failure must
+            # never cost a track its artwork.
+            logging.debug("Unrecognized image format; assuming png", exc_info=True)
+        else:
+            if is_image_mime(detected):
+                return detected.strip().lower()
+    return "image/png"
 
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
