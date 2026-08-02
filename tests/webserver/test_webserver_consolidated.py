@@ -6,6 +6,7 @@ import sys
 import aiohttp
 import pytest
 
+import nowplaying.metadata.processors
 import nowplaying.webserver.auth
 from tests.webserver.conftest import wait_for_webserver_content_update, wait_for_webserver_ready
 
@@ -162,6 +163,8 @@ async def test_webserver_remote_input_authentication(
         "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=",
         "ftp://evil.example/x.png",
         "javascript:alert(1)",
+        # shape-legal, so only the inequality check catches this one surviving
+        "cover/../../../etc/passwd",
     ],
 )
 async def test_webserver_remote_input_drops_submitted_coverurl(getwebserver, submitted_coverurl):
@@ -196,10 +199,20 @@ async def test_webserver_remote_input_drops_submitted_coverurl(getwebserver, sub
         assert req.status == 200
         processed = (await req.json())["processed_metadata"]
 
-    # no art was fetched, so processors never assigns a replacement -- the key should
-    # simply be gone rather than carrying the submitted value forward
-    assert processed.get("coverurl", "") != submitted_coverurl
-    assert "coverimageraw" not in processed
+    # Assert the shape, not merely "not what was submitted": != would also accept a
+    # mangled version of the submitted URL.  Every legitimate value is relative and
+    # WNP-generated -- absent when the track has no art, the singleton when it has art
+    # but no cachekey to address it by, and the keyed route on a datacache hit.  Which
+    # one appears is not stable: this track has no album, so it keys on artist+title
+    # and _process_cover_images does a retrieve_by_identifier against the datacache
+    # that every test shares, so art cached under that key elsewhere flips the answer.
+    coverurl = processed.get("coverurl", "")
+    assert coverurl in (
+        "",
+        nowplaying.metadata.processors.COVER_SINGLETON_URL,
+    ) or coverurl.startswith(nowplaying.metadata.processors.COVER_KEYED_PREFIX)
+    # and not merely shape-legal: a submitter can name "cover/anything" too
+    assert coverurl != submitted_coverurl
 
 
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
