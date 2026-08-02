@@ -434,21 +434,21 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # The placeholder is a PNG; a real image carries its own type, recorded
         # when it was ingested.  Artist images that reach metadb are copies of the
         # cover (see _artfallbacks in trackpoll), so coverimagetype covers them too.
-        content_type = "image/png"
         try:
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image: bytes = metadata[imgtype]
-                # Checked rather than trusted.  Every writer of coverimagetype
-                # currently constrains it, but that invariant is spread across the
-                # pipeline plus a remote deny-list, and the cost of one drifting is a
-                # 500 -- Response(content_type=...) raises on a value carrying
-                # parameters. A wrong-but-usable label only mislabels an image.
-                if nowplaying.datacache.storage.is_image_mime(metadata.get("coverimagetype")):
-                    content_type = str(metadata["coverimagetype"])
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("_image_handler: %s", err)
-        return web.Response(content_type=content_type, body=image)
+        # Derived from the bytes being sent rather than read from coverimagetype, which
+        # only describes the cover.  Artist banners, logos and thumbnails come straight
+        # from fanart.tv or TheAudioDB and are only ever cover copies when
+        # coverfornologos/coverfornothumbs are on with no real art available, so a PNG
+        # logo alongside a JPEG cover would otherwise be labelled image/jpeg.  This also
+        # gets the transparent-PNG placeholder right for nothing.
+        return web.Response(
+            content_type=nowplaying.datacache.storage.image_mime_type(image), body=image
+        )
 
     async def cover_handler(self, request: web.Request):
         """handle cover image"""
@@ -722,6 +722,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 clean_metadata["coverimageraw"] = cover_bytes
             else:
                 logging.debug("Cover art fetch returned nothing for coverurl from %s", source)
+            # The URL has served its purpose, and it came from the submitter. Templates
+            # use coverurl as an img src in an OBS browser source, so leaving a remote
+            # host here would have the DJ's overlay fetch from it -- on a failed fetch
+            # too, where nothing downstream would overwrite it. processors sets the
+            # real value once it knows whether the art reached the cache.
+            clean_metadata.pop("coverurl", None)
 
         # Strip null bytes from all string fields (radiologik and other sources may send them)
         for key, value in clean_metadata.items():

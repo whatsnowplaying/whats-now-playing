@@ -6,9 +6,9 @@ and randomimage support.
 """
 
 import asyncio
-import logging
 import tempfile
 import time
+import unittest.mock
 from pathlib import Path
 
 import orjson
@@ -888,27 +888,50 @@ async def test_negative_cache_survives_the_image_filter(temp_storage, data_type)
 
 
 @pytest.mark.asyncio
-async def test_negative_cache_skips_color_extraction(temp_storage, caplog):  # pylint: disable=redefined-outer-name
+async def test_negative_cache_skips_color_extraction(temp_storage):  # pylint: disable=redefined-outer-name
     """A recorded 404 must not be handed to the colour extractor.
 
     front_cover is in COLOR_EXTRACT_TYPES, so a negative entry used to spawn
-    extraction on b'', which Pillow cannot open -- logging a full traceback at ERROR
-    for every provider miss.
-    """
-    caplog.set_level(logging.DEBUG)
-    await temp_storage.store(
-        url="https://example.com/missing-cover.jpg",
-        identifier="wnpmockartist",
-        data_type="front_cover",
-        provider="test",
-        data_value=b"",
-        ttl_seconds=3600,
-        status_code=404,
-    )
-    # Extraction is fire-and-forget, so give a spawned task a chance to run and fail
-    await asyncio.sleep(0)
+    extraction on b'', which Pillow cannot open -- logging a traceback at ERROR for
+    every provider miss.
 
-    assert not [r for r in caplog.records if "palette" in r.getMessage().lower()]
+    Asserts on the call rather than on log output: extraction runs in a task that
+    hands off to asyncio.to_thread, so nothing a test can await reliably reaches its
+    logging, and the failure message does not contain the word this once matched on.
+    """
+    with unittest.mock.patch.object(
+        temp_storage, "_extract_and_store_colors", unittest.mock.AsyncMock()
+    ) as extract:
+        stored = await temp_storage.store(
+            url="https://example.com/missing-cover.jpg",
+            identifier="wnpmockartist",
+            data_type="front_cover",
+            provider="test",
+            data_value=b"",
+            ttl_seconds=3600,
+            status_code=404,
+        )
+        assert stored is not None, "negative caching must not be refused by the image filter"
+        await asyncio.sleep(0)
+        extract.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_real_content_does_get_color_extraction(temp_storage):  # pylint: disable=redefined-outer-name
+    """The 404 gate must not have switched extraction off for real images too."""
+    with unittest.mock.patch.object(
+        temp_storage, "_extract_and_store_colors", unittest.mock.AsyncMock()
+    ) as extract:
+        await temp_storage.store(
+            url="https://example.com/real-cover.png",
+            identifier="wnpmockartist",
+            data_type="front_cover",
+            provider="test",
+            data_value=b"\x89PNG\r\n\x1a\n" + b"\x00" * 32,
+            ttl_seconds=3600,
+        )
+        await asyncio.sleep(0)
+        extract.assert_called_once()
 
 
 @pytest.mark.parametrize(

@@ -360,7 +360,7 @@ class DataStorage:
                     cursor = await connection.execute(
                         """
                         SELECT data_value, file_path, metadata, status_code,
-                               mime_type, content_checksum, color_palette
+                               mime_type, content_checksum, color_palette, cachekey
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -397,6 +397,7 @@ class DataStorage:
                 mime_type,
                 content_checksum,
                 color_palette_json,
+                cachekey,
             ) = rows[0]
 
             if file_path_str:
@@ -429,6 +430,8 @@ class DataStorage:
                 metadata=metadata,
                 status_code=status_code,
                 mime_type=mime_type,
+                url=url,
+                cachekey=cachekey,
                 checksum=content_checksum,
                 color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
             )
@@ -642,7 +645,9 @@ class DataStorage:
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
-                        select_cols = "metadata, url, status_code, mime_type, color_palette"
+                        select_cols = (
+                            "metadata, url, status_code, mime_type, color_palette, cachekey"
+                        )
                         order_limit = ""
 
                     if provider:
@@ -678,7 +683,8 @@ class DataStorage:
                     # Update access statistics for all returned rows
                     # random row: (data_value, file_path, metadata, url, status_code,
                     #              mime_type, color_palette, cachekey)
-                    # non-random row: (metadata, url, status_code, mime_type)
+                    # non-random row: (metadata, url, status_code, mime_type,
+                    #                   color_palette, cachekey)
                     url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
@@ -706,9 +712,17 @@ class DataStorage:
                     status_code=status_code,
                     mime_type=mime_type,
                     url=url,
+                    cachekey=cachekey,
                     color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
                 )
-                for metadata_json, url, status_code, mime_type, color_palette_json in rows
+                for (
+                    metadata_json,
+                    url,
+                    status_code,
+                    mime_type,
+                    color_palette_json,
+                    cachekey,
+                ) in rows
             ]
 
         except Exception as error:  # pylint: disable=broad-exception-caught

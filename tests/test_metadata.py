@@ -61,7 +61,7 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
     # names the cached entry so a client fetches this track's art specifically.
     assert metadataout["coverimagetype"] == "image/jpeg"
-    assert metadataout["coverurl"].startswith("/cover/")
+    assert metadataout["coverurl"].startswith("cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -94,7 +94,7 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
     # names the cached entry so a client fetches this track's art specifically.
     assert metadataout["coverimagetype"] == "image/jpeg"
-    assert metadataout["coverurl"].startswith("/cover/")
+    assert metadataout["coverurl"].startswith("cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -127,7 +127,7 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
     # names the cached entry so a client fetches this track's art specifically.
     assert metadataout["coverimagetype"] == "image/jpeg"
-    assert metadataout["coverurl"].startswith("/cover/")
+    assert metadataout["coverurl"].startswith("cover/")
     assert metadataout["date"] == "2008-03-02"
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
@@ -158,7 +158,7 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     # Kept as the file supplied it rather than transcoded to PNG, and coverurl now
     # names the cached entry so a client fetches this track's art specifically.
     assert metadataout["coverimagetype"] == "image/jpeg"
-    assert metadataout["coverurl"].startswith("/cover/")
+    assert metadataout["coverurl"].startswith("cover/")
     assert metadataout["imagecacheartist"] == "nine inch nails"
     assert metadataout["isrc"] == ["USTC40852243"]
     assert metadataout["title"] == "15 Ghosts II"

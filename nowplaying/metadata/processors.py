@@ -37,6 +37,14 @@ import nowplaying.datacache.storage
 # in each of those.  What varies is the *subject* the art is filed under, which
 # is the identifier's job — hence the prefix below rather than a second type.
 COVER_DATA_TYPE = "front_cover"
+
+# coverurl is documented as a relative location (docs templatevariables.md), and
+# consumers such as the Lumia plugin and the StreamerBot script join it onto a base
+# URL.  Both values must therefore agree about the leading slash: emitting "cover.png"
+# alongside "/cover/{key}" would give one of them http://host:port//cover/uuid, which
+# aiohttp's router will not match.
+COVER_SINGLETON_URL = "cover.png"
+COVER_KEYED_PREFIX = "cover/"
 _TRACK_COVER_PREFIX = "track_"
 
 NOTE_RE = re.compile("N(?i:ote):")
@@ -216,7 +224,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         """
         if mime_type:
             self.metadata["coverimagetype"] = mime_type
-        self.metadata["coverurl"] = f"/cover/{cachekey}" if cachekey else "cover.png"
+        self.metadata["coverurl"] = (
+            f"{COVER_KEYED_PREFIX}{cachekey}" if cachekey else COVER_SINGLETON_URL
+        )
 
     async def _process_cover_images(self) -> None:
         """Store embedded cover art in datacache, or restore a cached image when none is
@@ -501,11 +511,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata or not self.metadata.get("coverimageraw"):
             return
 
-        if not self.metadata.get("coverimagetype"):
-            self.metadata["coverimagetype"] = nowplaying.datacache.storage.image_mime_type(
-                self.metadata["coverimageraw"]
-            )
-        self.metadata.setdefault("coverurl", "cover.png")
+        # Both assignments overwrite rather than fill: a declared type is never
+        # trusted, and coverurl arrives submitter-controlled on remote submissions --
+        # static_handlers fetches it into coverimageraw but leaves the URL in place, and
+        # templates use coverurl as an img src in an OBS browser source. Leaving it
+        # would point the DJ's overlay at whatever host the submitter named.
+        self.metadata["coverimagetype"] = nowplaying.datacache.storage.image_mime_type(
+            self.metadata["coverimageraw"]
+        )
+        self.metadata["coverurl"] = COVER_SINGLETON_URL
 
     async def _process_cover_colors(self) -> None:
         if not self.metadata.get("coverimageraw"):

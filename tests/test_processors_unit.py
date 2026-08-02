@@ -433,8 +433,8 @@ async def test_coverurl_points_at_keyed_route(bootstrap):
             metadata=metadatain, skipplugins=True
         )
 
-    assert metadataout["coverurl"].startswith("/cover/")
-    assert metadataout["coverurl"] != "/cover/None"
+    assert metadataout["coverurl"].startswith("cover/")
+    assert metadataout["coverurl"] != "cover/None"
 
 
 @pytest.mark.asyncio
@@ -523,3 +523,59 @@ async def test_declared_cover_type_is_not_trusted(bootstrap):
         )
 
     assert metadataout["coverimagetype"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_supplied_coverurl_is_replaced(bootstrap):
+    """A submitter's coverurl never survives into metadata.
+
+    static_handlers fetches whatever coverurl names and puts the bytes in
+    coverimageraw, but templates use coverurl as an img src in an OBS browser source
+    -- so leaving a remote host there would point the DJ's overlay at it. The value
+    is overwritten unconditionally rather than filled only when absent.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "title": "WNP Mock Song",
+        "coverimageraw": b"\x89PNG\r\n\x1a\n" + b"\x00" * 32,
+        "coverurl": "http://attacker.example/payload",
+    }
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert "attacker.example" not in metadataout["coverurl"]
+
+
+@pytest.mark.parametrize(
+    "cachekey,expected",
+    [
+        ("abc-123", "cover/abc-123"),
+        (None, "cover.png"),
+    ],
+)
+def test_coverurl_is_relative_on_both_branches(bootstrap, cachekey, expected):
+    """Both coverurl forms agree about the leading slash.
+
+    docs document it as a relative location and consumers join it onto a base, so
+    mixing "cover.png" with "/cover/{key}" would hand one of them a double slash that
+    aiohttp's router will not match.
+    """
+    processors = nowplaying.metadata.MetadataProcessors(config=bootstrap)
+    processors.metadata = {"coverimageraw": b"x"}
+
+    processors._set_cover_pointers(cachekey)  # pylint: disable=protected-access
+
+    assert processors.metadata["coverurl"] == expected
+    assert not processors.metadata["coverurl"].startswith("/")
