@@ -49,7 +49,6 @@ from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
-import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
@@ -255,8 +254,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     "filename": str(row["absolutepath"]),
                 }
                 if row["coverimage"]:
-                    if image := nowplaying.utils.image2png(row["coverimage"]):
-                        metadata["coverimageraw"] = image
+                    # Kept as DJUCED stored it.  Transcoding to PNG inflated
+                    # photographic art for nothing; the type is derived downstream and
+                    # /wsstream converts for the templates that need PNG.
+                    metadata["coverimageraw"] = row["coverimage"]
         return metadata
 
     # async def _try_songxml(self, deck):

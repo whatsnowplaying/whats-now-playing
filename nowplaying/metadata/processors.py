@@ -503,10 +503,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         honestly.  /wsstream is the exception -- its templates hardcode a
         data:image/png prefix -- so it converts at serialization time instead.
 
-        tinytag already recorded the type for embedded art, and datacache records it
-        for anything it holds.  Only detect when neither did: inputs that hand over
-        raw bytes with no type (djuced, winmedia, remote submissions), where assuming
-        PNG is exactly the mislabelling this is meant to stop.
+        Nothing declares the type any more, so detection here is the only source:
+        tinytag reports what an audio file's tag claims and that is content we did not
+        create, and a remote submission cannot set the field at all.  datacache runs
+        the same detection when it stores the bytes, so _set_cover_pointers replacing
+        this value later is not a disagreement.
         """
         if not self.metadata or not self.metadata.get("coverimageraw"):
             return

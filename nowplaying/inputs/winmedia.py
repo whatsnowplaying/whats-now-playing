@@ -60,7 +60,10 @@ class Plugin(InputPlugin):
             if byte_buffer := bytearray(
                 buffer_reader.read_buffer(buffer_reader.unconsumed_buffer_length)
             ):
-                return nowplaying.utils.image2png(byte_buffer)
+                # Kept as Windows handed it over.  Transcoding to PNG inflated
+                # photographic art for nothing; the type is derived downstream and
+                # /wsstream converts for the templates that need PNG.
+                return bytes(byte_buffer)
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
@@ -98,7 +101,7 @@ class Plugin(InputPlugin):
                 if info_dict.get(inkey)
             }
 
-            # avoid expensive image2png call
+            # skip the thumbnail stream read when nothing else changed
             diff = any(
                 newdata.get(cmpval) != self.metadata.get(cmpval) for cmpval in mapping.values()
             )
