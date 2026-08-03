@@ -15,6 +15,7 @@ from utils_artistextras import (
 
 import nowplaying.artistextras.lastfm
 import nowplaying.datacache
+from tests.utils_images import jpeg_bytes
 
 LASTFM_BASE_URL = "https://ws.audioscrobbler.com/2.0/"
 TEST_APIKEY = "testapikey123"  # pragma: allowlist secret
@@ -54,9 +55,9 @@ XYZ_URL = _artist_url("XYZ Nonexistent Artist XYZ")
 WNP_MOCK_ALBUM_URL = _album_url("WNP Mock Artist", "WNP Mock Album")
 COVER_IMAGE_URL = "https://lastfm.freetls.fastly.net/i/u/300x300/cover.jpg"
 
-# datacache refuses non-image bytes under an image data_type, so a fixture standing in
-# for downloaded cover art has to actually be an image.  A header is enough.
-MINIMAL_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+# datacache refuses bytes it cannot parse under an image data_type, so a fixture
+# standing in for downloaded cover art has to be a real image.
+MINIMAL_JPEG = jpeg_bytes()
 
 WNP_MOCK_ALBUM_RESPONSE = {
     "album": {

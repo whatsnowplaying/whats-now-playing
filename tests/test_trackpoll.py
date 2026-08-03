@@ -13,11 +13,13 @@ import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
 
 import nowplaying.processes.trackpoll  # pylint: disable=import-error
+from tests.utils_images import jpeg_bytes, png_bytes
 
-# datacache refuses non-image bytes under an image data_type, so fixtures that get
-# stored as artwork have to actually be images.  Headers are enough for puremagic.
-MINIMAL_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
-MINIMAL_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+# datacache refuses bytes it cannot parse under an image data_type, so artwork
+# fixtures have to be real images -- a signature plus filler takes the rejection
+# branch instead of the path under test.
+MINIMAL_PNG = png_bytes()
+MINIMAL_JPEG = jpeg_bytes()
 
 
 @pytest_asyncio.fixture(loop_scope="function")

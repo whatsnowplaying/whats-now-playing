@@ -299,30 +299,32 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
     def _base64ifier(metadata: TrackMetadata):
         """replace all the binary data with base64 data
 
-        Cover art is converted to PNG here and nowhere else.  The metadata pipeline
-        keeps source bytes, but /wsstream's templates hardcode a data:image/png
-        prefix and users customize copies WNP cannot update, so this stream owes
-        them actual PNG.  Converting at serialization keeps that promise without
-        making every other consumer pay for a transcode -- and costs nothing when
-        no one is connected, since this only runs to build a frame.
+        The cover is converted to PNG here and nowhere else: the metadata pipeline
+        keeps source bytes, but /wsstream's templates hardcode a data:image/png prefix
+        for it and users customize copies WNP cannot update.
+
+        Only the cover and its own copies, though.  websocket_artistfanart_streamer
+        rebuilds a frame every fanartdelay seconds with a freshly-selected random
+        fanart, so transcoding every blob would put a full decode and re-encode of a
+        large JPEG on a timer, per connected browser source -- reintroducing on a loop
+        the cost this release removed from the input plugins.  Artist images were never
+        transcoded before either, so their format is unchanged.
         """
+        # _artfallbacks copies the cover into artistlogoraw/artistthumbnailraw when
+        # coverfornologos/coverfornothumbs are on, and those copies go out under the
+        # same hardcoded prefix -- so they get the cover's conversion rather than a
+        # second transcode of the same bytes.
+        cover_source = metadata.get("coverimageraw")
+        cover_png = nowplaying.utils.image2png(cover_source) if cover_source else None
+        if cover_png:
+            # coverimagetype travels in this same frame now that it is in METADATALIST,
+            # so leaving it would advertise image/jpeg beside base64 holding PNG.
+            metadata["coverimagetype"] = "image/png"
+
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
-                # Every blob, not just the cover.  _artfallbacks copies coverimageraw
-                # into artistlogoraw and artistthumbnailraw, and the cover is now source
-                # bytes rather than a transcoded PNG -- so converting only the cover
-                # would send its own copies as JPEG under the same hardcoded
-                # data:image/png prefix.  Anything already PNG short-circuits on the
-                # magic bytes, including the transparent placeholder.
-                if converted := nowplaying.utils.image2png(metadata[key]):
-                    metadata[key] = converted
-                    if key == "coverimageraw":
-                        # The only blob with a type field, and it travels in this same
-                        # frame now that it is in METADATALIST -- so leaving it would
-                        # advertise image/jpeg beside base64 holding PNG.  On conversion
-                        # failure the original bytes go out and the recorded type is
-                        # still the true one.
-                        metadata["coverimagetype"] = "image/png"
+                if cover_png and metadata[key] == cover_source:
+                    metadata[key] = cover_png
                 newkey = key.replace("raw", "base64")
                 metadata[newkey] = base64.b64encode(metadata[key]).decode("utf-8")
                 del metadata[key]

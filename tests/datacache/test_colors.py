@@ -1,7 +1,9 @@
 """Tests for cover art color palette extraction."""
 
 import io
+import logging
 import re
+import unittest.mock
 
 import pytest
 from PIL import Image
@@ -72,11 +74,51 @@ async def test_extract_palettes_rgba_transparency():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bad_data", [b"not an image", b""])
 async def test_extract_palettes_bad_input_no_exception(bad_data):
-    """Invalid or empty input returns empty strings without raising."""
+    """Invalid or empty input reports no palette without raising."""
+    assert await nowplaying.datacache.colors.extract_palettes(bad_data) == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "bad_data,description",
+    [
+        (b"not an image", "no image magic"),
+        # magic-byte detection passes this, so it reaches Pillow and raises
+        (b"\x89PNG\r\n\x1a\n" + b"not really a png" * 4, "png magic, unparseable body"),
+    ],
+)
+async def test_extract_palettes_undecodable_does_not_log_error(bad_data, description, caplog):
+    """Undecodable bytes are a debug-level fact, not an ERROR with a traceback.
+
+    They arrive routinely -- a truncated download passes magic-byte detection, gets
+    stored, and is handed back on a later track -- so logging each one at ERROR buried
+    the extraction failures that do need attention.
+    """
+    caplog.set_level(logging.DEBUG)
     result = await nowplaying.datacache.colors.extract_palettes(bad_data)
-    assert result["cover_palette"] == ""
-    assert result["cover_palette_lighting"] == ""
-    assert result["cover_palette_type"] == ""
+
+    assert result == {}
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert not errors, f"{description} logged at ERROR: {[r.getMessage() for r in errors]}"
+
+
+@pytest.mark.asyncio
+async def test_extract_palettes_still_reports_real_failures(caplog):
+    """A genuine extraction bug keeps its ERROR and traceback."""
+    caplog.set_level(logging.DEBUG)
+    img = Image.new("RGB", (40, 40), (10, 200, 90))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+
+    with unittest.mock.patch.object(
+        nowplaying.datacache.colors,
+        "_quantize_candidates",
+        side_effect=ValueError("boom"),
+    ):
+        result = await nowplaying.datacache.colors.extract_palettes(buf.getvalue())
+
+    assert result == {}
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
 def test_color_extract_types_includes_image_types():

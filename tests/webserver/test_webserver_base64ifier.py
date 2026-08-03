@@ -7,24 +7,15 @@ pipeline keeps source bytes, so the transcode happens here at serialization time
 """
 
 import base64
-import io
 
-import PIL.Image
 import pytest
 
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.processes.webserver  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
+from tests.utils_images import jpeg_bytes
 
 PNG_MAGIC = b"\211PNG\r\n\032\n"
-
-
-def jpeg_bytes(color: tuple[int, int, int] = (10, 200, 90)) -> bytes:
-    """a real encoded JPEG -- a bare header does not decode, so image2png would
-    fall through to returning the original and hide whether conversion ran"""
-    buffer = io.BytesIO()
-    PIL.Image.new("RGB", (120, 120), color).save(buffer, format="JPEG")
-    return buffer.getvalue()
 
 
 def decoded(metadata: dict, key: str) -> bytes:
@@ -32,26 +23,40 @@ def decoded(metadata: dict, key: str) -> bytes:
     return base64.b64decode(metadata[key])
 
 
-def test_every_blob_is_converted_to_png():
-    """all blobs, not just the cover
-
-    _artfallbacks copies coverimageraw into artistlogoraw and artistthumbnailraw, and
-    the cover is source bytes now rather than a pre-transcoded PNG.  Converting only
-    the cover would ship its own copies as JPEG under the same data:image/png prefix.
-    """
-    source = jpeg_bytes()
-    metadata = dict.fromkeys(nowplaying.db.METADATABLOBLIST, source)
+def test_every_blob_is_base64ed():
+    """every blob is serialized, whether or not it needed converting"""
+    metadata = {key: jpeg_bytes() for key in nowplaying.db.METADATABLOBLIST}
 
     result = nowplaying.processes.webserver.WebHandler._base64ifier(metadata)  # pylint: disable=protected-access
 
     for key in nowplaying.db.METADATABLOBLIST:
         newkey = key.replace("raw", "base64")
         assert key not in result, f"{key} should be replaced by {newkey}"
-        assert decoded(result, newkey).startswith(PNG_MAGIC), f"{newkey} must be PNG"
+        assert decoded(result, newkey), newkey
+
+
+def test_artist_images_are_not_transcoded():
+    """genuine artist images ship as-is
+
+    websocket_artistfanart_streamer rebuilds a frame every fanartdelay seconds with a
+    new random fanart, so converting these would put a large-JPEG re-encode on a timer
+    per connection.  They were never transcoded before this release either.
+    """
+    fanart = jpeg_bytes(color=(200, 40, 120))
+    metadata = {"coverimageraw": jpeg_bytes(), "artistfanartraw": fanart}
+
+    result = nowplaying.processes.webserver.WebHandler._base64ifier(metadata)  # pylint: disable=protected-access
+
+    assert decoded(result, "artistfanartbase64") == fanart
+    assert decoded(result, "coverimagebase64").startswith(PNG_MAGIC)
 
 
 def test_cover_copies_match_the_cover_itself():
-    """the _artfallbacks shape: coverfornologos / coverfornothumbs copy the cover"""
+    """the _artfallbacks shape: coverfornologos / coverfornothumbs copy the cover
+
+    These share the cover's hardcoded data:image/png prefix, so they get the cover's
+    conversion -- and reuse it rather than transcoding the same bytes again.
+    """
     source = jpeg_bytes()
     metadata = {
         "coverimageraw": source,

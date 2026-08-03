@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import hashlib
+import io
 import logging
 import time
 import uuid
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any, Literal, overload
 
 import orjson
+import PIL.Image
 import puremagic
 
 import aiofiles
@@ -61,17 +63,16 @@ IMAGE_DATA_TYPES: frozenset[str] = frozenset(
 )
 
 
-def is_image_mime(mime_type: object) -> bool:
+def is_image_mime(mime_type: str | None) -> bool:
     """True when mime_type is a bare image/<subtype>.
 
     Parameters are refused as well as non-image types: a value carrying a charset
     makes aiohttp's Response(content_type=...) raise, so it is unusable as a
-    Content-Type even when the bytes themselves are fine.
-
-    Takes object rather than str | None because callers pass values straight out of
-    metadata dicts, where nothing has checked the type yet.
+    Content-Type even when the bytes themselves are fine.  The separator and CRLF
+    check guards a value that reaches a response header having come out of a
+    cached_data row, which is why it is not left to Pillow's mimetype table.
     """
-    if not isinstance(mime_type, str) or not mime_type:
+    if not mime_type:
         return False
     candidate = mime_type.strip().lower()
     if not candidate.startswith("image/") or candidate == "image/":
@@ -79,29 +80,62 @@ def is_image_mime(mime_type: object) -> bool:
     return not any(char in candidate for char in ';,\r\n "\\')
 
 
-def image_mime_type(image: bytes | None) -> str:
-    """Derive an image's MIME type from its bytes, defaulting to PNG.
+def detect_image_mime(image: bytes | None) -> str | None:
+    """The image's MIME type, or None when Pillow cannot parse these bytes.
 
-    Lives here beside is_image_mime so that detection and the definition of an
-    acceptable image type stay together: this and store() are the only places that
-    call puremagic, and both defer to the same predicate for what is usable.
+    Pillow answers both questions at once -- is this a parseable image, and what kind
+    -- so callers make one call.  Magic bytes alone would not do: a PNG signature
+    followed by garbage satisfies them and still raises here, and that shape (a
+    truncated download, a half-written file) is likelier than bytes with no magic.
+    Image.open() parses the header only, so this stays cheap on the live path.
 
-    Always derived, never taken from a declaration -- an audio file's tag and a
-    remote submission are both content we did not create, and callers put this in a
-    response Content-Type.
+    Always derived, never taken from a declaration: an audio file's tag and a remote
+    submission are both content we did not create, and callers put the result in a
+    response Content-Type.  None therefore means "do not keep or serve these bytes" --
+    there is deliberately no default, since labelling unparseable bytes image/png only
+    moves the failure to a consumer that cannot detect it.
     """
-    if image:
-        try:
-            detected = puremagic.from_string(image, mime=True)
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            # Deliberately broad, matching store(): PureError is what puremagic
-            # documents, but this takes arbitrary bytes and a detection failure must
-            # never cost a track its artwork.
-            logging.debug("Unrecognized image format; assuming png", exc_info=True)
-        else:
-            if is_image_mime(detected):
-                return detected.strip().lower()
-    return "image/png"
+    if not image:
+        return None
+    try:
+        logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
+        with PIL.Image.open(io.BytesIO(image)) as img:
+            detected = img.get_format_mimetype()
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        # Deliberately broad: this takes arbitrary bytes, and Pillow raises
+        # UnidentifiedImageError, OSError and assorted plugin-specific errors.
+        logging.debug("Not a parseable image", exc_info=True)
+        return None
+    # get_format_mimetype() is str | None -- a plugin need not declare one
+    if not detected or not is_image_mime(detected):
+        return None
+    return detected.strip().lower()
+
+
+def _mime_for_storage(url: str, data_value: bytes, data_type: str, status_code: int) -> str | None:
+    """The mime_type to record, refusing an image type that is not a parseable image.
+
+    Images are detected by detect_image_mime and nothing else, so the detector that
+    decides these bytes are usable is the one whose answer gets recorded -- detecting
+    with one library and validating with another hands callers a type from a check that
+    never ran.
+
+    Only real content is inspected: a negative cache entry is b"" with status_code=404,
+    and rejecting those would leave the status_code != 200 retrieval guard with no row
+    to suppress retries with, so every track would re-ask the provider.
+    """
+    if status_code == 200 and data_type in IMAGE_DATA_TYPES:
+        if mime_type := detect_image_mime(data_value):
+            return mime_type
+        # Served as a Content-Type and rendered by templates, and coverurl on a remote
+        # submission names a URL we fetch, which makes the body attacker-chosen.  Refuse
+        # rather than store, and let the caller decide how loudly to complain.
+        raise nowplaying.exceptions.ToxicContentError(f"{redact_url(url)} is not an image")
+    try:
+        return puremagic.from_string(data_value, mime=True)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
 
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
@@ -174,29 +208,7 @@ class DataStorage:
                 checksum if checksum is not None else hashlib.sha256(data_value).hexdigest()
             )
 
-            try:
-                mime_type: str | None = puremagic.from_string(data_value, mime=True)
-            except Exception:  # pylint: disable=broad-exception-caught
-                mime_type = None
-
-            if (
-                status_code == 200
-                and data_type in IMAGE_DATA_TYPES
-                and not is_image_mime(mime_type)
-            ):
-                # These bytes get served with mime_type as their Content-Type and
-                # rendered by templates, so a non-image here is not merely useless.
-                # coverurl on a remote submission names a URL we fetch, which makes
-                # the body attacker-chosen; refuse it rather than store it and let
-                # the caller decide how loudly to complain.
-                #
-                # Only inspect real content. A negative cache entry is b"" with
-                # status_code=404, recording that a provider has no art -- rejecting
-                # those would leave the status_code != 200 retrieval guard with no row
-                # to suppress retries with, and every track would re-ask the provider.
-                raise nowplaying.exceptions.ToxicContentError(
-                    f"{redact_url(url)} is {mime_type or 'undetectable'}, not an image"
-                )
+            mime_type = _mime_for_storage(url, data_value, data_type, status_code)
 
             if data_size <= _INLINE_THRESHOLD:
                 inline_data: bytes | None = data_value
@@ -322,8 +334,7 @@ class DataStorage:
     async def _extract_and_store_colors(self, url: str, data_value: bytes) -> None:
         """Run color extraction and write result to the dedicated color_palette column."""
         try:
-            colors = await extract_palettes(data_value)
-            if not any(colors.values()):
+            if not (colors := await extract_palettes(data_value)):
                 return
 
             async def _do_update() -> None:

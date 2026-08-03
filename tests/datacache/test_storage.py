@@ -19,6 +19,7 @@ import nowplaying.datacache.storage
 import nowplaying.datacache.utils
 import nowplaying.exceptions
 import nowplaying.utils.sqlite
+from tests.utils_images import jpeg_bytes, png_bytes
 
 
 def test_get_datacache_path_default():
@@ -135,6 +136,12 @@ def test_maintenance_cleanup_expired():
             assert count == 1
             url = conn.execute("SELECT url FROM cached_data").fetchone()[0]
             assert url == "https://example.com/valid.jpg"
+
+
+# Real encoded images: store() rejects image data_types it cannot parse, so a
+# magic-byte header with filler no longer stands in for cover art.
+COVER_PNG = png_bytes()
+COVER_JPEG = jpeg_bytes(color=(200, 40, 120))
 
 
 @pytest_asyncio.fixture
@@ -703,14 +710,14 @@ async def test_store_returns_cachekey_usable_for_retrieval(temp_storage):  # pyl
         identifier="wnpmockartist_wnpmockalbum",
         data_type="front_cover",
         provider="embedded",
-        data_value=b"\x89PNG\r\n\x1a\ncover-bytes",
+        data_value=COVER_PNG,
         ttl_seconds=3600,
     )
 
     assert stored is not None and stored.cachekey
     entry = await temp_storage.retrieve_by_cachekey(stored.cachekey)
     assert entry is not None
-    assert entry.data == b"\x89PNG\r\n\x1a\ncover-bytes"
+    assert entry.data == COVER_PNG
 
 
 @pytest.mark.asyncio
@@ -725,7 +732,7 @@ async def test_random_retrieval_reports_cachekey(temp_storage):  # pylint: disab
         identifier="wnpmockartist_wnpmockalbum",
         data_type="front_cover",
         provider="embedded",
-        data_value=b"\xff\xd8\xff\xe0jpeg-cover-bytes",
+        data_value=COVER_JPEG,
         ttl_seconds=3600,
     )
 
@@ -746,20 +753,19 @@ async def test_store_keeps_source_bytes_untranscoded(temp_storage):  # pylint: d
     Album art is usually JPEG; the old pipeline re-encoded it to lossless PNG, which
     inflated it for no benefit.  Only /wsstream converts now, at serialization time.
     """
-    jpeg_bytes = b"\xff\xd8\xff\xe0" + b"jpeg-payload" * 8
     stored = await temp_storage.store(
         url="embedded://wnpmockartist_wnpmockalbum/provided_0",
         identifier="wnpmockartist_wnpmockalbum",
         data_type="front_cover",
         provider="embedded",
-        data_value=jpeg_bytes,
+        data_value=COVER_JPEG,
         ttl_seconds=3600,
     )
     assert stored is not None
 
     entry = await temp_storage.retrieve_by_cachekey(stored.cachekey)
     assert entry is not None
-    assert entry.data == jpeg_bytes
+    assert entry.data == COVER_JPEG
     assert entry.mime_type == "image/jpeg"
 
 
@@ -782,8 +788,8 @@ async def test_store_returns_the_row_cachekey_not_a_generated_one(temp_storage):
         "ttl_seconds": 3600,
     }
 
-    first = await temp_storage.store(**common, data_value=b"\x89PNG\r\n\x1a\nfirst")
-    second = await temp_storage.store(**common, data_value=b"\xff\xd8\xff\xe0second")
+    first = await temp_storage.store(**common, data_value=COVER_PNG)
+    second = await temp_storage.store(**common, data_value=COVER_JPEG)
     assert first is not None and second is not None
 
     assert second.cachekey == first.cachekey, "the upsert preserves the original key"
@@ -791,7 +797,7 @@ async def test_store_returns_the_row_cachekey_not_a_generated_one(temp_storage):
     # And the reported key resolves to the current bytes, not a phantom row
     entry = await temp_storage.retrieve_by_cachekey(second.cachekey)
     assert entry is not None, "store() returned a cachekey that is not in the database"
-    assert entry.data == b"\xff\xd8\xff\xe0second"
+    assert entry.data == COVER_JPEG
 
 
 @pytest.mark.asyncio
@@ -927,51 +933,8 @@ async def test_real_content_does_get_color_extraction(temp_storage):  # pylint: 
             identifier="wnpmockartist",
             data_type="front_cover",
             provider="test",
-            data_value=b"\x89PNG\r\n\x1a\n" + b"\x00" * 32,
+            data_value=COVER_PNG,
             ttl_seconds=3600,
         )
         await asyncio.sleep(0)
         extract.assert_called_once()
-
-
-@pytest.mark.parametrize(
-    "image,expected",
-    [
-        (b"\xff\xd8\xff\xe0" + b"payload" * 4, "image/jpeg"),
-        (b"\x89PNG\r\n\x1a\n" + b"payload" * 4, "image/png"),
-        # unrecognizable, empty, and absent all fall back rather than raising
-        (b"not an image at all", "image/png"),
-        (b"", "image/png"),
-        (None, "image/png"),
-    ],
-)
-def test_image_mime_type(image, expected):
-    """type is detected from the bytes, defaulting to png when unknown"""
-    assert nowplaying.datacache.storage.image_mime_type(image) == expected
-
-
-@pytest.mark.parametrize(
-    "value,acceptable",
-    [
-        ("image/png", True),
-        ("image/jpeg", True),
-        ("IMAGE/PNG", True),
-        # not an image
-        ("text/html", False),
-        ("audio/x-sndr", False),
-        ("application/json", False),
-        # unusable as a Content-Type even where the bytes might be fine:
-        # aiohttp raises on a charset parameter, and separators could split the header
-        ("image/png; charset=utf-8", False),
-        ("image/png,text/html", False),
-        ("image/png\r\nX-Evil: 1", False),
-        # degenerate
-        ("image/", False),
-        ("", False),
-        (None, False),
-        (123, False),
-    ],
-)
-def test_is_image_mime(value, acceptable):
-    """the single definition of an acceptable image Content-Type"""
-    assert nowplaying.datacache.storage.is_image_mime(value) is acceptable

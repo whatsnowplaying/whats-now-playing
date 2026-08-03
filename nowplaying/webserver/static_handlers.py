@@ -443,9 +443,15 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # coverfornologos/coverfornothumbs are on with no real art available, so a PNG
         # logo alongside a JPEG cover would otherwise be labelled image/jpeg.  This also
         # gets the transparent-PNG placeholder right for nothing.
-        return web.Response(
-            content_type=nowplaying.datacache.storage.image_mime_type(image), body=image
-        )
+        #
+        # Fall back to the placeholder rather than to a guessed type: if these bytes are
+        # not a parseable image there is nothing a Content-Type can do for the client,
+        # and the same substitution already covers the no-metadata case above.
+        if not (mime_type := nowplaying.datacache.storage.detect_image_mime(image)):
+            logging.debug("%s is not a parseable image; sending placeholder", imgtype)
+            image = nowplaying.utils.TRANSPARENT_PNG_BIN
+            mime_type = "image/png"
+        return web.Response(content_type=mime_type, body=image)
 
     async def cover_handler(self, request: web.Request):
         """handle cover image"""
