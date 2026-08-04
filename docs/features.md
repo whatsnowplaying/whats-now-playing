@@ -47,7 +47,7 @@ updates required.
 * **[Virtual DJ](input/virtualdj.md)** — history and playlist database with background refresh,
   artist search
 * **[Denon DJ](input/denon.md)** (StagelinQ protocol) — direct network connection to supported
-  hardware
+  hardware, including multi-player setups (e.g. two SC6000s), with or without a Denon mixer
 * **[djay Pro](input/djaypro.md)** — track detection and metadata
 * **[DJUCED](input/djuced.md)** — database integration, smart playlists, artist search
 * **[JRiver Media Center](input/jriver.md)** — via network API
