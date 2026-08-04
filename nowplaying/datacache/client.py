@@ -396,7 +396,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
 
         data, content_checksum = result.data, result.checksum  # type: ignore[assignment]
         try:
-            success = await self.storage.store(
+            stored = await self.storage.store(
                 url=url,
                 identifier=identifier,
                 data_type=data_type,
@@ -413,11 +413,11 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             # would put it in metadata and from there into a template.
             logging.warning("Refusing %s: %s", self._redact_url(url), err)
             return None
-        if success:
+        if stored:
             logging.debug("Cached data from URL: %s", self._redact_url(url))
             # Hand back the stored entry: it carries the cachekey and the detected
             # mime_type, which a caller would otherwise have to derive again.
-            return success
+            return stored
         # Caching failed but the fetch did not, so the caller still gets its data --
         # just without the cachekey or mime_type that only a stored entry has.
         logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
