@@ -383,7 +383,7 @@ async def test_cover_art_is_not_transcoded(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
 
-    # A real JPEG: the body matters now, since unparseable art is rejected.
+    # A real JPEG: the body matters now, since unparsable art is rejected.
     cover = jpeg_bytes()
     metadatain = {
         "artist": "WNP Mock Artist",
@@ -466,7 +466,7 @@ async def test_coverurl_falls_back_without_a_cache_entry(bootstrap):
         # Passes puremagic as image/png; only Pillow can tell it is not a PNG.  This
         # is the shape a truncated download or half-written file takes, so it is the
         # likelier one in the wild.
-        (unparseable_image_bytes(), "image magic, unparseable body"),
+        (unparseable_image_bytes(), "image magic, unparsable body"),
     ],
 )
 @pytest.mark.parametrize(

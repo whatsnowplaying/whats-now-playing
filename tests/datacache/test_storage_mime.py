@@ -40,7 +40,7 @@ def test_detect_image_mime_real_images(image_format, expected):
         (b"<html><script>alert(1)</script></html>", "html"),
         # The case magic-byte detection cannot catch: puremagic calls this image/png,
         # so anything relying on magic alone would keep it and label it as an image.
-        (unparseable_image_bytes(), "png magic, unparseable body"),
+        (unparseable_image_bytes(), "png magic, unparsable body"),
         (encoded_image("JPEG")[:40], "truncated jpeg"),
         (b"", "empty"),
         (None, "absent"),

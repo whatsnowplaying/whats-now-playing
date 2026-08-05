@@ -84,7 +84,7 @@ async def test_extract_palettes_bad_input_no_exception(bad_data):
     [
         (b"not an image", "no image magic"),
         # magic-byte detection passes this, so it reaches Pillow and raises
-        (b"\x89PNG\r\n\x1a\n" + b"not really a png" * 4, "png magic, unparseable body"),
+        (b"\x89PNG\r\n\x1a\n" + b"not really a png" * 4, "png magic, unparsable body"),
     ],
 )
 async def test_extract_palettes_undecodable_does_not_log_error(bad_data, description, caplog):

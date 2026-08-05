@@ -92,7 +92,7 @@ def detect_image_mime(image: bytes | None) -> str | None:
     Always derived, never taken from a declaration: an audio file's tag and a remote
     submission are both content we did not create, and callers put the result in a
     response Content-Type.  None therefore means "do not keep or serve these bytes" --
-    there is deliberately no default, since labelling unparseable bytes image/png only
+    there is deliberately no default, since labelling unparsable bytes image/png only
     moves the failure to a consumer that cannot detect it.
     """
     if not image:
