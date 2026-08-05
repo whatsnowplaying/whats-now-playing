@@ -488,22 +488,44 @@
     <ul class="md-nav__list" data-md-component="toc">
       
         <li class="md-nav__item">
-  <a href="#version-522-2026-06-20" class="md-nav__link">
+  <a href="#version-523-unreleased" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version 5.2.2 - 2026-06-20
+        Version 5.2.3 - UNRELEASED
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Version 5.2.2 - 2026-06-20">
+    <nav class="md-nav" aria-label="Version 5.2.3 - UNRELEASED">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#denon-dj" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Denon DJ
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#new-features" class="md-nav__link">
     <span class="md-ellipsis">
       
         New Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixes
       
     </span>
   </a>
@@ -521,8 +543,47 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-522-2026-06-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version 5.2.2 - 2026-06-20
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 5.2.2 - 2026-06-20">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
-  <a href="#bug-fixes" class="md-nav__link">
+  <a href="#new-features_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -572,7 +633,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_1" class="md-nav__link">
+  <a href="#bug-fixes_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -633,7 +694,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#new-features_1" class="md-nav__link">
+  <a href="#new-features_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         New Features
@@ -732,7 +793,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_2" class="md-nav__link">
+  <a href="#bug-fixes_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -1041,7 +1102,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#new-features_2" class="md-nav__link">
+  <a href="#new-features_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         New Features
@@ -1063,7 +1124,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_3" class="md-nav__link">
+  <a href="#bug-fixes_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug fixes
@@ -3391,14 +3452,57 @@
 
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<h2 id="version-522-2026-06-20">Version 5.2.2 - 2026-06-20<a class="headerlink" href="#version-522-2026-06-20" title="Permanent link">&para;</a></h2>
+<h2 id="version-523-unreleased">Version 5.2.3 - UNRELEASED<a class="headerlink" href="#version-523-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="denon-dj">Denon DJ<a class="headerlink" href="#denon-dj" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fixed a StagelinQ protocol bug that caused "0 services" connection
+    failures against standalone players (SC5000/SC6000 series): the
+    player's own services request was misparsed, discarding its
+    service announcements</li>
+<li>WNP now connects to every Denon DJ player and all-in-one on the
+    network at the same time; multi-player setups (for example, two
+    SC6000s) work with or without a Denon mixer. Decks are numbered by
+    each unit's player number and layer, and Deck Skip applies to
+    those numbers</li>
+<li>Deck audibility now uses the mixer-provided per-deck volume when a
+    Denon mixer or all-in-one provides it; with an analog or
+    third-party mixer, every playing deck counts as audible and the
+    most recently started deck is reported</li>
+<li>Discovery announcements are now broadcast on every network
+    interface, fixing discovery on multi-NIC systems</li>
+<li>Connection lifecycle hardening and greatly reduced debug-log volume</li>
+</ul>
 <h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The upgrade prompt can now show aggregated release notes for the
+    versions between the installed and the offered build</li>
+</ul>
+<h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fixed WebSocket heartbeat handling in the built-in web server</li>
+<li>Fixed DJUCED install-time configuration writes being silently
+    ignored</li>
+<li>Fixed version comparison ordering across release, preview, and
+    release-candidate builds</li>
+<li>Icecast input now detects port changes and restarts without
+    requiring a WNP restart</li>
+<li>Fixed configuration restore when cancelling after a settings reset;
+    the charts key is preserved</li>
+</ul>
+<h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Updated nltk to 3.10.0 (security advisory)</li>
+<li>Updated aiohttp to 3.14.x, pillow to 12.3.0, zeroconf to 0.150.0,
+    requests-cache, and setuptools</li>
+</ul>
+<h2 id="version-522-2026-06-20">Version 5.2.2 - 2026-06-20<a class="headerlink" href="#version-522-2026-06-20" title="Permanent link">&para;</a></h2>
+<h3 id="new-features_1">New Features<a class="headerlink" href="#new-features_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>General settings now has a "Receive pre-release updates" checkbox. When
     enabled, WNP will offer alpha, beta, and release-candidate builds in
     addition to stable releases. Disabled by default.</li>
 </ul>
-<h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
+<h3 id="security_1">Security<a class="headerlink" href="#security_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Updated zeroconf to address five CVEs (CVE-2026-48487, CVE-2026-48045,
     CVE-2026-47184, CVE-2026-47183, CVE-2026-47180): unvalidated record
@@ -3408,7 +3512,7 @@
     hardening fixes: oversized message rejection, container nesting depth
     limits, and malformed-message handling</li>
 </ul>
-<h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_1">Bug Fixes<a class="headerlink" href="#bug-fixes_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Fixed template preview window showing a stale template list when
     reopened after new templates were added or removed</li>
@@ -3429,7 +3533,7 @@
     during update checks instead of another Intel build</li>
 </ul>
 <h2 id="version-521-2026-05-20">Version 5.2.1 - 2026-05-20<a class="headerlink" href="#version-521-2026-05-20" title="Permanent link">&para;</a></h2>
-<h3 id="bug-fixes_1">Bug Fixes<a class="headerlink" href="#bug-fixes_1" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_2">Bug Fixes<a class="headerlink" href="#bug-fixes_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Fixed incorrect Discord invite link in About window</li>
 <li>Fixed a bug where track detection silently stopped after a system sleep/wake
@@ -3484,7 +3588,7 @@
 <li>Fixed false rate-limit errors when talking to MusicBrainz</li>
 </ul>
 <h2 id="version-520-2026-05-04">Version 5.2.0 - 2026-05-04<a class="headerlink" href="#version-520-2026-05-04" title="Permanent link">&para;</a></h2>
-<h3 id="new-features_1">New Features<a class="headerlink" href="#new-features_1" title="Permanent link">&para;</a></h3>
+<h3 id="new-features_2">New Features<a class="headerlink" href="#new-features_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>WNP EarShot: new input source for vinyl, CDJs, and analog mixers via
     Shazam-based identification; supports Always-Accept mode as a secondary
@@ -3546,7 +3650,7 @@
 <ul>
 <li>Tenor GIF support; use Klipy instead</li>
 </ul>
-<h3 id="bug-fixes_2">Bug Fixes<a class="headerlink" href="#bug-fixes_2" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_3">Bug Fixes<a class="headerlink" href="#bug-fixes_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Track titles with duplicate parenthetical suffixes (e.g.
     <code>Song (Radio Edit) (radio edit)</code>) are now collapsed to a single suffix</li>
@@ -3763,7 +3867,7 @@
 <li>track_received</li>
 <li>twitchchannel</li>
 </ul>
-<h3 id="new-features_2">New Features<a class="headerlink" href="#new-features_2" title="Permanent link">&para;</a></h3>
+<h3 id="new-features_3">New Features<a class="headerlink" href="#new-features_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Completely revamped documentation website to make it easy to pick your version</li>
 <li>Upgrade downloads are now sent through whatsnowplaying.com/download so that
@@ -3777,7 +3881,7 @@
     executable.  This was done to speed up launch time by removing the
     need to extract the content.</li>
 </ul>
-<h3 id="bug-fixes_3">Bug fixes<a class="headerlink" href="#bug-fixes_3" title="Permanent link">&para;</a></h3>
+<h3 id="bug-fixes_4">Bug fixes<a class="headerlink" href="#bug-fixes_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li>M3U-based systems (Virtual DJ) file watching fixes</li>
 <li>Wikimedia links did not correctly redirect</li>
