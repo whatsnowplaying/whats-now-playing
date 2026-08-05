@@ -1,5 +1,49 @@
 # Changelog
 
+## Version 5.2.3 - UNRELEASED
+
+### Denon DJ
+
+* Fixed a StagelinQ protocol bug that caused "0 services" connection
+    failures against standalone players (SC5000/SC6000 series): the
+    player's own services request was misparsed, discarding its
+    service announcements
+* WNP now connects to every Denon DJ player and all-in-one on the
+    network at the same time; multi-player setups (for example, two
+    SC6000s) work with or without a Denon mixer. Decks are numbered by
+    each unit's player number and layer, and Deck Skip applies to
+    those numbers
+* Deck audibility now uses the mixer-provided per-deck volume when a
+    Denon mixer or all-in-one provides it; with an analog or
+    third-party mixer, every playing deck counts as audible and the
+    most recently started deck is reported
+* Discovery announcements are now broadcast on every network
+    interface, fixing discovery on multi-NIC systems
+* Connection lifecycle hardening and greatly reduced debug-log volume
+
+### New Features
+
+* The upgrade prompt can now show aggregated release notes for the
+    versions between the installed and the offered build
+
+### Bug Fixes
+
+* Fixed WebSocket heartbeat handling in the built-in web server
+* Fixed DJUCED install-time configuration writes being silently
+    ignored
+* Fixed version comparison ordering across release, preview, and
+    release-candidate builds
+* Icecast input now detects port changes and restarts without
+    requiring a WNP restart
+* Fixed configuration restore when cancelling after a settings reset;
+    the charts key is preserved
+
+### Security
+
+* Updated nltk to 3.10.0 (security advisory)
+* Updated aiohttp to 3.14.x, pillow to 12.3.0, zeroconf to 0.150.0,
+    requests-cache, and setuptools
+
 ## Version 5.2.2 - 2026-06-20
 
 ### New Features
