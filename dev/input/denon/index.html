@@ -763,6 +763,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#multiple-players" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Players
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2854,10 +2865,12 @@
 <p>Connects directly to Denon DJ equipment over your network to get real-time track information.</p>
 <h2 id="supported-equipment">Supported Equipment<a class="headerlink" href="#supported-equipment" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Denon DJ Prime series mixers (Prime 2, Prime 4, Prime Go/Go+)</li>
-<li>Denon DJ standalone players (SC5000, SC6000)</li>
+<li>Denon DJ standalone all-in-ones (Prime 2, Prime 4, Prime Go/Go+, SC Live 2/4, Mixstream Pro series)</li>
+<li>Denon DJ standalone players (SC5000/SC5000M, SC6000/SC6000M)</li>
 <li>Other StagelinQ-compatible Denon DJ equipment</li>
 </ul>
+<p>Denon DJ mixers (X1800/X1850 Prime) do not need to be configured: they push fader and crossfader
+information to the connected players automatically, and <strong>What's Now Playing</strong> reads it from there.</p>
 <h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
 <p><a href="../images/denon-source-selection.png"><img alt="Denon Source Selection" src="../images/denon-source-selection.png" /></a></p>
 <ol>
@@ -2873,9 +2886,60 @@
 <li><strong>Deck Skip</strong> - Check decks to ignore during track detection</li>
 <li>Click Save</li>
 </ol>
+<h2 id="multiple-players">Multiple Players<a class="headerlink" href="#multiple-players" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> connects to every Denon DJ player and all-in-one it finds on the network
+at the same time, so setups such as two SC6000s with a mixer work out of the box.</p>
+<p>With more than one player, deck numbers are assigned by the player number set on each unit
+(Engine OS preferences, shown on the jog display), then by layer:</p>
+<table>
+<thead>
+<tr>
+<th>Player</th>
+<th>Layer</th>
+<th>Deck number</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>A</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>B</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>A</td>
+<td>3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>B</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>A single all-in-one keeps its usual deck 1-4 numbering. The <strong>Deck Skip</strong> checkboxes refer to
+these numbers, so with two players, "Deck 3" means player 2's layer A. If a player leaves the
+network, the remaining decks are renumbered, so double-check deck skip settings if you change
+your setup mid-show.</p>
+<blockquote>
+<p>NOTE: Give each unit a <strong>distinct player number</strong>. If two players are both left at the
+default of 1, deck numbering falls back to an arbitrary order and a warning is logged.</p>
+</blockquote>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p><strong>What's Now Playing</strong> monitors all decks and selects the track your audience is actually hearing based on fader
-positions, crossfader state, and play status.</p>
+<p><strong>What's Now Playing</strong> monitors all decks and selects the track your audience is actually
+hearing based on fader positions, crossfader state, and play status.</p>
+<ul>
+<li><strong>All-in-one units</strong> report their own fader and crossfader positions.</li>
+<li><strong>Players with a Denon DJ mixer</strong> (X1800/X1850) receive per-deck volume from the mixer;
+  no direct mixer connection is needed.</li>
+<li><strong>Players with a third-party or analog mixer</strong> provide no volume information, so every
+  playing deck is treated as audible and selection falls back to play status and mix mode.</li>
+</ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="no-devices-found">No Devices Found<a class="headerlink" href="#no-devices-found" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2889,6 +2953,8 @@ positions, crossfader state, and play status.</p>
 <li>Check deck skip settings</li>
 <li>Verify fader positions (very low faders are ignored)</li>
 <li>Try switching between "newest" and "oldest" mix modes</li>
+<li>With an analog or third-party mixer, fader positions are unavailable: stop or pause decks
+  that should not be reported</li>
 </ul>
 <h3 id="connection-issues">Connection Issues<a class="headerlink" href="#connection-issues" title="Permanent link">&para;</a></h3>
 <ul>
