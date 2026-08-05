@@ -214,12 +214,14 @@ class ConnectionManager:
             return services
 
         except BaseException:  # pylint: disable=broad-exception-caught
-            # Ensure keepalive is stopped and writer is closed on any
-            # failure. BaseException so that cancellation (stop() during an
-            # input-plugin switch cancelling an in-flight setup task) cannot
-            # orphan the keepalive and socket, which are not yet registered
-            # in self.active at this point. Close the socket synchronously
-            # first: close() cannot be interrupted by a further cancel.
+            # Cleanup-and-reraise: nothing is swallowed. BaseException is
+            # deliberate so that cancellation (stop() during an input-plugin
+            # switch cancelling an in-flight setup task) cannot orphan the
+            # keepalive and socket, which are not yet registered in
+            # self.active at this point; KeyboardInterrupt/SystemExit still
+            # propagate via the raise below after cleanup runs. Close the
+            # socket synchronously first: close() cannot be interrupted by
+            # a further cancel.
             writer.close()
             ref_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
