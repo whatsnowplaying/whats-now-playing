@@ -189,7 +189,6 @@ def image2png(rawdata: bytes | None) -> bytes | None:
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
-    logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 
@@ -215,7 +214,6 @@ def image2avif(rawdata: bytes | None) -> bytes | None:
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
-    logging.debug("Leaving image2avif")
     return imgbuffer.getvalue()
 
 

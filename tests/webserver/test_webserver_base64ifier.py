@@ -35,8 +35,8 @@ def test_every_blob_is_base64ed():
         assert decoded(result, newkey), newkey
 
 
-def test_artist_images_are_not_transcoded():
-    """genuine artist images ship as-is
+def test_artist_images_are_not_transcoded_by_default():
+    """genuine artist images ship as-is unless a caller opts them in
 
     websocket_artistfanart_streamer rebuilds a frame every fanartdelay seconds with a
     new random fanart, so converting these would put a large-JPEG re-encode on a timer
@@ -49,6 +49,56 @@ def test_artist_images_are_not_transcoded():
 
     assert decoded(result, "artistfanartbase64") == fanart
     assert decoded(result, "coverimagebase64").startswith(PNG_MAGIC)
+
+
+def test_extra_convert_keys_transcodes_only_whats_opted_in():
+    """_wss_do_update opts banner+thumbnail in for /wsstream; nothing else follows
+
+    Several bundled templates hardcode data:image/png for artistbannerbase64 and
+    artistthumbnailbase64 too, not just the cover, so /wsstream's genuinely
+    event-driven rebuild (gated on the DB watcher's updatetime, not a fixed-interval
+    poll) opts those two in.  Fanart stays out: it's the one field the fanart
+    streamer's per-tick loop refreshes, and that loop reuses this same method.
+    """
+    banner = jpeg_bytes(color=(10, 10, 200))
+    thumbnail = jpeg_bytes(color=(200, 10, 10))
+    fanart = jpeg_bytes(color=(10, 200, 10))
+    metadata = {
+        "coverimageraw": jpeg_bytes(),
+        "artistbannerraw": banner,
+        "artistthumbnailraw": thumbnail,
+        "artistfanartraw": fanart,
+    }
+
+    result = nowplaying.processes.webserver.WebHandler._base64ifier(  # pylint: disable=protected-access
+        metadata, extra_convert_keys=frozenset({"artistbannerraw", "artistthumbnailraw"})
+    )
+
+    assert decoded(result, "artistbannerbase64").startswith(PNG_MAGIC)
+    assert decoded(result, "artistthumbnailbase64").startswith(PNG_MAGIC)
+    assert decoded(result, "artistfanartbase64") == fanart
+
+
+def test_transparentifier_threads_extra_convert_keys():
+    """the parameter has to survive _transparentifier, not just _base64ifier directly
+
+    _wss_do_update calls _transparentifier, never _base64ifier itself.
+    """
+    thumbnail = jpeg_bytes(color=(200, 10, 10))
+    metadata = {"coverimageraw": jpeg_bytes(), "artistthumbnailraw": thumbnail}
+
+    # _transparentifier is an instance method whose only use of self is to call the
+    # (static) _base64ifier -- passing the class itself as self resolves that call
+    # correctly without needing a real WebHandler instance.
+    result = nowplaying.processes.webserver.WebHandler._transparentifier(  # pylint: disable=protected-access
+        nowplaying.processes.webserver.WebHandler,
+        metadata,
+        extra_convert_keys=frozenset({"artistthumbnailraw"}),
+    )
+
+    assert decoded(result, "artistthumbnailbase64").startswith(PNG_MAGIC)
+    # untouched fields still get the placeholder, unaffected by the extra keys
+    assert decoded(result, "artistfanartbase64") == nowplaying.utils.TRANSPARENT_PNG_BIN
 
 
 def test_cover_copies_match_the_cover_itself():

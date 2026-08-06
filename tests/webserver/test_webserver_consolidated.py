@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Consolidated webserver tests using aiohttp"""
 
+import asyncio
+import base64
+import json
 import sys
 
 import aiohttp
 import pytest
+import websockets
 
 import nowplaying.metadata.processors
 import nowplaying.webserver.auth
+from tests.utils_images import jpeg_bytes
 from tests.webserver.conftest import wait_for_webserver_content_update, wait_for_webserver_ready
 
 
@@ -502,3 +507,44 @@ async def test_cover_by_cachekey_unknown_key_is_404(getwebserver):
         ) as req,
     ):
         assert req.status == 404
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_wsstream_transcodes_banner_and_thumbnail(getwebserver):
+    """/wsstream converts genuine artist banner/thumbnail JPEGs to PNG, not just the cover.
+
+    Found by live testing: several bundled templates hardcode data:image/png for
+    artistbannerbase64 and artistthumbnailbase64 too.  _wss_do_update's rebuild is
+    gated on the DB watcher's updatetime (a genuine track change), unlike
+    websocket_artistfanart_streamer's unconditional per-fanartdelay-tick rebuild, so
+    opting these two in here does not reintroduce the per-tick re-encode cost that was
+    walked back earlier.
+
+    Fanart is deliberately excluded from utils_images.py's fixtures here: write_to_metadb
+    nulls artistfanartraw unconditionally (db.py) -- it is populated live, per-connection,
+    only inside websocket_artistfanart_streamer's own datacache lookup, never from metadb.
+    The fanart-stays-untouched guarantee is exercised directly against _base64ifier in
+    test_webserver_base64ifier.py, which does not go through metadb at all.
+    """
+    config, metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    await metadb.write_to_metadb(
+        metadata={
+            "artist": "WNP Mock Artist",
+            "title": "WNP Mock Song",
+            "coverimageraw": jpeg_bytes(),
+            "artistbannerraw": jpeg_bytes(color=(10, 10, 200)),
+            "artistthumbnailraw": jpeg_bytes(color=(200, 10, 10)),
+        }
+    )
+
+    async with websockets.connect(f"ws://localhost:{port}/wsstream") as ws:
+        frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+
+    assert base64.b64decode(frame["artistbannerbase64"]).startswith(b"\x89PNG\r\n\x1a\n")
+    assert base64.b64decode(frame["artistthumbnailbase64"]).startswith(b"\x89PNG\r\n\x1a\n")
+    assert base64.b64decode(frame["coverimagebase64"]).startswith(b"\x89PNG\r\n\x1a\n")
