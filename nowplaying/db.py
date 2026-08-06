@@ -40,6 +40,7 @@ METADATALIST = [
     "bpm",
     "comments",
     "composer",
+    "coverimagetype",
     "coverurl",
     "date",
     "deck",

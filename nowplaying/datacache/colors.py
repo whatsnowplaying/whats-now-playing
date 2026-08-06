@@ -92,13 +92,17 @@ def _extract_palettes_sync(data: bytes, max_colors: int = 6) -> dict[str, str]:
             "cover_palette_lighting": ",".join(lighting_colors),
             "cover_palette_type": palette_type,
         }
+    except OSError:
+        # Not a bug, so not an ERROR: UnidentifiedImageError and "image file is
+        # truncated" both subclass OSError, and bytes in that state reach here
+        # routinely -- magic-byte detection passes a PNG signature followed by
+        # garbage, so a truncated download can be stored and later restored.  An
+        # ERROR traceback per track buried the failures that do need attention.
+        logging.debug("Palette extraction skipped: undecodable image", exc_info=True)
+        return {}
     except Exception:  # pylint: disable=broad-except
         logging.exception("Color palette extraction failed")
-        return {
-            "cover_palette": "",
-            "cover_palette_lighting": "",
-            "cover_palette_type": "",
-        }
+        return {}
 
 
 async def extract_palettes(data: bytes, max_colors: int = 6) -> dict[str, str]:
@@ -108,5 +112,8 @@ async def extract_palettes(data: bytes, max_colors: int = 6) -> dict[str, str]:
       cover_palette          — comma-separated hex, minimal filtering (for graphics)
       cover_palette_lighting — comma-separated hex, vibrant only (for stage lights)
       cover_palette_type     — 'vibrant' | 'desaturated' | 'monochrome'
+
+    Empty when there is no palette to report, so callers can test the result rather
+    than inspect three fields for empty strings.
     """
     return await asyncio.to_thread(_extract_palettes_sync, data, max_colors)

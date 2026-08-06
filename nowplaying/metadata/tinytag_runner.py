@@ -391,6 +391,9 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
     def _images(self, images: tinytag.Images) -> None:
         if "coverimageraw" not in self.metadata and images.front_cover:
             self.metadata["coverimageraw"] = images.front_cover.data
+            # Deliberately not carrying front_cover.mime_type: the tag is content from
+            # a file we did not create, and the value ends up as a response
+            # Content-Type.  processors.py derives it from the bytes instead.
 
         # Collect all embedded covers; processors.py stores them all to datacache
         # so random_image retrieval can cycle through embedded art variations.

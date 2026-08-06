@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """test utils not covered elsewhere"""
 
+import io
 from unittest.mock import Mock
 
+import PIL.Image
 import pytest
 
 import nowplaying.utils  # pylint: disable=import-error
 import nowplaying.utils.filters  # pylint: disable=import-error
+
+
+def compressible_image(source_format: str) -> bytes:
+    """encode a flat image that any of our target formats will compress smaller"""
+    buffer = io.BytesIO()
+    PIL.Image.new("RGB", (200, 200), (10, 200, 90)).save(buffer, format=source_format)
+    return buffer.getvalue()
 
 
 def results(expected, metadata):
@@ -117,6 +126,37 @@ def test_image_conversion_parameterized(getroot, conversion_func, expected_heade
     # Convert again (should be idempotent)
     converted_data2 = conversion_func(converted_data)
     assert converted_data2 == converted_data, f"Re-converting {format_name} should be idempotent"
+
+
+@pytest.mark.parametrize("source_format", ["BMP", "TIFF", "JPEG"])
+def test_image2png_leaves_no_trailing_source_bytes(source_format):
+    """the PNG must end at IEND, with none of the source image trailing it
+
+    image2png has to encode into an *empty* buffer.  Seeding the output buffer with
+    the source leaves every byte past the PNG's IEND in place, which decoders skip
+    over but /wsstream still base64s and ships per frame, per connection.
+    """
+    raw = compressible_image(source_format)
+
+    converted = nowplaying.utils.image2png(raw)
+    assert converted is not None
+    assert converted.startswith(b"\211PNG\r\n\032\n")
+    assert PIL.Image.open(io.BytesIO(converted)).format == "PNG"
+
+    # IEND is the terminal chunk: 4-byte length, 4-byte type, 4-byte CRC
+    assert len(converted) == converted.index(b"IEND") + 8
+    assert len(converted) < len(raw), "flat art should shrink; equal size means junk trails"
+
+
+@pytest.mark.parametrize(
+    "conversion_func", [nowplaying.utils.image2png, nowplaying.utils.image2avif]
+)
+def test_conversion_of_uncompressed_source_shrinks(conversion_func):
+    """same empty-buffer requirement, checked without parsing either container"""
+    raw = compressible_image("BMP")
+    converted = conversion_func(raw)
+    assert converted is not None
+    assert len(converted) < len(raw)
 
 
 @pytest.mark.parametrize(

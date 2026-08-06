@@ -714,7 +714,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             # fallback.
             if cachekey := nowplaying.metadata.processors.cover_cache_key(self.currentmeta):
                 result = await storage.retrieve_by_identifier(
-                    cachekey[0],
+                    cachekey,
                     nowplaying.metadata.processors.COVER_DATA_TYPE,
                     random=True,
                 )

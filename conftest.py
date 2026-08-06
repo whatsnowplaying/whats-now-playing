@@ -182,7 +182,12 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
             shutil.move(str(datacache_dir), str(temp_datacache))
 
         logging.info("Removing %s", cachedir)
-        shutil.rmtree(cachedir)
+        # requests/request.db (nowplaying/trackrequests.py) sits directly in cachedir,
+        # unlike datacache/api_cache above, and a webserver test's Requests() instance
+        # can still hold it open in a just-stopped subprocess for a moment after
+        # stop_all_processes() returns.  Same ERROR_SHARING_VIOLATION race the datacache
+        # move-aside works around, so retry rather than fail the next test's setup.
+        nowplaying.utils.sqlite.retry_file_operation(lambda: shutil.rmtree(cachedir))
 
         # Always recreate cachedir — other tests depend on it existing even if empty
         cachedir.mkdir(parents=True, exist_ok=True)

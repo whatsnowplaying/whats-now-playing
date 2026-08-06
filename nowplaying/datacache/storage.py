@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import hashlib
+import io
 import logging
 import time
 import uuid
@@ -11,18 +12,20 @@ from pathlib import Path
 from typing import Any, Literal, overload
 
 import orjson
+import PIL.Image
 import puremagic
 
 import aiofiles
 import aiosqlite
 
+import nowplaying.exceptions
 import nowplaying.utils.sqlite
 from .colors import COLOR_EXTRACT_TYPES, extract_palettes
 from .utils import ensure_datacache_schema, get_datacache_path, redact_url
 
 
 @dataclasses.dataclass
-class CachedEntry:
+class CachedEntry:  # pylint: disable=too-many-instance-attributes
     """Result returned by all DataStorage retrieve methods."""
 
     data: bytes
@@ -30,6 +33,12 @@ class CachedEntry:
     status_code: int
     mime_type: str | None
     url: str | None = None  # populated by retrieve_by_cachekey and retrieve_by_identifier
+    # Opaque handle for addressing this entry over HTTP; see the cover route in
+    # webserver/static_handlers.py.  Assigned at first insert and preserved across
+    # re-stores, so clients holding a key list from get_cache_keys_for_identifier stay
+    # valid -- which also means a key can come to hold different bytes, so do not
+    # serve it with long-lived cache headers.
+    cachekey: str | None = None
     checksum: str | None = None  # SHA-256 hex digest of data, set on store
     color_palette: dict | None = None  # cover_palette/lighting/type extracted by colors.py
 
@@ -52,6 +61,81 @@ IMAGE_DATA_TYPES: frozenset[str] = frozenset(
         "front_cover",
     }
 )
+
+
+def is_image_mime(mime_type: str | None) -> bool:
+    """True when mime_type is a bare image/<subtype>.
+
+    Parameters are refused as well as non-image types: a value carrying a charset
+    makes aiohttp's Response(content_type=...) raise, so it is unusable as a
+    Content-Type even when the bytes themselves are fine.  The separator and CRLF
+    check guards a value that reaches a response header having come out of a
+    cached_data row, which is why it is not left to Pillow's mimetype table.
+    """
+    if not mime_type:
+        return False
+    candidate = mime_type.strip().lower()
+    if not candidate.startswith("image/") or candidate == "image/":
+        return False
+    return not any(char in candidate for char in ';,\r\n "\\')
+
+
+def detect_image_mime(image: bytes | None) -> str | None:
+    """The image's MIME type, or None when Pillow cannot parse these bytes.
+
+    Pillow answers both questions at once -- is this a parseable image, and what kind
+    -- so callers make one call.  Magic bytes alone would not do: a PNG signature
+    followed by garbage satisfies them and still raises here, and that shape (a
+    truncated download, a half-written file) is likelier than bytes with no magic.
+    Image.open() parses the header only, so this stays cheap on the live path.
+
+    Always derived, never taken from a declaration: an audio file's tag and a remote
+    submission are both content we did not create, and callers put the result in a
+    response Content-Type.  None therefore means "do not keep or serve these bytes" --
+    there is deliberately no default, since labelling unparsable bytes image/png only
+    moves the failure to a consumer that cannot detect it.
+    """
+    if not image:
+        return None
+    try:
+        logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
+        with PIL.Image.open(io.BytesIO(image)) as img:
+            detected = img.get_format_mimetype()
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        # Deliberately broad: this takes arbitrary bytes, and Pillow raises
+        # UnidentifiedImageError, OSError and assorted plugin-specific errors.
+        logging.debug("Not a parseable image", exc_info=True)
+        return None
+    # get_format_mimetype() is str | None -- a plugin need not declare one
+    if not detected or not is_image_mime(detected):
+        return None
+    return detected.strip().lower()
+
+
+def _mime_for_storage(url: str, data_value: bytes, data_type: str, status_code: int) -> str | None:
+    """The mime_type to record, refusing an image type that is not a parseable image.
+
+    Images are detected by detect_image_mime and nothing else, so the detector that
+    decides these bytes are usable is the one whose answer gets recorded -- detecting
+    with one library and validating with another hands callers a type from a check that
+    never ran.
+
+    Only real content is inspected: a negative cache entry is b"" with status_code=404,
+    and rejecting those would leave the status_code != 200 retrieval guard with no row
+    to suppress retries with, so every track would re-ask the provider.
+    """
+    if status_code == 200 and data_type in IMAGE_DATA_TYPES:
+        if mime_type := detect_image_mime(data_value):
+            return mime_type
+        # Served as a Content-Type and rendered by templates, and coverurl on a remote
+        # submission names a URL we fetch, which makes the body attacker-chosen.  Refuse
+        # rather than store, and let the caller decide how loudly to complain.
+        raise nowplaying.exceptions.ToxicContentError(f"{redact_url(url)} is not an image")
+    try:
+        return puremagic.from_string(data_value, mime=True)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
 
 
 def _get_blob_path(cache_dir: Path, url: str) -> Path:
@@ -100,8 +184,15 @@ class DataStorage:
         metadata: dict | None = None,
         status_code: int = 200,
         checksum: str | None = None,
-    ) -> bool:
-        """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps)."""
+    ) -> "CachedEntry | None":
+        """Store bytes in the cache. Callers are responsible for encoding (e.g. orjson.dumps).
+
+        Returns the stored entry on success, None on failure -- so existing truthiness
+        checks still read correctly. Returning the entry rather than just a cachekey
+        means callers get the cachekey they need to build an HTTP handle *and* the
+        mime_type detected here, instead of deriving it a second time from the same
+        bytes and having two places agree on what counts as an image.
+        """
         await self.initialize()
 
         blob_path: Path | None = None
@@ -117,10 +208,7 @@ class DataStorage:
                 checksum if checksum is not None else hashlib.sha256(data_value).hexdigest()
             )
 
-            try:
-                mime_type: str | None = puremagic.from_string(data_value, mime=True)
-            except Exception:  # pylint: disable=broad-exception-caught
-                mime_type = None
+            mime_type = _mime_for_storage(url, data_value, data_type, status_code)
 
             if data_size <= _INLINE_THRESHOLD:
                 inline_data: bytes | None = data_value
@@ -134,7 +222,12 @@ class DataStorage:
                 inline_data = None
                 file_path_str = str(blob_path.relative_to(self.database_path.parent))
 
+            # Deliberately not seeded with new_cachekey: that is the value this is
+            # meant to stop reporting, so a silent fallback would reintroduce the bug.
+            stored_cachekey: str | None = None
+
             async def _do_store() -> None:
+                nonlocal stored_cachekey
                 async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
                     await connection.execute(
                         """
@@ -176,30 +269,72 @@ class DataStorage:
                             content_checksum,
                         ),
                     )
+                    # Read the key back rather than assuming new_cachekey landed. On the
+                    # insert path it did; on the upsert path the UPDATE deliberately
+                    # leaves the original key alone, so reporting the generated one would
+                    # hand callers a key that is in no row.
+                    #
+                    # A SELECT rather than ON CONFLICT ... RETURNING on purpose:
+                    # RETURNING needs SQLite >= 3.35 and the Linux build runs on
+                    # AlmaLinux 8, whose sqlite-libs is 3.26. Python links libsqlite3
+                    # dynamically, so that builds cleanly and then fails at runtime on
+                    # the one platform macOS CI cannot see -- and it would fail for every
+                    # datacache write at once. RETURNING also makes the fetch
+                    # load-bearing for the write itself, which is a trap for anyone later
+                    # removing a fetch they do not think they need.
+                    cursor = await connection.execute(
+                        "SELECT cachekey FROM cached_data WHERE url = ?", (url,)
+                    )
+                    if row := await cursor.fetchone():
+                        stored_cachekey = row[0]
                     await connection.commit()
 
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_store)
 
-            if data_type in COLOR_EXTRACT_TYPES:
+            if not stored_cachekey:
+                # The row must exist after a successful upsert, so this means the SQL
+                # above stopped doing what it is assumed to do.  Fail rather than
+                # invent a key: reporting one that is in no row is the bug this
+                # read-back exists to prevent.
+                logging.error("Stored %s but could not read its cachekey back", redact_url(url))
+                return None
+
+            # Only real content has colours to extract.  A negative entry is b'' with
+            # status_code=404, and handing that to Pillow logged a full traceback at
+            # ERROR for every provider miss.  COLOR_EXTRACT_TYPES is a subset of
+            # IMAGE_DATA_TYPES, so anything reaching here with status 200 has already
+            # been confirmed to be an image by the check above.
+            if status_code == 200 and data_type in COLOR_EXTRACT_TYPES:
                 asyncio.create_task(
                     self._extract_and_store_colors(url, data_value),
                     name=f"colors:{url[:60]}",
                 )
 
-            return True
+            return CachedEntry(
+                data=data_value,
+                metadata=metadata or {},
+                status_code=status_code,
+                mime_type=mime_type,
+                url=url,
+                cachekey=stored_cachekey,
+                checksum=content_checksum,
+            )
 
+        except nowplaying.exceptions.ToxicContentError:
+            # Must outrun the broad handler below: swallowing this would report a
+            # plain "could not cache" and leave the caller holding the payload.
+            raise
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to store cached data for URL %s: %s", redact_url(url), error)
             if blob_written and blob_path:
                 with contextlib.suppress(OSError):
                     blob_path.unlink()
-            return False
+            return None
 
     async def _extract_and_store_colors(self, url: str, data_value: bytes) -> None:
         """Run color extraction and write result to the dedicated color_palette column."""
         try:
-            colors = await extract_palettes(data_value)
-            if not any(colors.values()):
+            if not (colors := await extract_palettes(data_value)):
                 return
 
             async def _do_update() -> None:
@@ -236,7 +371,7 @@ class DataStorage:
                     cursor = await connection.execute(
                         """
                         SELECT data_value, file_path, metadata, status_code,
-                               mime_type, content_checksum, color_palette
+                               mime_type, content_checksum, color_palette, cachekey
                         FROM cached_data
                         WHERE url = ? AND expires_at > ?
                         """,
@@ -273,6 +408,7 @@ class DataStorage:
                 mime_type,
                 content_checksum,
                 color_palette_json,
+                cachekey,
             ) = rows[0]
 
             if file_path_str:
@@ -305,6 +441,8 @@ class DataStorage:
                 metadata=metadata,
                 status_code=status_code,
                 mime_type=mime_type,
+                url=url,
+                cachekey=cachekey,
                 checksum=content_checksum,
                 color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
             )
@@ -317,9 +455,13 @@ class DataStorage:
         """
         Retrieve data by opaque cachekey UUID.
 
-        Provides imagecache-compatible lookup by the stable UUID assigned at
-        first insert.  Callers that stored a cachekey from get_cache_keys_for_identifier
-        can retrieve the corresponding blob without knowing the original URL.
+        Provides imagecache-compatible lookup so callers holding a cachekey can
+        retrieve the corresponding blob without knowing the original URL.
+
+        The key is assigned at first insert and survives re-stores of the same URL,
+        so a client holding one from get_cache_keys_for_identifier keeps working after
+        a refetch.  The content behind it can change, so treat the bytes as current
+        rather than immutable.
 
         Args:
             cachekey: UUID string returned by get_cache_keys_for_identifier
@@ -406,6 +548,7 @@ class DataStorage:
                 status_code=status_code,
                 mime_type=mime_type,
                 url=url,
+                cachekey=cachekey,
                 color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
             )
 
@@ -413,7 +556,7 @@ class DataStorage:
             logging.error("Failed to retrieve cached data for cachekey %s: %s", cachekey, error)
             return None
 
-    async def _load_random_blob(
+    async def _load_random_blob(  # pylint: disable=too-many-locals
         self, row: tuple[Any, ...], identifier: str, data_type: str
     ) -> "CachedEntry | None":
         """Load data for a random row, deleting orphaned DB rows on FileNotFoundError."""
@@ -425,6 +568,7 @@ class DataStorage:
             status_code,
             mime_type,
             color_palette_json,
+            cachekey,
         ) = row
         if file_path_str:
             full_path = self.database_path.parent / file_path_str
@@ -453,6 +597,7 @@ class DataStorage:
             status_code=status_code,
             mime_type=mime_type,
             url=url,
+            cachekey=cachekey,
             color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
         )
 
@@ -506,12 +651,14 @@ class DataStorage:
                     if random:
                         select_cols = (
                             "data_value, file_path, metadata, url,"
-                            " status_code, mime_type, color_palette"
+                            " status_code, mime_type, color_palette, cachekey"
                         )
                         order_limit = " ORDER BY RANDOM() LIMIT 1"
                     else:
                         # Only fetch metadata and url — caller uses retrieve_by_url for blobs
-                        select_cols = "metadata, url, status_code, mime_type, color_palette"
+                        select_cols = (
+                            "metadata, url, status_code, mime_type, color_palette, cachekey"
+                        )
                         order_limit = ""
 
                     if provider:
@@ -545,8 +692,10 @@ class DataStorage:
                         return
 
                     # Update access statistics for all returned rows
-                    # random row: (data_value, file_path, metadata, url, status_code, mime_type)
-                    # non-random row: (metadata, url, status_code, mime_type)
+                    # random row: (data_value, file_path, metadata, url, status_code,
+                    #              mime_type, color_palette, cachekey)
+                    # non-random row: (metadata, url, status_code, mime_type,
+                    #                   color_palette, cachekey)
                     url_col = 3 if random else 1
                     for row in rows:
                         await connection.execute(
@@ -574,9 +723,17 @@ class DataStorage:
                     status_code=status_code,
                     mime_type=mime_type,
                     url=url,
+                    cachekey=cachekey,
                     color_palette=orjson.loads(color_palette_json) if color_palette_json else None,
                 )
-                for metadata_json, url, status_code, mime_type, color_palette_json in rows
+                for (
+                    metadata_json,
+                    url,
+                    status_code,
+                    mime_type,
+                    color_palette_json,
+                    cachekey,
+                ) in rows
             ]
 
         except Exception as error:  # pylint: disable=broad-exception-caught

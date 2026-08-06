@@ -137,6 +137,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             remotedb_key=REMOTEDB_KEY,
             metadata_key=METADATA_KEY,
             http_session_key=HTTP_SESSION_KEY,
+            dc_storage_key=DC_STORAGE_KEY,
         )
 
         self.requests_handler = RequestsHandler(config_key=CONFIG_KEY)
@@ -295,10 +296,41 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.error("Config refresh task error: %s", error)
 
     @staticmethod
-    def _base64ifier(metadata: TrackMetadata):
-        """replace all the binary data with base64 data"""
+    def _base64ifier(metadata: TrackMetadata, extra_convert_keys: frozenset[str] = frozenset()):
+        """replace all the binary data with base64 data
+
+        The cover is converted to PNG here and nowhere else by default: the metadata
+        pipeline keeps source bytes, but /wsstream's templates hardcode a
+        data:image/png prefix for it and users customize copies WNP cannot update.
+
+        Only the cover and its own copies, unless a caller opts more keys in via
+        extra_convert_keys.  websocket_artistfanart_streamer rebuilds a frame every
+        fanartdelay seconds with a freshly-selected random fanart, so transcoding every
+        blob unconditionally would put a full decode and re-encode of a large JPEG on a
+        timer, per connected browser source -- reintroducing on a loop the cost this
+        release removed from the input plugins.  /wsstream's own rebuild is different:
+        it is gated on the DB watcher's updatetime, so it only fires on a genuine track
+        change, and several bundled templates hardcode the same PNG prefix for
+        artistbannerbase64/artistthumbnailbase64 too -- so _wss_do_update opts those in.
+        """
+        # _artfallbacks copies the cover into artistlogoraw/artistthumbnailraw when
+        # coverfornologos/coverfornothumbs are on, and those copies go out under the
+        # same hardcoded prefix -- so they get the cover's conversion rather than a
+        # second transcode of the same bytes.
+        cover_source = metadata.get("coverimageraw")
+        cover_png = nowplaying.utils.image2png(cover_source) if cover_source else None
+        if cover_png:
+            # coverimagetype travels in this same frame now that it is in METADATALIST,
+            # so leaving it would advertise image/jpeg beside base64 holding PNG.
+            metadata["coverimagetype"] = "image/png"
+
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
+                if cover_png and metadata[key] == cover_source:
+                    metadata[key] = cover_png
+                elif key in extra_convert_keys:
+                    if converted := nowplaying.utils.image2png(metadata[key]):
+                        metadata[key] = converted
                 newkey = key.replace("raw", "base64")
                 metadata[newkey] = base64.b64encode(metadata[key]).decode("utf-8")
                 del metadata[key]
@@ -306,12 +338,14 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             del metadata["dbid"]
         return metadata
 
-    def _transparentifier(self, metadata: TrackMetadata):
+    def _transparentifier(
+        self, metadata: TrackMetadata, extra_convert_keys: frozenset[str] = frozenset()
+    ):
         """base64 encoding + transparent missing"""
         for key in nowplaying.db.METADATABLOBLIST:
             if not metadata.get(key):
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
-        return self._base64ifier(metadata)
+        return self._base64ifier(metadata, extra_convert_keys=extra_convert_keys)
 
     async def websocket_artistfanart_streamer(self, request: web.Request):  # pylint: disable=too-many-branches
         """handle continually streamed updates"""
@@ -328,20 +362,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
 
         try:
-            # Track loop start time for shutdown delay monitoring
-            loop_start_time = time.time()
             while (
                 not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not endloop
                 and not websocket.closed
             ):
-                # Log warning if shutdown is delayed beyond 30 seconds
-                if time.time() - loop_start_time > 30:
-                    logging.warning(
-                        "Artistfanart WebSocket shutdown delayed for more than %d seconds",
-                        30,
-                    )
-                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get("artist"):
                     await asyncio.sleep(5)
@@ -435,7 +460,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         if metadata:
             metadata.pop("dbid", None)
             if not websocket.closed:
-                await websocket.send_json(self._transparentifier(metadata))
+                await websocket.send_json(
+                    self._transparentifier(
+                        metadata,
+                        extra_convert_keys=frozenset({"artistbannerraw", "artistthumbnailraw"}),
+                    )
+                )
         return time.time()
 
     async def websocket_streamer(self, request: web.Request):
@@ -462,19 +492,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 sample=sample,
                 bundledir=bundledir,
             )
-            # Track loop start time for shutdown delay monitoring
-            loop_start_time = time.time()
             while (
                 not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not websocket.closed
             ):
-                # Log warning if shutdown is delayed beyond 30 seconds
-                if time.time() - loop_start_time > 30:
-                    logging.warning(
-                        "Session %s: WebSocket shutdown delayed for more than 30 seconds",
-                        session_id,
-                    )
-                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 if sample:
                     # Sample data never changes — just keep the connection alive.
                     await asyncio.sleep(1)
@@ -725,6 +746,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.post("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.get("/cover.png", self.static_handler.cover_handler),
+                web.get("/cover/{cachekey}", self.static_handler.cover_by_cachekey_handler),
                 web.get("/artistfanart.htm", self.static_handler.artistfanartlaunch_htm_handler),
                 web.get("/artistbanner.png", self.static_handler.artistbanner_handler),
                 web.get("/artistbanner.htm", self.static_handler.artistbanner_htm_handler),

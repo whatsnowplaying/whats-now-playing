@@ -176,17 +176,19 @@ def image2png(rawdata: bytes | None) -> bytes | None:
         return rawdata
 
     try:
-        imgbuffer = io.BytesIO(rawdata)
         logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
         logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
-        image = PIL.Image.open(imgbuffer)
-        imgbuffer = io.BytesIO(rawdata)
-        if image.format != "PNG":
-            image.convert(mode="RGB").save(imgbuffer, format="PNG")
+        image = PIL.Image.open(io.BytesIO(rawdata))
+        if image.format == "PNG":
+            return rawdata
+        # must be an empty buffer: seeding it with rawdata leaves everything past
+        # the PNG's IEND in place, so getvalue() trails the source image whenever
+        # the PNG compresses smaller than the input
+        imgbuffer = io.BytesIO()
+        image.convert(mode="RGB").save(imgbuffer, format="PNG")
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
-    logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 
@@ -201,17 +203,17 @@ def image2avif(rawdata: bytes | None) -> bytes | None:
         return rawdata
 
     try:
-        imgbuffer = io.BytesIO(rawdata)
         logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
         logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
-        image = PIL.Image.open(imgbuffer)
-        imgbuffer = io.BytesIO(rawdata)
-        if image.format != "AVIF":
-            image.convert(mode="RGB").save(imgbuffer, format="AVIF")
+        image = PIL.Image.open(io.BytesIO(rawdata))
+        if image.format == "AVIF":
+            return rawdata
+        # empty buffer, per image2png
+        imgbuffer = io.BytesIO()
+        image.convert(mode="RGB").save(imgbuffer, format="AVIF")
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
-    logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 

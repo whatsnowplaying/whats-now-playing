@@ -7,6 +7,7 @@ import pytest
 
 import nowplaying.metadata
 import nowplaying.metadata.processors
+from tests.utils_images import jpeg_bytes, png_bytes, unparseable_image_bytes
 
 
 @pytest.mark.asyncio
@@ -273,7 +274,7 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("artistextras/prioritizenetworkart", prioritize_network)
 
-    fake_image = b"fake-embedded-cover-bytes"
+    fake_image = png_bytes()
     metadatain = {
         "artist": "WNP Mock Artist",
         "title": "WNP Mock Song",
@@ -287,7 +288,7 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
     with (
         unittest.mock.patch.object(
             nowplaying.metadata.processors.MetadataProcessors,
-            "_process_image2png",
+            "_process_coverimagetype",
             lambda self: None,
         ),
         unittest.mock.patch.object(
@@ -336,9 +337,7 @@ async def test_prioritizenetworkart_toggle(bootstrap, prioritize_network):
 )
 def test_cover_cache_key(metadata, expected_key):
     """cover art keys on artist+album, falling back to artist+title when album is missing"""
-    identifier, _label = nowplaying.metadata.processors.cover_cache_key(metadata)
-
-    assert identifier == expected_key
+    assert nowplaying.metadata.processors.cover_cache_key(metadata) == expected_key
 
 
 @pytest.mark.parametrize(
@@ -362,11 +361,264 @@ def test_cover_cache_key_selftitled_album_does_not_collide():
     without the track prefix an album-less track would read or overwrite the
     album's cover art.
     """
-    album_key, _ = nowplaying.metadata.processors.cover_cache_key(
+    album_key = nowplaying.metadata.processors.cover_cache_key(
         {"artist": "Weezer", "album": "Weezer"}
     )
-    track_key, _ = nowplaying.metadata.processors.cover_cache_key(
+    track_key = nowplaying.metadata.processors.cover_cache_key(
         {"artist": "Weezer", "title": "Weezer"}
     )
 
     assert album_key != track_key
+
+
+@pytest.mark.asyncio
+async def test_cover_art_is_not_transcoded(bootstrap):
+    """The pipeline records the cover's type instead of re-encoding it to PNG.
+
+    Album art is usually JPEG, and converting it to lossless PNG inflated it several
+    times over.  /wsstream still converts at serialization time for templates that
+    hardcode a data:image/png prefix.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    # A real JPEG: the body matters now, since unparsable art is rejected.
+    cover = jpeg_bytes()
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "title": "WNP Mock Song",
+        "album": "WNP Mock Album",
+        "coverimageraw": cover,
+    }
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert metadataout["coverimageraw"] == cover
+    assert metadataout["coverimagetype"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_coverurl_points_at_keyed_route(bootstrap):
+    """coverurl addresses the specific cached image once the art has an entry.
+
+    Naming the entry rather than the singleton /cover.png is what stops a client
+    from fetching whatever is playing by the time it gets around to the request.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "title": "WNP Mock Song",
+        "album": "WNP Mock Album",
+        "coverimageraw": png_bytes(),
+    }
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert metadataout["coverurl"].startswith("cover/")
+    assert metadataout["coverurl"] != "cover/None"
+
+
+@pytest.mark.asyncio
+async def test_coverurl_falls_back_without_a_cache_entry(bootstrap):
+    """Art with nothing to key on keeps the singleton URL rather than a broken one."""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    # No artist, so cover_cache_key() returns None and the art never reaches datacache
+    metadatain = {"title": "WNP Mock Song", "coverimageraw": png_bytes()}
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert metadataout["coverurl"] == "cover.png"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "cover_bytes,description",
+    [
+        (b"<html><script>alert(1)</script></html>", "no image magic at all"),
+        # Passes puremagic as image/png; only Pillow can tell it is not a PNG.  This
+        # is the shape a truncated download or half-written file takes, so it is the
+        # likelier one in the wild.
+        (unparseable_image_bytes(), "image magic, unparsable body"),
+    ],
+)
+@pytest.mark.parametrize(
+    "artist,album",
+    [
+        ("WNP Mock Artist", "WNP Mock Album"),
+        # cover_cache_key() returns None without an artist, so _process_cover_images
+        # never calls store() -- rejection cannot be left to datacache alone.
+        (None, None),
+    ],
+)
+async def test_unparseable_cover_art_is_discarded(
+    bootstrap, cover_bytes, description, artist, album
+):
+    """Art we cannot parse is dropped from metadata, whether or not it can be cached.
+
+    Reachable from a remote submission -- the submitter names a coverurl, the webserver
+    fetches it, and those bytes become coverimageraw -- and from djuced and winmedia,
+    which hand over whatever their source gave them.  Keeping the bytes would serve
+    them from /cover.png under an image Content-Type that no decoder can honour.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "title": "WNP Mock Song",
+        "coverimageraw": cover_bytes,
+        "coverimagetype": "text/html",
+    }
+    if artist:
+        metadatain |= {"artist": artist, "album": album}
+
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain, skipplugins=True
+    )
+
+    assert "coverimageraw" not in metadataout, description
+    assert "coverimagetype" not in metadataout, description
+    # No palette either: the extractor would have logged a full traceback at ERROR
+    # and then written three empty strings in over nothing.
+    assert not metadataout.get("cover_palette")
+    assert "cover_palette_type" not in metadataout
+
+
+@pytest.mark.asyncio
+async def test_parseable_cover_art_still_gets_a_palette(bootstrap):
+    """The rejection and the empty-palette guard must not suppress real extraction."""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "title": "WNP Mock Song",
+        "coverimageraw": jpeg_bytes(),
+    }
+
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain, skipplugins=True
+    )
+
+    assert metadataout["coverimageraw"] == metadatain["coverimageraw"]
+    assert metadataout["coverimagetype"] == "image/jpeg"
+    assert metadataout["cover_palette_type"] in ("vibrant", "desaturated", "monochrome")
+    assert metadataout["cover_palette"].startswith("#")
+
+
+@pytest.mark.asyncio
+async def test_declared_cover_type_is_not_trusted(bootstrap):
+    """A supplied coverimagetype is replaced by one derived from the bytes.
+
+    coverimagetype becomes a response Content-Type, and both places it can come
+    from -- an audio file's own tag and a remote submission -- are content we did
+    not create.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "title": "WNP Mock Song",
+        "coverimageraw": jpeg_bytes(),
+        "coverimagetype": "text/html",
+    }
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert metadataout["coverimagetype"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_supplied_coverurl_is_replaced(bootstrap):
+    """A submitter's coverurl never survives into metadata.
+
+    static_handlers fetches whatever coverurl names and puts the bytes in
+    coverimageraw, but templates use coverurl as an img src in an OBS browser source
+    -- so leaving a remote host there would point the DJ's overlay at it. The value
+    is overwritten unconditionally rather than filled only when absent.
+    """
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+
+    metadatain = {
+        "artist": "WNP Mock Artist",
+        "album": "WNP Mock Album",
+        "title": "WNP Mock Song",
+        "coverimageraw": png_bytes(),
+        "coverurl": "http://attacker.example/payload",
+    }
+
+    with unittest.mock.patch.object(
+        nowplaying.metadata.processors.MetadataProcessors,
+        "_process_cover_colors",
+        unittest.mock.AsyncMock(),
+    ):
+        metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+            metadata=metadatain, skipplugins=True
+        )
+
+    assert "attacker.example" not in metadataout["coverurl"]
+
+
+@pytest.mark.parametrize(
+    "cachekey,expected",
+    [
+        ("abc-123", "cover/abc-123"),
+        (None, "cover.png"),
+    ],
+)
+def test_coverurl_is_relative_on_both_branches(bootstrap, cachekey, expected):
+    """Both coverurl forms agree about the leading slash.
+
+    docs document it as a relative location and consumers join it onto a base, so
+    mixing "cover.png" with "/cover/{key}" would hand one of them a double slash that
+    aiohttp's router will not match.
+    """
+    processors = nowplaying.metadata.MetadataProcessors(config=bootstrap)
+    processors.metadata = {"coverimageraw": b"x"}
+
+    processors._set_cover_pointers(cachekey)  # pylint: disable=protected-access
+
+    assert processors.metadata["coverurl"] == expected
+    assert not processors.metadata["coverurl"].startswith("/")

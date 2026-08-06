@@ -22,6 +22,7 @@ import orjson
 import truststore
 from httpx import Headers as CacheHeaders
 
+import nowplaying.exceptions
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 from .pending import RequestQueue
@@ -394,21 +395,32 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             return None
 
         data, content_checksum = result.data, result.checksum  # type: ignore[assignment]
-        success = await self.storage.store(
-            url=url,
-            identifier=identifier,
-            data_type=data_type,
-            provider=provider,
-            data_value=data,
-            ttl_seconds=ttl_seconds,
-            metadata=metadata,
-            status_code=200,
-            checksum=content_checksum,
-        )
-        if success:
+        try:
+            stored = await self.storage.store(
+                url=url,
+                identifier=identifier,
+                data_type=data_type,
+                provider=provider,
+                data_value=data,
+                ttl_seconds=ttl_seconds,
+                metadata=metadata,
+                status_code=200,
+                checksum=content_checksum,
+            )
+        except nowplaying.exceptions.ToxicContentError as err:
+            # A provider served something that is not the image it was asked for.
+            # Return nothing rather than pass the payload back to the plugin, which
+            # would put it in metadata and from there into a template.
+            logging.warning("Refusing %s: %s", self._redact_url(url), err)
+            return None
+        if stored:
             logging.debug("Cached data from URL: %s", self._redact_url(url))
-        else:
-            logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
+            # Hand back the stored entry: it carries the cachekey and the detected
+            # mime_type, which a caller would otherwise have to derive again.
+            return stored
+        # Caching failed but the fetch did not, so the caller still gets its data --
+        # just without the cachekey or mime_type that only a stored entry has.
+        logging.warning("Failed to cache data from URL: %s", self._redact_url(url))
         return CachedEntry(
             data=data,
             metadata=metadata or {},

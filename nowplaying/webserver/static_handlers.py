@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 import aiohttp
 from aiohttp import web
 
+import nowplaying.datacache
+import nowplaying.datacache.storage
 import nowplaying.db
 import nowplaying.hostmeta
 import nowplaying.preview.sampledata
@@ -96,11 +98,13 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         remotedb_key: web.AppKey[nowplaying.db.MetadataDB],
         metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
         http_session_key: web.AppKey[aiohttp.ClientSession],
+        dc_storage_key: web.AppKey["nowplaying.datacache.DataStorage"],
     ):
         self.config_key = config_key
         self.metadb_key = metadb_key
         self.remotedb_key = remotedb_key
         self.metadata_key = metadata_key
+        self.dc_storage_key = dc_storage_key
         self.http_session_key = http_session_key
 
     async def index_htm_handler(self, request: web.Request):
@@ -433,11 +437,61 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
                 image: bytes = metadata[imgtype]
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("_image_handler: %s", err)
-        return web.Response(content_type="image/png", body=image)
+        # Derived from the bytes being sent rather than read from coverimagetype, which
+        # only describes the cover.  Artist banners, logos and thumbnails come straight
+        # from fanart.tv or TheAudioDB and are only ever cover copies when
+        # coverfornologos/coverfornothumbs are on with no real art available, so a PNG
+        # logo alongside a JPEG cover would otherwise be labelled image/jpeg.  This also
+        # gets the transparent-PNG placeholder right for nothing.
+        #
+        # Fall back to the placeholder rather than to a guessed type: if these bytes are
+        # not a parseable image there is nothing a Content-Type can do for the client,
+        # and the same substitution already covers the no-metadata case above.
+        if not (mime_type := nowplaying.datacache.storage.detect_image_mime(image)):
+            logging.debug("%s is not a parseable image; sending placeholder", imgtype)
+            image = nowplaying.utils.TRANSPARENT_PNG_BIN
+            mime_type = "image/png"
+        return web.Response(content_type=mime_type, body=image)
 
     async def cover_handler(self, request: web.Request):
         """handle cover image"""
         return await self._image_handler("coverimageraw", request)
+
+    async def cover_by_cachekey_handler(self, request: web.Request):
+        """GET /cover/{cachekey} -- serve a specific cached cover image.
+
+        Unlike /cover.png, which always serves whatever is playing right now, this
+        addresses one image so a client can request the art belonging to a specific
+        track.  That matters once more than one track can be on screen at a time,
+        and it removes the race where art advances between a client reading a frame
+        and fetching the picture named in it.
+
+        Answers 404 rather than the transparent PNG the singleton routes fall back
+        to: the caller supplied a key, so a miss means that key is stale and worth
+        knowing about, not that the track has no art.
+        """
+        cachekey = request.match_info.get("cachekey", "")
+        if not cachekey:
+            return web.Response(status=404, text="Not found")
+        try:
+            entry = await request.app[self.dc_storage_key].retrieve_by_cachekey(cachekey)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # 500, not 404: the key may be perfectly good and the cache unreadable.
+            # Answering 404 would tell a client to go re-read the frame for a fresh
+            # key, which cannot help, and would hide a broken cache from whoever is
+            # reading the logs.
+            logging.exception("cover lookup failed for %s", cachekey)
+            return web.Response(status=500, text="Cache unavailable")
+        if not entry or not entry.data:
+            return web.Response(status=404, text="Not found")
+        # datacache derived the type from the bytes on store, and refuses to store a
+        # non-image under an image data_type -- but a cachekey names any entry, so
+        # decline to serve one whose type says it is not a picture rather than
+        # handing back cached JSON from an image route.
+        if not nowplaying.datacache.storage.is_image_mime(entry.mime_type):
+            logging.warning("Refusing non-image cache entry %s: %s", cachekey, entry.mime_type)
+            return web.Response(status=404, text="Not found")
+        return web.Response(content_type=entry.mime_type, body=entry.data)
 
     async def artistbanner_handler(self, request: web.Request):
         """handle artist banner image"""
@@ -475,6 +529,12 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
             "filename",  # Security: Never accept filenames from remote sources
             "track_received",  # System-generated timestamp, not user-provided
             "version",  # System-generated version, not user-provided
+            # Security: derived from the bytes we hold and becomes a response
+            # Content-Type. A submitter also controls coverurl, which we fetch, so
+            # accepting this would let one party pick both the body and how a
+            # browser interprets it. Tracks with nothing to key on skip the
+            # datacache store that would otherwise overwrite it.
+            "coverimagetype",
         }
         return {k: v for k, v in metadata.items() if k not in excluded_fields}
 
@@ -650,9 +710,18 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
         # Field whitelist - based on what remote.py actually sends
         clean_metadata = self._filter_excluded_fields(clean_metadata)
 
-        # If coverurl is an HTTP URL, fetch the image (coverurl in METADATALIST passes filtering)
-        # processors.py will overwrite coverurl with "cover.png" once coverimageraw is set
-        cover_url = clean_metadata.get("coverurl", "")
+        # processors.py sets coverurl once coverimageraw is set: the keyed cover/{key}
+        # route when the art reaches datacache, else cover.png.  Both are relative.
+        #
+        # Read and drop in one step, whatever shape the value is.  It came from the
+        # submitter, and templates use coverurl as an img src in an OBS browser source,
+        # so any surviving value is a fetch the DJ's overlay performs.  Only http is
+        # worth fetching ourselves, but the ones that are not are the dangerous ones to
+        # leave behind: "//evil.example/x.png" resolves against the browser source's own
+        # scheme, and a data: URI renders directly.  Neither produces coverimageraw, so
+        # _process_coverimagetype would return early and never overwrite it.  processors
+        # supplies the real value once it knows whether the art reached the cache.
+        cover_url = clean_metadata.pop("coverurl", "")
         if isinstance(cover_url, str) and cover_url.startswith("http"):
             cover_bytes = await self._fetch_cover_url(request, cover_url)
             if cover_bytes:

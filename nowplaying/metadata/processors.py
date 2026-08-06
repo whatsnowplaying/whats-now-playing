@@ -18,6 +18,7 @@ import wnpmb.normalization
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.exceptions
 import nowplaying.hostmeta
 import nowplaying.metadata.biohistory
 import nowplaying.metadata.tinytag_runner
@@ -28,6 +29,7 @@ from nowplaying.types import TrackMetadata
 
 import nowplaying.datacache
 import nowplaying.datacache.colors
+import nowplaying.datacache.storage
 
 # All cover art is one data_type: a track's embedded art is still a front cover,
 # and data_type drives eviction, TTL, and color extraction (see IMAGE_DATA_TYPES
@@ -35,6 +37,14 @@ import nowplaying.datacache.colors
 # in each of those.  What varies is the *subject* the art is filed under, which
 # is the identifier's job — hence the prefix below rather than a second type.
 COVER_DATA_TYPE = "front_cover"
+
+# coverurl is documented as a relative location (docs templatevariables.md), and
+# consumers such as the Lumia plugin and the StreamerBot script join it onto a base
+# URL.  Both values must therefore agree about the leading slash: emitting "cover.png"
+# alongside "/cover/{key}" would give one of them http://host:port//cover/uuid, which
+# aiohttp's router will not match.
+COVER_SINGLETON_URL = "cover.png"
+COVER_KEYED_PREFIX = "cover/"
 _TRACK_COVER_PREFIX = "track_"
 
 NOTE_RE = re.compile("N(?i:ote):")
@@ -42,8 +52,8 @@ YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
 
 
-def cover_cache_key(metadata: TrackMetadata) -> tuple[str, str] | None:
-    """Return (datacache identifier, human-readable label) for a track's front cover.
+def cover_cache_key(metadata: TrackMetadata) -> str | None:
+    """Return the datacache identifier for a track's front cover.
 
     Prefers artist+album, normalizing each part before joining — mirrors
     queue_front_cover() in artistextras/__init__.py so embedded art and network art
@@ -56,20 +66,15 @@ def cover_cache_key(metadata: TrackMetadata) -> tuple[str, str] | None:
 
     Returns None when there is nothing usable to key on.
     """
-    artist = metadata.get("artist")
-    norm_artist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
+    norm_artist = nowplaying.utils.normalize(metadata.get("artist"), sizecheck=0, nospaces=True)
     if not norm_artist:
         return None
 
-    if (album := metadata.get("album")) and (
-        norm_album := nowplaying.utils.normalize(album, sizecheck=0, nospaces=True)
-    ):
-        return f"{norm_artist}_{norm_album}", f"{artist}_{album}"
+    if album := nowplaying.utils.normalize(metadata.get("album"), sizecheck=0, nospaces=True):
+        return f"{norm_artist}_{album}"
 
-    if (title := metadata.get("title")) and (
-        norm_title := nowplaying.utils.normalize(title, sizecheck=0, nospaces=True)
-    ):
-        return f"{_TRACK_COVER_PREFIX}{norm_artist}_{norm_title}", f"{artist}_{title}"
+    if title := nowplaying.utils.normalize(metadata.get("title"), sizecheck=0, nospaces=True):
+        return f"{_TRACK_COVER_PREFIX}{norm_artist}_{title}"
 
     return None
 
@@ -130,7 +135,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata["musicbrainzalbumid"] = raw[0]
 
         try:
-            for processor in "hostmeta", "tinytag", "image2png":
+            for processor in "hostmeta", "tinytag", "coverimagetype":
                 logging.debug("running %s", processor)
                 func = getattr(self, f"_process_{processor}")
                 func()
@@ -141,11 +146,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             "artistextras/prioritizenetworkart", type=bool
         )
         embedded_art_backup: bytes | None = None
+        embedded_type_backup: str | None = None
         if prioritize_network:
             logging.debug("prioritizenetworkart: stashing embedded cover art as fallback")
             embedded_art_backup = self.metadata.pop("coverimageraw", None)
+            # Stash the type with the bytes so restoring the art restores its label
+            # rather than leaving a network image's type attached to it.
+            embedded_type_backup = self.metadata.pop("coverimagetype", None)
             for key in (
-                "coverimagetype",
                 "coverurl",
                 "cover_palette",
                 "cover_palette_lighting",
@@ -176,8 +184,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if embedded_art_backup and not self.metadata.get("coverimageraw"):
             logging.debug("prioritizenetworkart: no network art found, restoring embedded cover")
             self.metadata["coverimageraw"] = embedded_art_backup
-            self.metadata["coverimagetype"] = "png"
-            self.metadata["coverurl"] = "cover.png"
+            # This art never reached datacache on this pass, so there is no cachekey to
+            # address it by; the singleton route is the honest answer.  The stashed type
+            # is always present when the art is: _process_coverimagetype ran before the
+            # stash and either labelled the bytes or discarded them.
+            self._set_cover_pointers(None, mime_type=embedded_type_backup)
 
         if prioritize_network:
             # If palette wasn't already supplied by the datacache hit, extract it now
@@ -191,53 +202,98 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._finalize_metadata()
         return self.metadata
 
+    def _set_cover_pointers(self, cachekey: str | None, mime_type: str | None = None) -> None:
+        """Record how consumers should fetch and interpret the current cover art.
+
+        coverurl points at the keyed route when we know the cache entry, so a client
+        asks for *this* track's art rather than whatever is playing by the time it
+        gets around to fetching.  Falls back to the singleton /cover.png when the art
+        never reached datacache (nothing to key on).
+
+        The type is only set from an authoritative source -- the file's own tag via
+        tinytag, or datacache's recorded mime_type.  Detection is left to
+        _process_coverimagetype() for the paths where nothing declares one.
+        """
+        if mime_type:
+            self.metadata["coverimagetype"] = mime_type
+        self.metadata["coverurl"] = (
+            f"{COVER_KEYED_PREFIX}{cachekey}" if cachekey else COVER_SINGLETON_URL
+        )
+
     async def _process_cover_images(self) -> None:
         """Store embedded cover art in datacache, or restore a cached image when none is
         embedded."""
-        if not (cachekey := cover_cache_key(self.metadata)):
+        if not (normalid := cover_cache_key(self.metadata)):
             self.metadata.pop("_embedded_extra_covers", None)
             return
-        normalid, identifier = cachekey
         storage = nowplaying.datacache.get_client().storage
         if self.metadata.get("coverimageraw"):
-            logging.debug(
-                "Placing provided front cover for %s (normalized key: %s)",
-                identifier,
-                normalid,
-            )
-            await storage.store(
-                url=f"embedded://{normalid}/provided_0",
-                identifier=normalid,
-                data_type=COVER_DATA_TYPE,
-                provider="embedded",
-                data_value=self.metadata["coverimageraw"],
-                ttl_seconds=30 * 24 * 3600,
-                status_code=200,
-            )
-            # Store additional embedded covers from multi-image audio files
-            extra_covers = self.metadata.pop("_embedded_extra_covers", [])
-            for index, raw_data in enumerate(extra_covers, start=1):
-                converted = nowplaying.utils.image2png(raw_data)
-                if converted:
-                    await storage.store(
-                        url=f"embedded://{normalid}/provided_{index}",
-                        identifier=normalid,
-                        data_type=COVER_DATA_TYPE,
-                        provider="embedded",
-                        data_value=converted,
-                        ttl_seconds=30 * 24 * 3600,
-                        status_code=200,
-                    )
-        else:
-            self.metadata.pop("_embedded_extra_covers", None)
-            result = await storage.retrieve_by_identifier(normalid, COVER_DATA_TYPE, random=True)
-            if result:
-                logging.debug("Restoring coverimageraw from datacache for %s", identifier)
-                self.metadata["coverimageraw"] = result.data
-                self.metadata["coverimagetype"] = "png"
-                self.metadata["coverurl"] = "cover.png"
-                if result.color_palette:
-                    self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+            logging.debug("Placing provided front cover under %s", normalid)
+            try:
+                stored = await storage.store(
+                    url=f"embedded://{normalid}/provided_0",
+                    identifier=normalid,
+                    data_type=COVER_DATA_TYPE,
+                    provider="embedded",
+                    data_value=self.metadata["coverimageraw"],
+                    ttl_seconds=30 * 24 * 3600,
+                    status_code=200,
+                )
+            except nowplaying.exceptions.ToxicContentError as err:
+                # _process_coverimagetype already applied this same check, so reaching
+                # here means it was skipped -- its caller swallows exceptions.  Nothing
+                # wraps this method, so without the catch the error would reach
+                # trackpoll.  Falls through to the restore below: datacache may hold
+                # real art for this key.
+                logging.warning("Discarding cover art for %s: %s", normalid, err)
+                self.metadata.pop("coverimageraw", None)
+                self.metadata.pop("coverimagetype", None)
+                self.metadata.pop("_embedded_extra_covers", None)
+            else:
+                if stored:
+                    # Type comes from the entry we just wrote, so the bytes are labelled
+                    # by the detection that accepted them.
+                    self._set_cover_pointers(stored.cachekey, mime_type=stored.mime_type)
+                await self._store_extra_covers(storage, normalid)
+                return
+
+        self.metadata.pop("_embedded_extra_covers", None)
+        result = await storage.retrieve_by_identifier(normalid, COVER_DATA_TYPE, random=True)
+        if result:
+            logging.debug("Restoring coverimageraw from datacache for %s", normalid)
+            self.metadata["coverimageraw"] = result.data
+            self._set_cover_pointers(result.cachekey, mime_type=result.mime_type)
+            if result.color_palette:
+                self.metadata.update(result.color_palette)  # type: ignore[arg-type]
+
+    async def _store_extra_covers(
+        self,
+        storage: nowplaying.datacache.storage.DataStorage,
+        normalid: str,
+    ) -> None:
+        """Cache additional embedded covers from multi-image audio files.
+
+        Stored as-is: these are kept for later random selection rather than served
+        now, so there is no reason to transcode them either.
+        """
+        extra_covers = self.metadata.pop("_embedded_extra_covers", [])
+        for index, raw_data in enumerate(extra_covers, start=1):
+            if not raw_data:
+                continue
+            try:
+                await storage.store(
+                    url=f"embedded://{normalid}/provided_{index}",
+                    identifier=normalid,
+                    data_type=COVER_DATA_TYPE,
+                    provider="embedded",
+                    data_value=raw_data,
+                    ttl_seconds=30 * 24 * 3600,
+                    status_code=200,
+                )
+            except nowplaying.exceptions.ToxicContentError as err:
+                # One bad extra should not cost the others, and none of them are in
+                # metadata, so there is nothing to discard here.
+                logging.warning("Skipping embedded cover %d for %s: %s", index, normalid, err)
 
     def _finalize_metadata(self) -> None:
         """Apply terminal normalizations: publisher alias, dates, bios, dedup, and duration."""
@@ -422,27 +478,63 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("TinyTag crashed: %s", err)
 
-    def _process_image2png(self) -> None:
-        # always convert to png
+    def _process_coverimagetype(self) -> None:
+        """Make sure cover art has a type recorded, rather than transcoding it to PNG.
 
-        if (
-            not self.metadata
-            or "coverimageraw" not in self.metadata
-            or not self.metadata["coverimageraw"]
-        ):
+        Album art is photographic and usually arrives as JPEG; re-encoding it to
+        lossless PNG inflated it several-fold for nothing.  The bytes are now kept as
+        they came and the type travels with them, so HTTP consumers can report it
+        honestly.  /wsstream is the exception -- its templates hardcode a
+        data:image/png prefix -- so it converts at serialization time instead.
+
+        Nothing declares the type any more, so detection here is the only source:
+        tinytag reports what an audio file's tag claims and that is content we did not
+        create, and a remote submission cannot set the field at all.  datacache runs
+        the same detection when it stores the bytes, so _set_cover_pointers replacing
+        this value later is not a disagreement.
+        """
+        if not self.metadata or not self.metadata.get("coverimageraw"):
             return
 
-        self.metadata["coverimageraw"] = nowplaying.utils.image2png(self.metadata["coverimageraw"])
-        self.metadata["coverimagetype"] = "png"
-        self.metadata["coverurl"] = "cover.png"
+        if not (
+            mime_type := nowplaying.datacache.storage.detect_image_mime(
+                self.metadata["coverimageraw"]
+            )
+        ):
+            # image2png() used to do this implicitly: it returned None for anything
+            # Pillow could not open and the result was assigned straight back here, so
+            # removing the transcode removed the filter with it.  store() refuses the
+            # same bytes, but only for tracks with something to key an entry on --
+            # cover_cache_key() returns None without an artist -- so rejecting here is
+            # what makes it unconditional.
+            logging.warning(
+                "Discarding cover art: %s is not a parseable image",
+                mime_type or "unrecognized content",
+            )
+            self.metadata.pop("coverimageraw", None)
+            self.metadata.pop("coverimagetype", None)
+            return
+
+        # Both assignments overwrite rather than fill: a declared type is never
+        # trusted, and coverurl arrives submitter-controlled on remote submissions --
+        # static_handlers fetches it into coverimageraw but leaves the URL in place, and
+        # templates use coverurl as an img src in an OBS browser source. Leaving it
+        # would point the DJ's overlay at whatever host the submitter named.
+        self.metadata["coverimagetype"] = mime_type
+        self.metadata["coverurl"] = COVER_SINGLETON_URL
 
     async def _process_cover_colors(self) -> None:
         if not self.metadata.get("coverimageraw"):
             return
         if self.metadata.get("cover_palette"):
             return
-        colors = await nowplaying.datacache.colors.extract_palettes(self.metadata["coverimageraw"])
-        self.metadata.update(colors)  # type: ignore[arg-type]
+        # Empty when extraction found nothing, so there is no palette to write in.  It
+        # would otherwise survive in the in-memory dict and go out in /v1/remoteinput's
+        # processed_metadata response, even though db.py nulls it on write.
+        if colors := await nowplaying.datacache.colors.extract_palettes(
+            self.metadata["coverimageraw"]
+        ):
+            self.metadata.update(colors)  # type: ignore[arg-type]
 
     async def _musicbrainz(self) -> None:
         if not self.metadata:

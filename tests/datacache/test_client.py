@@ -55,7 +55,8 @@ async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined
         data_value=test_data,
         ttl_seconds=3600,
     )
-    assert success is True
+    # store() returns the stored entry, carrying its cachekey and detected mime_type
+    assert success is not None and success.cachekey
 
     result = await temp_client.get_or_fetch(
         nowplaying.datacache.FetchRequest(
