@@ -1,5 +1,5 @@
 properdocs==1.6.7
-mkdocs-materialx==10.1.8
+mkdocs-materialx==10.2.0
 mike==2.2.0
 mkdocs-macros-plugin==1.5.0
 # docs/macros.py generates the template reference from wnp_templates
