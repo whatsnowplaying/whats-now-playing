@@ -331,3 +331,39 @@ async def test_requests_delete_no_match_404(getwebserver):  # pylint: disable=re
             timeout=aiohttp.ClientTimeout(total=10),
         ) as req:
             assert req.status == 404
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_requests_external_id_roundtrip(getwebserver):  # pylint: disable=redefined-outer-name
+    """external_id posted by the source round-trips through GET so the queue mirror can match it"""
+    config, _ = getwebserver
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+    port = await _ready(config)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+
+        async with session.post(
+            f"http://localhost:{port}{REQUEST_URL}",
+            json={
+                "requester": "viewer1",
+                "artist": "Radiohead",
+                "title": "Creep",
+                "external_id": "lumia-xyz-123",
+            },
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+
+        async with session.get(
+            f"http://localhost:{port}{REQUEST_URL}", timeout=aiohttp.ClientTimeout(total=10)
+        ) as req:
+            assert req.status == 200
+            items = (await req.json())["requests"]
+            match = next(item for item in items if item["title"] == "Creep")
+            assert match["external_id"] == "lumia-xyz-123"

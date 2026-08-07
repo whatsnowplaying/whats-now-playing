@@ -78,6 +78,30 @@ async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: dis
 
 
 @pytest.mark.asyncio
+async def test_enqueue_request_external_id(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """external_id (the source's request id) is stored on both enqueue paths"""
+    trackrequest = trackrequestbootstrap
+    await trackrequest.enqueue_request(
+        requester="viewer1",
+        request_origin="lumia",
+        artist="Radiohead",
+        title="Creep",
+        external_id="lumia-structured-1",
+    )
+    await trackrequest.enqueue_request(
+        requester="viewer2",
+        request_origin="lumia",
+        query="Nirvana - Breed",
+        external_id="lumia-freetext-2",
+    )
+    stored = {
+        row.get("external_id") for row in [r async for r in trackrequest.get_all_generator()]
+    }
+    assert "lumia-structured-1" in stored
+    assert "lumia-freetext-2" in stored
+
+
+@pytest.mark.asyncio
 async def test_enqueue_request_dedup(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     """a second identical request from the same user within the window is deduped"""
     trackrequest = trackrequestbootstrap
