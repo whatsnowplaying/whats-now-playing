@@ -1097,7 +1097,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return False
         return row is not None
 
-    async def enqueue_request(  # pylint: disable=too-many-arguments
+    async def enqueue_request(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         requester: str,
         request_origin: str,

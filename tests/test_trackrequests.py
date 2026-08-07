@@ -79,7 +79,7 @@ async def test_enqueue_request_structured(trackrequestbootstrap):  # pylint: dis
 
 @pytest.mark.asyncio
 async def test_enqueue_request_external_id(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    """external_id (the source's own request id) is stored on both the structured and free-text paths"""
+    """external_id (the source's request id) is stored on both enqueue paths"""
     trackrequest = trackrequestbootstrap
     await trackrequest.enqueue_request(
         requester="viewer1",
