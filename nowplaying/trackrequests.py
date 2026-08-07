@@ -71,6 +71,7 @@ USERREQUEST_TEXT = [
     "normalizedtitle",
     "user_platform",
     "request_origin",
+    "external_id",
 ]
 
 USERREQUEST_BLOB = ["userimage"]
@@ -1004,6 +1005,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         user_input: str,
         request_origin: str = "wnp",
         user_platform: str | None = "twitch",
+        external_id: str | None = None,
     ) -> TrackRequestResult:
         """generic request"""
         logging.debug("%s generic requested %s", user, user_input)
@@ -1045,6 +1047,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "userimage": setting.get("userimage"),
             "request_origin": request_origin,
             "user_platform": user_platform,
+            "external_id": external_id,
         }
 
         await self.add_to_db(data)
@@ -1102,6 +1105,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         query: str | None = None,
         artist: str | None = None,
         title: str | None = None,
+        external_id: str | None = None,
         dedup_window: int = 30,
     ) -> TrackRequestResult:
         """create a request from an external source.
@@ -1123,6 +1127,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 "type": "Generic",
                 "request_origin": request_origin,
                 "user_platform": user_platform,
+                "external_id": external_id,
             }
             await self.add_to_db(data)
             return {
@@ -1141,7 +1146,12 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return {"accepted": False, "reason": "empty request"}
 
         result = await self.user_track_request(
-            {}, requester, user_input, request_origin=request_origin, user_platform=user_platform
+            {},
+            requester,
+            user_input,
+            request_origin=request_origin,
+            user_platform=user_platform,
+            external_id=external_id,
         )
         result["accepted"] = True
         result["deduped"] = False

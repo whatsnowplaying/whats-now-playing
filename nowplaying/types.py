@@ -143,6 +143,7 @@ class UserTrackRequest(BaseTrackRequest, total=False):
     normalizedtitle: str
     user_platform: str | None
     request_origin: str | None
+    external_id: str | None
 
     # Blob fields
     userimage: bytes | None

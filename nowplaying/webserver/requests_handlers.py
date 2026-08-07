@@ -70,6 +70,7 @@ class RequestsHandler:
             query=body.get("query"),
             artist=body.get("artist"),
             title=body.get("title"),
+            external_id=body.get("external_id"),
         )
         if not result.get("accepted"):
             return web.json_response(result, status=400)
@@ -90,6 +91,7 @@ class RequestsHandler:
                     "track_id": nowplaying.trackrequests.Requests.track_id(
                         row.get("artist"), row.get("title")
                     ),
+                    "external_id": row.get("external_id"),
                     "artist": row.get("artist"),
                     "title": row.get("title"),
                     "requester": row.get("username"),
