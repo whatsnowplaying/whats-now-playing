@@ -269,7 +269,12 @@ class EventsWebSocketHandler:
     async def events_broadcast_task(self, app: web.Application) -> None:
         """Background task: poll both DBWatchers, broadcast only on real change"""
         logging.info("Starting events broadcast task")
-        reqs = await asyncio.to_thread(self.requests_handler.get_requests, app)
+        # on_startup already built and cached this instance via asyncio.to_thread --
+        # that is the one call that pays for Requests()'s synchronous _migrate_db().
+        # runner.setup() awaits on_startup to completion before start_server ever
+        # creates this task, so this is always a cache hit: call directly rather than
+        # paying for another thread-pool hop that does nothing but a None check.
+        reqs = self.requests_handler.get_requests(app)
         last_meta_time = app[self.watcher_key].updatetime
         last_requests_time = app[self.requests_watcher_key].updatetime
         # Baseline only -- do not announce as "added" whatever already existed when
