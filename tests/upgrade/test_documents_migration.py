@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """test Documents directory migration"""
 
-import os
 import pathlib
 import sys
 import tempfile
@@ -11,7 +10,7 @@ from PySide6.QtCore import QSettings, QStandardPaths  # pylint: disable=no-name-
 
 import nowplaying.bootstrap
 import nowplaying.upgrades.config
-from tests.upgrade.upgradetools import reboot_macosx_prefs
+import tests.utils_prefs
 
 
 def test_documents_migration():
@@ -49,7 +48,6 @@ def test_documents_migration():
         oldconfig.sync()
         old_filename = oldconfig.fileName()
         del oldconfig
-        reboot_macosx_prefs()
 
         # Mock _getoldconfig to read our testsuite-old config (simulating old NowPlaying)
         def mock_getoldconfig(self):
@@ -104,12 +102,9 @@ def test_documents_migration():
 
         config.clear()
         del config
-        reboot_macosx_prefs()
 
         # Clean up old config
-        if os.path.exists(old_filename):
-            os.unlink(old_filename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(old_filename)
 
 
 def test_documents_migration_already_exists():
@@ -154,7 +149,6 @@ def test_documents_migration_already_exists():
 
         config.clear()
         del config
-        reboot_macosx_prefs()
 
 
 def test_documents_migration_no_old_templates():
@@ -195,7 +189,6 @@ def test_documents_migration_no_old_templates():
 
         config.clear()
         del config
-        reboot_macosx_prefs()
 
 
 def test_path_rewriting():
@@ -231,4 +224,3 @@ def test_path_rewriting():
 
         config.clear()
         del config
-        reboot_macosx_prefs()

@@ -9,10 +9,10 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
     QSettings,
 )
-from upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
+import tests.utils_prefs  # pylint: disable=import-error
 
 
 def _make_config(version: str, extra_keys: dict | None = None) -> str:
@@ -31,7 +31,6 @@ def _make_config(version: str, extra_keys: dict | None = None) -> str:
         QCoreApplication.applicationName(),
     )
     settings.clear()
-    reboot_macosx_prefs()
     settings.setValue("settings/configversion", version)
     if extra_keys:
         for key, value in extra_keys.items():
@@ -39,7 +38,6 @@ def _make_config(version: str, extra_keys: dict | None = None) -> str:
     settings.sync()
     filename = settings.fileName()
     del settings
-    reboot_macosx_prefs()
     assert os.path.exists(filename)
     return filename
 
@@ -57,7 +55,6 @@ def test_upgrade_520_removes_tenorkey():
             {"gifwords/tenorkey": "some-tenor-api-key", "settings/delay": "2.5"},
         )
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -75,9 +72,7 @@ def test_upgrade_520_removes_tenorkey():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_520_fixes_missing_basic_web_htm(tmp_path):
@@ -98,7 +93,6 @@ def test_upgrade_520_fixes_missing_basic_web_htm(tmp_path):
             {"weboutput/htmltemplate": old_template},
         )
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -115,9 +109,7 @@ def test_upgrade_520_fixes_missing_basic_web_htm(tmp_path):
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_520_preserves_basic_web_htm_if_file_exists(tmp_path):
@@ -139,7 +131,6 @@ def test_upgrade_520_preserves_basic_web_htm_if_file_exists(tmp_path):
             {"weboutput/htmltemplate": old_template},
         )
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -156,9 +147,7 @@ def test_upgrade_520_preserves_basic_web_htm_if_file_exists(tmp_path):
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_520_preserves_other_template():
@@ -176,7 +165,6 @@ def test_upgrade_520_preserves_other_template():
             {"weboutput/htmltemplate": existing_template},
         )
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -193,6 +181,4 @@ def test_upgrade_520_preserves_other_template():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
