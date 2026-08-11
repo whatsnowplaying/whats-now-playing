@@ -13,12 +13,11 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QSettings,
 )
 
-from upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
-
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
 import nowplaying.utils.config_json  # pylint: disable=import-error
 import nowplaying.version  # pylint: disable=no-member,import-error,no-name-in-module
+import tests.utils_prefs  # pylint: disable=import-error
 
 
 def make_fake_300_config(fakestr):
@@ -37,13 +36,11 @@ def make_fake_300_config(fakestr):
         QCoreApplication.applicationName(),
     )
     othersettings.clear()
-    reboot_macosx_prefs()
     othersettings.setValue("settings/configversion", "3.0.0-rc1")
     othersettings.setValue("settings/notdefault", fakestr)
     othersettings.sync()
     filename = othersettings.fileName()
     del othersettings
-    reboot_macosx_prefs()
     assert os.path.exists(filename)
     return filename
 
@@ -81,7 +78,6 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         assert not os.path.exists(backupdir)
 
         # Run upgrade which should create JSON backup
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -108,9 +104,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         # Clean up
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
         # Verify upgrade preserved our test data
         assert fakevalue == teststr

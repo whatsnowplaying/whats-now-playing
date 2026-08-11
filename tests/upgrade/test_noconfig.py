@@ -10,7 +10,7 @@ from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
-from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
+import tests.utils_prefs  # pylint: disable=import-error
 
 
 def test_noconfigfile():  # pylint: disable=redefined-outer-name
@@ -48,7 +48,4 @@ def test_noconfigfile():  # pylint: disable=redefined-outer-name
             assert not os.path.exists(backupdir)
             config.clear()
             del config
-            reboot_macosx_prefs()
-            if os.path.exists(filename):
-                os.unlink(filename)
-            reboot_macosx_prefs()
+            tests.utils_prefs.remove_prefs_domain(filename)

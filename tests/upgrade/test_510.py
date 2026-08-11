@@ -9,11 +9,11 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
     QSettings,
 )
-from upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 import nowplaying.artistextras.theaudiodb  # pylint: disable=import-error
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
+import tests.utils_prefs  # pylint: disable=import-error
 
 
 def make_fake_510_preview3_config(grace_period=None):
@@ -32,7 +32,6 @@ def make_fake_510_preview3_config(grace_period=None):
         QCoreApplication.applicationName(),
     )
     settings.clear()
-    reboot_macosx_prefs()
     settings.setValue("settings/configversion", "5.1.0-preview2")
     # Legacy keys that should be stripped by the 5.1.0 upgrade
     settings.setValue("icecast/traktor-collections", "/Users/someone/traktor/collection.nml")
@@ -46,7 +45,6 @@ def make_fake_510_preview3_config(grace_period=None):
     settings.sync()
     filename = settings.fileName()
     del settings
-    reboot_macosx_prefs()
     assert os.path.exists(filename)
     return filename
 
@@ -61,7 +59,6 @@ def test_upgrade_510_removes_legacy_keys():
 
         _oldfilename = make_fake_510_preview3_config(grace_period=5)
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -88,9 +85,7 @@ def test_upgrade_510_removes_legacy_keys():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_510_sets_default_theaudiodb_key_when_missing():
@@ -109,12 +104,10 @@ def test_upgrade_510_sets_default_theaudiodb_key_when_missing():
             QCoreApplication.applicationName(),
         )
         settings.clear()
-        reboot_macosx_prefs()
         settings.setValue("settings/configversion", "5.1.0-preview2")
         settings.remove("theaudiodb/apikey")
         settings.sync()
         del settings
-        reboot_macosx_prefs()
 
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
@@ -135,9 +128,7 @@ def test_upgrade_510_sets_default_theaudiodb_key_when_missing():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_510_preserves_existing_theaudiodb_key():
@@ -156,12 +147,10 @@ def test_upgrade_510_preserves_existing_theaudiodb_key():
             QCoreApplication.applicationName(),
         )
         settings.clear()
-        reboot_macosx_prefs()
         settings.setValue("settings/configversion", "5.1.0-preview2")
         settings.setValue("theaudiodb/apikey", "user-provided-key")
         settings.sync()
         del settings
-        reboot_macosx_prefs()
 
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
@@ -179,9 +168,7 @@ def test_upgrade_510_preserves_existing_theaudiodb_key():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)
 
 
 def test_upgrade_510_grace_period_not_changed_if_custom():
@@ -194,7 +181,6 @@ def test_upgrade_510_grace_period_not_changed_if_custom():
 
         _oldfilename = make_fake_510_preview3_config(grace_period=30)
 
-        reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
         _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
 
@@ -212,6 +198,4 @@ def test_upgrade_510_grace_period_not_changed_if_custom():
 
         config.clear()
         del config
-        if os.path.exists(newfilename):
-            os.unlink(newfilename)
-        reboot_macosx_prefs()
+        tests.utils_prefs.remove_prefs_domain(newfilename)

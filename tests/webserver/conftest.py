@@ -28,6 +28,24 @@ def is_port_in_use(port: int) -> bool:
         return sock.connect_ex(("localhost", port)) == 0
 
 
+async def wait_for_port_free(port: int, timeout: float = 10.0) -> bool:
+    """Poll until nothing is listening on port, or timeout.
+
+    Replaces a flat sleep() after stopping the webserver.  The point of the wait
+    is to not race the next start against a socket that is still bound, and
+    polling takes exactly as long as that needs instead of a fixed guess.  These
+    fixtures stop and start a subprocess per test, and macOS spawns rather than
+    forks, so the webserver suite is the slowest part of the run and two seconds
+    of unconditional sleep per test was a real share of it.
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if not is_port_in_use(port):
+            return True
+        await asyncio.sleep(0.05)
+    return False
+
+
 async def wait_for_webserver_ready(port: int, timeout: float = 10.0) -> bool:
     """Poll webserver until it's ready or timeout"""
     start_time = time.time()
@@ -130,7 +148,7 @@ async def getwebserver(shared_webserver_config):
 
     # Stop the shared webserver to avoid config conflicts
     manager.stop_all_processes()
-    await asyncio.sleep(1)
+    await wait_for_port_free(port)
 
     # Re-enable webserver settings
     config.cparser.setValue("weboutput/httpenabled", "true")
@@ -156,7 +174,7 @@ async def getwebserver(shared_webserver_config):
     manager.stop_all_processes()
     config.cparser.remove("testmode/metadbpath")
     config.cparser.sync()
-    await asyncio.sleep(1)
+    await wait_for_port_free(port)
 
 
 @pytest_asyncio.fixture
@@ -166,7 +184,7 @@ async def webserver_with_imagecache(shared_webserver_config):
 
     # Stop the shared webserver to avoid config conflicts
     manager.stop_all_processes()
-    await asyncio.sleep(1)
+    await wait_for_port_free(port)
 
     # Re-enable webserver settings with artist extras
     config.cparser.setValue("weboutput/httpenabled", "true")
@@ -202,7 +220,7 @@ async def webserver_with_imagecache(shared_webserver_config):
     manager.stop_all_processes()
     config.cparser.remove("testmode/metadbpath")
     config.cparser.sync()
-    await asyncio.sleep(1)
+    await wait_for_port_free(port)
 
 
 @pytest.fixture

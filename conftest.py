@@ -22,10 +22,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache
 import nowplaying.utils.sqlite
-
-# if sys.platform == 'darwin':
-#     import psutil
-#     import pwd
+import tests.utils_prefs
 
 # Enable tracemalloc to track resource allocations
 tracemalloc.start()
@@ -64,23 +61,6 @@ except ImportError:
     pass
 else:
     cleanup_on_sigterm()
-
-
-def reboot_macosx_prefs():
-    """work around Mac OS X's preference caching"""
-    if sys.platform == "darwin":
-        os.system(f"defaults delete {DOMAIN}")
-        #
-        # old method:
-        #
-        # for process in psutil.process_iter():
-        #     try:
-        #         if 'cfprefsd' in process.name() and pwd.getpwuid(
-        #                 os.getuid()).pw_name == process.username():
-        #             process.terminate()
-        #             process.wait()
-        #     except psutil.NoSuchProcess:
-        #         pass
 
 
 @pytest.fixture
@@ -142,9 +122,8 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
 
 
 #
-# OS X has a lot of caching wrt preference files
-# so we have do a lot of work to make sure they
-# don't stick around
+# OS X caches preference files in cfprefsd, so removing them has to go
+# through it -- see tests.utils_prefs.remove_prefs_domain().
 #
 @pytest.fixture(autouse=True, scope="function")
 def clear_old_testsuite():  # pylint: disable=too-many-statements
@@ -215,21 +194,11 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
     config.sync()
     filename = pathlib.Path(config.fileName())
     del config
-    if filename.exists():
-        filename.unlink()
-    reboot_macosx_prefs()
-    if filename.exists():
-        filename.unlink()
-    reboot_macosx_prefs()
+    tests.utils_prefs.remove_prefs_domain(filename)
     if filename.exists():
         logging.error("Still exists, wtf?")
     yield filename
-    if filename.exists():
-        filename.unlink()
-    reboot_macosx_prefs()
-    if filename.exists():
-        filename.unlink()
-    reboot_macosx_prefs()
+    tests.utils_prefs.remove_prefs_domain(filename)
 
 
 @pytest.fixture(autouse=True)
