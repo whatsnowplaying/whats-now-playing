@@ -27,19 +27,8 @@ import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 from .pending import RequestQueue
 from .queue import RateLimiterManager
-from .storage import IMAGE_DATA_TYPES, CachedEntry, DataStorage
+from .storage import CachedEntry, DataStorage
 from .utils import redact_url
-
-_PROVIDER_TTL_DEFAULTS: dict[str, int] = {
-    "theaudiodb": 7 * 24 * 3600,
-    "discogs": 7 * 24 * 3600,
-    "fanarttv": 30 * 24 * 3600,
-    "wikimedia": 7 * 24 * 3600,
-    "musicbrainz": 30 * 24 * 3600,
-    "lastfm": 7 * 24 * 3600,
-}
-_IMAGE_DATA_TYPES = IMAGE_DATA_TYPES  # re-exported from storage for TTL doubling logic
-_DEFAULT_TTL = 7 * 24 * 3600
 
 
 @dataclasses.dataclass
@@ -50,9 +39,10 @@ class FetchRequest:  # pylint: disable=too-many-instance-attributes
     identifier: str
     data_type: str
     provider: str
+    # Required: the caller knows how long its own data stays good, so it decides.
+    ttl_seconds: int
     timeout: float = 30.0
     retries: int = 3
-    ttl_seconds: int | None = None
     immediate: bool = True
     metadata: dict | None = None
     headers: CacheHeaders | None = None
@@ -363,7 +353,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         provider: str,
         timeout: float,
         retries: int,
-        ttl_seconds: int | None,
+        ttl_seconds: int,
         metadata: dict | None,
         headers: CacheHeaders | None = None,
         negative_ttl: int | None = None,
@@ -380,9 +370,6 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
                 "Rate limit acquire timed out for provider %s, dropping request", provider
             )
             return None
-
-        if ttl_seconds is None:
-            ttl_seconds = self._get_default_ttl(provider, data_type)
 
         result = await self._fetch_with_retry(
             url, provider, timeout, retries, headers, rate_limiter
@@ -429,12 +416,6 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             url=url,
             checksum=content_checksum,
         )
-
-    @staticmethod
-    def _get_default_ttl(provider: str, data_type: str) -> int:
-        """Get default TTL based on provider and data type."""
-        base = _PROVIDER_TTL_DEFAULTS.get(provider, _DEFAULT_TTL)
-        return base * 2 if data_type in _IMAGE_DATA_TYPES else base
 
     async def get_random_image(
         self,
@@ -532,7 +513,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
                         provider=request["provider"],
                         timeout=params.get("timeout", 30.0),
                         retries=params.get("retries", 3),
-                        ttl_seconds=params.get("ttl_seconds"),
+                        ttl_seconds=params["ttl_seconds"],
                         metadata=params.get("metadata"),
                     )
                     success = result is not None

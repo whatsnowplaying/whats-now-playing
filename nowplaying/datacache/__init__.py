@@ -46,16 +46,6 @@ def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
     return run_datacache_maintenance(cache_dir)
 
 
-# TTL defaults matching apicache.py provider settings (seconds)
-_PROVIDER_TTL: dict[str, int] = {
-    "discogs": 7 * 24 * 3600,
-    "theaudiodb": 7 * 24 * 3600,
-    "fanarttv": 7 * 24 * 3600,
-    "lastfm": 7 * 24 * 3600,
-    "wikimedia": 24 * 3600,
-    "default": 24 * 3600,
-}
-
 _BYTES_KEY = "__bytes__"
 
 
@@ -114,7 +104,7 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
     artist_name: str,
     endpoint: str,
     fetch_func: Callable[[], Awaitable[Any]],
-    ttl_seconds: int | None = None,
+    ttl_seconds: int,
     negative_ttl: int | None = None,
 ) -> Any | None:
     """Drop-in replacement for apicache.cached_fetch using datacache storage.
@@ -129,7 +119,13 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
     """
     storage = get_client().storage
     normalized = artist_name.lower().strip()
-    url = f"apicache://{provider}/{normalized}/{endpoint}"
+    # Synthetic key, not a fetchable address.  What is cached here is the result of
+    # a composite or derived operation -- wikimedia assembles wikidata + wikipedia,
+    # discogs searches then loads, theaudiodb filters a per-artist entry out of an
+    # already-cached search response -- so no single URL produced the value.  The
+    # schema makes url the primary key, so those callers need some key in that
+    # space; the scheme namespaces them away from real http(s):// rows.
+    url = f"derived://{provider}/{normalized}/{endpoint}"
 
     cached = await storage.retrieve_by_url(url)
     if cached is not None:
@@ -146,11 +142,7 @@ async def cached_fetch(  # pylint: disable=too-many-arguments
     logging.debug("Cache MISS for %s:%s:%s", provider, artist_name, endpoint)
     fresh = await fetch_func()
     if fresh:
-        store_ttl = (
-            ttl_seconds
-            if ttl_seconds is not None
-            else _PROVIDER_TTL.get(provider, _PROVIDER_TTL["default"])
-        )
+        store_ttl = ttl_seconds
     elif fresh is not None and negative_ttl is not None:
         # Falsy-but-not-None result (e.g. {} = not found) — cache with shorter TTL
         store_ttl = negative_ttl

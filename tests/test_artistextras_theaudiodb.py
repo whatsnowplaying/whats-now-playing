@@ -79,7 +79,7 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
+async def test_theaudiodb_datacache_duplicate_artists(bootstrap):
     """test TheAudioDB two-level caching with duplicate artist names"""
 
     plugin = _setup_theaudiodb_plugin(bootstrap)

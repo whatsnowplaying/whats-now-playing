@@ -376,8 +376,11 @@ async def test_retrieve_by_identifier_with_provider_filter(temp_storage):  # pyl
 
 
 @pytest.mark.asyncio
-async def test_ttl_expiration(temp_storage):  # pylint: disable=redefined-outer-name
+async def test_ttl_expiration(temp_storage, monkeypatch):  # pylint: disable=redefined-outer-name
     """Test that expired items are not retrieved"""
+    # This asserts real expiry, so it must not run under the CI TTL floor that
+    # store() otherwise applies to successful entries.
+    monkeypatch.delenv(nowplaying.datacache.utils.TTL_FLOOR_ENV, raising=False)
     url = "https://example.com/expired.jpg"
 
     # Store with very short TTL
@@ -490,8 +493,9 @@ async def test_inline_vs_file_threshold(temp_storage):  # pylint: disable=redefi
 
 
 @pytest.mark.asyncio
-async def test_cleanup_expired(temp_storage):  # pylint: disable=redefined-outer-name
+async def test_cleanup_expired(temp_storage, monkeypatch):  # pylint: disable=redefined-outer-name
     """Test cleanup of expired entries"""
+    monkeypatch.delenv(nowplaying.datacache.utils.TTL_FLOOR_ENV, raising=False)
     # Store expired item
     await temp_storage.store(
         url="https://example.com/expired.jpg",
@@ -601,8 +605,9 @@ async def test_cachekey_unknown_returns_none(temp_storage):  # pylint: disable=r
 
 
 @pytest.mark.asyncio
-async def test_cachekey_expired_returns_none(temp_storage):  # pylint: disable=redefined-outer-name
+async def test_cachekey_expired_returns_none(temp_storage, monkeypatch):  # pylint: disable=redefined-outer-name
     """retrieve_by_cachekey returns None once the entry has expired"""
+    monkeypatch.delenv(nowplaying.datacache.utils.TTL_FLOOR_ENV, raising=False)
     url = "https://example.com/cachekey_expired.jpg"
 
     await temp_storage.store(
@@ -852,7 +857,7 @@ async def test_store_allows_non_image_under_non_image_type(temp_storage):  # pyl
     disable caching for most of the application.
     """
     stored = await temp_storage.store(
-        url="apicache://theaudiodb/wnpmockartist/search",
+        url="derived://theaudiodb/wnpmockartist/search",
         identifier="wnpmockartist",
         data_type="api_response",
         provider="theaudiodb",

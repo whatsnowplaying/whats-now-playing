@@ -44,6 +44,7 @@ async def test_full_image_caching_workflow(bootstrap, isolated_datacache_client)
                 identifier="integration_test_artist",
                 data_type="thumbnail",
                 provider="test_provider",
+                ttl_seconds=3600,
                 immediate=True,
                 metadata={"source": "integration_test"},
             )
@@ -80,6 +81,7 @@ async def test_randomimage_functionality_integration(bootstrap, isolated_datacac
                     identifier="random_test_artist",
                     data_type="thumbnail",
                     provider="test_provider",
+                    ttl_seconds=3600,
                     immediate=True,
                 )
             )
@@ -125,6 +127,7 @@ async def test_queue_and_process_workflow(bootstrap, isolated_datacache_client):
                 identifier="queue_test_artist",
                 data_type="logo",
                 provider="test_provider",
+                ttl_seconds=3600,
                 immediate=False,
             )
         )
@@ -159,6 +162,7 @@ async def test_cache_hit_avoids_http_request(bootstrap, isolated_datacache_clien
                 identifier="cache_hit_artist",
                 data_type="banner",
                 provider="test_provider",
+                ttl_seconds=3600,
                 immediate=True,
             )
         )
@@ -171,6 +175,7 @@ async def test_cache_hit_avoids_http_request(bootstrap, isolated_datacache_clien
             identifier="cache_hit_artist",
             data_type="banner",
             provider="test_provider",
+            ttl_seconds=3600,
             immediate=True,
         )
     )
@@ -206,6 +211,7 @@ async def test_provider_filtering_works(bootstrap, isolated_datacache_client):  
                 identifier="filter_test_artist",
                 data_type="fanart",
                 provider="theaudiodb",
+                ttl_seconds=3600,
                 immediate=True,
             )
         )
@@ -216,6 +222,7 @@ async def test_provider_filtering_works(bootstrap, isolated_datacache_client):  
                 identifier="filter_test_artist",
                 data_type="fanart",
                 provider="discogs",
+                ttl_seconds=3600,
                 immediate=True,
             )
         )
@@ -262,6 +269,7 @@ async def test_api_response_caching_integration(bootstrap, isolated_datacache_cl
                 identifier="api_test_artist",
                 data_type="bio_en",
                 provider="test_api",
+                ttl_seconds=3600,
                 immediate=True,
                 metadata={"language": "en", "source": "test_api"},
             )
@@ -290,6 +298,7 @@ async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_clien
         artist_name="testartist",
         endpoint="bytes_test",
         fetch_func=fetch_func,
+        ttl_seconds=3600,
     )
     assert result1 == test_data
     assert isinstance(result1["raw"], bytes)
@@ -301,6 +310,7 @@ async def test_cached_fetch_bytes_round_trip(bootstrap, isolated_datacache_clien
         artist_name="testartist",
         endpoint="bytes_test",
         fetch_func=fetch_func,
+        ttl_seconds=3600,
     )
     assert result2 == test_data
     assert isinstance(result2["raw"], bytes)
@@ -355,6 +365,7 @@ async def test_concurrent_storage_operations(bootstrap, isolated_datacache_clien
                     identifier=f"concurrent_artist_{i}",
                     data_type="thumbnail",
                     provider="test_provider",
+                    ttl_seconds=3600,
                     immediate=True,
                 )
             )
@@ -404,6 +415,7 @@ async def test_queue_and_process_random_image_bytes(bootstrap, isolated_datacach
                     identifier="fanart_artist",
                     data_type="fanart",
                     provider="cdn",
+                    ttl_seconds=3600,
                     immediate=False,
                 )
             )
@@ -452,6 +464,7 @@ async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argume
             identifier="gary_numan",
             data_type="fanart",
             provider="theaudiodb",
+            ttl_seconds=3600,
             immediate=True,
         )
     )
@@ -466,6 +479,7 @@ async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argume
             identifier="gary_numan",
             data_type="fanart",
             provider="theaudiodb",
+            ttl_seconds=3600,
             immediate=True,
         )
     )
@@ -485,6 +499,7 @@ async def test_live_queue_and_random_image_bytes(bootstrap):  # pylint: disable=
                 identifier="gary_numan",
                 data_type="fanart",
                 provider="cdn",
+                ttl_seconds=3600,
                 timeout=30.0,
                 retries=3,
                 immediate=False,

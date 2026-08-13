@@ -21,8 +21,14 @@ from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache
+import nowplaying.datacache.utils
 import nowplaying.utils.sqlite
 import tests.utils_prefs
+
+# Keep cached entries alive across CI runs; see _effective_ttl().  Set in the
+# environment, not by patching, so subprocesses inherit it -- they spawn rather
+# than fork on macOS and Windows.  setdefault to allow a per-run override.
+os.environ.setdefault(nowplaying.datacache.utils.TTL_FLOOR_ENV, str(30 * 24 * 3600))
 
 # Enable tracemalloc to track resource allocations
 tracemalloc.start()
@@ -107,6 +113,11 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
                                 "DELETE FROM cached_data"
                                 " WHERE identifier LIKE 'wnpmock%'"
                                 " OR LOWER(identifier) LIKE 'wnp mock%'"
+                                " OR url LIKE 'derived://%/wnp%mock%'"
+                                # cached_fetch() used to mint apicache:// keys; a
+                                # restored CI cache can still hold mock rows under
+                                # the old prefix, and those expire rather than
+                                # being swept, so keep matching it.
                                 " OR url LIKE 'apicache://%/wnp%mock%'"
                             )
                             conn.execute(
@@ -145,14 +156,6 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
 
     cachedir = pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
     if "testsuite" in cachedir.name and cachedir.exists():
-        # Preserve api_cache directory for shared cache across tests
-        api_cache_dir = cachedir / "api_cache"
-        temp_api_cache = None
-        if api_cache_dir.exists():
-            # Temporarily move api_cache out of the way
-            temp_api_cache = cachedir.parent / f"api_cache_temp_{os.getpid()}"
-            shutil.move(str(api_cache_dir), str(temp_api_cache))
-
         # Move datacache out first to avoid ENOTEMPTY from open SQLite WAL handles
         datacache_dir = cachedir / "datacache"
         temp_datacache = None
@@ -162,8 +165,8 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
 
         logging.info("Removing %s", cachedir)
         # requests/request.db (nowplaying/trackrequests.py) sits directly in cachedir,
-        # unlike datacache/api_cache above, and a webserver test's Requests() instance
-        # can still hold it open in a just-stopped subprocess for a moment after
+        # unlike datacache above, and a webserver test's Requests() instance can still
+        # hold it open in a just-stopped subprocess for a moment after
         # stop_all_processes() returns.  Same ERROR_SHARING_VIOLATION race the datacache
         # move-aside works around, so retry rather than fail the next test's setup.
         nowplaying.utils.sqlite.retry_file_operation(lambda: shutil.rmtree(cachedir))
@@ -171,12 +174,8 @@ def clear_old_testsuite():  # pylint: disable=too-many-statements
         # Always recreate cachedir — other tests depend on it existing even if empty
         cachedir.mkdir(parents=True, exist_ok=True)
 
-        # Restore api_cache directory
-        if temp_api_cache and temp_api_cache.exists():
-            shutil.move(str(temp_api_cache), str(api_cache_dir))
-
-        # Restore datacache directory (preserved like api_cache to avoid cache
-        # misses that exhaust the Discogs/etc rate limit across tests).
+        # Restore datacache directory to avoid cache misses that exhaust the
+        # Discogs/etc rate limit across tests.
         if temp_datacache and temp_datacache.exists():
             shutil.move(str(temp_datacache), str(datacache_dir))
         # Reset singletons so the next test reconnects to the restored DB

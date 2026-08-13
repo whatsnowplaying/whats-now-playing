@@ -172,7 +172,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python: ["3.11", "3.12", "3.13", "3.14"]
+        # Ends of the requires-python range only.  3.12 is what the build
+        # workflows ship and what testing-macos and testing-win already run, so
+        # a Linux cell for it was a fourth pass over the same interpreter.
+        python: ["3.11", "3.14"]
     env:
       DISPLAY: ':99.0'
     steps:

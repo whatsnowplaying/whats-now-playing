@@ -15,6 +15,8 @@ import nowplaying.datacache
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
+_LASTFM_TTL = 7 * 24 * 3600  # 7 days
+
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
     from PySide6.QtWidgets import QWidget
@@ -139,7 +141,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             fetch_func=lambda: self._get_json(
                 self._album_url(apikey, artist, album, album_mbid=album_mbid)
             ),
-            ttl_seconds=None,
+            ttl_seconds=_LASTFM_TTL,
             negative_ttl=24 * 3600,  # 24h: artist/album not in Last.fm
         )
         images = ((album_data or {}).get("album") or {}).get("image") or []
@@ -176,7 +178,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             artist_name=artist,
             endpoint=f"artist.getinfo/{lang}/{cache_id}",
             fetch_func=fetch_func,
-            ttl_seconds=None,
+            ttl_seconds=_LASTFM_TTL,
             negative_ttl=24 * 3600,  # 24h: artist/album not in Last.fm
         )
         if not data:
@@ -204,7 +206,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     fetch_func=lambda: self._get_json(
                         self._artist_url(apikey, artist, mbid=mbid, lang="en")
                     ),
-                    ttl_seconds=None,
+                    ttl_seconds=_LASTFM_TTL,
                 )
                 raw_bio = ((data or {}).get("artist") or {}).get("bio", {}).get("content") or ""
             if bio := self._clean_bio(raw_bio):

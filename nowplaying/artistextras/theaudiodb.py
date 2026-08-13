@@ -296,7 +296,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"artist_{artist_data['idArtist']}",
             fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
+            ttl_seconds=_THEAUDIODB_TTL,
         )
 
     async def download_async(  # pylint: disable=too-many-branches
