@@ -8,6 +8,8 @@ import nowplaying.discogsclient
 import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
 
+_DISCOGS_TTL = 7 * 24 * 3600  # 7 days
+
 
 class Plugin(ArtistExtrasPlugin):
     """handler for discogs"""
@@ -83,7 +85,7 @@ class Plugin(ArtistExtrasPlugin):
                 artist_name=artist_name,
                 endpoint=f"search_{search_type}_{album_title}",
                 fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
+                ttl_seconds=_DISCOGS_TTL,
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.error(
@@ -140,7 +142,7 @@ class Plugin(ArtistExtrasPlugin):
                 artist_name=artist_name,
                 endpoint=f"artist_{artist_id}",
                 fetch_func=fetch_func,
-                ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
+                ttl_seconds=_DISCOGS_TTL,
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.error(

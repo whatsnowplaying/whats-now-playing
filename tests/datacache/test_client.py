@@ -64,6 +64,7 @@ async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined
             identifier="test_artist",
             data_type="thumbnail",
             provider="test",
+            ttl_seconds=3600,
             immediate=True,
         )
     )
@@ -83,6 +84,7 @@ async def test_get_or_fetch_immediate_false_queues_request(temp_client):  # pyli
             identifier="queue_artist",
             data_type="thumbnail",
             provider="test",
+            ttl_seconds=3600,
             immediate=False,
         )
     )
@@ -164,6 +166,7 @@ async def test_get_or_fetch_queues_for_background(temp_client):  # pylint: disab
             identifier="queue_artist",
             data_type="thumbnail",
             provider="test",
+            ttl_seconds=3600,
             immediate=False,
             queue_priority=1,
         )
@@ -617,6 +620,7 @@ async def test_negative_ttl_caches_404_and_suppresses_retry(
             endpoint="search",
             fetch_func=fetch_once,
             negative_ttl=300,
+            ttl_seconds=3600,
         )
         assert result1 == {}
         assert call_count == 1, "fetch_func must be called on first (cache miss)"
@@ -627,6 +631,7 @@ async def test_negative_ttl_caches_404_and_suppresses_retry(
             endpoint="search",
             fetch_func=fetch_once,
             negative_ttl=300,
+            ttl_seconds=3600,
         )
         assert result2 is None, "negative cache hit should suppress retry and return None"
         assert call_count == 1, "fetch_func must NOT be called again on negative cache hit"

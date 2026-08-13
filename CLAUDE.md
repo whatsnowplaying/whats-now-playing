@@ -368,9 +368,13 @@ developing:
 
 **Caching (`nowplaying/datacache/`):**
 
-`apicache.py` and `imagecache.py` were both replaced by datacache in 6.0.0.
-`apicache.py` still exists on disk but nothing uses it; `_upgrade_to_5_3_0` in
-`upgrades/config.py` deletes the old databases. Read
+`apicache.py` and `imagecache.py` were both replaced by datacache in 6.0.0 and
+have since been deleted; `_upgrade_to_5_3_0` in `upgrades/config.py` still
+deletes the old databases, so that is not dead code. `cached_fetch()` keys its
+entries under a synthetic `derived://` URL because the schema makes `url` the
+primary key and those values are assembled from several upstream calls rather
+than fetched from one address; it minted `apicache://` before 6.0.0, so both
+prefixes can appear in an existing cache. Read
 `nowplaying/datacache/CLAUDE.md` before working in here — it covers rate
 limiting, the pending queue, and the multiprocess design.
 

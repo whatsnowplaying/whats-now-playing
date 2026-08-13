@@ -31,12 +31,9 @@ def is_port_in_use(port: int) -> bool:
 async def wait_for_port_free(port: int, timeout: float = 10.0) -> bool:
     """Poll until nothing is listening on port, or timeout.
 
-    Replaces a flat sleep() after stopping the webserver.  The point of the wait
-    is to not race the next start against a socket that is still bound, and
-    polling takes exactly as long as that needs instead of a fixed guess.  These
-    fixtures stop and start a subprocess per test, and macOS spawns rather than
-    forks, so the webserver suite is the slowest part of the run and two seconds
-    of unconditional sleep per test was a real share of it.
+    These fixtures restart the webserver per test; the wait exists so the next
+    start does not race a socket that is still bound.  Polling takes as long as
+    that actually needs, where a flat sleep paid its full cost every time.
     """
     start_time = time.time()
     while time.time() - start_time < timeout:

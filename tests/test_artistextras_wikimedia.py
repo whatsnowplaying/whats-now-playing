@@ -14,8 +14,8 @@ import nowplaying.wikiclient  # pylint: disable=import-error
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_apicache_usage(bootstrap):
-    """test that wikimedia plugin uses apicache for API calls"""
+async def test_wikimedia_datacache_usage(bootstrap):
+    """test that wikimedia plugin uses datacache for API calls"""
 
     config = bootstrap
     configuresettings("wikimedia", config.cparser)

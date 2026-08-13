@@ -83,8 +83,8 @@ async def test_discogs_weblocation1(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
-async def test_discogs_apicache_usage(bootstrap):
-    """test that discogs plugin uses apicache for API calls"""
+async def test_discogs_datacache_usage(bootstrap):
+    """test that discogs plugin uses datacache for API calls"""
 
     config = bootstrap
 

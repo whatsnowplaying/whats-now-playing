@@ -7,7 +7,11 @@ replacing both the existing `apicache.py` and `imagecache.py` systems with a URL
 
 The datacache module is designed with performance and multiprocess coordination in mind:
 
-- **URL-based storage**: Uses URLs as primary keys following the imagecache pattern for randomimage support
+- **URL-based storage**: Uses URLs as primary keys following the imagecache pattern for randomimage support.
+  Not every entry has a fetchable address, so synthetic schemes occupy that key space: `derived://` for
+  `cached_fetch()` results assembled from several upstream calls, `wnpmb://` for the wnpmb cache adapter,
+  and `embedded://` for art pulled from file tags. Entries written before 6.0.0 use `apicache://` in place
+  of `derived://`
 - **Multiprocess coordination**: Database-backed queues work across multiple processes
 - **Windows compatibility**: Connection-per-operation SQLite pattern prevents locking issues
 - **Async-first**: Built on asyncio/aiohttp with aiosqlite for non-blocking operations

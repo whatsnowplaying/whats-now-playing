@@ -21,7 +21,8 @@ import aiosqlite
 import nowplaying.exceptions
 import nowplaying.utils.sqlite
 from .colors import COLOR_EXTRACT_TYPES, extract_palettes
-from .utils import ensure_datacache_schema, get_datacache_path, redact_url
+
+from .utils import _effective_ttl, ensure_datacache_schema, get_datacache_path, redact_url
 
 
 @dataclasses.dataclass
@@ -200,7 +201,7 @@ class DataStorage:
 
         try:
             now = time.time()
-            expires_at = now + ttl_seconds
+            expires_at = now + _effective_ttl(ttl_seconds, status_code)
             metadata_json = orjson.dumps(metadata).decode() if metadata else None
             new_cachekey = str(uuid.uuid4())
             data_size = len(data_value)

@@ -2,6 +2,7 @@
 
 import contextlib
 import logging
+import os
 import re
 import sqlite3
 import time
@@ -10,6 +11,32 @@ from pathlib import Path
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.utils.sqlite
+
+
+# Minimum TTL, in seconds, for successful entries.  Unset in normal use.
+TTL_FLOOR_ENV = "WNP_DATACACHE_TTL_FLOOR"
+
+
+def _effective_ttl(ttl_seconds: int, status_code: int) -> int:
+    """Apply the TTL floor to successful entries; leave negatives untouched.
+
+    Provider TTLs suit a continuously warm cache.  A restored CI cache can be
+    days old, so a lifetime shorter than the gap between runs expires before it
+    is ever read and gets refetched every time.
+
+    Negatives are excluded: they are short deliberately, and stretching them
+    would keep CI believing an artist is missing long after one appears.
+    """
+    if status_code != 200:
+        return ttl_seconds
+    raw = os.environ.get(TTL_FLOOR_ENV)
+    if not raw:
+        return ttl_seconds
+    try:
+        return max(ttl_seconds, int(raw))
+    except ValueError:
+        logging.warning("%s=%r is not an integer; ignoring", TTL_FLOOR_ENV, raw)
+        return ttl_seconds
 
 
 def get_datacache_path(cache_dir: Path | None = None) -> Path:

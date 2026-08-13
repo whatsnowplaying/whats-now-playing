@@ -194,7 +194,6 @@ def mock_dependencies():
         patch("nowplaying.settingsui.about_version_text"),
         patch("nowplaying.trackrequests.Requests", MockTrackrequests),
         patch("nowplaying.db.MetadataDB", MockMetadataDB),
-        patch("nowplaying.apicache.APIResponseCache.vacuum_database_file") as mock_api_vacuum,
         patch("nowplaying.guessgame.GuessGame.vacuum_database"),
         patch("nowplaying.guessgame.GuessGame.initialize_database"),
         patch("nowplaying.systemtray.Tray._start_background_vacuum"),
@@ -209,7 +208,6 @@ def mock_dependencies():
 
         yield {
             "load_ui": mock_load_ui,
-            "api_vacuum": mock_api_vacuum,
             "mock_watcher": mock_watcher,
             "mock_watcher_instance": mock_watcher_instance,
             "real_start_background_vacuum": real_start_background_vacuum,

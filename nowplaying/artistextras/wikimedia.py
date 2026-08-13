@@ -9,6 +9,8 @@ import nowplaying.datacache
 import nowplaying.wikiclient
 from nowplaying.artistextras import ArtistExtrasPlugin
 
+_WIKIMEDIA_TTL = 24 * 3600  # 24 hours -- bios and images change more often than IDs
+
 
 class Plugin(ArtistExtrasPlugin):
     """handler for discogs"""
@@ -76,7 +78,7 @@ class Plugin(ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"{entity}_{lang}",  # Unique per entity + language combination
             fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from _PROVIDER_TTL
+            ttl_seconds=_WIKIMEDIA_TTL,
         )
 
         # Reconstruct WikiPage object from cached JSON data if needed

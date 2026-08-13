@@ -38,8 +38,8 @@ def _get_test_metadata():
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_usage(bootstrap):
-    """test that fanarttv plugin uses apicache for API calls"""
+async def test_fanarttv_datacache_usage(bootstrap):
+    """test that fanarttv plugin uses datacache for API calls"""
     plugin = _setup_fanarttv_plugin(bootstrap)
 
     await run_cache_consistency_test(
@@ -51,7 +51,7 @@ async def test_fanarttv_apicache_usage(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_fanarttv_datacache_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
     """test that fanarttv makes only one HTTP call when the cache is warm"""
     plugin = _setup_fanarttv_plugin(bootstrap)
     mbid = "00000000-0000-0000-0000-000000000002"
@@ -76,7 +76,7 @@ async def test_fanarttv_apicache_api_call_count(bootstrap):  # pylint: disable=r
 
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
-async def test_fanarttv_apicache_api_failure_behavior(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_fanarttv_datacache_api_failure_behavior(bootstrap):  # pylint: disable=redefined-outer-name
     """test that fanarttv doesn't cache failed API calls; second call retries"""
     plugin = _setup_fanarttv_plugin(bootstrap)
     mbid = "00000000-0000-0000-0000-000000000099"

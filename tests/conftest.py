@@ -10,7 +10,6 @@ import pytest
 import pytest_asyncio
 from aiointercept import aiointercept
 
-import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.datacache
 
@@ -24,32 +23,6 @@ def run_datacache_maintenance_once():
     nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname="testsuite")
     nowplaying.datacache.run_maintenance()
     yield
-
-
-_SHARED_CACHE_INSTANCE = None
-
-
-@pytest_asyncio.fixture
-async def isolated_api_cache():
-    """Create an isolated API cache for testing (one per test)."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_dir = pathlib.Path(temp_dir)
-        cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
-        await cache._initialize_db()  # pylint: disable=protected-access
-        try:
-            yield cache
-        finally:
-            await cache.close()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def shared_api_cache():
-    """Shared API cache for artistextras tests to reduce API calls."""
-    global _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
-    if _SHARED_CACHE_INSTANCE is None:
-        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache()
-        await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
-    yield _SHARED_CACHE_INSTANCE
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -111,18 +84,3 @@ async def isolated_datacache_client():
                 yield client
             finally:
                 await client.close()
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
-    """Automatically use shared API cache for tests that hit external APIs."""
-    test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
-    test_manages_own_cache = (
-        "shared_api_cache" in request.fixturenames or "isolated_api_cache" in request.fixturenames
-    )
-    if (
-        any(module in request.module.__name__ for module in test_modules)
-        and not test_manages_own_cache
-    ):
-        nowplaying.apicache.set_cache_instance(shared_api_cache)
-    yield
