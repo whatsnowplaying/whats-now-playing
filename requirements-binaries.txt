@@ -1,5 +1,5 @@
 #
 # development
 #
-pyinstaller==6.21.0
+pyinstaller==6.22.1
 pyinstaller_versionfile==3.1.0
