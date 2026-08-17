@@ -2942,12 +2942,12 @@ access logs, proxy logs, and browser history.</p>
 <p><strong>Authentication</strong>: None required</p>
 <p><strong>Response</strong>: JSON object with current track information</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;genre&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Electronic&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;coverurl&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cover.png&quot;</span>
+<span class="w">  </span><span class="nt">"artist"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Artist Name"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Track Title"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"album"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Album Name"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"genre"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Electronic"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2023"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"coverurl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cover.png"</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="getpost-v1remoteinput">GET|POST /v1/remoteinput<a class="headerlink" href="#getpost-v1remoteinput" title="Permanent link">&para;</a></h3>
@@ -2960,9 +2960,9 @@ access logs, proxy logs, and browser history.</p>
 <span class="err">Content-Type: application/json</span>
 
 <span class="err">{</span>
-<span class="err">  &quot;artist&quot;: &quot;Artist Name&quot;,</span>
-<span class="err">  &quot;title&quot;: &quot;Track Title&quot;,</span>
-<span class="err">  &quot;album&quot;: &quot;Album Name&quot;</span>
+<span class="err">  "artist": "Artist Name",</span>
+<span class="err">  "title": "Track Title",</span>
+<span class="err">  "album": "Album Name"</span>
 <span class="err">}</span>
 </code></pre></div>
 <h4 id="get-request-query-parameters">GET Request (Query Parameters)<a class="headerlink" href="#get-request-query-parameters" title="Permanent link">&para;</a></h4>
@@ -2972,18 +2972,18 @@ access logs, proxy logs, and browser history.</p>
 <h4 id="response-format">Response Format<a class="headerlink" href="#response-format" title="Permanent link">&para;</a></h4>
 <p><strong>Success (200)</strong>:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;dbid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;processed_metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;artistlongbio&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist biography...&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;coverurl&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cover.png&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;genre&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Electronic&quot;</span>
+<span class="w">  </span><span class="nt">"dbid"</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"processed_metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"artist"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Artist Name"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Track Title"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"album"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Album Name"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"artistlongbio"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Artist biography..."</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"coverurl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cover.png"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2023"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"genre"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Electronic"</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;Field &#39;title&#39; truncated from 1500 to 1000 characters&quot;</span>
+<span class="w">  </span><span class="nt">"warnings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">"Field 'title' truncated from 1500 to 1000 characters"</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -3021,8 +3021,8 @@ security-sensitive information are automatically removed.</p>
 <p><strong>Authentication</strong>: None required</p>
 <p><strong>Response</strong>: JSON object</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;current application version&gt;&quot;</span>
+<span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ok"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;current application version&gt;"</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="get-v1imagesws">GET /v1/images/ws<a class="headerlink" href="#get-v1imagesws" title="Permanent link">&para;</a></h3>

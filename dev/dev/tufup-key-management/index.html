@@ -2721,25 +2721,25 @@ overhead with no realistic threat to mitigate against.</p>
 <p>One-time setup that replaces the spike key with the production key.</p>
 <h3 id="1-edit-tufup-repo-config">1. Edit <code>.tufup-repo-config</code><a class="headerlink" href="#1-edit-tufup-repo-config" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WhatsNowPlaying_macos15_arm&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;app_version_attr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nowplaying.version.__VERSION__&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;binary_diff&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;encrypted_keys&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">    </span><span class="nt">&quot;expiration_days&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">365</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;snapshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;targets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="nt">"app_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WhatsNowPlaying_macos15_arm"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"app_version_attr"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nowplaying.version.__VERSION__"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"binary_diff"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"encrypted_keys"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">    </span><span class="nt">"expiration_days"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="mi">365</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"snapshot"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"targets"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;key_map&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w">      </span><span class="p">[</span><span class="s2">&quot;wnp_prod_key&quot;</span><span class="p">],</span>
-<span class="w">        </span><span class="nt">&quot;snapshot&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="s2">&quot;wnp_prod_key&quot;</span><span class="p">],</span>
-<span class="w">        </span><span class="nt">&quot;targets&quot;</span><span class="p">:</span><span class="w">   </span><span class="p">[</span><span class="s2">&quot;wnp_prod_key&quot;</span><span class="p">],</span>
-<span class="w">        </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;wnp_prod_key&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="nt">"key_map"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"root"</span><span class="p">:</span><span class="w">      </span><span class="p">[</span><span class="s2">"wnp_prod_key"</span><span class="p">],</span>
+<span class="w">        </span><span class="nt">"snapshot"</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="s2">"wnp_prod_key"</span><span class="p">],</span>
+<span class="w">        </span><span class="nt">"targets"</span><span class="p">:</span><span class="w">   </span><span class="p">[</span><span class="s2">"wnp_prod_key"</span><span class="p">],</span>
+<span class="w">        </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"wnp_prod_key"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;keys_dir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/aw/.wnp-tufup-prod/keystore&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;repo_dir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/aw/.wnp-tufup-prod/repository&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;thresholds&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;snapshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;targets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span>
+<span class="w">    </span><span class="nt">"keys_dir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/aw/.wnp-tufup-prod/keystore"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"repo_dir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/aw/.wnp-tufup-prod/repository"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"thresholds"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"snapshot"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"targets"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>The config has absolute paths and stays untracked (gitignore'd, see
@@ -2748,8 +2748,8 @@ overhead with no realistic threat to mitigate against.</p>
 <div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.wnp-tufup-prod/<span class="o">{</span>repository,keystore<span class="o">}</span>
 
 <span class="c1"># tufup init prompts:</span>
-<span class="c1">#   - &quot;Found existing configuration. Modify?&quot; -&gt; n</span>
-<span class="c1">#   - &quot;Overwrite key pair?&quot; -&gt; y (first time)</span>
+<span class="c1">#   - "Found existing configuration. Modify?" -&gt; n</span>
+<span class="c1">#   - "Overwrite key pair?" -&gt; y (first time)</span>
 <span class="c1"># No passphrase prompt (encrypted_keys is empty).</span>
 tufup<span class="w"> </span>init
 </code></pre></div>
@@ -2794,11 +2794,11 @@ into the runner's tmpfs at the start of the job:</p>
 <span class="w">  </span><span class="nt">env</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">TUFUP_KEY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.TUFUP_KEY }}</span>
 <span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">    </span><span class="no">mkdir -p &quot;${RUNNER_TEMP}/keystore&quot;</span>
-<span class="w">    </span><span class="no">chmod 700 &quot;${RUNNER_TEMP}/keystore&quot;</span>
-<span class="w">    </span><span class="no">printf &#39;%s&#39; &quot;$TUFUP_KEY&quot; &gt; &quot;${RUNNER_TEMP}/keystore/wnp_prod_key&quot;</span>
-<span class="w">    </span><span class="no">chmod 600 &quot;${RUNNER_TEMP}/keystore/wnp_prod_key&quot;</span>
-<span class="w">    </span><span class="no">cp tools/tufup-pubkeys/wnp_prod_key.pub &quot;${RUNNER_TEMP}/keystore/&quot;</span>
+<span class="w">    </span><span class="no">mkdir -p "${RUNNER_TEMP}/keystore"</span>
+<span class="w">    </span><span class="no">chmod 700 "${RUNNER_TEMP}/keystore"</span>
+<span class="w">    </span><span class="no">printf '%s' "$TUFUP_KEY" &gt; "${RUNNER_TEMP}/keystore/wnp_prod_key"</span>
+<span class="w">    </span><span class="no">chmod 600 "${RUNNER_TEMP}/keystore/wnp_prod_key"</span>
+<span class="w">    </span><span class="no">cp tools/tufup-pubkeys/wnp_prod_key.pub "${RUNNER_TEMP}/keystore/"</span>
 </code></pre></div>
 <p>The keystore dir is in <code>${RUNNER_TEMP}</code> (tmpfs) — gone when the
 workflow ends.  Don't write keys to <code>${{ github.workspace }}</code>

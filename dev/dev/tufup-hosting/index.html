@@ -2731,45 +2731,45 @@ already pulls in.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.responses</span><span class="w"> </span><span class="kn">import</span> <span class="n">RedirectResponse</span><span class="p">,</span> <span class="n">StreamingResponse</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
-<span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/tufup&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;tufup&quot;</span><span class="p">])</span>
+<span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"/tufup"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"tufup"</span><span class="p">])</span>
 
-<span class="n">GH_PAGES_ORIGIN</span> <span class="o">=</span> <span class="s2">&quot;https://whatsnowplaying.github.io/whats-now-playing/tufup/metadata&quot;</span>
-<span class="n">GH_RELEASES_BASE</span> <span class="o">=</span> <span class="s2">&quot;https://github.com/whatsnowplaying/whats-now-playing/releases/download&quot;</span>
+<span class="n">GH_PAGES_ORIGIN</span> <span class="o">=</span> <span class="s2">"https://whatsnowplaying.github.io/whats-now-playing/tufup/metadata"</span>
+<span class="n">GH_RELEASES_BASE</span> <span class="o">=</span> <span class="s2">"https://github.com/whatsnowplaying/whats-now-playing/releases/download"</span>
 
 <span class="c1"># Per-file cache TTLs.  timestamp.json must be short (clients poll for</span>
 <span class="c1"># it to detect updates); other metadata is signed daily so an hour-ish</span>
 <span class="c1"># is fine; root.json is immutable per-version (rotation publishes a</span>
 <span class="c1"># new N.root.json rather than mutating existing files).</span>
 <span class="n">_CACHE_CONTROL</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;timestamp.json&quot;</span><span class="p">:</span> <span class="s2">&quot;public, max-age=60, must-revalidate&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;snapshot.json&quot;</span><span class="p">:</span> <span class="s2">&quot;public, max-age=900&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;targets.json&quot;</span><span class="p">:</span> <span class="s2">&quot;public, max-age=900&quot;</span><span class="p">,</span>
+    <span class="s2">"timestamp.json"</span><span class="p">:</span> <span class="s2">"public, max-age=60, must-revalidate"</span><span class="p">,</span>
+    <span class="s2">"snapshot.json"</span><span class="p">:</span> <span class="s2">"public, max-age=900"</span><span class="p">,</span>
+    <span class="s2">"targets.json"</span><span class="p">:</span> <span class="s2">"public, max-age=900"</span><span class="p">,</span>
 <span class="p">}</span>
 <span class="c1"># root.json and N.root.json</span>
-<span class="n">_ROOT_CACHE_CONTROL</span> <span class="o">=</span> <span class="s2">&quot;public, max-age=86400, immutable&quot;</span>
+<span class="n">_ROOT_CACHE_CONTROL</span> <span class="o">=</span> <span class="s2">"public, max-age=86400, immutable"</span>
 
 
-<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/metadata/{filename:path}&quot;</span><span class="p">)</span>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/metadata/{filename:path}"</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">tufup_metadata</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StreamingResponse</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Proxy TUF metadata from GH Pages.</span>
+<span class="w">    </span><span class="sd">"""Proxy TUF metadata from GH Pages.</span>
 
 <span class="sd">    Stream upstream rather than buffering — metadata files are small but</span>
 <span class="sd">    this keeps the handler memory-flat regardless of size.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Defense in depth: TUF filenames are well-defined.  Reject anything</span>
-    <span class="c1"># that doesn&#39;t look like metadata so we don&#39;t accidentally proxy</span>
+    <span class="c1"># that doesn't look like metadata so we don't accidentally proxy</span>
     <span class="c1"># arbitrary paths under the gh-pages tree.</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?:\d+\.)?(?:root|timestamp|snapshot|targets)\.json&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?:\d+\.)?(?:root|timestamp|snapshot|targets)\.json"</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">_CACHE_CONTROL</span><span class="p">:</span>
         <span class="n">cache_control</span> <span class="o">=</span> <span class="n">_CACHE_CONTROL</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;root.json&quot;</span><span class="p">):</span>
+    <span class="k">elif</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"root.json"</span><span class="p">):</span>
         <span class="n">cache_control</span> <span class="o">=</span> <span class="n">_ROOT_CACHE_CONTROL</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">cache_control</span> <span class="o">=</span> <span class="s2">&quot;public, max-age=60&quot;</span>  <span class="c1"># safe default</span>
+        <span class="n">cache_control</span> <span class="o">=</span> <span class="s2">"public, max-age=60"</span>  <span class="c1"># safe default</span>
 
-    <span class="n">upstream_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">GH_PAGES_ORIGIN</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">upstream_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">GH_PAGES_ORIGIN</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>  <span class="c1"># or reuse an app-scoped client</span>
     <span class="n">upstream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">upstream_url</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">upstream</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
@@ -2784,8 +2784,8 @@ already pulls in.</p>
 
     <span class="k">return</span> <span class="n">StreamingResponse</span><span class="p">(</span>
         <span class="n">body</span><span class="p">(),</span>
-        <span class="n">media_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
-        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Cache-Control&quot;</span><span class="p">:</span> <span class="n">cache_control</span><span class="p">},</span>
+        <span class="n">media_type</span><span class="o">=</span><span class="s2">"application/json"</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Cache-Control"</span><span class="p">:</span> <span class="n">cache_control</span><span class="p">},</span>
     <span class="p">)</span>
 
 
@@ -2793,32 +2793,32 @@ already pulls in.</p>
 <span class="c1"># &lt;channel&gt; = WhatsNowPlaying_&lt;os_or_platform&gt;[_&lt;extras&gt;] (no dashes in segments)</span>
 <span class="c1"># &lt;version&gt; = N.N.N optionally followed by -&lt;prerelease tag&gt;</span>
 <span class="n">_TARGET_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-    <span class="sa">r</span><span class="s2">&quot;^(?P&lt;channel&gt;WhatsNowPlaying_[A-Za-z0-9_]+)&quot;</span>
-    <span class="sa">r</span><span class="s2">&quot;-(?P&lt;version&gt;\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)&quot;</span>
-    <span class="sa">r</span><span class="s2">&quot;\.tar\.gz$&quot;</span>
+    <span class="sa">r</span><span class="s2">"^(?P&lt;channel&gt;WhatsNowPlaying_[A-Za-z0-9_]+)"</span>
+    <span class="sa">r</span><span class="s2">"-(?P&lt;version&gt;\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)"</span>
+    <span class="sa">r</span><span class="s2">"\.tar\.gz$"</span>
 <span class="p">)</span>
 
 
-<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/targets/</span><span class="si">{filename}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/targets/</span><span class="si">{filename}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">tufup_target</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RedirectResponse</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Redirect to the matching GH Releases asset.</span>
+<span class="w">    </span><span class="sd">"""Redirect to the matching GH Releases asset.</span>
 
-<span class="sd">    Filename pattern is locked by tufup&#39;s repo bundler, so we can parse</span>
+<span class="sd">    Filename pattern is locked by tufup's repo bundler, so we can parse</span>
 <span class="sd">    out the release tag from the filename rather than maintaining a</span>
 <span class="sd">    separate channel-to-tag mapping.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_TARGET_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
 
-    <span class="n">version</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
-    <span class="n">upstream</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">GH_RELEASES_BASE</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"version"</span><span class="p">)</span>
+    <span class="n">upstream</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">GH_RELEASES_BASE</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span>
     <span class="c1"># 302 + 1-day cache: the filename-to-tag mapping is stable for the</span>
     <span class="c1"># lifetime of the release.</span>
     <span class="k">return</span> <span class="n">RedirectResponse</span><span class="p">(</span>
         <span class="n">upstream</span><span class="p">,</span>
         <span class="n">status_code</span><span class="o">=</span><span class="mi">302</span><span class="p">,</span>
-        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Cache-Control&quot;</span><span class="p">:</span> <span class="s2">&quot;public, max-age=86400&quot;</span><span class="p">},</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Cache-Control"</span><span class="p">:</span> <span class="s2">"public, max-age=86400"</span><span class="p">},</span>
     <span class="p">)</span>
 </code></pre></div>
 <p>Notes:</p>
@@ -2933,7 +2933,7 @@ into <code>gh-pages:tufup/metadata/</code>.</p>
 <span class="w">          </span><span class="no">mkdir -p tufup/metadata</span>
 <span class="w">          </span><span class="no">cp -r $METADATA_DIR/* tufup/metadata/</span>
 <span class="w">          </span><span class="no">git add tufup/metadata</span>
-<span class="w">          </span><span class="no">git commit -m &quot;tufup: publish metadata for ${{ github.event.release.tag_name }}&quot;</span>
+<span class="w">          </span><span class="no">git commit -m "tufup: publish metadata for ${{ github.event.release.tag_name }}"</span>
 <span class="w">          </span><span class="no">git push</span>
 </code></pre></div>
 <p>The <code>docs-deploy.yaml</code> workflow uses <code>mike</code> which only touches
@@ -3007,8 +3007,8 @@ preserves POSIX mode bits with PAX format (which tufup uses), so
 this generally just works.</p>
 <h2 id="client-side-wiring">Client-side wiring<a class="headerlink" href="#client-side-wiring" title="Permanent link">&para;</a></h2>
 <p>Once the proxy is live, <code>nowplaying/upgrades/tufup_client.py</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="n">TUFUP_METADATA_BASE_URL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://whatsnowplaying.com/tufup/metadata/&quot;</span>
-<span class="n">TUFUP_TARGET_BASE_URL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://whatsnowplaying.com/tufup/targets/&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="n">TUFUP_METADATA_BASE_URL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"https://whatsnowplaying.com/tufup/metadata/"</span>
+<span class="n">TUFUP_TARGET_BASE_URL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"https://whatsnowplaying.com/tufup/targets/"</span>
 </code></pre></div>
 <p>Both currently point at <code>updates.whatsnowplaying.example/...</code> placeholders.
 Flip them in the same PR that turns on the publishing workflow.</p>
