@@ -23,7 +23,7 @@ env:
 jobs:
   testing-macos:
     runs-on: macos-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -78,7 +78,7 @@ jobs:
             popd
           fi
           source /tmp/venv/bin/activate
-          pytest --durations=10 -s tests
+          pytest --durations=40 --junit-xml=junit-macos.xml -s tests
           ls -al .coverage*
           coverage xml
       - name: artifact mac test
@@ -92,12 +92,13 @@ jobs:
             .coverage.*
             .coverage*
             coverage.xml
+            junit-macos.xml
       #       htmlcov
 
 
   testing-win:
     runs-on: windows-2025
-    timeout-minutes: 50
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -151,7 +152,7 @@ jobs:
             export FPCALC
             popd
           fi
-          pytest --durations=10 -s tests
+          pytest --durations=40 --junit-xml=junit-windows.xml -s tests
           coverage xml
       - name: artifact windows test
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
@@ -164,10 +165,11 @@ jobs:
             .coverage.*
             htmlcov
             coverage.xml
+            junit-windows.xml
 
   testing-linux:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     permissions:
       contents: read
     strategy:
@@ -255,7 +257,7 @@ jobs:
             popd
           fi
           source /tmp/venv/bin/activate
-          pytest --durations=10 -s
+          pytest --durations=40 --junit-xml=junit-linux-${{ matrix.python }}.xml -s
           coverage xml
       - name: artifact linux test
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
@@ -268,6 +270,7 @@ jobs:
             .coverage.*
             htmlcov
             coverage.xml
+            junit-linux-${{ matrix.python }}.xml
 
   merge:
     if: always()
@@ -325,6 +328,7 @@ jobs:
         if: always()
         with:
           name: full-coverage
+          include-hidden-files: true
           path: |
             .coverage
             htmlcov
