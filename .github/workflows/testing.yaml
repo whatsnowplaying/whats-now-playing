@@ -328,6 +328,7 @@ jobs:
         if: always()
         with:
           name: full-coverage
+          include-hidden-files: true
           path: |
             .coverage
             htmlcov
