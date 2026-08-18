@@ -78,7 +78,7 @@ jobs:
             popd
           fi
           source /tmp/venv/bin/activate
-          pytest --durations=0 --junit-xml=junit-macos.xml -s tests
+          pytest --durations=40 --junit-xml=junit-macos.xml -s tests
           ls -al .coverage*
           coverage xml
       - name: artifact mac test
@@ -152,7 +152,7 @@ jobs:
             export FPCALC
             popd
           fi
-          pytest --durations=0 --junit-xml=junit-windows.xml -s tests
+          pytest --durations=40 --junit-xml=junit-windows.xml -s tests
           coverage xml
       - name: artifact windows test
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
@@ -257,7 +257,7 @@ jobs:
             popd
           fi
           source /tmp/venv/bin/activate
-          pytest --durations=0 --junit-xml=junit-linux-${{ matrix.python }}.xml -s
+          pytest --durations=40 --junit-xml=junit-linux-${{ matrix.python }}.xml -s
           coverage xml
       - name: artifact linux test
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
