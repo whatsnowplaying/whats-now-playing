@@ -330,13 +330,13 @@ class ImageCache:
             return
 
         if "logo" in imagetype:
-            maxart: int = config.cparser.value("identifierextras/logos", defaultValue=3, type=int)
+            maxart: int = config.cparser.value("artistextras/logos", defaultValue=3, type=int)
         elif "banner" in imagetype:
-            maxart = config.cparser.value("identifierextras/banners", defaultValue=3, type=int)
+            maxart = config.cparser.value("artistextras/banners", defaultValue=3, type=int)
         elif "thumb" in imagetype:
-            maxart = config.cparser.value("identifierextras/thumbnails", defaultValue=3, type=int)
+            maxart = config.cparser.value("artistextras/thumbnails", defaultValue=3, type=int)
         else:
-            maxart = config.cparser.value("identifierextras/fanart", defaultValue=20, type=int)
+            maxart = config.cparser.value("artistextras/fanart", defaultValue=20, type=int)
 
         logging.debug(
             "Putting %s unfiltered for %s/%s",
