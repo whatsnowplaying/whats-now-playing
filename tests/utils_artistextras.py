@@ -13,6 +13,14 @@ import aiosqlite
 import orjson
 import pytest
 
+import nowplaying.datacache.utils
+
+# Per-artist image cap for tests.  The shipped defaults (6 each, 50 fanart) exist
+# for a DJ who wants variety across a set; a test only needs enough to exercise
+# the multi-image paths, and the real numbers queue dozens of pending rows per
+# artist into the datacache that CI carries between runs.
+TEST_IMAGE_CAP = 2
+
 # Shared pytest.mark.skipif decorators for API key requirements
 skip_no_discogs_key = pytest.mark.skipif(
     not os.environ.get("DISCOGS_API_KEY"), reason="Discogs API key not available"
@@ -76,6 +84,9 @@ async def datacache_image_available(client, identifier: str, data_type: str) -> 
 
 def configureplugins(config):
     """Configure plugins for testing"""
+    for imagetype in nowplaying.datacache.utils.CAPPED_IMAGE_TYPES:
+        config.cparser.setValue(f"artistextras/{imagetype}", TEST_IMAGE_CAP)
+
     plugins = ["wikimedia"]
     if os.environ.get("DISCOGS_API_KEY"):
         plugins.append("discogs")
