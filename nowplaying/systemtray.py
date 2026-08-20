@@ -541,7 +541,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # artistextras/cachesize is in gigabytes, matching the old imagecache setting.
         # Eviction runs here rather than in the datacache worker so the disk I/O
         # lands at startup instead of mid-set.
-        gigabytes = self.config.cparser.value("artistextras/cachesize", type=int)
+        # A negative limit would put every non-empty cache over budget and evict
+        # the lot, so it means unlimited here, same as 0.
+        gigabytes = max(0, int(self.config.cparser.value("artistextras/cachesize", type=int) or 0))
         limit = gigabytes * 1024 * 1024 * 1024 if gigabytes else None
         self.vacuum_thread = _VacuumThread(size_limit_bytes=limit)
         self.vacuum_thread.start()

@@ -187,8 +187,10 @@ def _evict_lfu(database_path: Path, size_limit_bytes: int) -> int:
         if not urls_to_delete:
             return 0
         batch = ",".join("?" * len(urls_to_delete))
-        conn.execute(f"DELETE FROM cached_data WHERE url IN ({batch})", urls_to_delete)
-        return len(urls_to_delete)
+        cursor = conn.execute(f"DELETE FROM cached_data WHERE url IN ({batch})", urls_to_delete)
+        # rowcount, not len(urls_to_delete): the datacache worker expires rows
+        # concurrently, so a candidate can be gone by the time we delete it.
+        return cursor.rowcount
 
 
 def run_datacache_maintenance(
