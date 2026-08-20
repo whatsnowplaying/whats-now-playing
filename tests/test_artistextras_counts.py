@@ -3,7 +3,6 @@
 
 import pathlib
 import tempfile
-import unittest.mock
 
 import pytest
 import pytest_asyncio
@@ -15,19 +14,15 @@ from tests.utils_images import png_bytes
 MINIMAL_PNG = png_bytes()
 
 
-def _plugin(values: dict[str, int]) -> nowplaying.artistextras.ArtistExtrasPlugin:
-    """A bare plugin whose config serves values, bypassing plugin bootstrap.
+def _plugin(config) -> nowplaying.artistextras.ArtistExtrasPlugin:
+    """A bare plugin bound to a real config, bypassing plugin bootstrap.
 
-    Only cparser.value is exercised, and it has to honour the caller's
-    defaultValue so the shipped defaults are what gets tested when a key is
-    absent.
+    The config comes from the bootstrap fixture rather than a mock: _trim_to_wanted
+    reads artistextras/<data_type> with no fallback of its own, so the thing worth
+    testing is that a real ConfigFile answers those reads.
     """
     plugin = nowplaying.artistextras.ArtistExtrasPlugin.__new__(
         nowplaying.artistextras.ArtistExtrasPlugin
-    )
-    config = unittest.mock.MagicMock()
-    config.cparser.value.side_effect = lambda key, **kwargs: values.get(
-        key, kwargs.get("defaultValue")
     )
     plugin.config = config
     return plugin
@@ -68,9 +63,12 @@ async def client_fixture():
         (6, 0, 3, 3),  # provider offers fewer than allowed
     ],
 )
-async def test_trim_to_wanted(client, wanted, already_cached, offered, expected):
+async def test_trim_to_wanted(  # pylint: disable=too-many-arguments
+    bootstrap, client, wanted, already_cached, offered, expected
+):
     """Only the shortfall between wanted and cached is queued."""
-    plugin = _plugin({"artistextras/logos": wanted})
+    bootstrap.cparser.setValue("artistextras/artistlogo", wanted)
+    plugin = _plugin(bootstrap)
     await _store(client, "wnpmockartist", "artistlogo", already_cached)
     urls = [f"https://cdn.example.com/new/{i}.png" for i in range(offered)]
 
@@ -83,9 +81,10 @@ async def test_trim_to_wanted(client, wanted, already_cached, offered, expected)
 
 
 @pytest.mark.asyncio
-async def test_count_is_shared_across_providers(client):
+async def test_count_is_shared_across_providers(bootstrap, client):
     """The cap counts every provider's contributions, not each one separately."""
-    plugin = _plugin({"artistextras/logos": 6})
+    bootstrap.cparser.setValue("artistextras/artistlogo", 6)
+    plugin = _plugin(bootstrap)
     # theaudiodb got there first and filled four slots
     await _store(client, "wnpmockartist", "artistlogo", 4)
 
@@ -97,9 +96,10 @@ async def test_count_is_shared_across_providers(client):
 
 
 @pytest.mark.asyncio
-async def test_cap_is_per_artist(client):
+async def test_cap_is_per_artist(bootstrap, client):
     """One artist filling its allowance does not starve another."""
-    plugin = _plugin({"artistextras/logos": 6})
+    bootstrap.cparser.setValue("artistextras/artistlogo", 6)
+    plugin = _plugin(bootstrap)
     await _store(client, "wnpmockartist1", "artistlogo", 6)
 
     urls = [f"https://cdn.example.com/new/{i}.png" for i in range(10)]
@@ -117,9 +117,11 @@ async def test_cap_is_per_artist(client):
 
 
 @pytest.mark.asyncio
-async def test_cap_is_per_image_type(client):
+async def test_cap_is_per_image_type(bootstrap, client):
     """Filling one type does not consume another type's allowance."""
-    plugin = _plugin({"artistextras/logos": 6, "artistextras/thumbnails": 6})
+    bootstrap.cparser.setValue("artistextras/artistlogo", 6)
+    bootstrap.cparser.setValue("artistextras/artistthumbnail", 6)
+    plugin = _plugin(bootstrap)
     await _store(client, "wnpmockartist", "artistlogo", 6)
 
     urls = [f"https://cdn.example.com/new/{i}.png" for i in range(10)]
@@ -134,9 +136,9 @@ async def test_cap_is_per_image_type(client):
 
 
 @pytest.mark.asyncio
-async def test_unmapped_type_is_uncapped(client):
+async def test_uncapped_type_passes_through(bootstrap, client):
     """front_cover has no per-artist count; it must pass through untouched."""
-    plugin = _plugin({})
+    plugin = _plugin(bootstrap)
     urls = [f"https://cdn.example.com/new/{i}.png" for i in range(10)]
     trimmed = await plugin._trim_to_wanted(  # pylint: disable=protected-access
         client, "wnpmockartist", "front_cover", urls
@@ -145,18 +147,32 @@ async def test_unmapped_type_is_uncapped(client):
 
 
 @pytest.mark.asyncio
-async def test_defaults_apply_when_unset(client):
-    """An absent setting falls back to the shipped default rather than uncapped."""
-    plugin = _plugin({})
-    urls = [f"https://cdn.example.com/new/{i}.png" for i in range(100)]
-
-    for imagetype, expected in (
-        ("artistlogo", 6),
+@pytest.mark.parametrize(
+    "imagetype,expected",
+    [
         ("artistbanner", 6),
+        ("artistlogo", 6),
         ("artistthumbnail", 6),
         ("artistfanart", 50),
-    ):
-        trimmed = await plugin._trim_to_wanted(  # pylint: disable=protected-access
-            client, "wnpmockartist", imagetype, urls
-        )
-        assert len(trimmed) == expected, f"{imagetype} should default to {expected}"
+    ],
+)
+async def test_shipped_defaults_apply(bootstrap, client, imagetype, expected):
+    """An untouched config caps at the shipped default.
+
+    _trim_to_wanted passes no defaultValue, so a type whose default went
+    unregistered would read 0 and silently queue nothing at all.
+    """
+    plugin = _plugin(bootstrap)
+    urls = [f"https://cdn.example.com/new/{i}.png" for i in range(100)]
+
+    trimmed = await plugin._trim_to_wanted(  # pylint: disable=protected-access
+        client, "wnpmockartist", imagetype, urls
+    )
+    assert len(trimmed) == expected
+
+
+def test_every_capped_type_has_a_default(bootstrap):
+    """Each capped type must have a default registered, per the config.py rule."""
+    for imagetype in nowplaying.artistextras._CAPPED_IMAGE_TYPES:  # pylint: disable=protected-access
+        key = f"artistextras/{imagetype}"
+        assert bootstrap.cparser.value(key, type=int) > 0, f"{key} has no usable default"

@@ -72,10 +72,10 @@ def _artistextras_int_fields(widget: "QWidget") -> tuple[tuple[Any, str], ...]:
     built name: a renamed widget then fails here instead of silently doing nothing.
     """
     return (
-        (widget.banners_lineedit, "artistextras/banners"),
-        (widget.logos_lineedit, "artistextras/logos"),
-        (widget.thumbnails_lineedit, "artistextras/thumbnails"),
-        (widget.fanart_lineedit, "artistextras/fanart"),
+        (widget.banners_lineedit, "artistextras/artistbanner"),
+        (widget.logos_lineedit, "artistextras/artistlogo"),
+        (widget.thumbnails_lineedit, "artistextras/artistthumbnail"),
+        (widget.fanart_lineedit, "artistextras/artistfanart"),
         (widget.processes_lineedit, "artistextras/processes"),
         (widget.cachesize_lineedit, "artistextras/cachesize"),
         (widget.fanartdelay_lineedit, "artistextras/fanartdelay"),

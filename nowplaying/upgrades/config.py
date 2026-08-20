@@ -560,13 +560,24 @@ class UpgradeConfig:
         # that no longer exists.
         for key, value in (
             ("artistextras/cachesize", 20),  # gigabytes
-            ("artistextras/banners", 6),
-            ("artistextras/logos", 6),
-            ("artistextras/thumbnails", 6),
-            ("artistextras/fanart", 50),
+            ("artistextras/artistbanner", 6),
+            ("artistextras/artistlogo", 6),
+            ("artistextras/artistthumbnail", 6),
+            ("artistextras/artistfanart", 50),
         ):
             logging.info("Upgrade to 6.0.0-preview1: resetting %s to %s", key, value)
             config.setValue(key, value)
+
+        # The counts moved to artistextras/<datacache data_type>, which is what the
+        # rest of the app already calls these.  Nothing carries over: the values are
+        # being reset anyway, so the old keys are just dropped.
+        for key in (
+            "artistextras/banners",
+            "artistextras/logos",
+            "artistextras/thumbnails",
+            "artistextras/fanart",
+        ):
+            config.remove(key)
 
         try:
             cache_dir = pathlib.Path(

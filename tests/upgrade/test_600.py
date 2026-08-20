@@ -17,11 +17,19 @@ import tests.utils_prefs  # pylint: disable=import-error
 
 _RESET_KEYS = {
     "artistextras/cachesize": 20,
-    "artistextras/banners": 6,
-    "artistextras/logos": 6,
-    "artistextras/thumbnails": 6,
-    "artistextras/fanart": 50,
+    "artistextras/artistbanner": 6,
+    "artistextras/artistlogo": 6,
+    "artistextras/artistthumbnail": 6,
+    "artistextras/artistfanart": 50,
 }
+
+# What the counts were called before they moved to the datacache data_type names.
+_LEGACY_COUNT_KEYS = (
+    "artistextras/banners",
+    "artistextras/logos",
+    "artistextras/thumbnails",
+    "artistextras/fanart",
+)
 
 
 def _make_config(version: str, extra_keys: dict | None = None) -> str:
@@ -82,6 +90,27 @@ def test_upgrade_600_overwrites_stored_artwork_limits(key, expected):
         config = _read_config()
         try:
             assert config.value(key, type=int) == expected
+        finally:
+            config.clear()
+            filename = config.fileName()
+            del config
+            tests.utils_prefs.remove_prefs_domain(filename)
+
+
+def test_upgrade_600_drops_legacy_count_keys():
+    """The pre-rename keys go away rather than lingering as dead settings.
+
+    Nothing reads them after the rename, so leaving them behind would strand a
+    number that looks like a preference in every upgraded config.
+    """
+    with tempfile.TemporaryDirectory() as newpath:
+        _make_config("5.2.0", dict.fromkeys(_LEGACY_COUNT_KEYS, 999))
+
+        nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)
+        config = _read_config()
+        try:
+            for key in _LEGACY_COUNT_KEYS:
+                assert not config.contains(key), f"{key} survived the rename"
         finally:
             config.clear()
             filename = config.fileName()

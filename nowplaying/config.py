@@ -197,13 +197,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def _defaults_artistextras(settings: QSettings) -> None:
         """default values for artist extras"""
         settings.setValue("artistextras/enabled", True)
-        for field in ["banners", "logos", "thumbnails"]:
+        # Keyed by datacache data_type, so the per-artist cap can look the setting
+        # up from the type it is capping.
+        for field in ["artistbanner", "artistlogo", "artistthumbnail"]:
             settings.setValue(f"artistextras/{field}", 6)
 
         settings.setValue("musicbrainz/enabled", True)
         settings.setValue("musicbrainz/fallback", True)
 
-        settings.setValue("artistextras/fanart", 50)
+        settings.setValue("artistextras/artistfanart", 50)
         settings.setValue("artistextras/processes", 5)
         settings.setValue("artistextras/bandwidth", 0)  # KB/s; 0 = unlimited
         settings.setValue("artistextras/cachesize", 20)
