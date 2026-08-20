@@ -37,6 +37,7 @@ import nowplaying.firstinstall
 import nowplaying.guessgame.settings
 import nowplaying.preview.textwindow
 import nowplaying.preview.window
+import nowplaying.processes.datacache
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
@@ -63,23 +64,35 @@ if TYPE_CHECKING:
 LOGGING_COMBOBOX = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "CRITICAL"]
 
 
-def _artistextras_int_fields(widget: "QWidget") -> tuple[tuple[Any, str], ...]:
-    """The Artist Extras integer fields, each paired with its config key.
+def _artistextras_int_fields(widget: "QWidget") -> tuple[tuple[Any, str, int, int | None], ...]:
+    """The Artist Extras integer fields: widget, config key, minimum, maximum.
 
     One list drives both load and save so the two cannot drift -- cachesize used to
     be loaded but never saved and fanartdelay saved but never loaded, so each
     appeared to reset itself.  Direct attribute access rather than getattr on a
     built name: a renamed widget then fails here instead of silently doing nothing.
+
+    The bounds are here because these are free-form text fields now, so nothing
+    else stops an out-of-range value.  Where the consumer enforces its own range,
+    the same constants are used: processes clamped to 1-10 in the UI but 1-10 again
+    in the worker would let a user type 500, watch it save, and never learn the
+    worker ran at 10.  A minimum of 0 means the field accepts "off" -- unlimited
+    for cachesize and bandwidth, "fetch none of this type" for the counts.
     """
     return (
-        (widget.banners_lineedit, "artistextras/artistbanner"),
-        (widget.logos_lineedit, "artistextras/artistlogo"),
-        (widget.thumbnails_lineedit, "artistextras/artistthumbnail"),
-        (widget.fanart_lineedit, "artistextras/artistfanart"),
-        (widget.processes_lineedit, "artistextras/processes"),
-        (widget.cachesize_lineedit, "artistextras/cachesize"),
-        (widget.fanartdelay_lineedit, "artistextras/fanartdelay"),
-        (widget.bandwidth_lineedit, "artistextras/bandwidth"),
+        (widget.banners_lineedit, "artistextras/artistbanner", 0, None),
+        (widget.logos_lineedit, "artistextras/artistlogo", 0, None),
+        (widget.thumbnails_lineedit, "artistextras/artistthumbnail", 0, None),
+        (widget.fanart_lineedit, "artistextras/artistfanart", 0, None),
+        (
+            widget.processes_lineedit,
+            "artistextras/processes",
+            nowplaying.processes.datacache.MIN_CONCURRENT,
+            nowplaying.processes.datacache.MAX_CONCURRENT,
+        ),
+        (widget.cachesize_lineedit, "artistextras/cachesize", 0, None),
+        (widget.fanartdelay_lineedit, "artistextras/fanartdelay", 0, None),
+        (widget.bandwidth_lineedit, "artistextras/bandwidth", 0, None),
     )
 
 
@@ -524,7 +537,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value("artistextras/coverfornothumbs", type=bool)
         )
 
-        for lineedit, key in _artistextras_int_fields(self.widgets["artistextras"]):
+        for lineedit, key, _, _ in _artistextras_int_fields(self.widgets["artistextras"]):
             lineedit.setText(str(self.config.cparser.value(key, type=int)))
 
         self.widgets["artistextras"].bio_dedup_checkbox.setChecked(
@@ -796,20 +809,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets["artistextras"].missingthumbs_checkbox.isChecked(),
         )
 
-        for lineedit, key in _artistextras_int_fields(self.widgets["artistextras"]):
+        for lineedit, key, minimum, maximum in _artistextras_int_fields(
+            self.widgets["artistextras"]
+        ):
             try:
                 value = int(lineedit.text())
             except ValueError:
                 # Keep what is stored rather than writing junk, and show the user
                 # what actually applies.
                 value = self.config.cparser.value(key, type=int)
-                lineedit.setText(str(value))
                 logging.warning("%s was not an integer; kept %s", key, value)
-            if value < 0:
-                value = 0
-                lineedit.setText("0")
-                logging.warning("%s was negative; clamped to 0", key)
-            self.config.cparser.setValue(key, value)
+            clamped = max(minimum, value) if maximum is None else min(max(minimum, value), maximum)
+            if clamped != value:
+                logging.warning("%s of %s is out of range; using %s", key, value, clamped)
+            # Write back unconditionally: the box has to show what was stored, or
+            # the setting silently means something other than what is on screen.
+            lineedit.setText(str(clamped))
+            self.config.cparser.setValue(key, clamped)
 
         current = self.widgets["artistextras"].coverart_combobox.currentText()
         self.config.cparser.setValue("artistextras/nocoverfallback", current.lower())

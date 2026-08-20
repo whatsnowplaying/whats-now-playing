@@ -42,7 +42,6 @@ class MockConfig:
             "settings/requests": True,
             "settings/input": "serato",
             "settings/mixmode": "newest",
-            "artistextras/cachesize": 5,  # gigabytes
         }
         return defaults.get(key, kwargs.get("defaultValue", False))
 
@@ -266,22 +265,48 @@ def test_database_vacuum_on_startup(qtbot, mock_dependencies):
         mock_vacuum.assert_called_once()
 
 
-def test_start_background_vacuum(qtbot, mock_dependencies):
-    """Test that _start_background_vacuum creates a VacuumThread and starts it"""
+@pytest.mark.parametrize(
+    "gigabytes,expected_bytes",
+    [
+        (5, 5 * 1024 * 1024 * 1024),
+        (20, 20 * 1024 * 1024 * 1024),  # the shipped default
+        (0, None),  # 0 means unlimited, so eviction is skipped
+        (-5, None),  # a negative limit would evict the entire cache
+    ],
+)
+def test_start_background_vacuum(qtbot, mock_dependencies, bootstrap, gigabytes, expected_bytes):
+    """artistextras/cachesize reaches the thread as bytes.
+
+    Uses a real ConfigFile rather than MockConfig: without the conversion
+    eviction silently never runs, and a mock would agree with whatever the test
+    assumed the key was called.
+    """
+    bootstrap.cparser.setValue("artistextras/cachesize", gigabytes)
     with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
         mock_thread_instance = MagicMock()
         mock_thread_class.return_value = mock_thread_instance
 
         tray = nowplaying.systemtray.Tray()
+        tray.config = bootstrap
 
         # Call the real implementation via the saved reference, bypassing the
         # fixture's patch so we can verify it creates and starts a VacuumThread.
         mock_dependencies["real_start_background_vacuum"](tray)
 
-        # artistextras/cachesize is in gigabytes and reaches the thread as bytes;
-        # without that conversion eviction silently never runs.
-        mock_thread_class.assert_called_once_with(size_limit_bytes=5 * 1024 * 1024 * 1024)
+        mock_thread_class.assert_called_once_with(size_limit_bytes=expected_bytes)
         mock_thread_instance.start.assert_called_once()
+
+
+def test_start_background_vacuum_uses_shipped_default(qtbot, mock_dependencies, bootstrap):
+    """With nothing stored, the default registered by config.defaults() applies."""
+    bootstrap.cparser.remove("artistextras/cachesize")
+    with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
+        tray = nowplaying.systemtray.Tray()
+        tray.config = bootstrap
+
+        mock_dependencies["real_start_background_vacuum"](tray)
+
+        mock_thread_class.assert_called_once_with(size_limit_bytes=20 * 1024 * 1024 * 1024)
 
 
 def test_start_background_vacuum_skips_while_running(qtbot, mock_dependencies):

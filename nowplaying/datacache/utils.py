@@ -13,8 +13,8 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 import nowplaying.utils.sqlite
 
 
-# Canonical set of image data_types — shared between evict_lfu(), client._IMAGE_DATA_TYPES,
-# and queue priority logic so all three stay in sync as types evolve.
+# Canonical set of image data_types — shared with eviction, colour extraction and
+# queue priority so they stay in sync as types evolve.
 IMAGE_DATA_TYPES: frozenset[str] = frozenset(
     {
         "artistthumbnail",
@@ -24,6 +24,11 @@ IMAGE_DATA_TYPES: frozenset[str] = frozenset(
         "front_cover",
     }
 )
+
+# Image types with a per-artist cap, read from artistextras/<data_type>.
+# front_cover is excluded: it is per-album rather than per-artist, and one album
+# has one cover, so there is nothing to cap.
+CAPPED_IMAGE_TYPES: frozenset[str] = IMAGE_DATA_TYPES - {"front_cover"}
 
 
 # Minimum TTL, in seconds, for successful entries.  Unset in normal use.

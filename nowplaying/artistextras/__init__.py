@@ -30,15 +30,11 @@ _IMAGE_PRIORITY: dict[str, int] = {
     "artistfanart": 4,
 }
 
-# Types with a per-artist cap, each read from artistextras/<data_type>.
-# front_cover is the exception: it is per-album rather than per-artist, and one
-# album has one cover, so there is nothing to cap.
-#
-# Every retrieval path uses random=True, so for the single-image types more art
-# is worse, not better: the provider returns its list best-first, and each extra
-# entry dilutes the good one in the rotation.  Fanart is the exception -- variety
-# is the whole point there -- hence its much larger default.
-_CAPPED_IMAGE_TYPES: frozenset[str] = nowplaying.datacache.utils.IMAGE_DATA_TYPES - {"front_cover"}
+# Why the capped types are worth capping: every retrieval path uses random=True,
+# so for the single-image types more art is worse, not better -- the provider
+# returns its list best-first, and each extra entry dilutes the good one in the
+# rotation.  Fanart is the exception, variety being the whole point there, hence
+# its much larger default.
 
 
 class ArtistExtrasPlugin(WNPBasePlugin):
@@ -128,7 +124,7 @@ class ArtistExtrasPlugin(WNPBasePlugin):
         count settles rather than binding exactly, and it avoids a queue lookup on
         the live path.
         """
-        if imagetype not in _CAPPED_IMAGE_TYPES:
+        if imagetype not in nowplaying.datacache.utils.CAPPED_IMAGE_TYPES:
             return urls
         # config.defaults() registers artistextras/<data_type> for each of these on
         # every ConfigFile build, so there is no default to repeat here.

@@ -173,6 +173,6 @@ async def test_shipped_defaults_apply(bootstrap, client, imagetype, expected):
 
 def test_every_capped_type_has_a_default(bootstrap):
     """Each capped type must have a default registered, per the config.py rule."""
-    for imagetype in nowplaying.artistextras._CAPPED_IMAGE_TYPES:  # pylint: disable=protected-access
+    for imagetype in nowplaying.datacache.utils.CAPPED_IMAGE_TYPES:
         key = f"artistextras/{imagetype}"
         assert bootstrap.cparser.value(key, type=int) > 0, f"{key} has no usable default"

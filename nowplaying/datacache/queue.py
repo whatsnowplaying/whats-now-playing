@@ -11,20 +11,40 @@ import time
 from dataclasses import dataclass, field
 
 
-class RateLimiter:
-    """
-    Per-provider rate limiting for API requests.
+class _TokenBucket:  # pylint: disable=too-few-public-methods
+    """Monotonic-clock token bucket.
 
-    Implements token bucket algorithm with configurable rates.
+    The request limiter and the byte limiter differ only in unit, so the refill
+    maths lives here instead of being maintained twice.  Subclasses decide what a
+    token means and how one is spent.
     """
 
-    def __init__(self, provider: str, requests_per_second: float = 1.0):
-        self.provider = provider
-        self.rate = requests_per_second
-        self.capacity = max(1.0, requests_per_second * 2)  # Burst capacity
-        self.tokens = self.capacity
+    def __init__(self, rate: float, capacity: float):
+        self.rate = rate
+        self.capacity = capacity
+        self.tokens = capacity
         self.last_refill = time.monotonic()
         self._lock = asyncio.Lock()
+
+    def _refill(self) -> None:
+        """Credit the tokens accrued since the last refill, capped at capacity."""
+        now = time.monotonic()
+        self.tokens = min(self.capacity, self.tokens + (now - self.last_refill) * self.rate)
+        self.last_refill = now
+
+    def available_tokens(self) -> float:
+        """Current token count, brought up to date first."""
+        self._refill()
+        return self.tokens
+
+
+class RateLimiter(_TokenBucket):
+    """Per-provider rate limiting for API requests, one token per request."""
+
+    def __init__(self, provider: str, requests_per_second: float = 1.0):
+        # Two seconds of burst, so a provider left idle can catch up briefly.
+        super().__init__(requests_per_second, max(1.0, requests_per_second * 2))
+        self.provider = provider
 
     async def acquire(self, timeout: float = 30.0) -> bool:
         """
@@ -40,7 +60,7 @@ class RateLimiter:
 
         while time.monotonic() - start_time < timeout:
             async with self._lock:
-                self._refill_tokens()
+                self._refill()
 
                 if self.tokens >= 1.0:
                     self.tokens -= 1.0
@@ -57,21 +77,6 @@ class RateLimiter:
         logging.warning("Rate limit timeout for provider %s", self.provider)
         return False
 
-    def _refill_tokens(self) -> None:
-        """Refill token bucket based on elapsed time"""
-        now = time.monotonic()
-        elapsed = now - self.last_refill
-        self.last_refill = now
-
-        # Add tokens based on rate and elapsed time
-        tokens_to_add = elapsed * self.rate
-        self.tokens = min(self.capacity, self.tokens + tokens_to_add)
-
-    def available_tokens(self) -> float:
-        """Get current number of available tokens"""
-        self._refill_tokens()
-        return self.tokens
-
     def time_until_token(self) -> float:
         """Get estimated time until next token is available"""
         if self.tokens >= 1.0:
@@ -79,11 +84,10 @@ class RateLimiter:
         return (1.0 - self.tokens) / self.rate
 
 
-class BandwidthLimiter:
-    """Shared byte-rate limit for downloads.
+class BandwidthLimiter(_TokenBucket):
+    """Shared byte-rate limit for downloads, one token per byte.
 
-    Same token bucket as RateLimiter, with bytes as the unit instead of requests,
-    and one instance for the whole client rather than one per provider: the budget
+    One instance for the whole client rather than one per provider: the budget
     models the operator's connection, not a service's politeness rules.
 
     Metered per streamed chunk rather than per file, so a large download is paced
@@ -95,23 +99,15 @@ class BandwidthLimiter:
     """
 
     def __init__(self, kb_per_second: float = 0.0):
-        self.rate = max(0.0, kb_per_second) * 1024
+        rate = max(0.0, kb_per_second) * 1024
         # One second of burst, so a single 64 KB chunk never deadlocks on a
         # limit smaller than itself.
-        self.capacity = max(self.rate, 65536.0)
-        self.tokens = self.capacity
-        self.last_refill = time.monotonic()
-        self._lock = asyncio.Lock()
+        super().__init__(rate, max(rate, 65536.0))
 
     @property
     def enabled(self) -> bool:
         """True when a limit is in force."""
         return self.rate > 0
-
-    def _refill(self) -> None:
-        now = time.monotonic()
-        self.tokens = min(self.capacity, self.tokens + (now - self.last_refill) * self.rate)
-        self.last_refill = now
 
     async def consume(self, nbytes: int, wait: bool = True) -> None:
         """Account for nbytes, sleeping until the budget allows it.

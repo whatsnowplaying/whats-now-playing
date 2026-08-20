@@ -27,21 +27,25 @@ import nowplaying.processes.template_sync
 import nowplaying.utils
 
 
-# Most simultaneous outbound connections to allow, whatever the setting says.
-# The Artist Extras field is a free-form integer now, so a typo could otherwise
-# ask for hundreds of concurrent downloads.
-_MAX_CONCURRENT_CEILING = 10
+# Bounds on simultaneous outbound connections, whatever the setting says.  The
+# Artist Extras field is a free-form integer now, so a typo could otherwise ask
+# for hundreds of concurrent downloads -- or for zero, which stalls the queue.
+# Public because the settings UI clamps to the same range: if it did not, a user
+# could type 500, watch it save, and never learn the worker ran at 10.
+MIN_CONCURRENT = 1
+MAX_CONCURRENT = 10
 
 
 def _concurrency_from_config(config: nowplaying.config.ConfigFile) -> int:
     """How many downloads to run at once, from artistextras/processes."""
     configured = config.cparser.value("artistextras/processes", type=int, defaultValue=5)
-    clamped = min(max(1, configured), _MAX_CONCURRENT_CEILING)
+    clamped = min(max(MIN_CONCURRENT, configured), MAX_CONCURRENT)
     if clamped != configured:
         logging.warning(
-            "artistextras/processes of %s is outside 1-%s; using %s",
+            "artistextras/processes of %s is outside %s-%s; using %s",
             configured,
-            _MAX_CONCURRENT_CEILING,
+            MIN_CONCURRENT,
+            MAX_CONCURRENT,
             clamped,
         )
     return clamped
@@ -64,7 +68,12 @@ async def _run(
     await client.initialize()
     if max_concurrent is None:
         max_concurrent = _concurrency_from_config(config)
-    kbps = max(0, config.cparser.value("artistextras/bandwidth", type=int, defaultValue=0))
+    configured_kbps = config.cparser.value("artistextras/bandwidth", type=int, defaultValue=0)
+    kbps = max(0, configured_kbps)
+    if kbps != configured_kbps:
+        logging.warning(
+            "artistextras/bandwidth of %s is negative; treating as unlimited", configured_kbps
+        )
     client.bandwidth = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=kbps)
     if kbps:
         logging.info("DataCache worker limiting downloads to %s KB/s", kbps)
