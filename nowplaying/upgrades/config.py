@@ -307,8 +307,8 @@ class UpgradeConfig:
         if oldversion < Version("5.2.1"):
             self._upgrade_to_5_2_1()
 
-        if oldversion < Version("5.3.0"):
-            self._upgrade_to_5_3_0()
+        if oldversion < Version("6.0.0-preview1"):
+            self._upgrade_to_6_0_0_preview1(config)
 
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
@@ -542,16 +542,32 @@ class UpgradeConfig:
 
         The vacuum pass that follows on startup reclaims the freed disk pages.
         """
-        # apicache was replaced by datacache in 5.3.0; nothing to purge.
-        # The apicache database file is deleted by _upgrade_to_5_3_0.
+        # apicache was replaced by datacache in 6.0.0; nothing to purge.
+        # The apicache database file is deleted by _upgrade_to_6_0_0_preview1.
 
     @staticmethod
-    def _upgrade_to_5_3_0() -> None:
-        """Upgrade to 5.3.0 — delete the old apicache and imagecache directories.
+    def _upgrade_to_6_0_0_preview1(config: QSettings) -> None:
+        """Upgrade to 6.0.0-preview1 — reset artwork limits, drop old cache dirs.
 
-        Both apicache and imagecache were replaced by datacache in 5.3.0.
+        Both apicache and imagecache were replaced by datacache in 6.0.0.
         Remove the old directories to reclaim disk space.
         """
+        # Overwrite rather than fill in a missing value.  None of these were read
+        # by anything between the imagecache migration and now, so a stored number
+        # is not a preference anyone ever experienced -- it is whatever the default
+        # happened to be when they installed.  Carrying it forward would mean
+        # honouring a choice that never took effect, at values chosen for a cache
+        # that no longer exists.
+        for key, value in (
+            ("artistextras/cachesize", 20),  # gigabytes
+            ("artistextras/banners", 6),
+            ("artistextras/logos", 6),
+            ("artistextras/thumbnails", 6),
+            ("artistextras/fanart", 50),
+        ):
+            logging.info("Upgrade to 6.0.0-preview1: resetting %s to %s", key, value)
+            config.setValue(key, value)
+
         try:
             cache_dir = pathlib.Path(
                 QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
@@ -559,15 +575,20 @@ class UpgradeConfig:
             api_cache_db = cache_dir / "api_cache" / "api_responses.db"
             if api_cache_db.exists():
                 api_cache_db.unlink()
-                logging.info("Upgrade to 5.3.0: removed old apicache database %s", api_cache_db)
+                logging.info(
+                    "Upgrade to 6.0.0-preview1: removed old apicache database %s", api_cache_db
+                )
             imagecache_dir = cache_dir / "imagecache"
             if imagecache_dir.exists():
                 shutil.rmtree(imagecache_dir)
                 logging.info(
-                    "Upgrade to 5.3.0: removed old imagecache directory %s", imagecache_dir
+                    "Upgrade to 6.0.0-preview1: removed old imagecache directory %s",
+                    imagecache_dir,
                 )
         except OSError as error:
-            logging.warning("Upgrade to 5.3.0: could not remove old cache files: %s", error)
+            logging.warning(
+                "Upgrade to 6.0.0-preview1: could not remove old cache files: %s", error
+            )
 
     @staticmethod
     def _upgrade_to_5_2_0(config: QSettings) -> None:

@@ -13,6 +13,19 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 import nowplaying.utils.sqlite
 
 
+# Canonical set of image data_types — shared between evict_lfu(), client._IMAGE_DATA_TYPES,
+# and queue priority logic so all three stay in sync as types evolve.
+IMAGE_DATA_TYPES: frozenset[str] = frozenset(
+    {
+        "artistthumbnail",
+        "artistlogo",
+        "artistbanner",
+        "artistfanart",
+        "front_cover",
+    }
+)
+
+
 # Minimum TTL, in seconds, for successful entries.  Unset in normal use.
 TTL_FLOOR_ENV = "WNP_DATACACHE_TTL_FLOOR"
 
@@ -128,14 +141,72 @@ def ensure_datacache_schema(database_path: Path) -> None:
     nowplaying.utils.sqlite.retry_sqlite_operation(_do_schema)
 
 
-def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
-    """Run datacache maintenance at system startup (sync version)."""
+def _evict_lfu(database_path: Path, size_limit_bytes: int) -> int:
+    """Evict least-frequently-used image entries until under size_limit_bytes.
+
+    Only image data_types are considered; API responses are small and cheap to
+    refetch, so evicting them buys nothing.  Blobs are unlinked before their rows
+    for the same reason as expiry cleanup: a failed unlink leaves the row for the
+    next cycle rather than orphaning the file.
+    """
+    image_types = tuple(sorted(IMAGE_DATA_TYPES))
+    placeholders = ",".join("?" * len(image_types))
+
+    with nowplaying.utils.sqlite.sqlite_connection(str(database_path)) as conn:
+        row = conn.execute(
+            f"SELECT SUM(data_size) FROM cached_data WHERE data_type IN ({placeholders})",
+            image_types,
+        ).fetchone()
+        total = row[0] if row and row[0] else 0
+        if total <= size_limit_bytes:
+            return 0
+
+        candidates = conn.execute(
+            f"SELECT url, file_path, data_size FROM cached_data"
+            f" WHERE data_type IN ({placeholders})"
+            " ORDER BY access_count ASC, last_accessed ASC",
+            image_types,
+        ).fetchall()
+
+        urls_to_delete: list[str] = []
+        remaining = total
+        for url, file_path, entry_size in candidates:
+            if remaining <= size_limit_bytes:
+                break
+            if file_path:
+                try:
+                    (database_path.parent / file_path).unlink()
+                except FileNotFoundError:
+                    pass  # blob already gone; still drop the orphaned row
+                except OSError:
+                    logging.warning("LFU evict: could not unlink blob %s; row kept", file_path)
+                    continue
+            urls_to_delete.append(url)
+            remaining -= entry_size or 0
+
+        if not urls_to_delete:
+            return 0
+        batch = ",".join("?" * len(urls_to_delete))
+        conn.execute(f"DELETE FROM cached_data WHERE url IN ({batch})", urls_to_delete)
+        return len(urls_to_delete)
+
+
+def run_datacache_maintenance(
+    cache_dir: Path | None = None, size_limit_bytes: int | None = None
+) -> dict[str, int]:
+    """Run datacache maintenance at system startup (sync version).
+
+    size_limit_bytes caps the total size of cached images; None skips eviction.
+    Deliberately startup-only work: eviction plus VACUUM on a multi-gigabyte
+    database is exactly the disk I/O that must not happen mid-set.
+    """
     database_path = get_datacache_path(cache_dir)
 
     stats = {
         "expired_cleaned": 0,
         "requests_cleaned": 0,
         "requests_recovered": 0,
+        "lfu_evicted": 0,
         "vacuum_performed": 0,
         "errors": 0,
     }
@@ -207,6 +278,11 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
         expired_count, requests_count, recovered_count = (
             nowplaying.utils.sqlite.retry_sqlite_operation(_do_maintenance)
         )
+        if size_limit_bytes is not None:
+            stats["lfu_evicted"] = nowplaying.utils.sqlite.retry_sqlite_operation(
+                lambda: _evict_lfu(database_path, size_limit_bytes)
+            )
+        # after eviction so VACUUM reclaims the pages it freed
         nowplaying.utils.sqlite.retry_sqlite_operation(_do_vacuum)
         stats["expired_cleaned"] = expired_count
         stats["requests_cleaned"] = requests_count
@@ -217,6 +293,8 @@ def run_datacache_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
             logging.info("Cleaned up %d expired datacache entries", stats["expired_cleaned"])
         if stats["requests_cleaned"] > 0:
             logging.info("Cleaned up %d old request records", stats["requests_cleaned"])
+        if stats["lfu_evicted"] > 0:
+            logging.info("LFU evicted %d cached images to stay under limit", stats["lfu_evicted"])
         if stats["requests_recovered"] > 0:
             logging.warning(
                 "Recovered %d requests stuck in 'processing' from previous run",

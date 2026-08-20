@@ -20,10 +20,31 @@ from pathlib import Path
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache.client
+import nowplaying.datacache.queue
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.processes.template_sync
 import nowplaying.utils
+
+
+# Most simultaneous outbound connections to allow, whatever the setting says.
+# The Artist Extras field is a free-form integer now, so a typo could otherwise
+# ask for hundreds of concurrent downloads.
+_MAX_CONCURRENT_CEILING = 10
+
+
+def _concurrency_from_config(config: nowplaying.config.ConfigFile) -> int:
+    """How many downloads to run at once, from artistextras/processes."""
+    configured = config.cparser.value("artistextras/processes", type=int, defaultValue=5)
+    clamped = min(max(1, configured), _MAX_CONCURRENT_CEILING)
+    if clamped != configured:
+        logging.warning(
+            "artistextras/processes of %s is outside 1-%s; using %s",
+            configured,
+            _MAX_CONCURRENT_CEILING,
+            clamped,
+        )
+    return clamped
 
 
 def _log_task_exception(task: "asyncio.Task") -> None:
@@ -36,12 +57,18 @@ async def _run(
     stopevent: asyncio.Event,
     config: nowplaying.config.ConfigFile,
     cache_dir: Path | None = None,
-    max_concurrent: int = 3,
+    max_concurrent: int | None = None,
 ) -> None:
     """Main async loop: drain the queue until stopevent is set."""
     client = nowplaying.datacache.client.DataCacheClient(cache_dir)
     await client.initialize()
-    logging.info("DataCache worker started")
+    if max_concurrent is None:
+        max_concurrent = _concurrency_from_config(config)
+    kbps = max(0, config.cparser.value("artistextras/bandwidth", type=int, defaultValue=0))
+    client.bandwidth = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=kbps)
+    if kbps:
+        logging.info("DataCache worker limiting downloads to %s KB/s", kbps)
+    logging.info("DataCache worker started, %s concurrent downloads", max_concurrent)
     # hold references so the tasks cannot be garbage-collected mid-run;
     # the done callback also surfaces any swallowed exceptions
     background_tasks: set[asyncio.Task] = set()

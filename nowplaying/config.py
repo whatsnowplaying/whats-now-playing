@@ -198,14 +198,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         """default values for artist extras"""
         settings.setValue("artistextras/enabled", True)
         for field in ["banners", "logos", "thumbnails"]:
-            settings.setValue(f"artistextras/{field}", 2)
+            settings.setValue(f"artistextras/{field}", 6)
 
         settings.setValue("musicbrainz/enabled", True)
         settings.setValue("musicbrainz/fallback", True)
 
-        settings.setValue("artistextras/fanart", 10)
+        settings.setValue("artistextras/fanart", 50)
         settings.setValue("artistextras/processes", 5)
-        settings.setValue("artistextras/cachesize", 5)
+        settings.setValue("artistextras/bandwidth", 0)  # KB/s; 0 = unlimited
+        settings.setValue("artistextras/cachesize", 20)
         settings.setValue("artistextras/fanartdelay", 8)
         settings.setValue("artistextras/coverfornofanart", True)
         settings.setValue("artistextras/coverfornologos", False)

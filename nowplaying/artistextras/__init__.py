@@ -29,6 +29,18 @@ _IMAGE_PRIORITY: dict[str, int] = {
     "artistfanart": 4,
 }
 
+# How many images of each type to keep per artist, and the setting that sets it.
+# Every retrieval path uses random=True, so for the single-image types more art
+# is worse, not better: the provider returns its list best-first, and each extra
+# entry dilutes the good one in the rotation.  Fanart is the exception -- variety
+# is the whole point there -- hence the much larger count.
+_IMAGE_COUNT_SETTING: dict[str, tuple[str, int]] = {
+    "artistbanner": ("artistextras/banners", 6),
+    "artistlogo": ("artistextras/logos", 6),
+    "artistthumbnail": ("artistextras/thumbnails", 6),
+    "artistfanart": ("artistextras/fanart", 50),
+}
+
 
 class ArtistExtrasPlugin(WNPBasePlugin):
     """base class of plugins"""
@@ -76,6 +88,9 @@ class ArtistExtrasPlugin(WNPBasePlugin):
         if not normalidentifier or not urls:
             return
         client = self._get_datacache_client()
+        urls = await self._trim_to_wanted(client, normalidentifier, imagetype, urls)
+        if not urls:
+            return
         # First URL gets the type's normal priority (best image by popularity).
         # Remaining URLs are deferred to fanart priority so a mix of types
         # downloads before the bulk of any single type.
@@ -94,6 +109,35 @@ class ArtistExtrasPlugin(WNPBasePlugin):
                     queue_priority=first_priority if i == 0 else bulk_priority,
                 )
             )
+
+    async def _trim_to_wanted(
+        self,
+        client: "nowplaying.datacache.client.DataCacheClient",
+        identifier: str,
+        imagetype: str,
+        urls: list[str],
+    ) -> list[str]:
+        """Drop URLs beyond the configured count already cached for this artist.
+
+        The count is per artist and per type across every provider, not per
+        provider: several services supply the same type, so a per-call limit
+        multiplies by however many are enabled.
+
+        Providers run concurrently, so on an artist's first play each one sees an
+        empty cache and contributes its full allowance.  That overshoot is
+        deliberate -- later plays see the filled cache and add nothing, so the
+        count settles rather than binding exactly, and it avoids a queue lookup on
+        the live path.
+        """
+        setting = _IMAGE_COUNT_SETTING.get(imagetype)
+        if not setting:
+            return urls
+        key, fallback = setting
+        wanted = self.config.cparser.value(key, type=int, defaultValue=fallback)
+        if wanted <= 0:
+            return []
+        existing = len(await client.storage.get_cache_keys_for_identifier(identifier, imagetype))
+        return urls[: max(0, wanted - existing)]
 
     async def queue_front_cover(
         self,

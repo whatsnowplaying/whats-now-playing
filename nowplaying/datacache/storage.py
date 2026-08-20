@@ -22,7 +22,13 @@ import nowplaying.exceptions
 import nowplaying.utils.sqlite
 from .colors import COLOR_EXTRACT_TYPES, extract_palettes
 
-from .utils import _effective_ttl, ensure_datacache_schema, get_datacache_path, redact_url
+from .utils import (  # noqa: F401  IMAGE_DATA_TYPES re-exported: tests import it from here
+    IMAGE_DATA_TYPES,
+    _effective_ttl,
+    ensure_datacache_schema,
+    get_datacache_path,
+    redact_url,
+)
 
 
 @dataclasses.dataclass
@@ -50,18 +56,6 @@ _schema_lock = asyncio.Lock()
 # Content ≤ this threshold is stored inline in the DB; larger content goes to a blob file.
 # Production data shows API responses are consistently < 30 KB, images consistently > 16 KB.
 _INLINE_THRESHOLD = 16 * 1024
-
-# Canonical set of image data_types — shared between evict_lfu(), client._IMAGE_DATA_TYPES,
-# and queue priority logic so all three stay in sync as types evolve.
-IMAGE_DATA_TYPES: frozenset[str] = frozenset(
-    {
-        "artistthumbnail",
-        "artistlogo",
-        "artistbanner",
-        "artistfanart",
-        "front_cover",
-    }
-)
 
 
 def is_image_mime(mime_type: str | None) -> bool:
@@ -857,128 +851,6 @@ class DataStorage:
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to cleanup expired cache entries: %s", error)
             return 0
-
-    async def evict_lfu(self, size_limit_bytes: int = 2 * 1024 * 1024 * 1024) -> int:  # pylint: disable=too-many-locals
-        """Evict image entries by Least Frequently Used until total size is under the limit.
-
-        Only image data_types are considered for eviction; API response entries (tiny,
-        infrequently re-fetched) are left alone. Blob files are deleted before their
-        DB rows to avoid orphaned files on partial failure.
-
-        Args:
-            size_limit_bytes: Maximum total size for image entries (default 2 GB).
-
-        Returns:
-            Number of entries evicted.
-        """
-        await self.initialize()
-
-        image_types = tuple(sorted(IMAGE_DATA_TYPES))
-        placeholders = ",".join("?" * len(image_types))
-
-        total_size: int = 0
-        evict_candidates: list[tuple[str, str | None, int]] = []  # (url, file_path, data_size)
-        evicted = 0
-
-        async def _do_check() -> None:
-            nonlocal total_size, evict_candidates
-            async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                cursor = await connection.execute(
-                    f"SELECT SUM(data_size) FROM cached_data WHERE data_type IN ({placeholders})",
-                    image_types,
-                )
-                row = await cursor.fetchone()
-                total_size = row[0] if row and row[0] else 0
-                if total_size <= size_limit_bytes:
-                    return
-                cursor = await connection.execute(
-                    f"""
-                    SELECT url, file_path, data_size FROM cached_data
-                    WHERE data_type IN ({placeholders})
-                    ORDER BY access_count ASC, last_accessed ASC
-                    """,
-                    image_types,
-                )
-                evict_candidates = [(r[0], r[1], r[2] or 0) for r in await cursor.fetchall()]
-
-        await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_check)
-
-        if total_size <= size_limit_bytes:
-            return 0
-
-        urls_to_delete: list[str] = []
-        remaining = total_size
-        for url, file_path, entry_size in evict_candidates:
-            if remaining <= size_limit_bytes:
-                break
-            if file_path:
-                try:
-                    (self.database_path.parent / file_path).unlink()
-                except FileNotFoundError:
-                    pass  # blob already gone; still remove the orphaned DB row
-                except OSError as err:
-                    logging.warning("LFU evict: could not delete blob %s: %s", file_path, err)
-                    continue  # keep both blob and row; retry next maintenance cycle
-            urls_to_delete.append(url)
-            remaining -= entry_size
-
-        if not urls_to_delete:
-            return 0
-
-        batch_placeholders = ",".join("?" * len(urls_to_delete))
-
-        async def _do_evict() -> None:
-            nonlocal evicted
-            async with aiosqlite.connect(str(self.database_path), timeout=30.0) as connection:
-                cursor = await connection.execute(
-                    f"DELETE FROM cached_data WHERE url IN ({batch_placeholders})",
-                    urls_to_delete,
-                )
-                await connection.commit()
-                evicted = cursor.rowcount
-
-        await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_evict)
-        if evicted:
-            logging.info(
-                "LFU eviction: removed %d image entries to stay under size limit", evicted
-            )
-        return evicted
-
-    async def maintenance(self) -> dict[str, int]:
-        """
-        Perform database maintenance operations.
-
-        Should be called at system startup to clean expired entries
-        and reclaim database space.
-
-        Returns:
-            Dictionary with maintenance statistics
-        """
-        await self.initialize()
-
-        stats = {"expired_cleaned": 0, "lfu_evicted": 0, "vacuum_performed": 0, "errors": 0}
-
-        try:
-            # Clean up expired entries
-            expired_count = await self.cleanup_expired()
-            stats["expired_cleaned"] = expired_count
-
-            if expired_count > 0:
-                logging.info("Cleaned up %d expired cache entries", expired_count)
-
-            # LFU eviction to stay under size limit
-            evicted = await self.evict_lfu()
-            stats["lfu_evicted"] = evicted
-
-            # Vacuum database to reclaim space
-            await self.vacuum()
-            stats["vacuum_performed"] = 1
-
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Database maintenance failed: %s", error)
-            stats["errors"] += 1
-
-        return stats
 
     async def vacuum(self) -> None:
         """Vacuum the database to reclaim space"""

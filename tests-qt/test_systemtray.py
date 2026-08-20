@@ -42,6 +42,7 @@ class MockConfig:
             "settings/requests": True,
             "settings/input": "serato",
             "settings/mixmode": "newest",
+            "artistextras/cachesize": 5,  # gigabytes
         }
         return defaults.get(key, kwargs.get("defaultValue", False))
 
@@ -277,8 +278,29 @@ def test_start_background_vacuum(qtbot, mock_dependencies):
         # fixture's patch so we can verify it creates and starts a VacuumThread.
         mock_dependencies["real_start_background_vacuum"](tray)
 
-        mock_thread_class.assert_called_once_with()
+        # artistextras/cachesize is in gigabytes and reaches the thread as bytes;
+        # without that conversion eviction silently never runs.
+        mock_thread_class.assert_called_once_with(size_limit_bytes=5 * 1024 * 1024 * 1024)
         mock_thread_instance.start.assert_called_once()
+
+
+def test_start_background_vacuum_skips_while_running(qtbot, mock_dependencies):
+    """A second run requested mid-flight is skipped, not waited on.
+
+    The settings-window cleanup button calls this on the GUI thread, so waiting
+    would freeze the window that triggered it.
+    """
+    with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
+        running = MagicMock()
+        running.isRunning.return_value = True
+        mock_thread_class.return_value = running
+
+        tray = nowplaying.systemtray.Tray()
+        mock_dependencies["real_start_background_vacuum"](tray)
+        mock_dependencies["real_start_background_vacuum"](tray)
+
+        mock_thread_class.assert_called_once()
+        running.wait.assert_not_called()
 
 
 def test_settings_window_integration(qtbot, mock_dependencies):

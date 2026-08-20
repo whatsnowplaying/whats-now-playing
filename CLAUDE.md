@@ -369,7 +369,7 @@ developing:
 **Caching (`nowplaying/datacache/`):**
 
 `apicache.py` and `imagecache.py` were both replaced by datacache in 6.0.0 and
-have since been deleted; `_upgrade_to_5_3_0` in `upgrades/config.py` still
+have since been deleted; `_upgrade_to_6_0_0_preview1` in `upgrades/config.py` still
 deletes the old databases, so that is not dead code. `cached_fetch()` keys its
 entries under a synthetic `derived://` URL because the schema makes `url` the
 primary key and those values are assembled from several upstream calls rather
