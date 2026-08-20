@@ -274,12 +274,17 @@ def test_database_vacuum_on_startup(qtbot, mock_dependencies):
         (-5, None),  # a negative limit would evict the entire cache
     ],
 )
-def test_start_background_vacuum(qtbot, mock_dependencies, bootstrap, gigabytes, expected_bytes):
+def test_start_background_vacuum(qtbot, bootstrap, mock_dependencies, gigabytes, expected_bytes):
     """artistextras/cachesize reaches the thread as bytes.
 
     Uses a real ConfigFile rather than MockConfig: without the conversion
     eviction silently never runs, and a mock would agree with whatever the test
     assumed the key was called.
+
+    bootstrap must be requested before mock_dependencies.  Same-scope fixtures are
+    built in signature order, and mock_dependencies patches nowplaying.config.ConfigFile
+    with MockConfig -- so the other way round, bootstrap's own ConfigFile(bundledir=...)
+    call hits the mock and dies on the keyword.
     """
     bootstrap.cparser.setValue("artistextras/cachesize", gigabytes)
     with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
@@ -297,8 +302,11 @@ def test_start_background_vacuum(qtbot, mock_dependencies, bootstrap, gigabytes,
         mock_thread_instance.start.assert_called_once()
 
 
-def test_start_background_vacuum_uses_shipped_default(qtbot, mock_dependencies, bootstrap):
-    """With nothing stored, the default registered by config.defaults() applies."""
+def test_start_background_vacuum_uses_shipped_default(qtbot, bootstrap, mock_dependencies):
+    """With nothing stored, the default registered by config.defaults() applies.
+
+    bootstrap before mock_dependencies, for the reason in test_start_background_vacuum.
+    """
     bootstrap.cparser.remove("artistextras/cachesize")
     with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
         tray = nowplaying.systemtray.Tray()
