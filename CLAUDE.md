@@ -12,6 +12,13 @@ code in this repository.
 - tests should be methods not classes
 - tests should be parameterized when possible
 - tests should be aware of the fixtures in conftest.py to bootstrap the config
+- **Tests that read or write config MUST use the `bootstrap` fixture.** Never hand-roll a
+  `MagicMock` config with a `cparser.value.side_effect`. A mock only replays the assumptions
+  of whoever wrote it, so it passes whether or not `defaults()` actually registers the key,
+  and it silently keeps passing when a call site stops supplying `defaultValue=`. The
+  `bootstrap` fixture yields a real `ConfigFile`, which is the only way a test can prove a
+  setting resolves. Use `bootstrap.cparser.setValue()` to stage a value and
+  `bootstrap.cparser.remove()` to test the unset case.
 - `pytest` - Run all tests (both tests-qt and tests directories)
 - `pytest tests/` - Run only non-Qt tests
 - `pytest tests-qt/` - Run only Qt-based tests
@@ -369,7 +376,7 @@ developing:
 **Caching (`nowplaying/datacache/`):**
 
 `apicache.py` and `imagecache.py` were both replaced by datacache in 6.0.0 and
-have since been deleted; `_upgrade_to_5_3_0` in `upgrades/config.py` still
+have since been deleted; `_upgrade_to_6_0_0_preview1` in `upgrades/config.py` still
 deletes the old databases, so that is not dead code. `cached_fetch()` keys its
 entries under a synthetic `derived://` URL because the schema makes `url` the
 primary key and those values are assembled from several upstream calls rather

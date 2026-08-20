@@ -3,7 +3,6 @@
 
 # pylint: disable=too-many-lines
 
-import contextlib
 import functools
 import glob
 import json
@@ -12,6 +11,7 @@ import os
 import pathlib
 import re
 import shutil
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 # pylint: disable=no-name-in-module
@@ -37,6 +37,7 @@ import nowplaying.firstinstall
 import nowplaying.guessgame.settings
 import nowplaying.preview.textwindow
 import nowplaying.preview.window
+import nowplaying.processes.datacache
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
@@ -61,6 +62,40 @@ if TYPE_CHECKING:
     import nowplaying.tray
 
 LOGGING_COMBOBOX = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "CRITICAL"]
+
+
+def _artistextras_int_fields(widget: "QWidget") -> tuple[tuple[Any, str, int, int | None], ...]:
+    """The Artist Extras integer fields: widget, config key, minimum, maximum.
+
+    One list drives both load and save so the two cannot drift -- cachesize used to
+    be loaded but never saved and fanartdelay saved but never loaded, so each
+    appeared to reset itself.  Direct attribute access rather than getattr on a
+    built name: a renamed widget then fails here instead of silently doing nothing.
+
+    The bounds are here because these are free-form text fields now, so nothing
+    else stops an out-of-range value.  Where the consumer enforces its own range,
+    the same constants are used: processes clamped to 1-10 in the UI but 1-10 again
+    in the worker would let a user type 500, watch it save, and never learn the
+    worker ran at 10.  A minimum of 0 means the field accepts "off" -- unlimited
+    for cachesize and bandwidth, "fetch none of this type" for the counts.
+    """
+    return (
+        (widget.banners_lineedit, "artistextras/artistbanner", 0, None),
+        (widget.logos_lineedit, "artistextras/artistlogo", 0, None),
+        (widget.thumbnails_lineedit, "artistextras/artistthumbnail", 0, None),
+        (widget.fanart_lineedit, "artistextras/artistfanart", 0, None),
+        (
+            widget.processes_lineedit,
+            "artistextras/processes",
+            nowplaying.processes.datacache.MIN_CONCURRENT,
+            nowplaying.processes.datacache.MAX_CONCURRENT,
+        ),
+        (widget.cachesize_lineedit, "artistextras/cachesize", 0, None),
+        (widget.fanartdelay_lineedit, "artistextras/fanartdelay", 0, None),
+        (widget.bandwidth_lineedit, "artistextras/bandwidth", 0, None),
+    )
+
+
 NOCOVER_COMBOBOX = ["None", "Fanart", "Logo", "Thumbnail"]
 TRAY_ICON_THEMES = ["auto", "light", "dark"]
 
@@ -156,9 +191,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if not self.widgets[uiname]:
             return
 
-        with contextlib.suppress(AttributeError):
-            qobject_connector = getattr(self, f"_connect_{uiname}_widget")
-            qobject_connector(self.widgets[uiname])
+        if connector := self._widget_connectors().get(uiname):
+            connector(self.widgets[uiname])
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
         # Note: Tree structure will be built later in _build_settings_tree()
 
@@ -368,6 +402,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             if mapped_value == f"{service}_group" and service in self.settingsclasses:
                 self.settingsclasses[service].update_oauth_status()
 
+    def _widget_connectors(self) -> dict[str, Callable[[Any], None]]:
+        """Pages needing wiring beyond what their .ui file declares.
+
+        Named explicitly rather than looked up by built name.  The lookup used to
+        be getattr inside contextlib.suppress(AttributeError), which also swallowed
+        an AttributeError raised *by* a connector -- so a renamed widget silently
+        left its buttons dead instead of failing.
+        """
+        return {
+            "destroy": self._connect_destroy_widget,
+            "updates": self._connect_updates_widget,
+            "webserver": self._connect_webserver_widget,
+            "artistextras": self._connect_artistextras_widget,
+            "obsws": self._connect_obsws_widget,
+            "filter": self._connect_filter_widget,
+        }
+
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)
 
@@ -392,6 +443,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _connect_artistextras_widget(self, qobject):
         """connect the artistextras buttons to non-built-ins"""
         qobject.clearcache_button.clicked.connect(self.on_artistextras_clearcache_button)
+        qobject.cleanupcache_button.clicked.connect(self.on_artistextras_cleanupcache_button)
 
     def _connect_obsws_widget(self, qobject):
         """connect obsws button to template picker"""
@@ -485,9 +537,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value("artistextras/coverfornothumbs", type=bool)
         )
 
-        for art in ["banners", "processes", "fanart", "logos", "thumbnails", "sizelimit"]:
-            guiattr = getattr(self.widgets["artistextras"], f"{art}_spin")
-            guiattr.setValue(self.config.cparser.value(f"artistextras/{art}", type=int))
+        for lineedit, key, _, _ in _artistextras_int_fields(self.widgets["artistextras"]):
+            lineedit.setText(str(self.config.cparser.value(key, type=int)))
 
         self.widgets["artistextras"].bio_dedup_checkbox.setChecked(
             self.config.cparser.value("artistextras/bio_dedup", type=bool)
@@ -758,9 +809,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets["artistextras"].missingthumbs_checkbox.isChecked(),
         )
 
-        for art in ["banners", "processes", "fanart", "logos", "thumbnails", "fanartdelay"]:
-            guiattr = getattr(self.widgets["artistextras"], f"{art}_spin")
-            self.config.cparser.setValue(f"artistextras/{art}", guiattr.value())
+        for lineedit, key, minimum, maximum in _artistextras_int_fields(
+            self.widgets["artistextras"]
+        ):
+            try:
+                value = int(lineedit.text())
+            except ValueError:
+                # Keep what is stored rather than writing junk, and show the user
+                # what actually applies.
+                value = self.config.cparser.value(key, type=int)
+                logging.warning("%s was not an integer; kept %s", key, value)
+            clamped = max(minimum, value) if maximum is None else min(max(minimum, value), maximum)
+            if clamped != value:
+                logging.warning("%s of %s is out of range; using %s", key, value, clamped)
+            # Write back unconditionally: the box has to show what was stored, or
+            # the setting silently means something other than what is on screen.
+            lineedit.setText(str(clamped))
+            self.config.cparser.setValue(key, clamped)
 
         current = self.widgets["artistextras"].coverart_combobox.currentText()
         self.config.cparser.setValue("artistextras/nocoverfallback", current.lower())
@@ -959,6 +1024,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """trigger a fresh start"""
         if self.widgets["destroy"].areyousure_checkbox.isChecked():
             self.tray.fresh_start_quit()
+
+    @Slot()
+    def on_artistextras_cleanupcache_button(self) -> None:
+        """clean up cache button was pushed"""
+        if not self.tray:
+            return
+        # Reuses the startup path so cleanup means the same thing however it is
+        # triggered, and so it runs on a thread -- expiry plus eviction plus VACUUM
+        # on a multi-gigabyte database would otherwise freeze the settings window.
+        self.tray._start_background_vacuum()  # pylint: disable=protected-access
 
     @Slot()
     @staticmethod

@@ -26,7 +26,7 @@ import nowplaying.exceptions
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 from .pending import RequestQueue
-from .queue import RateLimiterManager
+from .queue import BandwidthLimiter, RateLimiterManager
 from .storage import CachedEntry, DataStorage
 from .utils import redact_url
 
@@ -90,6 +90,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         self.storage = DataStorage(cache_dir)
         self.queue = RequestQueue(cache_dir)
         self.rate_limiters = RateLimiterManager()
+        self.bandwidth = BandwidthLimiter()
         self._initialized = False
         self._session: httpx.AsyncClient | None = None
         self._init_lock = asyncio.Lock()
@@ -184,6 +185,9 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             return None
 
         return await self._fetch_and_store(
+            # immediate fetches feed something the DJ is looking at now, so they
+            # spend from the budget but never wait on it
+            throttle=not request.immediate,
             url=request.url,
             identifier=request.identifier,
             data_type=request.data_type,
@@ -250,12 +254,16 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         """
         self._retry_after_until.pop(provider, None)
 
-    @staticmethod
-    async def _stream_body(response: httpx.Response) -> tuple[bytes, str]:
-        """Stream response body, returning (data, sha256_hex)."""
+    async def _stream_body(self, response: httpx.Response, wait: bool = True) -> tuple[bytes, str]:
+        """Stream response body, returning (data, sha256_hex).
+
+        Chunks are metered against the bandwidth budget as they arrive.  wait=False
+        accounts without pausing, for live-path fetches.
+        """
         h = hashlib.sha256()
         chunks: list[bytes] = []
         async for chunk in response.aiter_bytes(65536):
+            await self.bandwidth.consume(len(chunk), wait=wait)
             h.update(chunk)
             chunks.append(chunk)
         return b"".join(chunks), h.hexdigest()
@@ -292,6 +300,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         retries: int,
         headers: CacheHeaders | None,
         rate_limiter: Any,
+        throttle: bool = True,
     ) -> FetchResult:
         """Stream-fetch url with retries.
 
@@ -306,7 +315,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
                     "GET", url, timeout=httpx.Timeout(timeout), headers=headers
                 ) as response:
                     if response.status_code == 200:
-                        data, checksum = await self._stream_body(response)
+                        data, checksum = await self._stream_body(response, wait=throttle)
                         return FetchResult(data=data, checksum=checksum, status=200)
                     if response.status_code == 429:
                         should_continue = await self._handle_429(
@@ -357,6 +366,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         metadata: dict | None,
         headers: CacheHeaders | None = None,
         negative_ttl: int | None = None,
+        throttle: bool = True,
     ) -> CachedEntry | None:
         if not self._session:
             raise RuntimeError("DataCacheClient not initialized - call initialize() first")
@@ -372,7 +382,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             return None
 
         result = await self._fetch_with_retry(
-            url, provider, timeout, retries, headers, rate_limiter
+            url, provider, timeout, retries, headers, rate_limiter, throttle=throttle
         )
         if not result.ok:
             if result.terminal and result.status == 404 and negative_ttl is not None:

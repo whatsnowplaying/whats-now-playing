@@ -80,7 +80,7 @@ async def test_rate_limiter_capacity_limit():
 
     # Wait longer than needed to fill capacity
     await asyncio.sleep(0.5)
-    limiter._refill_tokens()  # pylint: disable=protected-access
+    limiter._refill()  # pylint: disable=protected-access
 
     # Should not exceed capacity
     assert limiter.available_tokens() <= limiter.capacity
@@ -235,3 +235,55 @@ async def test_rate_limiter_different_providers_independent():
     # Should be able to acquire from Discogs
     success = await discogs_limiter.acquire(timeout=0.1)
     assert success is True
+
+
+@pytest.mark.asyncio
+async def test_bandwidth_limiter_zero_is_unlimited():
+    """A limit of 0 means no throttling at all, not a full stop.
+
+    Stopping downloads entirely is what disabling artist extras is for.
+    """
+    limiter = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=0)
+    assert limiter.enabled is False
+
+    start = time.monotonic()
+    await limiter.consume(10 * 1024 * 1024)
+    assert time.monotonic() - start < 0.1, "an unlimited limiter must not sleep"
+
+
+@pytest.mark.asyncio
+async def test_bandwidth_limiter_throttles_once_burst_is_spent():
+    """Consuming beyond the budget waits for the bucket to refill."""
+    limiter = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=64)
+    assert limiter.enabled is True
+    await limiter.consume(int(limiter.capacity))  # spend the burst
+
+    start = time.monotonic()
+    await limiter.consume(64 * 1024)  # one second's worth at this rate
+    elapsed = time.monotonic() - start
+    assert 0.5 < elapsed < 2.0, f"expected roughly a second of throttling, got {elapsed:.2f}s"
+
+
+@pytest.mark.asyncio
+async def test_bandwidth_limiter_live_path_spends_without_waiting():
+    """wait=False accounts for the bytes but never blocks.
+
+    A track's cover art must not stall behind background artwork, but it still
+    comes out of the same budget so background work backs off to compensate --
+    which is why the balance is allowed to go negative.
+    """
+    limiter = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=64)
+    await limiter.consume(int(limiter.capacity))
+    before = limiter.tokens
+
+    start = time.monotonic()
+    await limiter.consume(64 * 1024, wait=False)
+    assert time.monotonic() - start < 0.1, "the live path must not wait"
+    assert limiter.tokens < before, "the bytes must still be charged to the budget"
+
+
+@pytest.mark.asyncio
+async def test_bandwidth_limiter_chunk_larger_than_rate_does_not_deadlock():
+    """A 64 KB chunk must pass even when the per-second rate is smaller."""
+    limiter = nowplaying.datacache.queue.BandwidthLimiter(kb_per_second=8)
+    await asyncio.wait_for(limiter.consume(65536), timeout=5.0)

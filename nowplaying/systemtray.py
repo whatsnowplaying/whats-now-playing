@@ -48,7 +48,11 @@ LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
     """Background thread for database vacuum operations on startup."""
 
-    def run(self) -> None:  # pylint: disable=no-self-use
+    def __init__(self, size_limit_bytes: int | None = None) -> None:
+        super().__init__()
+        self.size_limit_bytes = size_limit_bytes
+
+    def run(self) -> None:
         """Run vacuum and maintenance operations on all databases."""
         logging.debug("Starting background database vacuum")
         try:
@@ -56,7 +60,9 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming guess game database: %s", error)
         try:
-            stats = nowplaying.datacache.run_datacache_maintenance()
+            stats = nowplaying.datacache.run_datacache_maintenance(
+                size_limit_bytes=self.size_limit_bytes
+            )
             logging.debug("Datacache maintenance completed: %s", stats)
         except (sqlite3.Error, OSError) as error:
             logging.error("Error during datacache maintenance: %s", error)
@@ -521,9 +527,25 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             app.exit(1)
 
     def _start_background_vacuum(self) -> None:
-        """Start database vacuum operations in a background thread."""
+        """Start database vacuum operations in a background thread.
 
-        self.vacuum_thread = _VacuumThread()
+        Also reachable from the settings window, on the GUI thread: waiting for an
+        in-flight run would freeze the very window this runs off.  Skipping instead
+        of replacing keeps the last reference to a running QThread alive -- dropping
+        it crashes -- and the run already under way does the same work anyway.
+        """
+        if self.vacuum_thread is not None and self.vacuum_thread.isRunning():
+            logging.debug("vacuum already running; not starting another")
+            return
+
+        # artistextras/cachesize is in gigabytes, matching the old imagecache setting.
+        # Eviction runs here rather than in the datacache worker so the disk I/O
+        # lands at startup instead of mid-set.
+        # A negative limit would put every non-empty cache over budget and evict
+        # the lot, so it means unlimited here, same as 0.
+        gigabytes = max(0, int(self.config.cparser.value("artistextras/cachesize", type=int) or 0))
+        limit = gigabytes * 1024 * 1024 * 1024 if gigabytes else None
+        self.vacuum_thread = _VacuumThread(size_limit_bytes=limit)
         self.vacuum_thread.start()
 
     def _start_background_prefetch(self) -> None:
@@ -560,9 +582,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def _wait_for_vacuum_thread(self) -> None:
         """Wait for the background vacuum thread to finish if it is still running."""
-        thread = getattr(self, "vacuum_thread", None)
-        if thread is not None and thread.isRunning():
-            thread.wait()
+        if self.vacuum_thread is not None and self.vacuum_thread.isRunning():
+            self.vacuum_thread.wait()
 
     def __del__(self) -> None:
         """Ensure the vacuum thread is joined before Python drops this object.

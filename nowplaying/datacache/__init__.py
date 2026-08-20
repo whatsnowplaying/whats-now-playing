@@ -41,9 +41,14 @@ __all__ = [
 ]
 
 
-def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
-    """Run datacache maintenance tasks at system startup."""
-    return run_datacache_maintenance(cache_dir)
+def run_maintenance(
+    cache_dir: Path | None = None, size_limit_bytes: int | None = None
+) -> dict[str, int]:
+    """Run datacache maintenance tasks at system startup.
+
+    size_limit_bytes caps the total size of cached images; None skips eviction.
+    """
+    return run_datacache_maintenance(cache_dir, size_limit_bytes)
 
 
 _BYTES_KEY = "__bytes__"

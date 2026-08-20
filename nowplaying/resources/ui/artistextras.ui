@@ -46,9 +46,22 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="cleanupcache_button">
+       <property name="text">
+        <string>Clean Up Cache</string>
+       </property>
+       <property name="toolTip">
+        <string>Drop expired images and trim the cache to the size limit above.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="clearcache_button">
        <property name="text">
         <string>Clear Cache</string>
+       </property>
+       <property name="toolTip">
+        <string>Delete every cached image. They will be downloaded again as tracks play.</string>
        </property>
       </widget>
      </item>
@@ -91,14 +104,7 @@
      <item row="0" column="1">
       <layout class="QHBoxLayout" name="banners_layout">
        <item>
-        <widget class="QSpinBox" name="banners_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>3</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="banners_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -125,14 +131,7 @@
      <item row="1" column="1">
       <layout class="QHBoxLayout" name="logos_layout">
        <item>
-        <widget class="QSpinBox" name="logos_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>3</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="logos_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -159,14 +158,7 @@
      <item row="2" column="1">
       <layout class="QHBoxLayout" name="thumbnails_layout">
        <item>
-        <widget class="QSpinBox" name="thumbnails_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>3</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="thumbnails_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -193,14 +185,7 @@
      <item row="3" column="1">
       <layout class="QHBoxLayout" name="fanart_layout">
        <item>
-        <widget class="QSpinBox" name="fanart_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>20</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="fanart_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -227,14 +212,7 @@
      <item row="4" column="1">
       <layout class="QHBoxLayout" name="processes_layout">
        <item>
-        <widget class="QSpinBox" name="processes_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>5</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="processes_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -252,23 +230,16 @@
       </layout>
      </item>
      <item row="5" column="0">
-      <widget class="QLabel" name="sizelimit_label">
+      <widget class="QLabel" name="cachesize_label">
        <property name="text">
-        <string>Image cache size in GB</string>
+        <string>Image cache size in GB (0 = unlimited)</string>
        </property>
       </widget>
      </item>
      <item row="5" column="1">
       <layout class="QHBoxLayout" name="sizelimit_layout">
        <item>
-        <widget class="QSpinBox" name="sizelimit_spin">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <number>5</number>
-         </property>
-        </widget>
+        <widget class="QLineEdit" name="cachesize_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -295,11 +266,34 @@
      <item row="6" column="1">
       <layout class="QHBoxLayout" name="fanartdelay_layout">
        <item>
-        <widget class="QSpinBox" name="fanartdelay_spin">
-         <property name="value">
-          <number>8</number>
+        <widget class="QLineEdit" name="fanartdelay_lineedit"/>
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
-        </widget>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="bandwidth_label">
+       <property name="text">
+        <string>Download limit in KB/s (0 = unlimited)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <layout class="QHBoxLayout" name="bandwidth_layout">
+       <item>
+        <widget class="QLineEdit" name="bandwidth_lineedit"/>
        </item>
        <item>
         <spacer>
@@ -469,49 +463,55 @@
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>fanart_spin</receiver>
+   <receiver>fanart_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>banners_spin</receiver>
+   <receiver>banners_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>sizelimit_spin</receiver>
+   <receiver>cachesize_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>logos_spin</receiver>
+   <receiver>logos_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>thumbnails_spin</receiver>
+   <receiver>thumbnails_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>processes_spin</receiver>
+   <receiver>processes_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>fanartdelay_spin</receiver>
+   <receiver>fanartdelay_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>
    <sender>artistextras_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>prioritizenetworkart_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>artistextras_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bandwidth_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
  </connections>
