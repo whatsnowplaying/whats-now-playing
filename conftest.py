@@ -54,7 +54,7 @@ def enforce_single_pytest_instance():
 # don't overwhelm test output.  (bootstrap.setuplogging() does the same for
 # the running app but is not called during tests.)
 logging.getLogger("hpack").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx2").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 # DO NOT CHANGE THIS TO BE com.github.whatsnowplaying

@@ -95,7 +95,7 @@ def setuplogging(
     )
     logging.captureWarnings(True)
     # These libraries emit very noisy DEBUG-level tracing
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("hpack").setLevel(logging.WARNING)
     return logpath

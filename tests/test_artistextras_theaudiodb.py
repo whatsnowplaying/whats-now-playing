@@ -262,7 +262,7 @@ async def test_theaudiodb_api_call_count(bootstrap):  # pylint: disable=redefine
     artist_url = f"{TADB_BASE_URL}/artist-mb.php?i={fake_mbid}"
     mock_payload = {"artists": [{"strArtist": "WNP Mock Artist", "idArtist": "999999"}]}
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(artist_url).mock(return_value=httpx.Response(200, json=mock_payload))
 
         await plugin.download_async(metadata.copy())
@@ -280,7 +280,7 @@ async def test_theaudiodb_other_http_errors(bootstrap):  # pylint: disable=redef
     url = f"{TADB_BASE_URL}/search.php?s=notfound"
 
     # Use side_effect callable so the mock persists across retries
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(side_effect=lambda _: httpx.Response(404))
         result = await plugin._fetch_cached(  # pylint: disable=protected-access
             DEFAULT_THEAUDIODB_API_KEY, "search.php?s=notfound", "testartist"
@@ -296,7 +296,7 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client): 
 
     # Side-effect callable keeps responding 429 across all retry attempts.
     # Retry-After: 1 caps the per-retry sleep to 1 s.
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(
             side_effect=lambda _: httpx.Response(429, headers={"Retry-After": "1"})
         )
@@ -311,7 +311,7 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_datacache_client): 
     isolated_datacache_client.set_retry_after("theaudiodb", -1)  # negative = already expired
 
     # Second call: if 429 had been cached to disk, this would also return None
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(
             return_value=httpx.Response(200, json={"artists": [{"strArtist": "Test"}]})
         )
@@ -367,7 +367,7 @@ async def test_theaudiodb_coverart_queued(bootstrap):  # pylint: disable=redefin
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
@@ -395,7 +395,7 @@ async def test_theaudiodb_coverart_prefers_hq(bootstrap):  # pylint: disable=red
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
@@ -423,7 +423,7 @@ async def test_theaudiodb_coverart_disabled(bootstrap):  # pylint: disable=redef
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", False)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
@@ -447,7 +447,7 @@ async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
@@ -472,7 +472,7 @@ async def test_theaudiodb_coverart_no_album(bootstrap):  # pylint: disable=redef
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )
@@ -492,7 +492,7 @@ async def test_theaudiodb_coverart_album_api_error(bootstrap):  # pylint: disabl
     plugin = _setup_theaudiodb_plugin_no_key(bootstrap)
     bootstrap.cparser.setValue("theaudiodb/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_ARTIST_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ARTIST_RESPONSE)
         )

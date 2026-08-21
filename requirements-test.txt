@@ -2,7 +2,10 @@
 # tests
 #
 aiointercept==0.1.9
+# pytest-httpx2 is respx plus an httpcore2 mocker; respx alone only
+# intercepts httpcore, so httpx2 clients would sail past the mocks.
 respx==0.23.1
+pytest-httpx2==1.0.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0

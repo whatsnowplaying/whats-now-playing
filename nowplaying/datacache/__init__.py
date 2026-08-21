@@ -8,7 +8,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from httpx import Headers as CacheHeaders  # re-exported so callers don't import httpx directly
+from httpx2 import Headers as CacheHeaders  # re-exported so callers don't import httpx2 directly
 
 import orjson
 
@@ -37,7 +37,7 @@ __all__ = [
     "reset_client",  # Reset DataCacheClient singleton (test fixtures)
     "reset_shared_storage",  # Reset singleton after DB move/delete
     "get_shared_storage",  # Access the storage singleton directly
-    "CacheHeaders",  # httpx.Headers re-export — use for get_or_fetch() headers param
+    "CacheHeaders",  # httpx2.Headers re-export — use for get_or_fetch() headers param
 ]
 
 

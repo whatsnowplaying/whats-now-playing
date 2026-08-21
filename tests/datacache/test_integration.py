@@ -31,7 +31,7 @@ async def test_full_image_caching_workflow(bootstrap, isolated_datacache_client)
     test_image_data = b"fake_image_bytes"
     test_url = "https://example.com/artist_thumb.jpg"
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(test_url).mock(
             return_value=httpx.Response(
                 200, content=test_image_data, headers={"content-type": "image/jpeg"}
@@ -65,7 +65,7 @@ async def test_randomimage_functionality_integration(bootstrap, isolated_datacac
         "https://example.com/thumb3.jpg",
     ]
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         # Mock all image responses
         for i, url in enumerate(image_urls):
             mock_responses.get(url).mock(
@@ -114,7 +114,7 @@ async def test_queue_and_process_workflow(bootstrap, isolated_datacache_client):
     test_url = "https://example.com/queued_image.jpg"
     test_data = b"queued_image_data"
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(test_url).mock(
             return_value=httpx.Response(
                 200, content=test_data, headers={"content-type": "image/jpeg"}
@@ -149,7 +149,7 @@ async def test_cache_hit_avoids_http_request(bootstrap, isolated_datacache_clien
     test_data = b"cached_test_data"
 
     # First request with mock
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(test_url).mock(
             return_value=httpx.Response(
                 200, content=test_data, headers={"content-type": "image/jpeg"}
@@ -192,7 +192,7 @@ async def test_provider_filtering_works(bootstrap, isolated_datacache_client):  
         "discogs": "https://discogs.com/image2.jpg",
     }
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         # Mock responses from different providers
         mock_responses.get(test_urls["theaudiodb"]).mock(
             return_value=httpx.Response(
@@ -256,7 +256,7 @@ async def test_api_response_caching_integration(bootstrap, isolated_datacache_cl
         "genre": "Electronic",
     }
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(test_url).mock(
             return_value=httpx.Response(
                 200, json=test_bio_data, headers={"content-type": "application/json"}
@@ -345,7 +345,7 @@ async def test_concurrent_storage_operations(bootstrap, isolated_datacache_clien
         "https://example.com/concurrent3.jpg",
     ]
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         # Mock all responses
         for i, url in enumerate(test_urls):
             mock_responses.get(url).mock(
@@ -398,7 +398,7 @@ async def test_queue_and_process_random_image_bytes(bootstrap, isolated_datacach
         "https://example.com/fanart3.jpg",
     ]
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         for i, url in enumerate(image_urls):
             mock_responses.get(url).mock(
                 return_value=httpx.Response(

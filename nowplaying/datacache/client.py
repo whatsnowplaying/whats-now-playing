@@ -17,10 +17,10 @@ from typing import Any
 
 import ssl
 
-import httpx
+import httpx2
 import orjson
 import truststore
-from httpx import Headers as CacheHeaders
+from httpx2 import Headers as CacheHeaders
 
 import nowplaying.exceptions
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
@@ -92,7 +92,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         self.rate_limiters = RateLimiterManager()
         self.bandwidth = BandwidthLimiter()
         self._initialized = False
-        self._session: httpx.AsyncClient | None = None
+        self._session: httpx2.AsyncClient | None = None
         self._init_lock = asyncio.Lock()
         self._retry_after_until: dict[str, float] = {}
         self._callbacks: dict[str, Callable] = {}
@@ -107,7 +107,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             await self.storage.initialize()
             await self.queue.initialize()
             ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self._session = httpx.AsyncClient(
+            self._session = httpx2.AsyncClient(
                 http2=True,
                 verify=ssl_ctx,
                 follow_redirects=True,
@@ -254,7 +254,9 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         """
         self._retry_after_until.pop(provider, None)
 
-    async def _stream_body(self, response: httpx.Response, wait: bool = True) -> tuple[bytes, str]:
+    async def _stream_body(
+        self, response: httpx2.Response, wait: bool = True
+    ) -> tuple[bytes, str]:
         """Stream response body, returning (data, sha256_hex).
 
         Chunks are metered against the bandwidth budget as they arrive.  wait=False
@@ -270,7 +272,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
 
     async def _handle_429(  # pylint: disable=too-many-arguments
         self,
-        response: httpx.Response,
+        response: httpx2.Response,
         provider: str,
         attempt: int,
         retries: int,
@@ -312,7 +314,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         for attempt in range(retries + 1):
             try:
                 async with self._session.stream(  # type: ignore[union-attr]
-                    "GET", url, timeout=httpx.Timeout(timeout), headers=headers
+                    "GET", url, timeout=httpx2.Timeout(timeout), headers=headers
                 ) as response:
                     if response.status_code == 200:
                         data, checksum = await self._stream_body(response, wait=throttle)
@@ -335,7 +337,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
                         "HTTP %d fetching %s", response.status_code, self._redact_url(url)
                     )
                     last_result = FetchResult(status=response.status_code, terminal=False)
-            except httpx.TimeoutException:
+            except httpx2.TimeoutException:
                 logging.warning(
                     "Timeout fetching URL (attempt %d/%d): %s",
                     attempt + 1,
@@ -590,10 +592,10 @@ def reset_client() -> None:
     """Reset the global client singleton.
 
     Forces the next get_client() call to create a fresh DataCacheClient,
-    binding its httpx session to the current event loop.  Call this from
+    binding its httpx2 session to the current event loop.  Call this from
     test fixtures after the event loop or database path may have changed.
 
-    Nulls out the httpx session before dropping the instance so that
+    Nulls out the httpx2 session before dropping the instance so that
     Windows's ProactorEventLoop does not emit ResourceWarning about
     unclosed transports — the connections are abandoned rather than
     cleanly closed, which is acceptable in test fixtures that run
