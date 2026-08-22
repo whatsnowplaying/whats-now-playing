@@ -18,7 +18,11 @@ if sys.stderr is None:
 
 multiprocessing.freeze_support()
 
-truststore.inject_into_ssl()
+# WNP_CA_BUNDLE means the parent process decided the OS trust store is too old
+# to be usable (see nowplaying/tlstrust.py).  Injecting truststore here would
+# drag this subprocess right back onto it.
+if not os.environ.get("WNP_CA_BUNDLE"):
+    truststore.inject_into_ssl()
 
 # Ensure the current directory is in sys.path
 if __name__ == "__main__":

@@ -83,6 +83,35 @@ playing" information from various DJ software.
 - Qt6/PySide6 is used for the GUI framework
 - We control the UI files. No need for hasattr/getattr patterns.
 - Configuration uses Qt's QSettings with cross-platform support
+- **NEVER touch the user config from `nowplaying/__main__.py`, or from anything that
+  runs before `nowplaying.upgrade.upgrade()` finishes.** `UpgradeConfig.upgrade()` does
+  not go through `ConfigFile` at all. It reads the settings file directly by path
+  (`rawconfig = QSettings(str(sourcepath), self.qsettingsformat)`) and treats those
+  on-disk bytes as the authoritative record of what the user had before this version —
+  `_oldkey_to_newkey(rawconfig, config, mapping)` and every `_upgrade_to_*()` that needs
+  a prior value reads from `rawconfig` and writes through `config`. On macOS that raw
+  read deliberately bypasses the cfprefsd-cached handle. It also decides whether this is
+  a fresh install purely from `if not sourcepath.exists(): return`.
+
+  So one premature write does two kinds of damage: it can create the file and make an
+  existing user look brand new, which silently skips the entire `_upgrade_to_*()` chain,
+  `backup_config()`, and the `NowPlaying` -> `WhatsNowPlaying` key copy; and it can alter
+  the bytes the migration reads as "before", so key renames migrate the wrong values.
+  Both fail without an error. Config writes belong in `nowplaying/config.py` or in the
+  upgrade code — `ConfigFile` is constructed after `upgrade()` has run, which is exactly
+  what makes writing from it safe.
+
+  Reads are not obviously safe either, so do not reach for one as a workaround: the
+  migration's view is the file on disk while a `QSettings` handle goes through the
+  platform preference cache, and those two can disagree. If something genuinely needs
+  state before `upgrade()`, cache it outside the settings entirely —
+  `nowplaying/tlstrust.py` keeps its probe verdict in a JSON file next to the logs for
+  exactly this reason, and validates every field on the way back in because that file
+  is user-visible.
+- **Do not write to `QSettings.SystemScope`.** On macOS it resolves to
+  `/Library/Preferences/...`, where `isWritable()` is `False` and a write returns
+  `Status.AccessError` without creating a file; the value can still read back through
+  the platform preference cache, so a write appears to work when nothing persisted.
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts

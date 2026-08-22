@@ -10,7 +10,7 @@ import os
 import platform
 import sys
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -145,6 +145,11 @@ def windows_version_file():
 
 block_cipher = None
 
+# Packages that read their own version out of importlib.metadata at import
+# time, so they die if their .dist-info is stripped below.  httpx2's
+# __version__.py is literally version("httpx2") at module scope.
+KEEP_METADATA = ('httpx2',)
+
 executables = {
     'WhatsNowPlaying': 'wnppyi.py',
 }
@@ -159,8 +164,18 @@ for execname, execpy in executables.items():
                         ('nowplaying/resources/preview/*', 'resources/preview/'),
                         ('nowplaying/templates/*', 'templates/')] +
                        _nltk_datas('punkt') +
-                       _nltk_datas('punkt_tab'),
-                 hiddenimports=ALL_PLUGIN_MODULES,
+                       _nltk_datas('punkt_tab') +
+                       [d for pkg in KEEP_METADATA for d in copy_metadata(pkg)],
+                 hiddenimports=ALL_PLUGIN_MODULES + [
+                     # Nothing in nowplaying imports httpx2 on this branch --
+                     # it arrives only through the wnpmb wheel -- and
+                     # httpcore2 defers its h2 import until HTTP/2 is actually
+                     # negotiated, so neither is reliably picked up by static
+                     # analysis.
+                     'httpx2',
+                     'httpcore2',
+                     'h2',
+                 ],
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
                  excludes=[
@@ -173,7 +188,10 @@ for execname, execpy in executables.items():
                  cipher=block_cipher,
                  noarchive=False)
 
-    a.datas = [x for x in a.datas if '.dist-info' not in x[0]]
+    _keep = tuple(f'{pkg}-' for pkg in KEEP_METADATA)
+    a.datas = [
+        x for x in a.datas if '.dist-info' not in x[0] or x[0].startswith(_keep)
+    ]
 
     # Splash screen disabled for folder mode
     # if sys.platform != 'darwin':

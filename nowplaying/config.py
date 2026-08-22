@@ -8,7 +8,6 @@ import logging
 import os
 import pathlib
 import re
-import ssl
 import sys
 import time
 from types import ModuleType
@@ -27,6 +26,7 @@ import nowplaying.inputs
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.recognition
+import nowplaying.tlstrust
 import nowplaying.utils.config_json
 
 # IMPORTANT: Import compatibility shim FIRST to handle old AuthScope enums in Qt config
@@ -69,11 +69,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         logging.info("Logpath: %s", self.logpath)
         logging.info("Templates: %s", self.templatedir)
         logging.info("Bundle: %s", ConfigFile.BUNDLEDIR)
-        logging.debug("SSL_CERT_FILE=%s", os.environ.get("SSL_CERT_FILE"))
-        logging.debug("SSL CA FILE=%s", ssl.get_default_verify_paths().cafile)
-        logging.debug(
-            "SSL using system trust store=%s", ssl.SSLContext.__module__ == "truststore._api"
-        )
 
         self.qsettingsformat: QSettings.Format = QSettings.NativeFormat
         if sys.platform == "win32":
@@ -224,6 +219,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         """default values for general settings"""
         settings.setValue("settings/delay", "1.0")
         settings.setValue("settings/initialized", False)
+        settings.setValue(nowplaying.tlstrust.MODE_KEY, nowplaying.tlstrust.MODE_AUTO)
         settings.setValue("settings/loglevel", self.loglevel)
         settings.setValue("settings/notif", self.notif)
         settings.setValue("settings/requests", False)

@@ -42,6 +42,20 @@
   Use Light or Dark to override Auto if your OS theme reporting is unreliable
   (e.g. macOS with wallpaper tinting enabled).
 
+* **Certificate Trust** - Controls which certificate authorities are used to
+  verify the sites **What's Now Playing** connects to. A computer that has not
+  been updated in several years may no longer recognise the authorities that
+  MusicBrainz, Discogs, and the other services use, which shows up as missing
+  artwork and biographies rather than as an obvious error.
+
+  * **Automatic** (default) — checks once whether this computer's certificates
+    still work and quietly switches to the bundled set if they do not.
+  * **Operating system** — always use this computer's certificates. Required if
+    your network inspects traffic with a certificate your workplace installed.
+  * **Bundled with What's Now Playing** — always use the bundled certificates.
+
+  Changes take effect the next time **What's Now Playing** starts.
+
 * **Configuration Backup** - Export and import your complete
   configuration to make version upgrades easier.
 

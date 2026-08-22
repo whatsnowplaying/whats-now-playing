@@ -37,6 +37,9 @@ def run_bootstrap(bundledir: str | None = None) -> pathlib.Path:  # pragma: no c
     logpath = nowplaying.bootstrap.setuplogging(rotate=True)
     plat = platform.platform()
     logging.info("starting up v%s on %s", nowplaying.__version__, plat)
+    # upgrade() checks whatsnowplaying.com for a new version, the first TLS this
+    # process makes, so the trust store has to be settled before it.
+    nowplaying.bootstrap.apply_ca_trust()
     nowplaying.upgrade.upgrade(bundledir=bundledir)
     logging.debug("ending upgrade")
 

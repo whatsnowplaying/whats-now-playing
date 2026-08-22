@@ -265,6 +265,9 @@ requires no account to start, and is built into WNP with no configuration needed
 * Export and import configuration as JSON for moving between systems
 * Home directory paths are automatically remapped on import
 * Stale legacy configuration keys are automatically cleaned up on upgrade
+* Falls back to bundled certificate authorities when the computer's own can no
+  longer verify the music services, so older machines keep fetching artwork and
+  biographies instead of silently coming up empty
 
 ## References
 
