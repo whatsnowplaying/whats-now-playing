@@ -15,14 +15,12 @@ from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
-import ssl
-
 import httpx2
 import orjson
-import truststore
 from httpx2 import Headers as CacheHeaders
 
 import nowplaying.exceptions
+import nowplaying.tlstrust
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 from .pending import RequestQueue
@@ -106,7 +104,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
                 return
             await self.storage.initialize()
             await self.queue.initialize()
-            ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_ctx = nowplaying.tlstrust.create_ssl_context()
             self._session = httpx2.AsyncClient(
                 http2=True,
                 verify=ssl_ctx,

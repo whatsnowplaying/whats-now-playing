@@ -12,6 +12,7 @@ import orjson
 import nowplaying.artistextras
 import nowplaying.config
 import nowplaying.datacache
+import nowplaying.tlstrust
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -42,7 +43,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             await dc_client.initialize()
             if dc_client.in_cooldown("lastfm"):
                 return None
-            async with httpx2.AsyncClient(timeout=self.calculate_delay()) as session:
+            async with httpx2.AsyncClient(
+                timeout=self.calculate_delay(),
+                verify=nowplaying.tlstrust.create_ssl_context(),
+            ) as session:
                 response = await session.get(url)
             if response.status_code == 429:
                 try:

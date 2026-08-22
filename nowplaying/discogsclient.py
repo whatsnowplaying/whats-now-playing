@@ -9,11 +9,11 @@ with just the functionality needed by the nowplaying application.
 
 import contextlib
 import logging
-import ssl
 from typing import Any
 
 import aiohttp
 
+import nowplaying.tlstrust
 import nowplaying.utils
 
 
@@ -132,8 +132,7 @@ class AsyncDiscogsClient:
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: aiohttp.ClientSession | None = None
 
-        # Create SSL context with proper certificate verification
-        self.ssl_context = ssl.create_default_context()
+        self.ssl_context = nowplaying.tlstrust.create_ssl_context()
 
     async def __aenter__(self):
         headers = {"User-Agent": self.user_agent}

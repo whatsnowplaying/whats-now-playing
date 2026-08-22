@@ -23,14 +23,13 @@ import hashlib
 import json
 import logging
 import pathlib
-import ssl
 from typing import TYPE_CHECKING
 
 import httpx2
-import truststore
 import wnp_templates._version
 
 import nowplaying.datacache
+import nowplaying.tlstrust
 import nowplaying.upgrades
 import nowplaying.template_colors
 import nowplaying.utils.charts_api
@@ -147,7 +146,7 @@ async def sync_from_charts(  # pylint: disable=too-many-locals
 
 
 async def _fetch_manifest(url: str, api_key: str) -> dict | None:
-    ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx = nowplaying.tlstrust.create_ssl_context()
     try:
         async with httpx2.AsyncClient(verify=ssl_ctx, follow_redirects=True) as session:
             headers = {"X-WNP-Charts-Key": api_key} if api_key else None
@@ -254,7 +253,7 @@ async def sync_base_templates(config: "nowplaying.config.ConfigFile") -> None:
 
     allow_downloads = _server_is_newer(manifest_data.get("wnp_templates_version", ""))
 
-    ssl_ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx = nowplaying.tlstrust.create_ssl_context()
     async with httpx2.AsyncClient(
         verify=ssl_ctx, follow_redirects=True, timeout=httpx2.Timeout(_DOWNLOAD_TIMEOUT)
     ) as client:

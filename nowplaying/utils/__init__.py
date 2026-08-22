@@ -28,6 +28,8 @@ from wnpmb import (
     unsmartquotes,
 )
 
+import nowplaying.tlstrust
+
 if TYPE_CHECKING:
     import nowplaying.config
     from nowplaying.types import TrackMetadata
@@ -285,7 +287,7 @@ def create_http_connector(
     Create a standardized aiohttp TCPConnector with optimized SSL settings.
 
     Args:
-        ssl_context: Optional SSL context. If None, creates default context.
+        ssl_context: Optional SSL context. If None, uses the app-wide trust store.
         service_type: Type of service ('musicbrainz' for stricter limits, 'default' for others)
 
     Returns:
@@ -293,7 +295,7 @@ def create_http_connector(
     """
 
     if ssl_context is None:
-        ssl_context = ssl.create_default_context()
+        ssl_context = nowplaying.tlstrust.create_ssl_context()
 
     base_config = {
         "ssl": ssl_context,

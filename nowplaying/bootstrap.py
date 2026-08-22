@@ -10,6 +10,34 @@ import time
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 
+import nowplaying.tlstrust
+
+
+def catrust_state_path() -> pathlib.Path:
+    """Where the CA trust decision is cached.
+
+    The cache location rather than Documents: this is a probe result, losing it
+    to an OS cache purge just costs one re-probe, and Documents is synced
+    between a user's machines -- a verdict reached on a stale old laptop has no
+    business landing on a healthy desktop.
+    """
+    return (
+        pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
+        / nowplaying.tlstrust.STATE_FILE
+    )
+
+
+def apply_ca_trust() -> None:
+    """Point this process at the trust store the last probe settled on.
+
+    upgrade() checks whatsnowplaying.com for a new version, which is the first
+    TLS this process makes.  That happens before ConfigFile exists and before
+    UpgradeConfig has run, and nothing may open QSettings that early, so the
+    decision is cached in a plain file instead of a setting.
+    """
+    effective, _, _ = nowplaying.tlstrust.load_state(catrust_state_path())
+    nowplaying.tlstrust.apply_mode(effective)
+
 
 def verify_python_version():
     """make sure the correct version of python is being used"""

@@ -170,6 +170,69 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="catrust_label">
+     <property name="text">
+      <string>**Certificate Trust**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="catrust_layout">
+     <item>
+      <widget class="QLabel" name="catrust_combo_label">
+       <property name="text">
+        <string>Certificate authorities</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="catrust_combobox">
+       <item>
+        <property name="text">
+         <string>Automatic</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Operating system</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Bundled with What's Now Playing</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="catrust_help_label">
+     <property name="text">
+      <string>Automatic switches to the bundled certificates when this computer's own are too old to verify the sites What's Now Playing connects to. Takes effect after a restart.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer>
      <property name="orientation">
       <enum>Qt::Vertical</enum>

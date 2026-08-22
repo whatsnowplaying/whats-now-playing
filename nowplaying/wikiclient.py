@@ -10,7 +10,6 @@ with just the functionality needed by the nowplaying application.
 
 import asyncio
 import logging
-import ssl
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -20,6 +19,7 @@ from urllib.parse import quote
 import aiohttp
 
 import nowplaying
+import nowplaying.tlstrust
 import nowplaying.utils
 
 
@@ -71,8 +71,7 @@ class AsyncWikiClient:
     def __init__(self, timeout: int = 30):
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: aiohttp.ClientSession | None = None
-        # Create SSL context with proper certificate verification
-        self.ssl_context = ssl.create_default_context()
+        self.ssl_context = nowplaying.tlstrust.create_ssl_context()
 
     @classmethod
     def _raise_if_rate_limited(cls) -> None:
