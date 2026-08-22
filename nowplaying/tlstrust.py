@@ -107,9 +107,11 @@ def _handshake(context: ssl.SSLContext, host: str, port: int = 443) -> bool | No
 def probe() -> str | None:
     """Decide which trust store to use, or None if nothing could be reached.
 
-    Every host gets asked, not just the first one that answers: a stale store
-    typically still has the older roots, so one success proves nothing about
-    the rest.  One host failing the stale-root test is enough to switch.
+    A success proves nothing, so keep going: a stale store typically still has
+    the older roots, and one host verifying says nothing about the rest.  A
+    confirmed failure does prove something, so stop there -- one host the OS
+    store rejects and certifi accepts is the whole diagnosis, and asking the
+    remaining hosts cannot change it.
 
     A rejection only counts once certifi has verified the same host: both
     stores failing means something else is wrong (captive portal, MITM proxy,
@@ -134,11 +136,32 @@ def probe() -> str | None:
     return MODE_SYSTEM if verified_any else None
 
 
+def _release_bundle_env() -> None:
+    """Drop bundle variables that point at our own certifi copy.
+
+    frozen.py sets SSL_CERT_FILE to the bundled cacert.pem before we get a say,
+    so choosing the OS store has to undo that or every default HTTP client
+    keeps verifying against certifi.  That matters most to the one user who
+    picks this deliberately: a workplace whose inspecting root is in the system
+    store and not in certifi.
+
+    Only our own path is removed.  An operator who exported a bundle of their
+    own still outranks us, in both directions.
+    """
+    ours = pathlib.Path(certifi.where())
+    os.environ.pop(BUNDLE_ENV, None)
+    for name in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+        value = os.environ.get(name)
+        if value and pathlib.Path(value) == ours:
+            del os.environ[name]
+
+
 def apply_mode(mode: str) -> str:
     """Point this process at the chosen trust store and remember the choice."""
     global _effective_mode  # pylint: disable=global-statement
     _effective_mode = mode
     if mode != MODE_CERTIFI:
+        _release_bundle_env()
         logging.debug(
             "CA trust: OS trust store; SSL_CERT_FILE=%s, openssl cafile=%s",
             os.environ.get("SSL_CERT_FILE"),
@@ -206,7 +229,7 @@ def needs_probe(mode: str, cached_verdict: str, checked: int) -> bool:
 def load_state(path: "pathlib.Path") -> tuple[str, str, int]:
     """Return (effective, verdict, checked) from the cache, with safe defaults.
 
-    This file lives in the user's Documents tree, so treat it as untrusted:
+    This file lives under Qt's cache location, so treat it as untrusted:
     every field is validated against values we already defined, and nothing in
     it can name a path or a bundle -- the worst a hostile edit can do is pick
     between the OS trust store and our own certifi copy.  Anything unreadable,

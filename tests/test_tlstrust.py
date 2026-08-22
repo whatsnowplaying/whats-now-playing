@@ -71,6 +71,45 @@ def test_certifi_mode_sets_bundle_for_subprocesses():
     assert type(nowplaying.tlstrust.create_ssl_context()).__module__ == "ssl"
 
 
+def test_system_mode_releases_our_own_bundle(monkeypatch):
+    """frozen.py points SSL_CERT_FILE at the bundled certifi before we decide
+
+    Choosing the OS store has to undo that, or the escape hatch does nothing
+    for the workplace whose inspecting root is in the system store only.
+    """
+    monkeypatch.setenv("SSL_CERT_FILE", certifi.where())
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", certifi.where())
+    monkeypatch.setenv(nowplaying.tlstrust.BUNDLE_ENV, certifi.where())
+
+    nowplaying.tlstrust.apply_mode(nowplaying.tlstrust.MODE_SYSTEM)
+
+    assert nowplaying.tlstrust.BUNDLE_ENV not in os.environ
+    assert "SSL_CERT_FILE" not in os.environ
+    assert "REQUESTS_CA_BUNDLE" not in os.environ
+    assert nowplaying.tlstrust.ca_bundle() is None
+
+
+def test_system_mode_leaves_an_operator_bundle_alone(monkeypatch):
+    """someone else's export is not ours to remove, in either direction"""
+    monkeypatch.setenv("SSL_CERT_FILE", "/somewhere/corporate.pem")
+    nowplaying.tlstrust.apply_mode(nowplaying.tlstrust.MODE_SYSTEM)
+    assert os.environ["SSL_CERT_FILE"] == "/somewhere/corporate.pem"
+
+
+def test_certifi_then_system_round_trips(monkeypatch):
+    """flipping the setting back has to actually flip the process back"""
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("REQUESTS_CA_BUNDLE", raising=False)
+    monkeypatch.delenv(nowplaying.tlstrust.BUNDLE_ENV, raising=False)
+
+    nowplaying.tlstrust.apply_mode(nowplaying.tlstrust.MODE_CERTIFI)
+    assert os.environ[nowplaying.tlstrust.BUNDLE_ENV] == certifi.where()
+
+    nowplaying.tlstrust.apply_mode(nowplaying.tlstrust.MODE_SYSTEM)
+    assert nowplaying.tlstrust.BUNDLE_ENV not in os.environ
+    assert type(nowplaying.tlstrust.create_ssl_context()).__module__ == "truststore._api"
+
+
 def test_operator_bundle_outranks_the_verdict(monkeypatch):
     """someone who exported their own bundle meant it"""
     monkeypatch.setenv("SSL_CERT_FILE", "/somewhere/corporate.pem")
