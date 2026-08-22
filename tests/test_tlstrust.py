@@ -30,6 +30,15 @@ def restore_process_state():
             os.environ[key] = value
 
 
+@pytest.mark.parametrize(
+    "mode", [nowplaying.tlstrust.MODE_SYSTEM, nowplaying.tlstrust.MODE_CERTIFI]
+)
+def test_contexts_floor_tls_at_1_2(mode):
+    """the floor is ours to state, not OpenSSL's to choose"""
+    nowplaying.tlstrust.apply_mode(mode)
+    assert nowplaying.tlstrust.create_ssl_context().minimum_version == ssl.TLSVersion.TLSv1_2
+
+
 def test_default_mode_is_system():
     """no configured mode and no verdict leaves the OS trust store in charge"""
     mode = nowplaying.tlstrust.resolve(nowplaying.tlstrust.MODE_AUTO, "")
