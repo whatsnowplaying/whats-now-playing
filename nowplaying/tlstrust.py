@@ -80,14 +80,25 @@ RECHECK_SECONDS = 7 * 24 * 3600
 _effective_mode: str | None = None  # pylint: disable=invalid-name
 
 
+def _floor_tls(context: ssl.SSLContext) -> ssl.SSLContext:
+    """Pin the protocol floor rather than inheriting whatever OpenSSL defaults to.
+
+    Current builds already land on TLS 1.2, but that is a property of how
+    OpenSSL was configured, not a guarantee we make.  Every context WNP uses
+    comes from here, so this is the one place to state it.
+    """
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def _certifi_context() -> ssl.SSLContext:
     """context pinned to the Mozilla roots shipped with certifi"""
-    return ssl.create_default_context(cafile=certifi.where())
+    return _floor_tls(ssl.create_default_context(cafile=certifi.where()))
 
 
 def _system_context() -> ssl.SSLContext:
     """context that defers to the OS trust store"""
-    return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    return _floor_tls(truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT))
 
 
 def _handshake(context: ssl.SSLContext, host: str, port: int = 443) -> bool | None:
