@@ -26,6 +26,7 @@ inside a live process would mean chasing every session and context already
 built from it.
 """
 
+import json
 import logging
 import os
 import pathlib
@@ -35,7 +36,6 @@ import threading
 import time
 
 import certifi
-import orjson
 import truststore
 
 MODE_AUTO = "auto"
@@ -240,7 +240,7 @@ def load_state(path: "pathlib.Path") -> tuple[str, str, int]:
         if path.stat().st_size > _MAX_STATE_BYTES:
             logging.warning("CA trust cache at %s is implausibly large; ignoring it", path)
             return MODE_SYSTEM, "", 0
-        raw = orjson.loads(path.read_bytes())
+        raw = json.loads(path.read_bytes())
     except (OSError, ValueError):
         return MODE_SYSTEM, "", 0
 
@@ -264,8 +264,9 @@ def save_state(path: "pathlib.Path", effective: str, verdict: str, checked: int)
     """Record the resolved mode and the probe result for the next launch."""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(
-            orjson.dumps({"effective": effective, "verdict": verdict, "checked": checked})
+        path.write_text(
+            json.dumps({"effective": effective, "verdict": verdict, "checked": checked}),
+            encoding="utf-8",
         )
     except OSError:
         logging.exception("Could not write the CA trust cache to %s", path)

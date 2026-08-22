@@ -4,9 +4,8 @@
 import os
 import ssl
 import threading
+import json
 import time
-
-import orjson
 
 import certifi
 import pytest
@@ -270,8 +269,8 @@ def test_load_state_degrades_to_the_os_store(tmp_path, body):
 def test_load_state_rejects_unusable_timestamps(tmp_path, checked):
     """a bool, a string, or a time in the future all mean: probe again"""
     path = tmp_path / nowplaying.tlstrust.STATE_FILE
-    path.write_bytes(
-        orjson.dumps(
+    path.write_text(
+        json.dumps(
             {
                 "effective": nowplaying.tlstrust.MODE_CERTIFI,
                 "verdict": nowplaying.tlstrust.MODE_CERTIFI,
