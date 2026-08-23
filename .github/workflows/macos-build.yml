@@ -80,6 +80,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # PyInstaller downgrades a failed BUNDLE signing to a log warning
+          # and emits the bundle anyway, so a locked keychain or a bad
+          # identity yields a green build and an unsigned .app.  Fail on it.
+          PYINSTALLER_STRICT_BUNDLE_CODESIGN_ERROR: '1'
         run: |
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"

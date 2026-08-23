@@ -44,6 +44,13 @@
 
 * The upgrade prompt can now show aggregated release notes for the
     versions between the installed and the offered build
+* WNP now checks whether this computer's certificate authorities can still
+    verify the music services it fetches from, and falls back to a bundled
+    set when they cannot. On a machine whose certificates have fallen behind,
+    artwork and biographies stopped arriving with nothing in the interface to
+    explain why. General settings has a Certificate Trust control to force
+    either behaviour, which matters on networks that inspect traffic with
+    their own certificate
 
 ### Bug Fixes
 
@@ -54,12 +61,21 @@
     release-candidate builds
 * Fixed configuration restore when cancelling after a settings reset;
     the charts key is preserved
+* Fixed the artist extras image limits, which had been read from a
+    configuration key nothing writes and so were ignored since March 2024.
+    The values on the Artist Extras settings page now take effect. Anyone who
+    never changed them will see fewer images than before, because the
+    defaults are lower than the fallbacks that were silently in use
+* Album matching is more accurate: MusicBrainz lookups now treat "&" and
+    "and" as the same, so a track tagged one way still matches a release
+    tagged the other
 
 ### Security
 
-* Updated nltk to 3.10.0 (security advisory)
-* Updated aiohttp to 3.14.x, pillow to 12.3.0, zeroconf to 0.150.0,
-    requests-cache, and setuptools
+* Updated nltk to 3.10.3 (security advisory)
+* Updated aiohttp to 3.14.3, pillow to 12.3.0, pillow-avif-plugin to 1.6.0,
+    zeroconf to 0.150.0, pypresence to 4.6.2, pyinstaller to 6.22.1,
+    requests-cache to 1.3.3, and setuptools
 
 ## Version 5.2.2 - 2026-06-20
 
