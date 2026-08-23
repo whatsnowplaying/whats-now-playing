@@ -129,7 +129,8 @@ def test_inherited_bundle_survives_without_apply(monkeypatch):
     """a subprocess reads the verdict off the environment before its config exists"""
     monkeypatch.setattr(nowplaying.tlstrust, "_effective_mode", None)
     monkeypatch.setenv(nowplaying.tlstrust.BUNDLE_ENV, certifi.where())
-    assert nowplaying.tlstrust.effective_mode() == nowplaying.tlstrust.MODE_CERTIFI
+    assert nowplaying.tlstrust.ca_bundle() == certifi.where()
+    assert type(nowplaying.tlstrust.create_ssl_context()).__module__ == "ssl"
 
 
 @pytest.mark.parametrize(
