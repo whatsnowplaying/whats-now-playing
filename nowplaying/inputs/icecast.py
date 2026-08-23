@@ -4,13 +4,13 @@
 import asyncio
 import codecs
 import io
+import json
 import logging
-import logging.config
 import os
 import struct
 import time
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
@@ -19,39 +19,56 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QWidget,
 )
 
+from nowplaying.inputs import InputPlugin
+from nowplaying.types import TrackMetadata
+import nowplaying.wizard
+
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
 
     import nowplaying.config
-
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-    }
-)
-
-# pylint: disable=wrong-import-position
-
-# from nowplaying.exceptions import PluginVerifyError
-from nowplaying.inputs import InputPlugin
-from nowplaying.types import TrackMetadata
-import nowplaying.wizard
 
 METADATALIST: list[str] = ["artist", "title", "album", "key", "filename", "bpm"]
 
 PLAYLIST: list[str] = ["name", "filename"]
 
 
+# What we claim to be when a source client polls the status pages.
+_SERVER_ID = "Icecast 2.4.4"
+
+# Never echoed into the log; some encoders put the source password in the query.
+_SECRET_FIELDS = frozenset({"pass", "password", "auth", "token"})
+
+
+def _fmt_fields(fields: dict[str, str]) -> str:
+    """Render fields for a log line, withholding anything credential-shaped."""
+    if not fields:
+        return "(none)"
+    return ", ".join(
+        f"{k}={'<redacted>' if k.lower() in _SECRET_FIELDS else v!r}"
+        for k, v in sorted(fields.items())
+    )
+
+
 class IcecastProtocol(asyncio.Protocol):
     """a terrible implementation of the Icecast SOURCE protocol"""
 
-    def __init__(self, metadata_callback: Callable[[dict[str, str]], None] | None = None) -> None:
+    def __init__(
+        self,
+        metadata_callback: Callable[[dict[str, str]], None] | None = None,
+        metadata_reader: Callable[[], dict[str, str]] | None = None,
+    ) -> None:
         self.streaming: bool = False
+        # bytes that arrived but do not yet form a whole page, and a packet
+        # still being carried across page boundaries
+        self.buffer: bytes = b""
         self.previous_page: bytes = b""
+        self.warned_not_ogg: bool = False
         self.metadata_callback: Callable[[dict[str, str]], None] | None = metadata_callback
-        self._current_metadata: dict[str, str] = {}
+        # Reads back whatever the plugin currently holds.  A status poll arrives
+        # on its own connection -- butt opened twenty in one short session -- so
+        # this instance never saw the stream it is being asked about.
+        self.metadata_reader: Callable[[], dict[str, str]] | None = metadata_reader
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """initial connection gives us a transport to use"""
@@ -64,53 +81,147 @@ class IcecastProtocol(asyncio.Protocol):
             # if 200 gets set, new page. data content here is irrelevant
 
             self.streaming = True
+            self.buffer = b""
             self.previous_page = b""
-            if data[:19] == b"GET /admin/metadata":
-                self._query_parse(data)
+            self.warned_not_ogg = False
+            if self._short_request(data):
+                # metadata updates and status polls each get their own
+                # connection -- butt opened twenty in one short session -- so
+                # answer and hang up rather than leaving a socket per poll
+                self.transport.close()  # type: ignore
+                return
             logging.debug("Sending initial 200")
             self.transport.write(b"HTTP/1.0 200 OK\r\n\r\n")  # type: ignore
         else:
-            # data block. convert to bytes and process it,
-            # adding each block to the previously received block as necessary
-            dataio = io.BytesIO(data)
-            for page in self._parse_page(dataio):
-                pageio = io.BytesIO(page)
-                if page[:7] == b"\x03vorbis":
-                    pageio.seek(7, os.SEEK_CUR)  # jump over header name
-                    self._parse_vorbis_comment(pageio)
-                elif page[:8] == b"OpusTags":  # parse opus metadata:
-                    pageio.seek(8, os.SEEK_CUR)  # jump over header name
-                    self._parse_vorbis_comment(pageio)
+            if request := self._find_request(data):
+                # a metadata update on the same connection as the audio; letting
+                # it reach the page reader would wedge the buffer behind a page
+                # that never completes
+                self._query_parse(request)
+                self.transport.write(b"HTTP/1.0 200 OK\r\n\r\n")  # type: ignore
+                return
 
-    def _parse_page(self, dataio: io.BytesIO):
-        """modified from tinytag, modified for here"""
-        header_data = dataio.read(27)  # read ogg page header
-        while len(header_data) != 0:
-            header = struct.unpack("<4sBBqIIiB", header_data)
-            oggs, version, flags, pos, serial, pageseq, crc, segments = header  # pylint: disable=unused-variable
-            # self._max_samplenum = max(self._max_samplenum, pos)
-            if oggs != b"OggS" or version != 0:
-                logging.debug("Not a valid ogg stream!")
-            segsizes = struct.unpack("B" * segments, dataio.read(segments))
-            total = 0
-            for segsize in segsizes:  # read all segments
-                total += segsize
-                if total < 255:  # less than 255 bytes means end of page
-                    yield self.previous_page + dataio.read(total)
+            # TCP hands us arbitrary slices, so hold anything short of a whole
+            # page until the rest turns up
+            self.buffer += data
+            for packet in self._drain_packets():
+                packetio = io.BytesIO(packet)
+                if packet[:7] == b"\x03vorbis":
+                    packetio.seek(7, os.SEEK_CUR)  # jump over header name
+                    self._parse_vorbis_comment(packetio)
+                elif packet[:8] == b"OpusTags":  # parse opus metadata:
+                    packetio.seek(8, os.SEEK_CUR)  # jump over header name
+                    self._parse_vorbis_comment(packetio)
+
+    def _drain_packets(self) -> Iterator[bytes]:
+        """Yield complete Ogg packets, holding partial pages until they finish.
+
+        Ogg frames packets as runs of 255-byte segments closed by a shorter
+        one, so the segment table is the only thing that says where a packet
+        ends -- and a page can carry the tail of one packet plus the whole of
+        the next.  A page can also arrive split across TCP reads, which is why
+        nothing is consumed until its whole body is present.
+        """
+        while True:
+            begin = self.buffer.find(b"OggS")
+            if begin < 0:
+                if len(self.buffer) > 3 and not self.warned_not_ogg:
+                    # once per connection: an MP3 source produces this on every
+                    # chunk, and the useful part is telling the DJ where their
+                    # metadata will have to come from instead
+                    self.warned_not_ogg = True
+                    logging.warning(
+                        "icecast: stream carries no Ogg pages (MP3?); track data can only "
+                        "arrive via /admin/metadata updates from this source"
+                    )
+                # keep a sliver in case the capture pattern straddles reads
+                self.buffer = self.buffer[-3:]
+                return
+            if begin:
+                logging.debug("icecast: skipping %d bytes to resync on a page", begin)
+                self.buffer = self.buffer[begin:]
+            if len(self.buffer) < 27:
+                return
+            _, _, flags, _, _, _, _, segments = struct.unpack("<4sBBqIIiB", self.buffer[:27])
+            body_start = 27 + segments
+            if len(self.buffer) < body_start:
+                return
+            segsizes = self.buffer[27:body_start]
+            body_end = body_start + sum(segsizes)
+            if len(self.buffer) < body_end:
+                return
+
+            body = self.buffer[body_start:body_end]
+            self.buffer = self.buffer[body_end:]
+            if not flags & 0x01:
+                # not a continuation, so anything held over was never finished
+                self.previous_page = b""
+
+            offset = 0
+            for size in segsizes:
+                self.previous_page += body[offset : offset + size]
+                offset += size
+                if size < 255:  # a short segment ends the packet
+                    yield self.previous_page
                     self.previous_page = b""
-                    total = 0
-            if total != 0:
-                if total % 255 == 0:
-                    self.previous_page += dataio.read(total)
-                else:
-                    yield self.previous_page + dataio.read(total)
-                    self.previous_page = b""
-            header_data = dataio.read(27)
+
+    @staticmethod
+    def _log_exchange(source: str, received: dict[str, str], parsed: dict[str, str]) -> None:
+        """Log what a broadcaster sent and what we made of it.
+
+        Both halves matter.  Dropping a field the DJ software displays is one
+        failure; misreading one we do consume is another, and splitting
+        "Artist - Title" out of a single song= is a guess that only the raw
+        value can settle.
+        """
+        logging.debug("icecast %s received: %s", source, _fmt_fields(received))
+        logging.debug("icecast %s parsed: %s", source, _fmt_fields(parsed))
+
+    def _short_request(self, data: bytes) -> bool:
+        """Answer a metadata update or status poll; True if this was one.
+
+        These arrive on their own connection and expect a reply and a close.
+        A source handshake must not come through here -- that connection has
+        to stay open to carry the audio.
+        """
+        url = self._extract_url_from_data(data)
+        if url is None:
+            return False
+        if url.path == "/admin/metadata":
+            self._query_parse(data)
+            self.transport.write(b"HTTP/1.0 200 OK\r\n\r\n")  # type: ignore
+            return True
+        if url.path == "/status-json.xsl":
+            body = json.dumps({"icestats": self._icestats()}).encode("utf-8")
+            self.transport.write(  # type: ignore
+                b"HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nContent-Length: "
+                + str(len(body)).encode("ascii")
+                + b"\r\nConnection: close\r\n\r\n"
+                + body
+            )
+            return True
+        return False
+
+    def _icestats(self) -> dict:
+        """Server status in Icecast's shape, reporting only what we know.
+
+        Zero listeners is the truth -- WNP receives a stream, it does not relay
+        one -- and anything we would have to invent, such as a listenurl that
+        serves nothing, is left out rather than fabricated.
+        """
+        stats: dict = {"server_id": _SERVER_ID, "listeners": 0, "sources": 0}
+        metadata = self.metadata_reader() if self.metadata_reader else {}
+        source = {field: metadata[field] for field in ("artist", "title") if metadata.get(field)}
+        if not source:
+            return stats
+
+        source |= {"listeners": 0, "listener_peak": 0, "slow_listeners": 0}
+        stats["sources"] = 1
+        stats["source"] = source
+        return stats
 
     def _query_parse(self, data: bytes) -> None:
         """try to parse the query"""
-        logging.debug("Processing updinfo")
-
         # Parse the URL from the request data
         url = self._extract_url_from_data(data)
         if not url:
@@ -126,22 +237,55 @@ class IcecastProtocol(asyncio.Protocol):
 
         # Extract metadata from query parameters
         metadata = self._extract_metadata_from_query(query)
+        self._log_exchange("updinfo", {k: v[0] for k, v in query.items() if v}, metadata)
 
         # Update instance metadata and notify callback
-        self._current_metadata.update(metadata)
+        if not any(value for value in metadata.values()):
+            # butt follows every real update with an empty song=, and every Ogg
+            # connection opens with a comment block carrying only ENCODER.
+            # Publishing either blanks whatever is currently playing.
+            logging.debug("icecast: ignoring an update with no usable fields")
+            return
+
+        # each update describes the current track in full, so pass it on as-is:
+        # merging would carry the previous track's artist onto this one, which
+        # is worse than reporting none
         if self.metadata_callback:
-            self.metadata_callback(self._current_metadata.copy())
+            self.metadata_callback(metadata)
+
+    @staticmethod
+    def _find_request(data: bytes) -> bytes | None:
+        """Return an HTTP request line found in this chunk, wherever it starts.
+
+        Normally a metadata update arrives on its own, but a client is free to
+        flush it behind audio in the same segment.
+        """
+        for line in data.split(b"\r\n"):
+            if IcecastProtocol._extract_url_from_data(line):
+                return line
+        return None
 
     @staticmethod
     def _extract_url_from_data(data: bytes) -> urllib.parse.ParseResult | None:
-        """Extract and parse URL from request data"""
-        try:
-            text = data.decode("utf-8").replace("GET ", "http://localhost").split()[0]
-            return urllib.parse.urlparse(text)
-        except UnicodeDecodeError:
+        """Parse the target out of an HTTP request line, or None if it is not one.
+
+        Clients vary the method and its casing, pad the line with extra spaces,
+        and sometimes send an absolute-form URI.  Read the request line as the
+        three tokens it is rather than matching a literal "GET ", which also
+        stops the old version from mangling any payload containing that text.
+        """
+        line = data.split(b"\r\n", 1)[0].decode("utf-8", "replace")
+        parts = line.split()
+        if len(parts) != 3 or not parts[2].upper().startswith("HTTP/"):
+            return None
+        if "\ufffd" in line:
+            # shaped like a request but not valid UTF-8, so say so -- audio
+            # chunks fail the shape test above and stay quiet
             logging.warning("Failed to decode icecast query data as UTF-8")
             return None
-        except (IndexError, ValueError) as error:
+        try:
+            return urllib.parse.urlparse(parts[1])
+        except ValueError as error:
             logging.warning("Failed to parse icecast query URL: %s", error)
             return None
 
@@ -150,28 +294,30 @@ class IcecastProtocol(asyncio.Protocol):
         """Extract metadata from parsed query parameters"""
         metadata: dict[str, str] = {}
 
-        # Direct artist/title parameters
+        # song is the fallback for clients that send nothing else -- butt only
+        # ever sends this.  Splitting it on " - " is a guess, so anything
+        # explicit overrides it below: Mixxx sends both and its song lags a
+        # track behind the artist and title it sends alongside.
+        if song_text := query.get("song", [""])[0].strip():
+            if " - " in song_text:
+                # first occurrence only, so "Artist - Song - Remix" keeps the
+                # remix with the title
+                artist, title = song_text.split(" - ", 1)
+                metadata["artist"] = artist.strip()
+                metadata["title"] = title.strip()
+            else:
+                metadata["title"] = song_text
+
         if query.get("artist"):
             metadata["artist"] = query["artist"][0]
         if query.get("title"):
             metadata["title"] = query["title"][0]
 
-        # Handle 'song' parameter that might contain "Artist - Title"
-        if "song" in query:
-            song_text = query["song"][0].strip()
-            if " - " not in song_text:
-                # No separator found, treat entire string as title
-                metadata["title"] = song_text
-            else:
-                # Split on first occurrence of ' - ' (with spaces)
-                # This handles cases like "Artist - Song - Remix" correctly
-                artist, title = song_text.split(" - ", 1)
-                metadata["artist"] = artist.strip()
-                metadata["title"] = title.strip()
-
         return metadata
 
-    def _parse_vorbis_comment(self, fh: io.BytesIO) -> None:  # pylint: disable=invalid-name
+    def _parse_vorbis_comment(  # pylint: disable=invalid-name,too-many-locals,too-many-branches
+        self, fh: io.BytesIO
+    ) -> None:
         """from tinytag, with slight modifications, pull out metadata"""
         comment_type_to_attr_mapping: dict[str, str] = {
             "album": "album",
@@ -187,22 +333,51 @@ class IcecastProtocol(asyncio.Protocol):
             "description": "comments",
         }
 
-        logging.debug("Processing vorbis comment")
         metadata: dict[str, str] = {}
+        seen: dict[str, str] = {}
 
-        vendor_length = struct.unpack("I", fh.read(4))[0]
+        # Every read is length-checked: a block cut short used to raise
+        # struct.error out of here, which asyncio swallowed, so a truncated
+        # comment lost the fields that did arrive as well as the ones that
+        # did not.
+        header = fh.read(4)
+        if len(header) < 4:
+            logging.warning("icecast vorbis comment ended before its vendor string")
+            return
+        vendor_length = struct.unpack("I", header)[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
-        elements = struct.unpack("I", fh.read(4))[0]
+        header = fh.read(4)
+        if len(header) < 4:
+            logging.warning("icecast vorbis comment ended before its field count")
+            return
+        elements = struct.unpack("I", header)[0]
+        decoded = 0
         for _ in range(elements):
-            length = struct.unpack("I", fh.read(4))[0]
+            raw_length = fh.read(4)
+            if len(raw_length) < 4:
+                break
+            length = struct.unpack("I", raw_length)[0]
+            chunk = fh.read(length)
+            if len(chunk) < length:
+                break
             try:
-                keyvalpair = codecs.decode(fh.read(length), "UTF-8")
+                keyvalpair = codecs.decode(chunk, "UTF-8")
             except UnicodeDecodeError:
                 continue
             if "=" in keyvalpair:
+                decoded += 1
                 key, value = keyvalpair.split("=", 1)
+                seen[key.lower()] = value
                 if fieldname := comment_type_to_attr_mapping.get(key.lower()):
                     metadata[fieldname] = value
+
+        if decoded != elements:
+            # the block says how many fields it holds; a shortfall means the
+            # packet was cut, not that the broadcaster sent little
+            logging.warning(
+                "icecast vorbis comment declared %d fields but only %d decoded", elements, decoded
+            )
+        self._log_exchange("vorbis", seen, metadata)
 
         # Fallback: If artist is empty but title contains " - ", try splitting the title
         artist_value = metadata.get("artist")
@@ -219,10 +394,18 @@ class IcecastProtocol(asyncio.Protocol):
                 metadata["title"] = title
 
         # Update instance metadata and notify callback
-        self._current_metadata.update(metadata)
+        if not any(value for value in metadata.values()):
+            # butt follows every real update with an empty song=, and every Ogg
+            # connection opens with a comment block carrying only ENCODER.
+            # Publishing either blanks whatever is currently playing.
+            logging.debug("icecast: ignoring an update with no usable fields")
+            return
 
+        # each update describes the current track in full, so pass it on as-is:
+        # merging would carry the previous track's artist onto this one, which
+        # is worse than reporting none
         if self.metadata_callback:
-            self.metadata_callback(self._current_metadata.copy())
+            self.metadata_callback(metadata)
 
 
 class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
@@ -320,7 +503,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         try:
 
             def protocol_factory() -> IcecastProtocol:
-                return IcecastProtocol(metadata_callback=self._metadata_callback)
+                return IcecastProtocol(
+                    metadata_callback=self._metadata_callback,
+                    metadata_reader=lambda: self._current_metadata,
+                )
 
             self.server = await loop.create_server(protocol_factory, "", port)
             self.current_port = port

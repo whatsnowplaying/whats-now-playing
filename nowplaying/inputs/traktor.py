@@ -167,7 +167,16 @@ class _TraktorWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
 
 
 class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
-    """base class of input plugins"""
+    """Traktor input: the Icecast listener plus collection.nml enrichment.
+
+    Traktor intermittently broadcasts the title with no ARTIST field at all,
+    on both 3 and 4, with fully tagged files whose artist its own browser
+    displays.  Confirmed against the raw wire rather than inferred, so there
+    is nothing to recover on this side.  No reliable trigger was found:
+    reconnecting the broadcast clears it sometimes and relaunching Traktor
+    usually does, and once a session starts without artists every track in it
+    is affected.  Please do not go looking for this one in the parser again.
+    """
 
     def __init__(self, config: "nowplaying.config.ConfigFile | None" = None, qsettings=None):
         """no custom init"""
