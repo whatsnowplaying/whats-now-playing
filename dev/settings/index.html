@@ -2773,6 +2773,23 @@
   (e.g. macOS with wallpaper tinting enabled).</p>
 <ul>
 <li>
+<p><strong>Certificate Trust</strong> - Controls which certificate authorities are used to
+  verify the sites <strong>What's Now Playing</strong> connects to. A computer that has not
+  been updated in several years may no longer recognise the authorities that
+  MusicBrainz, Discogs, and the other services use, which shows up as missing
+  artwork and biographies rather than as an obvious error.</p>
+</li>
+<li>
+<p><strong>Automatic</strong> (default) — checks once whether this computer's certificates
+    still work and quietly switches to the bundled set if they do not.</p>
+</li>
+<li><strong>Operating system</strong> — always use this computer's certificates. Required if
+    your network inspects traffic with a certificate your workplace installed.</li>
+<li><strong>Bundled with What's Now Playing</strong> — always use the bundled certificates.</li>
+</ul>
+<p>Changes take effect the next time <strong>What's Now Playing</strong> starts.</p>
+<ul>
+<li>
 <p><strong>Configuration Backup</strong> - Export and import your complete
   configuration to make version upgrades easier.</p>
 </li>
