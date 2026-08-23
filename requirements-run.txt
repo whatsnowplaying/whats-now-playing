@@ -1,8 +1,9 @@
 aiocache==0.12.3
 aiofiles==25.1.0
 aiohttp==3.14.3
-httpx[http2]==0.28.1
+httpx2[http2]==2.12.0
 aiosqlite==0.22.1
+certifi==2026.6.17
 chardet<8 # required by requests
 charset-normalizer==3.4.7
 defusedxml==0.7.1
@@ -35,7 +36,7 @@ tufup==0.10.0
 twitchAPI==4.5.0
 url_normalize==3.0.0
 watchdog==6.0.0
-wnpmb @ https://github.com/whatsnowplaying/wnpmb/releases/download/0.3.0/wnpmb-0.3.0-py3-none-any.whl
+wnpmb @ https://github.com/whatsnowplaying/wnpmb/releases/download/0.4.1/wnpmb-0.4.1-py3-none-any.whl
 wnp-templates @ https://github.com/whatsnowplaying/wnp-templates/releases/download/0.1.4/wnp_templates-0.1.4-py3-none-any.whl
 zeroconf==0.150.0
 

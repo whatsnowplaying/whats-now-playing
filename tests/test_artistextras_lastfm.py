@@ -142,7 +142,7 @@ async def test_lastfm_bio_and_website(bootstrap):
     """successful fetch returns bio and website"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
 
         result = await plugin.download_async(
@@ -160,7 +160,7 @@ async def test_lastfm_bio_stripped(bootstrap):
     """Last.fm attribution is stripped from bio"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -177,7 +177,7 @@ async def test_lastfm_bio_disabled(bootstrap):
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/bio", False)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -194,7 +194,7 @@ async def test_lastfm_websites_disabled(bootstrap):
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -210,7 +210,7 @@ async def test_lastfm_existing_bio_not_overwritten(bootstrap):
     """does not overwrite existing artistlongbio"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {
@@ -231,7 +231,7 @@ async def test_lastfm_api_error(bootstrap):
     """Last.fm API error response returns None"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(XYZ_URL).mock(
             return_value=httpx.Response(200, json={"error": 6, "message": "Artist not found"})
         )
@@ -247,7 +247,7 @@ async def test_lastfm_http_error(bootstrap):
     """HTTP error returns None without raising"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(side_effect=lambda _r: httpx.Response(503))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -261,7 +261,7 @@ async def test_lastfm_429_sets_cooldown(bootstrap, isolated_datacache_client):  
     """429 response sets provider cooldown; second call skips network"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(
             side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "60"})
         )
@@ -273,8 +273,10 @@ async def test_lastfm_429_sets_cooldown(bootstrap, isolated_datacache_client):  
     assert isolated_datacache_client.in_cooldown("lastfm")
 
     # Second call during cooldown must not touch the network
-    with respx.mock(assert_all_called=False) as mock_http2:
-        mock_http2.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http2:
+        mock_http2.get(WNP_MOCK_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE)
+        )
         result2 = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
@@ -287,7 +289,7 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
     """After cooldown expires the next call hits the network again"""
     plugin = _setup_plugin(bootstrap)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(
             side_effect=lambda _r: httpx.Response(429, headers={"Retry-After": "60"})
         )
@@ -303,8 +305,10 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
     # After clearing, cooldown should be gone
     assert not isolated_datacache_client.in_cooldown("lastfm")
 
-    with respx.mock(assert_all_called=False) as mock_http2:
-        mock_http2.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http2:
+        mock_http2.get(WNP_MOCK_URL).mock(
+            return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE)
+        )
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
@@ -319,7 +323,7 @@ async def test_lastfm_both_disabled_returns_none(bootstrap):
     bootstrap.cparser.setValue("lastfm/bio", False)
     bootstrap.cparser.setValue("lastfm/websites", False)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -353,7 +357,7 @@ async def test_lastfm_lang_returned(bootstrap):
         }
     }
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(de_url).mock(return_value=httpx.Response(200, json=de_response))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -378,7 +382,7 @@ async def test_lastfm_lang_fallback_to_en(bootstrap):
         }
     }
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(ko_url).mock(return_value=httpx.Response(200, json=ko_response))
         mock_http.get(en_url).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
@@ -404,7 +408,7 @@ async def test_lastfm_lang_no_fallback(bootstrap):
         }
     }
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(ko_url).mock(return_value=httpx.Response(200, json=ko_response))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -490,12 +494,14 @@ async def test_lastfm_coverart_queued(bootstrap):  # pylint: disable=redefined-o
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         mock_http.get(WNP_MOCK_ALBUM_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
+        mock_http.get(COVER_IMAGE_URL).mock(
+            return_value=httpx.Response(200, content=MINIMAL_JPEG)
+        )
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",
@@ -518,7 +524,7 @@ async def test_lastfm_coverart_disabled(bootstrap):  # pylint: disable=redefined
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", False)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {
@@ -542,7 +548,7 @@ async def test_lastfm_coverart_skipped_when_coverimageraw_present(
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {
@@ -565,7 +571,7 @@ async def test_lastfm_coverart_no_album(bootstrap):  # pylint: disable=redefined
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
@@ -583,7 +589,7 @@ async def test_lastfm_coverart_album_api_error(bootstrap):  # pylint: disable=re
     plugin = _setup_plugin(bootstrap)
     bootstrap.cparser.setValue("lastfm/coverart", True)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         mock_http.get(WNP_MOCK_ALBUM_URL).mock(
             return_value=httpx.Response(200, json={"error": 6, "message": "Album not found"})
@@ -611,12 +617,14 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):  # pylint: disable=re
     album_mbid = "00000000-0000-0000-0000-000000000002"
     mbid_url = _album_mbid_url(album_mbid)
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         mock_http.get(mbid_url).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
+        mock_http.get(COVER_IMAGE_URL).mock(
+            return_value=httpx.Response(200, content=MINIMAL_JPEG)
+        )
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",

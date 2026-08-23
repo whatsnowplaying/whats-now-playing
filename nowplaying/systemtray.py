@@ -4,6 +4,7 @@
 import logging
 import socket
 import sqlite3
+import time
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QFileSystemWatcher,
@@ -28,6 +29,7 @@ import nowplaying.upgrades
 import nowplaying.upgrades.background
 import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
+import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache
 import nowplaying.db
@@ -37,6 +39,7 @@ import nowplaying.notifications.charts
 import nowplaying.oauth2
 import nowplaying.settingsui
 import nowplaying.subprocesses
+import nowplaying.tlstrust
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
 import nowplaying.utils.charts_api
@@ -121,6 +124,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # System setup
         self._setup_database_and_processes()
 
+        # Settle the trust store before anything opens a TLS connection --
+        # _setup_charts_key() is the first thing that does.
+        self._settle_catrust()
+
         # Charts initialization
         self._setup_charts_key()
 
@@ -140,6 +147,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._update_startup_progress("Loading configuration...")
 
         self.config = config or nowplaying.config.ConfigFile()
+
+        # Started as early as possible so it overlaps the UI and database work
+        # below; _settle_catrust() collects it before the first TLS call.
+        self._catrust_probe = self._start_catrust_probe()
 
         # Clean up any stray temporary OAuth2 credentials from previous sessions
         self._update_startup_progress("Cleaning OAuth2 credentials...")
@@ -592,6 +603,40 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         PySide6 does not call ~QThread() while the OS thread is still running.
         """
         self._wait_for_vacuum_thread()
+
+    def _catrust_mode(self) -> str:
+        """The user's configured preference; the only part that is a setting."""
+        return str(
+            self.config.cparser.value(
+                nowplaying.tlstrust.MODE_KEY, defaultValue=nowplaying.tlstrust.MODE_AUTO
+            )
+        )
+
+    def _start_catrust_probe(self) -> "nowplaying.tlstrust.TrustProbe | None":
+        """Begin a trust-store probe if the cached verdict is missing or stale."""
+        _, verdict, checked = nowplaying.tlstrust.load_state(
+            nowplaying.bootstrap.catrust_state_path()
+        )
+        if not nowplaying.tlstrust.needs_probe(self._catrust_mode(), verdict, checked):
+            return None
+        return nowplaying.tlstrust.TrustProbe().start()
+
+    def _settle_catrust(self) -> None:
+        """Apply the trust decision and cache it for the next launch.
+
+        Runs every startup, not only when a probe was warranted, so that a
+        change to the setting reaches the cache the next launch reads before
+        upgrade() -- the setting itself cannot be consulted that early.
+        """
+        path = nowplaying.bootstrap.catrust_state_path()
+        _, verdict, checked = nowplaying.tlstrust.load_state(path)
+        if self._catrust_probe:
+            if fresh := self._catrust_probe.result(nowplaying.tlstrust.PROBE_JOIN_TIMEOUT):
+                verdict, checked = fresh, int(time.time())
+            self._catrust_probe = None
+        effective = nowplaying.tlstrust.resolve(self._catrust_mode(), verdict)
+        nowplaying.tlstrust.apply_mode(effective)
+        nowplaying.tlstrust.save_state(path, effective, verdict, checked)
 
     def _setup_charts_key(self) -> None:
         """Generate anonymous charts key if none exists, or ping version if key already present"""

@@ -10,7 +10,8 @@ import unittest.mock
 from pathlib import Path
 
 import aiosqlite
-import httpx
+import httpx  # respx type-checks its canned replies as httpx.Response, even under httpcore2
+import httpx2
 import orjson
 import pytest
 import pytest_asyncio
@@ -186,7 +187,7 @@ async def test_fetch_and_store_json_response(temp_client):  # pylint: disable=re
     """Test fetching and storing JSON response"""
     test_data = {"test": "data", "id": 123}
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://api.example.com/test.json").mock(
             return_value=httpx.Response(
                 200, json=test_data, headers={"content-type": "application/json"}
@@ -218,7 +219,7 @@ async def test_fetch_and_store_binary_response(temp_client):  # pylint: disable=
     """Test fetching and storing binary response"""
     test_data = b"fake_jpeg_data"
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://example.com/image.jpg").mock(
             return_value=httpx.Response(
                 200, content=test_data, headers={"content-type": "image/jpeg"}
@@ -243,7 +244,7 @@ async def test_fetch_and_store_binary_response(temp_client):  # pylint: disable=
 @pytest.mark.asyncio
 async def test_fetch_and_store_http_error(temp_client):  # pylint: disable=redefined-outer-name
     """Test handling HTTP error responses"""
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://example.com/notfound.jpg").mock(
             return_value=httpx.Response(404)
         )
@@ -265,7 +266,7 @@ async def test_fetch_and_store_http_error(temp_client):  # pylint: disable=redef
 @pytest.mark.asyncio
 async def test_fetch_and_store_rate_limit_handling(temp_client):  # pylint: disable=redefined-outer-name
     """Test rate limit response handling"""
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://example.com/ratelimited.jpg").mock(
             return_value=httpx.Response(429, headers={"Retry-After": "1"})
         )
@@ -289,9 +290,9 @@ async def test_fetch_and_store_rate_limit_handling(temp_client):  # pylint: disa
 @pytest.mark.asyncio
 async def test_fetch_and_store_timeout_handling(temp_client):  # pylint: disable=redefined-outer-name
     """Test timeout handling with retries"""
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://example.com/timeout.jpg").mock(
-            side_effect=httpx.ReadTimeout("timed out")
+            side_effect=httpx2.ReadTimeout("timed out")
         )
         result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/timeout.jpg",
@@ -329,7 +330,7 @@ async def test_process_queue_single_request(temp_client):  # pylint: disable=red
         priority=2,
     )
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(url).mock(
             return_value=httpx.Response(
                 200, content=expected_data, headers={"content-type": "image/jpeg"}
@@ -441,7 +442,7 @@ async def test_4xx_not_stored_in_cache(temp_client):  # pylint: disable=redefine
     """404 returns None and nothing is written to the cache"""
     url = "https://example.com/gone.jpg"
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(url).mock(return_value=httpx.Response(404))
 
         result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
@@ -472,7 +473,7 @@ async def test_404_is_not_retried(temp_client):  # pylint: disable=redefined-out
         call_count += 1
         return httpx.Response(404)
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(url).mock(side_effect=_count)
 
         result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
@@ -505,7 +506,7 @@ async def test_5xx_retry_then_success_stores_item(temp_client):  # pylint: disab
             return httpx.Response(503)
         return httpx.Response(200, content=good_data, headers={"content-type": "image/jpeg"})
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get(url).mock(side_effect=_seq)
 
         result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
@@ -552,7 +553,7 @@ async def test_process_queue_all_failed_drains_queue(temp_client):  # pylint: di
             priority=2,
         )
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         for url in urls:
             mock_responses.get(url).mock(return_value=httpx.Response(503))
 
@@ -576,7 +577,7 @@ async def test_rate_limiter_integration(temp_client):  # pylint: disable=redefin
     tokens_before = rate_limiter.available_tokens()
     assert tokens_before > 0
 
-    with respx.mock() as mock_responses:
+    with respx.mock(using="httpcore2") as mock_responses:
         mock_responses.get("https://example.com/ratelimit_test.txt").mock(
             return_value=httpx.Response(
                 200, text="test data", headers={"content-type": "text/plain"}

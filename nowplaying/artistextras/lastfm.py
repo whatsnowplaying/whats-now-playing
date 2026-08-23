@@ -6,12 +6,13 @@ import re
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import httpx2
 import orjson
 
 import nowplaying.artistextras
 import nowplaying.config
 import nowplaying.datacache
+import nowplaying.tlstrust
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -42,7 +43,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             await dc_client.initialize()
             if dc_client.in_cooldown("lastfm"):
                 return None
-            async with httpx.AsyncClient(timeout=self.calculate_delay()) as session:
+            async with httpx2.AsyncClient(
+                timeout=self.calculate_delay(),
+                verify=nowplaying.tlstrust.create_ssl_context(),
+            ) as session:
                 response = await session.get(url)
             if response.status_code == 429:
                 try:
@@ -63,7 +67,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 logging.debug("Last.fm API error: %s", data.get("message"))
                 return None
             return data
-        except httpx.TimeoutException:
+        except httpx2.TimeoutException:
             logging.error("Last.fm fetch timeout: %s", safe_url)
             return None
         except Exception:  # pragma: no cover pylint: disable=broad-except

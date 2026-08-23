@@ -10,7 +10,7 @@ import os
 import platform
 import sys
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 sys.path.insert(0, os.path.abspath('.'))
 
@@ -145,6 +145,11 @@ def windows_version_file():
 
 block_cipher = None
 
+# Packages that read their own version out of importlib.metadata at import
+# time, so they die if their .dist-info is stripped below.  httpx2's
+# __version__.py is literally version("httpx2") at module scope.
+KEEP_METADATA = ('httpx2',)
+
 # Versioned contents directory so each build's _internal-X.Y.Z/ is unique.
 # The installer renames the old binary aside and moves the new bundle in;
 # because the new binary looks for a different _internal-{new_ver}/ there is
@@ -172,7 +177,8 @@ for execname, execpy in executables.items():
                        # missing from the frozen app.
                        collect_data_files('wnp_templates') +
                        _nltk_datas('punkt') +
-                       _nltk_datas('punkt_tab'),
+                       _nltk_datas('punkt_tab') +
+                       [d for pkg in KEEP_METADATA for d in copy_metadata(pkg)],
                  hiddenimports=ALL_PLUGIN_MODULES + [
                      # tufup 0.10.0 imports setuptools.config.expand
                      # behind a try/except that hides it from
@@ -193,7 +199,10 @@ for execname, execpy in executables.items():
                  cipher=block_cipher,
                  noarchive=False)
 
-    a.datas = [x for x in a.datas if '.dist-info' not in x[0]]
+    _keep = tuple(f'{pkg}-' for pkg in KEEP_METADATA)
+    a.datas = [
+        x for x in a.datas if '.dist-info' not in x[0] or x[0].startswith(_keep)
+    ]
 
     # Splash screen disabled for folder mode
     # if sys.platform != 'darwin':

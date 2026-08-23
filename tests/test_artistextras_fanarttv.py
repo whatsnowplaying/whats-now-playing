@@ -64,7 +64,7 @@ async def test_fanarttv_datacache_api_call_count(bootstrap):  # pylint: disable=
         "musicbrainzartistid": [mbid],
     }
 
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(return_value=httpx.Response(200, json=mock_payload))
         await plugin.download_async(metadata.copy())
         first_count = mock_http.calls.call_count
@@ -89,13 +89,13 @@ async def test_fanarttv_datacache_api_failure_behavior(bootstrap):  # pylint: di
     }
 
     # First call: 500 (transient server error) → not cached → returns None
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(side_effect=lambda _: httpx.Response(500))
         result1 = await plugin.download_async(metadata.copy())
         assert result1 is None
 
     # Second call: success → should reach API (transient failure was not cached)
-    with respx.mock(assert_all_called=False) as mock_http:
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
         mock_http.get(url).mock(return_value=httpx.Response(200, json={"name": "Test Artist"}))
         result2 = await plugin.download_async(metadata.copy())
         assert mock_http.calls.call_count >= 1, "Transient failure must not have been cached"
