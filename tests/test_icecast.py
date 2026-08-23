@@ -350,10 +350,13 @@ def test_protocol_data_received_streaming_state():
     # Initial non-streaming state
     assert not protocol.streaming
 
-    # Send initial GET request
+    # a request with no header terminator yet is held, not guessed at
     protocol.data_received(b"GET /admin/metadata?mode=updinfo&song=Test HTTP/1.1")
+    assert not protocol.streaming
+    transport.write.assert_not_called()
 
-    # Should now be streaming
+    # once the rest arrives it is handled and the connection moves on
+    protocol.data_received(b"\r\n\r\n")
     assert protocol.streaming
     transport.write.assert_called_with(b"HTTP/1.0 200 OK\r\n\r\n")
 
@@ -450,6 +453,7 @@ def test_thread_safety_multiple_calls():
 # Ten Ogg pages lifted from a real Traktor broadcast: the vorbis identification
 # and comment headers, re-sent once per track change.
 TRAKTOR_CAPTURE = pathlib.Path(__file__).parent / "icecast" / "traktor-vorbis-headers.ogg"
+TRAKTOR_CAPTURE_BYTES = TRAKTOR_CAPTURE.read_bytes()
 TRAKTOR_TRACKS = [
     ("Poptone", "Performance"),
     ("Poptone", "No Big Deal"),
@@ -752,3 +756,65 @@ def test_short_requests_hang_up_and_sources_do_not(request_line, should_close, d
     protocol.connection_made(transport)
     protocol.data_received(request_line + b"\r\n\r\n")
     assert transport.closed is should_close
+
+
+@pytest.mark.parametrize(
+    "chunks,expected,description",
+    [
+        ([b"SOURCE / ICE/1.0\r\n\r\n", TRAKTOR_CAPTURE_BYTES], TRAKTOR_TRACKS, "audio alone"),
+        (
+            [
+                b"SOURCE / ICE/1.0\r\n\r\n",
+                b"GET /admin/metadata?mode=updinfo&song=A%20-%20B HTTP/1.0\r\n\r\n"
+                + TRAKTOR_CAPTURE_BYTES,
+            ],
+            [("A", "B")] + TRAKTOR_TRACKS,
+            "in-stream request must not swallow the audio behind it",
+        ),
+        (
+            [b"SOURCE / ICE/1.0\r\n\r\n" + TRAKTOR_CAPTURE_BYTES],
+            TRAKTOR_TRACKS,
+            "source flushing audio behind its own handshake",
+        ),
+        (
+            [b"PUT /stream HTTP/1.1\r\nUser-Agent: butt\r\n\r\n" + TRAKTOR_CAPTURE_BYTES],
+            TRAKTOR_TRACKS,
+            "butt's PUT handshake likewise",
+        ),
+    ],
+)
+def test_request_and_audio_in_one_segment(chunks, expected, description):  # pylint: disable=unused-argument
+    """a chunk carrying both a request and audio must yield both"""
+    seen: list[dict[str, str]] = []
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(
+        metadata_callback=lambda meta: seen.append(dict(meta))
+    )
+    protocol.connection_made(_NullTransport())
+    for chunk in chunks:
+        protocol.data_received(chunk)
+    assert [(m.get("artist"), m.get("title")) for m in seen if m.get("title")] == expected
+
+
+@pytest.mark.parametrize(
+    "query,expected,description",
+    [
+        (
+            "song=Artist%20-%20Title&artist=&title=",
+            {"artist": "Artist", "title": "Title"},
+            "empty explicit fields must not wipe the song fallback",
+        ),
+        (
+            "song=Artist%20-%20Title&title=%20%20",
+            {"artist": "Artist", "title": "Title"},
+            "whitespace counts as empty",
+        ),
+    ],
+)
+def test_empty_explicit_fields_do_not_clobber_song(query, expected, description):  # pylint: disable=unused-argument
+    """presence of artist= is not the same as it having a value"""
+    callback = MagicMock()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_callback=callback)  # pylint: disable=unexpected-keyword-arg
+    protocol._query_parse(  # pylint: disable=protected-access
+        f"GET /admin/metadata?mode=updinfo&{query} HTTP/1.0".encode()
+    )
+    assert callback.call_args[0][0] == expected

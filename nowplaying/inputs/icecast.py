@@ -36,6 +36,9 @@ PLAYLIST: list[str] = ["name", "filename"]
 # What we claim to be when a source client polls the status pages.
 _SERVER_ID = "Icecast 2.4.4"
 
+# A request line longer than this is not one; stop holding the bytes.
+_MAX_REQUEST_LINE = 8192
+
 # Never echoed into the log; some encoders put the source password in the query.
 _SECRET_FIELDS = frozenset({"pass", "password", "auth", "token"})
 
@@ -78,13 +81,18 @@ class IcecastProtocol(asyncio.Protocol):
         """every time data is received, this method is called"""
 
         if not self.streaming:
-            # if 200 gets set, new page. data content here is irrelevant
+            self.buffer += data
+            request, rest = self._split_request(self.buffer)
+            if request is None:
+                if self._maybe_request(self.buffer):
+                    return  # a request split across reads; wait for the rest
+                request, rest = b"", self.buffer
 
             self.streaming = True
             self.buffer = b""
             self.previous_page = b""
             self.warned_not_ogg = False
-            if self._short_request(data):
+            if request and self._short_request(request):
                 # metadata updates and status polls each get their own
                 # connection -- butt opened twenty in one short session -- so
                 # answer and hang up rather than leaving a socket per poll
@@ -92,26 +100,27 @@ class IcecastProtocol(asyncio.Protocol):
                 return
             logging.debug("Sending initial 200")
             self.transport.write(b"HTTP/1.0 200 OK\r\n\r\n")  # type: ignore
+            self.buffer = rest  # a source may flush audio behind its handshake
         else:
-            if request := self._find_request(data):
+            request, rest = self._split_request(data)
+            if request is not None:
                 # a metadata update on the same connection as the audio; letting
                 # it reach the page reader would wedge the buffer behind a page
                 # that never completes
                 self._query_parse(request)
                 self.transport.write(b"HTTP/1.0 200 OK\r\n\r\n")  # type: ignore
-                return
-
             # TCP hands us arbitrary slices, so hold anything short of a whole
             # page until the rest turns up
-            self.buffer += data
-            for packet in self._drain_packets():
-                packetio = io.BytesIO(packet)
-                if packet[:7] == b"\x03vorbis":
-                    packetio.seek(7, os.SEEK_CUR)  # jump over header name
-                    self._parse_vorbis_comment(packetio)
-                elif packet[:8] == b"OpusTags":  # parse opus metadata:
-                    packetio.seek(8, os.SEEK_CUR)  # jump over header name
-                    self._parse_vorbis_comment(packetio)
+            self.buffer += rest
+
+        for packet in self._drain_packets():
+            packetio = io.BytesIO(packet)
+            if packet[:7] == b"\x03vorbis":
+                packetio.seek(7, os.SEEK_CUR)  # jump over header name
+                self._parse_vorbis_comment(packetio)
+            elif packet[:8] == b"OpusTags":  # parse opus metadata:
+                packetio.seek(8, os.SEEK_CUR)  # jump over header name
+                self._parse_vorbis_comment(packetio)
 
     def _drain_packets(self) -> Iterator[bytes]:
         """Yield complete Ogg packets, holding partial pages until they finish.
@@ -254,16 +263,28 @@ class IcecastProtocol(asyncio.Protocol):
             self.metadata_callback(metadata)
 
     @staticmethod
-    def _find_request(data: bytes) -> bytes | None:
-        """Return an HTTP request line found in this chunk, wherever it starts.
+    def _split_request(data: bytes) -> tuple[bytes | None, bytes]:
+        """Peel a complete HTTP request off the front, returning it and the rest.
 
-        Normally a metadata update arrives on its own, but a client is free to
-        flush it behind audio in the same segment.
+        (None, data) means this is not a request, or not all of one yet.  Audio
+        flushed behind a request in the same segment stays in the remainder
+        rather than being discarded with it, and scanning only the front avoids
+        mistaking audio bytes for a request line.
         """
-        for line in data.split(b"\r\n"):
-            if IcecastProtocol._extract_url_from_data(line):
-                return line
-        return None
+        head, separator, rest = data.partition(b"\r\n\r\n")
+        if not separator or IcecastProtocol._extract_url_from_data(head) is None:
+            return None, data
+        return head, rest
+
+    @staticmethod
+    def _maybe_request(data: bytes) -> bool:
+        """True if data could still become an HTTP request once more arrives."""
+        if b"\r\n\r\n" in data:
+            return False  # headers are complete, so whatever it is, it is not one
+        first = data.split(b"\r\n", 1)[0]
+        if len(first) > _MAX_REQUEST_LINE:
+            return False
+        return first[:1].isalpha() and first.isascii()
 
     @staticmethod
     def _extract_url_from_data(data: bytes) -> urllib.parse.ParseResult | None:
@@ -308,10 +329,12 @@ class IcecastProtocol(asyncio.Protocol):
             else:
                 metadata["title"] = song_text
 
-        if query.get("artist"):
-            metadata["artist"] = query["artist"][0]
-        if query.get("title"):
-            metadata["title"] = query["title"][0]
+        # tested for content, not presence: a client sending artist= with no
+        # value would otherwise wipe what song= just gave us
+        if artist := query.get("artist", [""])[0].strip():
+            metadata["artist"] = artist
+        if title := query.get("title", [""])[0].strip():
+            metadata["title"] = title
 
         return metadata
 
