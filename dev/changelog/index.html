@@ -511,6 +511,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#icecast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Icecast
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#new-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3474,6 +3485,25 @@
     interface, fixing discovery on multi-NIC systems</li>
 <li>Connection lifecycle hardening and greatly reduced debug-log volume</li>
 </ul>
+<h3 id="icecast">Icecast<a class="headerlink" href="#icecast" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Track metadata no longer goes missing or arrives stale. Ogg pages split
+    across network reads are reassembled instead of dropped, so
+    broadcasters that put artist and title in the stream (Traktor) are
+    read reliably. Broadcasters that also send a combined "song" value
+    (Mixxx) no longer have their correct artist and title overridden by it</li>
+<li>A track no longer inherits the previous track's artist when a
+    broadcaster omits it, and an empty update no longer blanks whatever is
+    playing</li>
+<li>Metadata sent after streaming has started is now accepted rather than
+    ignored</li>
+<li>Status requests are answered with the current track, so broadcast
+    software can confirm WNP received it</li>
+<li>Streams in a format WNP cannot read, such as MP3, now log one
+    explanatory warning instead of filling the log</li>
+<li>Port changes are detected and the listener restarts without requiring a
+    WNP restart</li>
+</ul>
 <h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The upgrade prompt can now show aggregated release notes for the
@@ -3486,8 +3516,6 @@
     ignored</li>
 <li>Fixed version comparison ordering across release, preview, and
     release-candidate builds</li>
-<li>Icecast input now detects port changes and restarts without
-    requiring a WNP restart</li>
 <li>Fixed configuration restore when cancelling after a settings reset;
     the charts key is preserved</li>
 </ul>
