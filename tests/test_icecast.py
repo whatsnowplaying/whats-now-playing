@@ -3,6 +3,12 @@
 
 # pylint: disable=redefined-outer-name
 
+import importlib
+import io
+import json
+import logging
+import pathlib
+import struct
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,8 +36,10 @@ def test_protocol_init():
     protocol = nowplaying.inputs.icecast.IcecastProtocol()
     assert not protocol.streaming
     assert protocol.previous_page == b""
+    assert protocol.buffer == b""
     assert protocol.metadata_callback is None  # pylint: disable=no-member
-    assert not protocol._current_metadata  # pylint: disable=protected-access,no-member
+    assert protocol.metadata_callback is None
+    assert protocol.metadata_reader is None
 
 
 def test_protocol_init_with_callback():
@@ -48,6 +56,36 @@ def test_connection_made():
 
     protocol.connection_made(transport)
     assert protocol.transport == transport
+
+
+@pytest.mark.parametrize(
+    "query_string,description",
+    [
+        ("song=", "empty song field"),
+        ("song=%20%20%20", "whitespace-only song field"),
+        ("artist=&title=", "empty artist and title"),
+    ],
+)
+def test_query_parse_publishes_nothing_when_empty(query_string, description):  # pylint: disable=unused-argument
+    """butt follows every real update with an empty song=
+
+    Publishing it would blank the track a moment after it appeared, so an
+    update carrying no usable value is dropped rather than forwarded.
+    """
+    callback = MagicMock()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_callback=callback)  # pylint: disable=unexpected-keyword-arg
+    query_data = f"GET /admin/metadata?mode=updinfo&{query_string} HTTP/1.1".encode()
+    protocol._query_parse(query_data)  # pylint: disable=protected-access
+    callback.assert_not_called()
+
+
+def test_stream_header_does_not_blank_the_track():
+    """every Ogg connection opens with a comment block holding only ENCODER"""
+    callback = MagicMock()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_callback=callback)  # pylint: disable=unexpected-keyword-arg
+    body = _comment_block([b"ENCODER=Native Instruments Media Library"])
+    protocol._parse_vorbis_comment(io.BytesIO(body))  # pylint: disable=protected-access
+    callback.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -77,8 +115,6 @@ def test_connection_made():
             "separate artist and title fields",
         ),
         # Edge cases
-        ("song=", None, "", "empty song field"),
-        ("song=%20%20%20", None, "", "whitespace-only song field"),
     ],
 )
 def test_query_parse_metadata(query_string, expected_artist, expected_title, test_description):  # pylint: disable=unused-argument
@@ -104,8 +140,10 @@ def test_query_parse_metadata(query_string, expected_artist, expected_title, tes
             True,
             "Failed to decode icecast query data as UTF-8",
         ),
-        # Invalid URL parsing
-        (b"", True, None),  # Empty data - any warning message accepted
+        # Not a request line at all: silent, because _find_request runs this
+        # against every audio chunk and a warning per chunk would bury the log
+        (b"", False, None),
+        (b"\x03vorbis\x00\x01\x02", False, None),
     ],
 )
 def test_query_parse_error_handling(test_data, should_log_warning, expected_warning_msg):
@@ -312,10 +350,13 @@ def test_protocol_data_received_streaming_state():
     # Initial non-streaming state
     assert not protocol.streaming
 
-    # Send initial GET request
+    # a request with no header terminator yet is held, not guessed at
     protocol.data_received(b"GET /admin/metadata?mode=updinfo&song=Test HTTP/1.1")
+    assert not protocol.streaming
+    transport.write.assert_not_called()
 
-    # Should now be streaming
+    # once the rest arrives it is handled and the connection moves on
+    protocol.data_received(b"\r\n\r\n")
     assert protocol.streaming
     transport.write.assert_called_with(b"HTTP/1.0 200 OK\r\n\r\n")
 
@@ -407,3 +448,373 @@ def test_thread_safety_multiple_calls():
     final_metadata = plugin._current_metadata  # pylint: disable=protected-access,no-member
     assert final_metadata["artist"] == "Artist99"
     assert final_metadata["title"] == "Title99"
+
+
+# Ten Ogg pages lifted from a real Traktor broadcast: the vorbis identification
+# and comment headers, re-sent once per track change.
+TRAKTOR_CAPTURE = pathlib.Path(__file__).parent / "icecast" / "traktor-vorbis-headers.ogg"
+TRAKTOR_CAPTURE_BYTES = TRAKTOR_CAPTURE.read_bytes()
+TRAKTOR_TRACKS = [
+    ("Poptone", "Performance"),
+    ("Poptone", "No Big Deal"),
+    ("Poptone", "Christian Says"),
+    ("Poptone", "Happiness"),
+]
+
+
+class _NullTransport:  # pylint: disable=too-few-public-methods
+    """just enough transport for the protocol to answer the request with a 200"""
+
+    @staticmethod
+    def write(_data: bytes) -> None:
+        """swallow the response"""
+
+    @staticmethod
+    def close() -> None:
+        """nothing to close"""
+
+
+def _feed(data: bytes, chunk: int) -> list[dict[str, str]]:
+    """Push data through the protocol in fixed-size slices, as TCP would."""
+    seen: list[dict[str, str]] = []
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(
+        metadata_callback=lambda meta: seen.append(dict(meta))
+    )
+    protocol.connection_made(_NullTransport())
+    protocol.data_received(b"SOURCE / HTTP/1.0\r\n\r\n")
+    for offset in range(0, len(data), chunk):
+        protocol.data_received(data[offset : offset + chunk])
+    return seen
+
+
+@pytest.mark.parametrize("chunk", [15772, 4096, 1400, 137, 1])
+def test_ogg_stream_survives_any_chunking(chunk):
+    """TCP splits wherever it likes, and a page boundary is not a read boundary
+
+    Reading a page header straight out of whichever slice arrived used to raise
+    struct.error mid-stream and desynchronise everything after it, so a real
+    broadcast at MTU-sized reads lost the artist and most track changes.
+    """
+    seen = _feed(TRAKTOR_CAPTURE.read_bytes(), chunk)
+    tracks = [(m.get("artist"), m.get("title")) for m in seen if m.get("title")]
+    assert tracks == TRAKTOR_TRACKS
+
+
+def test_packet_boundaries_come_from_the_segment_table():
+    """a page can hold the end of one packet and the whole of the next
+
+    Splitting on a running byte count instead of the segment table merged the
+    two into a single malformed packet.
+    """
+    body = b"A" * 300 + b"B" * 100
+    header = struct.pack("<4sBBqIIiB", b"OggS", 0, 0x00, 0, 1, 0, 0, 3)
+    protocol = nowplaying.inputs.icecast.IcecastProtocol()
+    protocol.buffer = header + bytes([255, 45, 100]) + body
+    assert [len(pkt) for pkt in protocol._drain_packets()] == [300, 100]  # pylint: disable=protected-access
+
+
+def test_partial_page_is_held_until_complete():
+    """nothing may be consumed until a page's whole body has arrived"""
+    data = TRAKTOR_CAPTURE.read_bytes()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol()
+    protocol.buffer = data[:20]
+    assert not list(protocol._drain_packets())  # pylint: disable=protected-access
+    protocol.buffer = data
+    assert list(protocol._drain_packets())  # pylint: disable=protected-access
+
+
+def _comment_block(fields: list[bytes], declared: int | None = None) -> bytes:
+    """Build a vorbis comment body, optionally lying about the field count."""
+    vendor = b"Native Instruments Media Library"
+    out = struct.pack("I", len(vendor)) + vendor
+    out += struct.pack("I", len(fields) if declared is None else declared)
+    for field in fields:
+        out += struct.pack("I", len(field)) + field
+    return out
+
+
+@pytest.mark.parametrize(
+    "body,expected",
+    [
+        (_comment_block([b"ARTIST=A", b"TITLE=T"]), {"artist": "A", "title": "T"}),
+        # claims more than it carries
+        (_comment_block([b"ARTIST=A", b"TITLE=T"], declared=5), {"artist": "A", "title": "T"}),
+        # cut partway through the final field
+        (_comment_block([b"ARTIST=A", b"TITLE=Something"])[:-6], {"artist": "A"}),
+        (b"", {}),
+    ],
+)
+def test_truncated_comment_keeps_what_arrived(body, expected):
+    """a short block used to raise struct.error and lose the fields it did carry
+
+    asyncio swallowed that, so a cut comment was indistinguishable from a
+    broadcaster that simply sent less.
+    """
+    seen: list[dict[str, str]] = []
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(
+        metadata_callback=lambda meta: seen.append(dict(meta))
+    )
+    protocol._parse_vorbis_comment(io.BytesIO(body))  # pylint: disable=protected-access
+    got = seen[-1] if seen else {}
+    assert {k: v for k, v in got.items() if k in {"artist", "title"}} == expected
+
+
+@pytest.mark.parametrize(
+    "query,expected,description",
+    [
+        # captured from libshout/2.4.1: song lagged a track behind the explicit
+        # fields, and the explicit ones matched what was actually playing
+        (
+            "mount=%2f&song=Poptone%20%2d%20Love%20Me&charset=UTF%2d8"
+            "&artist=Poptone&title=Performance",
+            {"artist": "Poptone", "title": "Performance"},
+            "mixxx sends both and song is stale",
+        ),
+        # captured from butt 1.45/1.47: song is all it ever sends
+        (
+            "mount=/stream&song=some%20artist%20-%20some%20title",
+            {"artist": "some artist", "title": "some title"},
+            "butt sends song only",
+        ),
+        (
+            "song=Bicep%20-%20Glue%20-%20Original%20Mix",
+            {"artist": "Bicep", "title": "Glue - Original Mix"},
+            "split on the first separator so a remix stays with the title",
+        ),
+        ("song=Just%20A%20Title", {"title": "Just A Title"}, "no separator"),
+        ("artist=A&title=T", {"artist": "A", "title": "T"}, "explicit only"),
+    ],
+)
+def test_song_is_a_fallback_not_an_override(query, expected, description):  # pylint: disable=unused-argument
+    """explicit artist and title beat a string we split on a guess"""
+    callback = MagicMock()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_callback=callback)  # pylint: disable=unexpected-keyword-arg
+    protocol._query_parse(  # pylint: disable=protected-access
+        f"GET /admin/metadata?mode=updinfo&{query} HTTP/1.0".encode()
+    )
+    callback.assert_called_once()
+    assert callback.call_args[0][0] == expected
+
+
+@pytest.mark.parametrize(
+    "request_line,expect_body,description",
+    [
+        (b"GET /status-json.xsl HTTP/1.1", True, "butt polls this every few seconds"),
+        (b"PUT /stream HTTP/1.1", False, "butt's source connection must stay a bare 200"),
+        (b"SOURCE / HTTP/1.0", False, "mixxx's source connection likewise"),
+        (b"GET /admin/metadata?mode=updinfo&song=A%20-%20B HTTP/1.0", False, "metadata update"),
+    ],
+)
+def test_status_pages_answered_without_disturbing_sources(request_line, expect_body, description):  # pylint: disable=unused-argument
+    """a source client polls the status page on a separate connection
+
+    Answering with a bare 200 and no body sent butt to the legacy /7.xsl
+    fallback; answering the source handshake with a body would break the
+    stream, so the two must stay distinct.
+    """
+    written: list[bytes] = []
+
+    class _Recorder:  # pylint: disable=too-few-public-methods
+        @staticmethod
+        def write(data: bytes) -> None:
+            """capture the response"""
+            written.append(data)
+
+        @staticmethod
+        def close() -> None:
+            """nothing to close"""
+
+    protocol = nowplaying.inputs.icecast.IcecastProtocol()
+    protocol.connection_made(_Recorder())
+    protocol.data_received(request_line + b"\r\n\r\n")
+
+    response = b"".join(written)
+    assert response.startswith(b"HTTP/1.0 200 OK")
+    body = response.partition(b"\r\n\r\n")[2]
+    assert bool(body) is expect_body
+
+
+def test_status_json_is_valid_json():
+    """butt parses this, so it has to be more than a 200"""
+    written: list[bytes] = []
+
+    class _Recorder:  # pylint: disable=too-few-public-methods
+        @staticmethod
+        def write(data: bytes) -> None:
+            """capture the response"""
+            written.append(data)
+
+        @staticmethod
+        def close() -> None:
+            """nothing to close"""
+
+    protocol = nowplaying.inputs.icecast.IcecastProtocol()
+    protocol.connection_made(_Recorder())
+    protocol.data_received(b"GET /status-json.xsl HTTP/1.1\r\n\r\n")
+    body = b"".join(written).partition(b"\r\n\r\n")[2]
+    assert "icestats" in json.loads(body)
+
+
+def _status_poll(protocol) -> dict:
+    """Drive a status request through a protocol and return the parsed body."""
+    written: list[bytes] = []
+
+    class _Recorder:  # pylint: disable=too-few-public-methods
+        @staticmethod
+        def write(data: bytes) -> None:
+            """capture the response"""
+            written.append(data)
+
+        @staticmethod
+        def close() -> None:
+            """nothing to close"""
+
+    protocol.connection_made(_Recorder())
+    protocol.data_received(b"GET /status-json.xsl HTTP/1.1\r\n\r\n")
+    return json.loads(b"".join(written).partition(b"\r\n\r\n")[2])
+
+
+def test_status_reports_the_track_from_another_connection():
+    """status polls arrive on their own connection, not the stream's
+
+    butt opened twenty connections in one short session, so the instance
+    answering a poll has never seen the stream it is asked about; it reads
+    what the plugin holds instead.
+    """
+    held = {"artist": "Poptone", "title": "Lions"}
+    stats = _status_poll(nowplaying.inputs.icecast.IcecastProtocol(metadata_reader=lambda: held))[
+        "icestats"
+    ]
+    assert stats["sources"] == 1
+    assert stats["source"]["artist"] == "Poptone"
+    assert stats["source"]["title"] == "Lions"
+    assert stats["source"]["listeners"] == 0
+
+
+def test_status_reports_no_source_before_anything_streams():
+    """claiming a source with no track would be a lie"""
+    stats = _status_poll(nowplaying.inputs.icecast.IcecastProtocol(metadata_reader=dict))[
+        "icestats"
+    ]
+    assert stats["sources"] == 0
+    assert "source" not in stats
+    assert stats["listeners"] == 0
+
+
+def test_importing_the_plugin_leaves_other_loggers_alone():
+    """this module used to run logging.config.dictConfig at import time
+
+    disable_existing_loggers switched off every named logger already set up,
+    including the third-party ones bootstrap had just quieted, so a real
+    warning from them would vanish.
+    """
+    probe = logging.getLogger("wnp_icecast_probe")
+    probe.setLevel(logging.WARNING)
+    importlib.reload(nowplaying.inputs.icecast)
+    assert not probe.disabled
+
+
+class _ClosableTransport:  # pylint: disable=too-few-public-methods
+    """Transport that records whether the protocol hung up."""
+
+    def __init__(self) -> None:
+        self.written: list[bytes] = []
+        self.closed = False
+
+    def write(self, data: bytes) -> None:
+        """capture the response"""
+        self.written.append(data)
+
+    def close(self) -> None:
+        """record the hangup"""
+        self.closed = True
+
+
+@pytest.mark.parametrize(
+    "request_line,should_close,description",
+    [
+        (b"GET /status-json.xsl HTTP/1.1", True, "butt polls this every ten seconds"),
+        (
+            b"GET /admin/metadata?mode=updinfo&song=A%20-%20B HTTP/1.0",
+            True,
+            "one connection per metadata update",
+        ),
+        (b"SOURCE / HTTP/1.0", False, "mixxx's audio connection must stay open"),
+        (b"PUT /stream HTTP/1.1", False, "butt's audio connection likewise"),
+    ],
+)
+def test_short_requests_hang_up_and_sources_do_not(request_line, should_close, description):  # pylint: disable=unused-argument
+    """we advertise Connection: close, so we have to actually close
+
+    Metadata updates and status polls each get their own connection.  Leaving
+    them open leaked a socket and a protocol instance per poll -- roughly one
+    a second across a long set -- while closing the source connection would
+    cut the audio off entirely.
+    """
+    transport = _ClosableTransport()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_reader=dict)
+    protocol.connection_made(transport)
+    protocol.data_received(request_line + b"\r\n\r\n")
+    assert transport.closed is should_close
+
+
+@pytest.mark.parametrize(
+    "chunks,expected,description",
+    [
+        ([b"SOURCE / ICE/1.0\r\n\r\n", TRAKTOR_CAPTURE_BYTES], TRAKTOR_TRACKS, "audio alone"),
+        (
+            [
+                b"SOURCE / ICE/1.0\r\n\r\n",
+                b"GET /admin/metadata?mode=updinfo&song=A%20-%20B HTTP/1.0\r\n\r\n"
+                + TRAKTOR_CAPTURE_BYTES,
+            ],
+            [("A", "B")] + TRAKTOR_TRACKS,
+            "in-stream request must not swallow the audio behind it",
+        ),
+        (
+            [b"SOURCE / ICE/1.0\r\n\r\n" + TRAKTOR_CAPTURE_BYTES],
+            TRAKTOR_TRACKS,
+            "source flushing audio behind its own handshake",
+        ),
+        (
+            [b"PUT /stream HTTP/1.1\r\nUser-Agent: butt\r\n\r\n" + TRAKTOR_CAPTURE_BYTES],
+            TRAKTOR_TRACKS,
+            "butt's PUT handshake likewise",
+        ),
+    ],
+)
+def test_request_and_audio_in_one_segment(chunks, expected, description):  # pylint: disable=unused-argument
+    """a chunk carrying both a request and audio must yield both"""
+    seen: list[dict[str, str]] = []
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(
+        metadata_callback=lambda meta: seen.append(dict(meta))
+    )
+    protocol.connection_made(_NullTransport())
+    for chunk in chunks:
+        protocol.data_received(chunk)
+    assert [(m.get("artist"), m.get("title")) for m in seen if m.get("title")] == expected
+
+
+@pytest.mark.parametrize(
+    "query,expected,description",
+    [
+        (
+            "song=Artist%20-%20Title&artist=&title=",
+            {"artist": "Artist", "title": "Title"},
+            "empty explicit fields must not wipe the song fallback",
+        ),
+        (
+            "song=Artist%20-%20Title&title=%20%20",
+            {"artist": "Artist", "title": "Title"},
+            "whitespace counts as empty",
+        ),
+    ],
+)
+def test_empty_explicit_fields_do_not_clobber_song(query, expected, description):  # pylint: disable=unused-argument
+    """presence of artist= is not the same as it having a value"""
+    callback = MagicMock()
+    protocol = nowplaying.inputs.icecast.IcecastProtocol(metadata_callback=callback)  # pylint: disable=unexpected-keyword-arg
+    protocol._query_parse(  # pylint: disable=protected-access
+        f"GET /admin/metadata?mode=updinfo&{query} HTTP/1.0".encode()
+    )
+    assert callback.call_args[0][0] == expected

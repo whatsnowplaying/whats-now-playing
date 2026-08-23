@@ -63,3 +63,11 @@ In Traktor's main interface:
 - **No enhanced track details**: Check that collection.nml path is correct and Re-read completed
 - **Connection issues**: Verify port numbers match between Traktor and **What's Now Playing**
 - **Slow database building**: Normal for large collections (10,000+ tracks)
+- **Titles arrive but artists are missing**: Traktor sometimes broadcasts only
+    the track title, leaving the artist out of the stream entirely, even though
+    its own browser shows one. This has been seen on both Traktor 3 and 4 with
+    fully tagged files, and **What's Now Playing** cannot recover a field that
+    was never sent. Restarting the broadcast sometimes clears it and quitting
+    and relaunching Traktor usually does, but neither is reliable. Once a
+    broadcast session starts without artists, every track in that session is
+    affected, so reconnecting is worth trying before a relaunch

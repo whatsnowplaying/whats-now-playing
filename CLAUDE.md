@@ -34,6 +34,22 @@ code in this repository.
   `gh pr create --repo whatsnowplaying/whats-now-playing`
 - All development and PRs should stay within the `whatsnowplaying` organization
 
+**NEVER use `git stash`**: the stash is one global stack shared across every
+branch, worktree, and concurrent session in the repository, and this one
+routinely holds long-lived entries belonging to other work. A `git stash pop`
+restores whatever is on top — which is very unlikely to be what you just
+stashed — and a failed pop leaves conflicted files in the working tree while
+keeping the entry, so it looks like nothing happened. Note also that
+`git stash <path>` is not valid syntax; it silently stashes nothing, which sets
+up a later `pop` to restore someone else's work.
+
+To look at a committed version of a file, extract a copy instead of touching
+the tree:
+
+```bash
+git show HEAD:path/to/file.py > /tmp/old_file.py
+```
+
 **Do NOT enable Git LFS**: This repo is a public fork of `e1miran/Now-Playing-Serato`.
 GitHub does not allow public forks to upload LFS objects to their own storage —
 pushes fail with "can not upload new objects to public fork".

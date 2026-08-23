@@ -21,6 +21,25 @@
     interface, fixing discovery on multi-NIC systems
 * Connection lifecycle hardening and greatly reduced debug-log volume
 
+### Icecast
+
+* Track metadata no longer goes missing or arrives stale. Ogg pages split
+    across network reads are reassembled instead of dropped, so
+    broadcasters that put artist and title in the stream (Traktor) are
+    read reliably. Broadcasters that also send a combined "song" value
+    (Mixxx) no longer have their correct artist and title overridden by it
+* A track no longer inherits the previous track's artist when a
+    broadcaster omits it, and an empty update no longer blanks whatever is
+    playing
+* Metadata sent after streaming has started is now accepted rather than
+    ignored
+* Status requests are answered with the current track, so broadcast
+    software can confirm WNP received it
+* Streams in a format WNP cannot read, such as MP3, now log one
+    explanatory warning instead of filling the log
+* Port changes are detected and the listener restarts without requiring a
+    WNP restart
+
 ### New Features
 
 * The upgrade prompt can now show aggregated release notes for the
@@ -33,8 +52,6 @@
     ignored
 * Fixed version comparison ordering across release, preview, and
     release-candidate builds
-* Icecast input now detects port changes and restarts without
-    requiring a WNP restart
 * Fixed configuration restore when cancelling after a settings reset;
     the charts key is preserved
 
