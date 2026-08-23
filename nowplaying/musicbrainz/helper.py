@@ -21,6 +21,7 @@ from wnpmb.normalization import normalize
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.tlstrust
 import nowplaying.utils.metadata
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ class MusicBrainzHelper:
         self.mb_client = MusicBrainzClient(
             timeout=5.0,
             retry_settings=RetrySettings(max_retries=2, wait=0.5, timeout_retries=1),
+            ca_bundle=nowplaying.tlstrust.ca_bundle(),
         )
 
     async def _mb_op_with_retry(self, operation, error_msg: str, default: Any) -> Any:

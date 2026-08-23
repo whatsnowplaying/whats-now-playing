@@ -40,6 +40,7 @@ import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
 import nowplaying.settings.tabs
+import nowplaying.tlstrust
 import nowplaying.utils.qt
 from nowplaying.exceptions import PluginVerifyError
 
@@ -437,6 +438,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         tray_idx = TRAY_ICON_THEMES.index(tray_theme) if tray_theme in TRAY_ICON_THEMES else 0
         self.widgets["general"].tray_icon_combobox.setCurrentIndex(tray_idx)
 
+        catrust = self.config.cparser.value(
+            nowplaying.tlstrust.MODE_KEY, defaultValue=nowplaying.tlstrust.MODE_AUTO
+        )
+        catrust_idx = (
+            nowplaying.tlstrust.MODES.index(catrust) if catrust in nowplaying.tlstrust.MODES else 0
+        )
+        self.widgets["general"].catrust_combobox.setCurrentIndex(catrust_idx)
+
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
@@ -659,6 +668,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         tray_theme = TRAY_ICON_THEMES[self.widgets["general"].tray_icon_combobox.currentIndex()]
         self.config.cparser.setValue("tray/icontheme", tray_theme)
+
+        catrust = nowplaying.tlstrust.MODES[
+            self.widgets["general"].catrust_combobox.currentIndex()
+        ]
+        self.config.cparser.setValue(nowplaying.tlstrust.MODE_KEY, catrust)
 
         self.config.cparser.setValue(
             "upgrades/prefer_prerelease",
