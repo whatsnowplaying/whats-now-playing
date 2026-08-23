@@ -150,6 +150,12 @@ block_cipher = None
 # __version__.py is literally version("httpx2") at module scope.
 KEEP_METADATA = ('httpx2',)
 
+# Versioned contents directory so each build's _internal-X.Y.Z/ is unique.
+# Two installs can then sit side by side without their private directories
+# colliding, which is what an in-place upgrade needs in order to move a new
+# bundle in before removing the old one.
+_CONTENTS_DIR = '_internal-' + __VERSION__.replace('+', '-')
+
 executables = {
     'WhatsNowPlaying': 'wnppyi.py',
 }
@@ -216,6 +222,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             #console=False,
+            contents_directory=_CONTENTS_DIR,
             icon=geticon(),
             codesign_identity=os.environ.get('MACOS_SIGN_IDENTITY'),
             entitlements_file='bincomponents/entitlements.plist')
@@ -256,6 +263,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             console=False,
+            contents_directory=_CONTENTS_DIR,
             version=WINVERSFILE,
             icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
@@ -281,6 +289,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=False,
             console=False,
+            contents_directory=_CONTENTS_DIR,
             icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
