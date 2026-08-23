@@ -1,29 +1,16 @@
 #!/usr/bin/env python3
 """pick a TLS trust store, falling back to certifi when the OS store is stale
 
-A machine that has not taken an OS update in years carries a root store that
-predates the CAs MusicBrainz, Discogs, and the rest chain to today.  Every
-handshake fails with CERTIFICATE_VERIFY_FAILED and the DJ just sees empty
-metadata with nothing obviously wrong.  Probe once in the background; if the
-bundled Mozilla roots validate a host the system store rejects, move the whole
-app onto certifi.
+A trust store that cannot verify our hosts shows up as empty artwork and bios,
+not as an error: the artistextras plugins swallow exceptions to keep a set
+running.  So probe for it explicitly.
 
-Three kinds of consumer have to agree on the answer:
+Callers get the answer three ways because three kinds of consumer need it:
+create_ssl_context() for our own clients, ca_bundle() for wnpmb, and the
+environment for libraries we only reach through their defaults.
 
-* code that builds its own context -- ``create_ssl_context()``
-* wnpmb, which takes a path -- ``ca_bundle()``
-* everything reached only through library defaults (twitchAPI, discord.py,
-  tufup, bare ``aiohttp.ClientSession()``) -- the environment variables set by
-  ``apply_mode()``
-
-This module only answers "are the certs bad?" -- it never touches config.
-The caller reads the settings, decides whether a probe is warranted, and owns
-writing any verdict back, because config must not be written before
-nowplaying.upgrade.upgrade() has run.
-
-Mode changes take effect on the next launch.  Un-doing an applied fallback
-inside a live process would mean chasing every session and context already
-built from it.
+Reports only -- never touches config, which is unreadable and unwritable until
+nowplaying.upgrade.upgrade() has run.  Takes effect on the next launch.
 """
 
 import json
@@ -42,13 +29,10 @@ MODE_AUTO = "auto"
 MODE_SYSTEM = "system"
 MODE_CERTIFI = "certifi"
 MODES = (MODE_AUTO, MODE_SYSTEM, MODE_CERTIFI)
-# What a probe can conclude and what can actually be applied; "auto" is a
-# question, not an answer.
-APPLIED_MODES = (MODE_SYSTEM, MODE_CERTIFI)
+VERDICTS = (MODE_SYSTEM, MODE_CERTIFI)
 
-# The user's preference is a setting.  The probe result is not -- it is a cache,
-# and it lives in a plain file so startup can read it before upgrade() runs,
-# when opening QSettings at all is off limits.
+# The preference is a setting; the probe result is a cache, in a plain file
+# because startup needs it before QSettings may be opened at all.
 MODE_KEY = "settings/catrust"
 STATE_FILE = "catrust.json"
 _MAX_STATE_BYTES = 4096
@@ -72,33 +56,25 @@ PROBE_HOSTS = (
     "musicbrainz.org",
 )
 PROBE_TIMEOUT = 3.0
-# Startup waits at most this long for a verdict.  An offline machine would
-# otherwise pay PROBE_TIMEOUT per host before the tray could continue.
+# Cap on the startup wait; offline would otherwise cost PROBE_TIMEOUT per host.
 PROBE_JOIN_TIMEOUT = 5.0
 RECHECK_SECONDS = 7 * 24 * 3600
 
 _effective_mode: str | None = None  # pylint: disable=invalid-name
 
 
-def _floor_tls(context: ssl.SSLContext) -> ssl.SSLContext:
-    """Pin the protocol floor rather than inheriting whatever OpenSSL defaults to.
-
-    Current builds already land on TLS 1.2, but that is a property of how
-    OpenSSL was configured, not a guarantee we make.  Every context WNP uses
-    comes from here, so this is the one place to state it.
-    """
+def _certifi_context() -> ssl.SSLContext:
+    """context pinned to the Mozilla roots shipped with certifi"""
+    context = ssl.create_default_context(cafile=certifi.where())
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     return context
 
 
-def _certifi_context() -> ssl.SSLContext:
-    """context pinned to the Mozilla roots shipped with certifi"""
-    return _floor_tls(ssl.create_default_context(cafile=certifi.where()))
-
-
 def _system_context() -> ssl.SSLContext:
     """context that defers to the OS trust store"""
-    return _floor_tls(truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT))
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
 
 
 def _handshake(context: ssl.SSLContext, host: str, port: int = 443) -> bool | None:
@@ -118,15 +94,10 @@ def _handshake(context: ssl.SSLContext, host: str, port: int = 443) -> bool | No
 def probe() -> str | None:
     """Decide which trust store to use, or None if nothing could be reached.
 
-    A success proves nothing, so keep going: a stale store typically still has
-    the older roots, and one host verifying says nothing about the rest.  A
-    confirmed failure does prove something, so stop there -- one host the OS
-    store rejects and certifi accepts is the whole diagnosis, and asking the
-    remaining hosts cannot change it.
-
-    A rejection only counts once certifi has verified the same host: both
-    stores failing means something else is wrong (captive portal, MITM proxy,
-    an actually-expired server cert) and swapping roots would not help.
+    A success proves nothing about the other hosts, so keep going; a confirmed
+    failure is the whole diagnosis, so stop.  A rejection only counts once
+    certifi has verified the same host -- both stores failing means a portal, a
+    proxy, or a bad server cert, none of which swapping roots would fix.
     """
     verified_any = False
     for host in PROBE_HOSTS:
@@ -147,32 +118,24 @@ def probe() -> str | None:
     return MODE_SYSTEM if verified_any else None
 
 
-def _release_bundle_env() -> None:
-    """Drop bundle variables that point at our own certifi copy.
-
-    frozen.py sets SSL_CERT_FILE to the bundled cacert.pem before we get a say,
-    so choosing the OS store has to undo that or every default HTTP client
-    keeps verifying against certifi.  That matters most to the one user who
-    picks this deliberately: a workplace whose inspecting root is in the system
-    store and not in certifi.
-
-    Only our own path is removed.  An operator who exported a bundle of their
-    own still outranks us, in both directions.
-    """
-    ours = pathlib.Path(certifi.where())
-    os.environ.pop(BUNDLE_ENV, None)
-    for name in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
-        value = os.environ.get(name)
-        if value and pathlib.Path(value) == ours:
-            del os.environ[name]
-
-
 def apply_mode(mode: str) -> str:
-    """Point this process at the chosen trust store and remember the choice."""
+    """Point this process at the chosen trust store and remember the choice.
+
+    The environment carries the answer to spawned subprocesses and to libraries
+    we only reach through their defaults.  An operator who exported their own
+    bundle outranks us in both directions, so we only ever set what is unset and
+    only ever remove our own path -- frozen.py plants ours before we get a say,
+    and leaving it would quietly keep certifi in force after a switch away.
+    """
     global _effective_mode  # pylint: disable=global-statement
     _effective_mode = mode
+    bundle = certifi.where()
+
     if mode != MODE_CERTIFI:
-        _release_bundle_env()
+        os.environ.pop(BUNDLE_ENV, None)
+        for name in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+            if (value := os.environ.get(name)) and pathlib.Path(value) == pathlib.Path(bundle):
+                del os.environ[name]
         logging.debug(
             "CA trust: OS trust store; SSL_CERT_FILE=%s, openssl cafile=%s",
             os.environ.get("SSL_CERT_FILE"),
@@ -180,15 +143,10 @@ def apply_mode(mode: str) -> str:
         )
         return mode
 
-    bundle = certifi.where()
     os.environ[BUNDLE_ENV] = bundle
-    # setdefault, not assignment: an operator who exported their own bundle
-    # (corporate root, test rig) outranks our verdict.
     os.environ.setdefault("SSL_CERT_FILE", bundle)
     os.environ.setdefault("REQUESTS_CA_BUNDLE", bundle)
     truststore.extract_from_ssl()
-    # SSL_CERT_FILE is named separately because an operator export outranks our
-    # bundle, so the two can legitimately disagree.
     logging.info(
         "CA trust: bundled certifi roots (%s); SSL_CERT_FILE=%s",
         bundle,
@@ -197,23 +155,21 @@ def apply_mode(mode: str) -> str:
     return mode
 
 
-def effective_mode() -> str:
-    """Trust store in force for this process."""
+def _current_mode() -> str:
+    """A subprocess that never applied a mode still honours an inherited one."""
     if _effective_mode:
         return _effective_mode
-    # A process that never applied a mode -- a subprocess mid-startup, a test
-    # importing a client directly -- still honours an inherited verdict.
     return MODE_CERTIFI if os.environ.get(BUNDLE_ENV) else MODE_SYSTEM
 
 
 def ca_bundle() -> str | None:
     """Path to force on clients that take one, or None to keep their default."""
-    return certifi.where() if effective_mode() == MODE_CERTIFI else None
+    return certifi.where() if _current_mode() == MODE_CERTIFI else None
 
 
 def create_ssl_context() -> ssl.SSLContext:
     """The one place WNP builds a client-side TLS context."""
-    if effective_mode() == MODE_CERTIFI:
+    if _current_mode() == MODE_CERTIFI:
         return _certifi_context()
     return _system_context()
 
@@ -225,14 +181,14 @@ def resolve(mode: str, cached_verdict: str) -> str:
         mode = MODE_AUTO
     if mode != MODE_AUTO:
         return mode
-    return cached_verdict if cached_verdict in MODES else MODE_SYSTEM
+    return cached_verdict if cached_verdict in VERDICTS else MODE_SYSTEM
 
 
 def needs_probe(mode: str, cached_verdict: str, checked: int) -> bool:
     """True when auto mode has no verdict, or one old enough to re-test."""
     if mode != MODE_AUTO:
         return False
-    if cached_verdict not in MODES or checked <= 0:
+    if cached_verdict not in VERDICTS or checked <= 0:
         return True
     return time.time() - checked >= RECHECK_SECONDS
 
@@ -240,12 +196,9 @@ def needs_probe(mode: str, cached_verdict: str, checked: int) -> bool:
 def load_state(path: "pathlib.Path") -> tuple[str, str, int]:
     """Return (effective, verdict, checked) from the cache, with safe defaults.
 
-    This file lives under Qt's cache location, so treat it as untrusted:
-    every field is validated against values we already defined, and nothing in
-    it can name a path or a bundle -- the worst a hostile edit can do is pick
-    between the OS trust store and our own certifi copy.  Anything unreadable,
-    oversized, or unrecognised degrades to the OS trust store, which is what an
-    install with no cache has always done.
+    Untrusted input: no field can name a path or a bundle, so the worst a hand
+    edit achieves is choosing between the OS store and our own certifi copy.
+    Anything unrecognised degrades to the OS store.
     """
     try:
         if path.stat().st_size > _MAX_STATE_BYTES:
@@ -260,13 +213,12 @@ def load_state(path: "pathlib.Path") -> tuple[str, str, int]:
     effective = raw.get("effective")
     verdict = raw.get("verdict")
     checked = raw.get("checked")
-    # bool is an int; a timestamp from the future means a wrong clock or a hand
-    # edit, and either way the honest move is to probe again.
+    # bool is an int, and a future timestamp means a bad clock or a hand edit
     if isinstance(checked, bool) or not isinstance(checked, int) or not 0 < checked <= time.time():
         checked = 0
     return (
-        effective if effective in APPLIED_MODES else MODE_SYSTEM,
-        verdict if verdict in APPLIED_MODES else "",
+        effective if effective in VERDICTS else MODE_SYSTEM,
+        verdict if verdict in VERDICTS else "",
         checked,
     )
 
@@ -284,11 +236,7 @@ def save_state(path: "pathlib.Path", effective: str, verdict: str, checked: int)
 
 
 class TrustProbe:
-    """Runs probe() on a worker so startup can overlap it.
-
-    Deliberately inert: it reports a verdict and nothing else.  The caller
-    joins it before the first TLS of the session and decides what to persist.
-    """
+    """Runs probe() on a worker so startup can overlap it."""
 
     def __init__(self) -> None:
         self.verdict: str | None = None
@@ -305,8 +253,7 @@ class TrustProbe:
     def result(self, timeout: float) -> str | None:
         """Verdict if the probe finished in time, else None.
 
-        A probe that overruns is abandoned rather than waited out -- startup
-        matters more than the answer, and the next launch tries again.
+        An overrunning probe is abandoned, not waited out; next launch retries.
         """
         self._thread.join(timeout)
         if self._thread.is_alive():
