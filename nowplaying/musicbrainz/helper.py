@@ -47,7 +47,11 @@ class MusicBrainzHelper:
         self.emailaddressset = False
         self.mb_client = MusicBrainzClient(
             timeout=5.0,
-            retry_settings=RetrySettings(max_retries=2, wait=0.5, timeout_retries=1),
+            # timeout_wait is set rather than inherited: wnpmb defaults it to 2.0,
+            # which is most of the budget a track has before the next one starts.
+            retry_settings=RetrySettings(
+                max_retries=2, wait=0.5, timeout_retries=1, timeout_wait=0.5
+            ),
             ca_bundle=nowplaying.tlstrust.ca_bundle(),
         )
 
