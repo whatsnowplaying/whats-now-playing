@@ -29,6 +29,17 @@ import nowplaying.upgrade
 #
 
 
+def log_unhandled(exctype, value, tbobj):  # pragma: no cover
+    """Log an exception that escapes a Qt slot instead of losing it.
+
+    A windowed build has no stderr -- wnppyi.py points it at devnull -- so the
+    default hook writes the traceback nowhere and PySide6 then aborts.  The
+    subprocesses wrap their own entry points; this is the GUI process only.
+    """
+    logging.critical("Unhandled exception", exc_info=(exctype, value, tbobj))
+    sys.__excepthook__(exctype, value, tbobj)
+
+
 def run_bootstrap(bundledir: str | None = None) -> pathlib.Path:  # pragma: no cover
     """bootstrap the app"""
     # we are in a hurry to get results.  If it takes longer than
@@ -36,6 +47,7 @@ def run_bootstrap(bundledir: str | None = None) -> pathlib.Path:  # pragma: no c
     # point this should be configurable but this is good enough for now
     socket.setdefaulttimeout(5.0)
     logpath = nowplaying.bootstrap.setuplogging(rotate=True)
+    sys.excepthook = log_unhandled
     plat = platform.platform()
     logging.info("starting up v%s on %s", nowplaying.__version__, plat)
     # upgrade() checks whatsnowplaying.com for a new version, the first TLS this
