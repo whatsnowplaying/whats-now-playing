@@ -13,7 +13,6 @@ from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
     RateLimitError,
-    ResponseError,
     extract_artist_urls,
 )
 from wnpmb.client._base import RetrySettings
@@ -100,7 +99,11 @@ class MusicBrainzHelper:
         self.emailaddressset = False
         self.mb_client = MusicBrainzClient(
             timeout=5.0,
-            retry_settings=RetrySettings(max_retries=2, wait=0.5, timeout_retries=1),
+            # timeout_wait is set rather than inherited: wnpmb defaults it to 2.0,
+            # which is most of the budget a track has before the next one starts.
+            retry_settings=RetrySettings(
+                max_retries=2, wait=0.5, timeout_retries=1, timeout_wait=0.5
+            ),
             ca_bundle=nowplaying.tlstrust.ca_bundle(),
         )
 
@@ -360,8 +363,11 @@ class MusicBrainzHelper:
                             )
                             return {"coverimageraw": raw}
                     return None
-                except ResponseError as err:
-                    if "404" in str(err):
+                except MusicBrainzError as err:
+                    # Catch the base class, not ResponseError: a CAA timeout is a
+                    # NetworkError and a 503 is a ServerBusyError, neither of which
+                    # is a ResponseError.
+                    if err.status_code == 404:
                         # No cover art exists for this release — stable negative result
                         logger.debug("CAA 404 for %s/%s", entity_type, entity_id)
                         return {}
