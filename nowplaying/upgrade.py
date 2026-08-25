@@ -32,12 +32,23 @@ from nowplaying.upgrades.templates import TemplateDirMigration
 class ReleaseNotesDialog(QDialog):  # pylint: disable=too-few-public-methods
     """Modal child dialog showing aggregated release notes since from_version."""
 
-    def __init__(self, newversion: str, from_version: str, parent: QWidget | None = None):
+    def __init__(
+        self,
+        newversion: str,
+        from_version: str,
+        parent: QWidget | None = None,
+        prefer_prerelease: bool = False,
+    ):
         super().__init__(parent)
         self.setWindowTitle(f"What's New in v{newversion}")
         self.resize(660, 540)
 
-        entries = nowplaying.upgrades.fetch_release_notes(from_version) or []
+        entries = (
+            nowplaying.upgrades.fetch_release_notes(
+                from_version, prefer_prerelease=prefer_prerelease
+            )
+            or []
+        )
 
         content = QWidget()
         clayout = QVBoxLayout(content)
@@ -203,7 +214,17 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
 
     def _show_release_notes(self) -> None:
         if self.newversion and self.oldversion:
-            ReleaseNotesDialog(self.newversion, self.oldversion, parent=self).exec_()
+            # Same setting check_for_update() used, so the notes cover the build
+            # actually being offered rather than only the stable ones.
+            prefer_prerelease = bool(
+                QSettings().value("upgrades/prefer_prerelease", defaultValue=False, type=bool)
+            )
+            ReleaseNotesDialog(
+                self.newversion,
+                self.oldversion,
+                parent=self,
+                prefer_prerelease=prefer_prerelease,
+            ).exec_()
 
     def _view_downloads(self) -> None:
         self.action = _UpgradeAction.VIEW_DOWNLOADS
