@@ -2,6 +2,8 @@
 
 [Icecast](https://icecast.org/) is a popular system to stream audio over the Internet.
 This page also covers **[MIXXX](#settings-for-mixxx)** and **[butt](#settings-for-butt)**.
+[Traktor](traktor.md) broadcasts over Icecast too, but has its own page because
+**What's Now Playing** reads Traktor's local database as well as the stream.
 
 > NOTE: This source does not support Oldest mix mode.
 
@@ -10,6 +12,24 @@ Icecast is best for:
 - Software without dedicated **What's Now Playing** support (like MIXXX)
 - Generic audio streaming applications (like butt)
 - Custom setups where other inputs don't work
+
+## Audio Format
+
+Set the broadcast format to **Ogg Vorbis** or **Ogg Opus**. Track data is read
+out of the tags carried inside the stream itself, and only Ogg carries them in
+a form **What's Now Playing** can read.
+
+MP3 and other formats still connect, but no track data comes from the audio.
+Metadata then arrives only if the broadcaster separately sends it, which not
+every application does. When the stream is not Ogg, the log says so once:
+
+```text
+icecast: stream carries no Ogg pages (MP3?); track data can only
+arrive via /admin/metadata updates from this source
+```
+
+The bitrate does not matter for metadata, so a low setting such as 32 kbps
+mono is enough if this stream is only feeding **What's Now Playing**.
 
 ## Instructions
 
