@@ -27,7 +27,7 @@ class Plugin(ArtistExtrasPlugin):
         delay = self.calculate_delay()
 
         try:
-            baseurl = f"http://webservice.fanart.tv/v3/music/{artistid}"
+            baseurl = f"https://webservice.fanart.tv/v3/music/{artistid}"
             logging.debug("fanarttv async: calling %s", baseurl)
             connector = nowplaying.utils.create_http_connector()
             async with aiohttp.ClientSession(connector=connector) as session:
