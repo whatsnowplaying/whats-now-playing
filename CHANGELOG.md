@@ -79,7 +79,7 @@
 
 ### Security
 
-* Artist images and biographies from fanart.tv are now fetched over an
+* Artist images and album artwork from fanart.tv are now fetched over an
     encrypted connection. The request previously went out unencrypted with
     the fanart.tv API key attached, exposing the key to anything between
     this computer and fanart.tv
