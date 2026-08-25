@@ -19,16 +19,34 @@ UPDATE_CHECK_URL = "https://whatsnowplaying.com/api/v1/check-version"
 RELEASE_NOTES_URL = "https://whatsnowplaying.com/api/v1/release-notes"
 
 
-def fetch_release_notes(from_version: str) -> list[dict] | None:
+def wants_prerelease(prefer_prerelease: bool = False) -> bool:
+    """Whether this install is on the prerelease track.
+
+    Someone already running a prerelease stays on it whatever the setting says;
+    the setting is how a stable user opts in.
+    """
+    return (
+        Version(nowplaying.version.__VERSION__).is_prerelease()  # pylint: disable=no-member
+        or prefer_prerelease
+    )
+
+
+def fetch_release_notes(from_version: str, prefer_prerelease: bool = False) -> list[dict] | None:
     """Fetch aggregated release notes since from_version from the WNP API.
 
     Returns a list of release entry dicts (version, date, is_prerelease, notes)
     ordered newest-first, or None on any error.
+
+    The track has to match the one check_for_update() asked with, or the notes
+    for the very build being offered are filtered out of the reply.
     """
+    params: dict[str, t.Any] = {"from_version": from_version}
+    if wants_prerelease(prefer_prerelease):
+        params["track"] = "prerelease"
     try:
         response = requests.get(
             RELEASE_NOTES_URL,
-            params={"from_version": from_version},
+            params=params,
             timeout=5,
         )
         response.raise_for_status()
@@ -194,7 +212,7 @@ def _build_version_params(
         params["chipset"] = chipset
     if macos_version := platform_info.get("macos_version"):
         params["macos_version"] = macos_version
-    if Version(current_version).is_prerelease() or prefer_prerelease:
+    if wants_prerelease(prefer_prerelease):
         params["track"] = "prerelease"
 
     return params
