@@ -814,6 +814,17 @@
     <ul class="md-nav__list" data-md-component="toc">
       
         <li class="md-nav__item">
+  <a href="#audio-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#instructions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2790,7 +2801,9 @@
 
 <h1 id="icecast">Icecast<a class="headerlink" href="#icecast" title="Permanent link">&para;</a></h1>
 <p><a href="https://icecast.org/">Icecast</a> is a popular system to stream audio over the Internet.
-This page also covers <strong><a href="#settings-for-mixxx">MIXXX</a></strong> and <strong><a href="#settings-for-butt">butt</a></strong>.</p>
+This page also covers <strong><a href="#settings-for-mixxx">MIXXX</a></strong> and <strong><a href="#settings-for-butt">butt</a></strong>.
+<a href="../traktor/">Traktor</a> broadcasts over Icecast too, but has its own page because
+<strong>What's Now Playing</strong> reads Traktor's local database as well as the stream.</p>
 <blockquote>
 <p>NOTE: This source does not support Oldest mix mode.</p>
 </blockquote>
@@ -2800,6 +2813,18 @@ This page also covers <strong><a href="#settings-for-mixxx">MIXXX</a></strong> a
 <li>Generic audio streaming applications (like butt)</li>
 <li>Custom setups where other inputs don't work</li>
 </ul>
+<h2 id="audio-format">Audio Format<a class="headerlink" href="#audio-format" title="Permanent link">&para;</a></h2>
+<p>Set the broadcast format to <strong>Ogg Vorbis</strong> or <strong>Ogg Opus</strong>. Track data is read
+out of the tags carried inside the stream itself, and only Ogg carries them in
+a form <strong>What's Now Playing</strong> can read.</p>
+<p>MP3 and other formats still connect, but no track data comes from the audio.
+Metadata then arrives only if the broadcaster separately sends it, which not
+every application does. When the stream is not Ogg, the log says so once:</p>
+<div class="highlight"><pre><span></span><code>icecast: stream carries no Ogg pages (MP3?); track data can only
+arrive via /admin/metadata updates from this source
+</code></pre></div>
+<p>The bitrate does not matter for metadata, so a low setting such as 32 kbps
+mono is enough if this stream is only feeding <strong>What's Now Playing</strong>.</p>
 <h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
 <p><a href="../images/icecast-source-selection.png"><img alt="icecast-input-source" src="../images/icecast-source-selection.png" /></a></p>
 <ol>
