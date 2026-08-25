@@ -20,6 +20,7 @@
 * Discovery announcements are now broadcast on every network
     interface, fixing discovery on multi-NIC systems
 * Connection lifecycle hardening and greatly reduced debug-log volume
+* Many thanks to Nachtraaf for the assistance
 
 ### Icecast
 
