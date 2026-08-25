@@ -34,7 +34,7 @@ class Plugin(ArtistExtrasPlugin):
         datacache_client = nowplaying.datacache.get_client()
 
         for artistid in metadata["musicbrainzartistid"]:
-            url = f"http://webservice.fanart.tv/v3/music/{artistid}"
+            url = f"https://webservice.fanart.tv/v3/music/{artistid}"
             result = await datacache_client.get_or_fetch(
                 nowplaying.datacache.FetchRequest(
                     url=url,
