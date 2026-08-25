@@ -147,8 +147,12 @@ block_cipher = None
 
 # Packages that read their own version out of importlib.metadata at import
 # time, so they die if their .dist-info is stripped below.  httpx2's
-# __version__.py is literally version("httpx2") at module scope.
-KEEP_METADATA = ('httpx2',)
+# __version__.py is literally version("httpx2") at module scope, and
+# httpcore2/__init__.py ends with the same call.  Transitive dependencies
+# count: httpcore2 is never named in requirements-run.txt, it arrives through
+# httpx2, and --smoke-test exits before any client is built so a green build
+# proves nothing here.
+KEEP_METADATA = ('httpx2', 'httpcore2')
 
 # Versioned contents directory so each build's _internal-X.Y.Z/ is unique.
 # The installer renames the old binary aside and moves the new bundle in;
