@@ -98,6 +98,35 @@ playing" information from various DJ software.
 
 - Qt6/PySide6 is used for the GUI framework
 - We control the UI files. No need for hasattr/getattr patterns.
+- **Never grow a `.ui` file's size without being asked, and check before you
+  assume you haven't.** WNP runs on small laptops and VMs — 1200x600 is a real
+  target. Adding widgets to a settings page raises that page's
+  `minimumSizeHint()`, and the settings dialog's minimum is the *tallest page
+  plus about 40px of shell*, so one page growing pushes the whole window past
+  the screen. The dialog also opens at the geometry in `settings.ui`, which is
+  a separate number from the minimum: if the default is larger than the
+  minimum, every user gets the larger window regardless. Measure both before
+  and after any UI edit:
+
+```bash
+QT_QPA_PLATFORM=offscreen python -c "
+import sys, pathlib
+from PySide6.QtWidgets import QApplication, QStackedWidget
+from PySide6.QtUiTools import QUiLoader
+app = QApplication(sys.argv); l = QUiLoader()
+shell = l.load('nowplaying/resources/ui/settings.ui')
+stack = shell.findChild(QStackedWidget, 'settings_stack')
+for f in sorted(pathlib.Path('nowplaying/resources/ui').glob('*.ui')):
+    if f.name != 'settings.ui' and (w := l.load(str(f))): stack.addWidget(w)
+print('minimum', shell.minimumSizeHint(), 'opens at', shell.size())
+"
+```
+
+- Prefer `QLabel` with `wordWrap` over `QTextBrowser` for static description
+  text. `QTextBrowser` reserves space for a scrollable document and costs
+  ~60px of minimum height per page even for one sentence. Long settings pages
+  that scroll are not an acceptable fix — split into tabs
+  (`TabGroup` in `nowplaying/settings/categories.py`) or reflow into columns.
 - Configuration uses Qt's QSettings with cross-platform support
 - **NEVER touch the user config from `nowplaying/__main__.py`, or from anything that
   runs before `nowplaying.upgrade.upgrade()` finishes.** `UpgradeConfig.upgrade()` does
