@@ -55,7 +55,7 @@ async def test_fanarttv_datacache_api_call_count(bootstrap):  # pylint: disable=
     """test that fanarttv makes only one HTTP call when the cache is warm"""
     plugin = _setup_fanarttv_plugin(bootstrap)
     mbid = "00000000-0000-0000-0000-000000000002"
-    url = f"http://webservice.fanart.tv/v3/music/{mbid}"
+    url = f"https://webservice.fanart.tv/v3/music/{mbid}"
     mock_payload = {"name": "WNP Mock Artist"}
     metadata = {
         "artist": "WNP Mock Artist",
@@ -80,7 +80,7 @@ async def test_fanarttv_datacache_api_failure_behavior(bootstrap):  # pylint: di
     """test that fanarttv doesn't cache failed API calls; second call retries"""
     plugin = _setup_fanarttv_plugin(bootstrap)
     mbid = "00000000-0000-0000-0000-000000000099"
-    url = f"http://webservice.fanart.tv/v3/music/{mbid}"
+    url = f"https://webservice.fanart.tv/v3/music/{mbid}"
     metadata = {
         "album": "WNP Mock Album",
         "artist": "WNP Mock Artist",
