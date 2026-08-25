@@ -544,6 +544,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#security" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -616,7 +627,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#platform" class="md-nav__link">
+  <a href="#platform_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Platform
@@ -782,7 +793,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#platform_1" class="md-nav__link">
+  <a href="#platform_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Platform
@@ -3533,13 +3544,25 @@
 <li>Album matching is more accurate: MusicBrainz lookups now treat "&amp;" and
     "and" as the same, so a track tagged one way still matches a release
     tagged the other</li>
+<li>A momentary MusicBrainz outage no longer leaves a track missing its album,
+    label, and date for up to a week afterward</li>
+</ul>
+<h3 id="platform">Platform<a class="headerlink" href="#platform" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The private directory inside a build now carries the version in its name,
+    so an upgrade can put the new copy in place before removing the old one</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
+<li>Artist images and album artwork from fanart.tv are now fetched over an
+    encrypted connection. The request previously went out unencrypted with
+    the fanart.tv API key attached, exposing the key to anything between
+    this computer and fanart.tv</li>
 <li>Updated nltk to 3.10.3 (security advisory)</li>
-<li>Updated aiohttp to 3.14.3, pillow to 12.3.0, pillow-avif-plugin to 1.6.0,
-    zeroconf to 0.150.0, pypresence to 4.6.2, pyinstaller to 6.22.1,
-    requests-cache to 1.3.3, and setuptools</li>
+<li>Updated aiohttp to 3.14.3, certifi to 2026.7.22, lxml to 6.1.2,
+    pillow to 12.3.0, pillow-avif-plugin to 1.6.0, pyinstaller to 6.22.2,
+    pypresence to 4.6.2, requests-cache to 1.3.3, setuptools to 83.0.0,
+    wnpmb to 0.6.0, and zeroconf to 0.150.0</li>
 </ul>
 <h2 id="version-522-2026-06-20">Version 5.2.2 - 2026-06-20<a class="headerlink" href="#version-522-2026-06-20" title="Permanent link">&para;</a></h2>
 <h3 id="new-features_1">New Features<a class="headerlink" href="#new-features_1" title="Permanent link">&para;</a></h3>
@@ -3572,7 +3595,7 @@
     maintains its own side index of djay Pro's location data, so track
     matching stays fast even for large libraries</li>
 </ul>
-<h3 id="platform">Platform<a class="headerlink" href="#platform" title="Permanent link">&para;</a></h3>
+<h3 id="platform_1">Platform<a class="headerlink" href="#platform_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>macOS: WNP now detects when an Intel build is running under Rosetta on
     Apple Silicon hardware and offers the native Apple Silicon build
@@ -3686,7 +3709,7 @@
 <li>Key and BPM from the Scan element are captured when not present in track tags</li>
 <li>BPM is now correctly converted from VirtualDJ's internal format</li>
 </ul>
-<h3 id="platform_1">Platform<a class="headerlink" href="#platform_1" title="Permanent link">&para;</a></h3>
+<h3 id="platform_2">Platform<a class="headerlink" href="#platform_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>macOS binaries are now code-signed and notarized</li>
 <li>Windows binaries are now signed with Azure Trusted Signing</li>
