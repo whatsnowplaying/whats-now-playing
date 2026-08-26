@@ -190,6 +190,9 @@
      </item>
      <item>
       <widget class="QComboBox" name="catrust_combobox">
+       <property name="toolTip">
+        <string>Automatic switches to the bundled certificates when this computer's own are too old to verify the sites What's Now Playing connects to. Takes effect after a restart.</string>
+       </property>
        <item>
         <property name="text">
          <string>Automatic</string>
@@ -221,16 +224,6 @@
       </spacer>
      </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QLabel" name="catrust_help_label">
-     <property name="text">
-      <string>Automatic switches to the bundled certificates when this computer's own are too old to verify the sites What's Now Playing connects to. Takes effect after a restart.</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
    </item>
    <item>
     <widget class="QLabel" name="prerelease_label">
@@ -363,14 +356,26 @@
     </layout>
    </item>
    <item>
-    <widget class="QTextBrowser" name="config_warning_label">
+    <widget class="QLabel" name="config_warning_label">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
+       <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="html">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Sunken</enum>
+     </property>
+     <property name="margin">
+      <number>6</number>
+     </property>
+     <property name="text">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
