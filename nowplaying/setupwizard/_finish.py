@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Finish / summary page for the installation wizard."""
+"""Finish / summary page for the setup wizard."""
 
 # pylint: disable=no-name-in-module,too-few-public-methods
 
@@ -30,18 +30,11 @@ class _FinishPage(QWizardPage):
         """Terminal page — returning -1 makes Qt show the Finish button."""
         return -1
 
-    def set_summary(
-        self,
-        input_display: str,
-        extra_names: list[str],
-        output_names: list[str],
-    ) -> None:
-        """Populate the summary with chosen input, artist extras, and outputs."""
-        extras = ", ".join(extra_names) if extra_names else "none selected"
+    def set_summary(self, input_display: str, output_names: list[str]) -> None:
+        """Populate the summary with the chosen input and outputs."""
         outputs = ", ".join(output_names) if output_names else "none selected"
         self._summary.setText(
             f"<b>Input source:</b>  {input_display}<br><br>"
-            f"<b>Artist information:</b>  {extras}<br><br>"
             f"<b>Outputs:</b>  {outputs}<br><br>"
             "Click <b>Finish</b> to save these settings and start "
             "What's Now Playing."

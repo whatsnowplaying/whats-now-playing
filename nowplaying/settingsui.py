@@ -20,6 +20,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QCheckBox,
+    QDialog,
     QErrorMessage,
     QFileDialog,
     QHBoxLayout,
@@ -31,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import nowplaying.wizard.artistextras
 import nowplaying.config
 import nowplaying.discord.settings
 import nowplaying.firstinstall
@@ -40,6 +42,7 @@ import nowplaying.preview.window
 import nowplaying.processes.datacache
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
+import nowplaying.obs.wizard
 import nowplaying.settings.categories
 import nowplaying.settings.tabs
 import nowplaying.tlstrust
@@ -445,10 +448,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """connect the artistextras buttons to non-built-ins"""
         qobject.clearcache_button.clicked.connect(self.on_artistextras_clearcache_button)
         qobject.cleanupcache_button.clicked.connect(self.on_artistextras_cleanupcache_button)
+        qobject.setup_button.clicked.connect(self.on_artistextras_setup_button)
 
     def _connect_obsws_widget(self, qobject):
         """connect obsws button to template picker"""
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
+        qobject.setup_button.clicked.connect(self.on_obsws_setup_button)
 
     def _connect_filter_widget(self, qobject):
         """connect regex filter to template picker"""
@@ -1068,6 +1073,37 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.uihelp.template_picker_lineedit(
                 self.widgets["obsws"].template_lineedit, limit="plain/*.txt"
             )
+
+    @Slot()
+    def on_artistextras_setup_button(self):
+        """run the guided artist information setup and adopt whatever it wrote
+
+        The wizard writes to config directly, so its values have to be mirrored
+        back into the widgets -- otherwise Save would write the stale on-screen
+        values straight back over them.
+
+        Two refreshes, because the wizard writes across both: the shared
+        preferences live on this page, but every {service}/enabled and
+        {service}/apikey belongs to that service's own plugin widget.
+        """
+        wizard = nowplaying.wizard.artistextras.ArtistExtrasWizard(self.config, parent=self.qtui)
+        if wizard.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._upd_win_artistextras()
+        self.config.plugins_load_settingsui(self.widgets, plugintypes=["artistextras"])
+
+    @Slot()
+    def on_obsws_setup_button(self):
+        """run the guided OBS WebSocket setup and adopt whatever it wrote
+
+        The wizard writes to config directly, so its values have to be mirrored
+        back into the widgets -- otherwise Save would write the stale on-screen
+        values straight back over them.
+        """
+        wizard = nowplaying.obs.wizard.ObsWsWizard(self.config, parent=self.qtui)
+        if wizard.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._upd_win_obsws()
 
     @Slot()
     def on_html_template_button(self):

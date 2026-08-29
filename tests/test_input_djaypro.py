@@ -752,23 +752,75 @@ def test_check_for_new_track_duplicate(bootstrap):
 
 
 # ---------------------------------------------------------------------------
+# side_db_lock tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("precreate_parent", [False, True])
+def test_side_db_lock_acquires_whether_or_not_the_parent_exists(tmp_path, precreate_parent):
+    """The lock must work on a fresh install, where its directory is absent.
+
+    QLockFile cannot create its file in a missing directory and fails there
+    exactly as it does when the lock is held, so the caller sees "someone else
+    is indexing" forever. Since the only mkdir lives in catchup_index(), behind
+    this lock, that left the location index permanently unbuildable and djay Pro
+    filenames permanently unresolved.
+    """
+    side_db = tmp_path / "djaypro" / "djaypro-locations.db"
+    if precreate_parent:
+        side_db.parent.mkdir(parents=True)
+    assert side_db.parent.exists() is precreate_parent
+
+    with nowplaying.djaypro.locationdb.side_db_lock(side_db) as owned:
+        assert owned
+        assert side_db.parent.is_dir()
+
+
+def test_side_db_lock_excludes_a_second_holder(tmp_path):
+    """Two indexers must not run at once, which is why the lock exists."""
+    side_db = tmp_path / "djaypro" / "djaypro-locations.db"
+
+    with nowplaying.djaypro.locationdb.side_db_lock(side_db) as first:
+        assert first
+        with nowplaying.djaypro.locationdb.side_db_lock(side_db) as second:
+            assert not second
+
+
+def test_side_db_lock_releases_on_exit(tmp_path):
+    """A released lock has to be re-acquirable, or one run poisons every later one."""
+    side_db = tmp_path / "djaypro" / "djaypro-locations.db"
+
+    with nowplaying.djaypro.locationdb.side_db_lock(side_db) as first:
+        assert first
+    with nowplaying.djaypro.locationdb.side_db_lock(side_db) as second:
+        assert second
+
+
+# ---------------------------------------------------------------------------
 # Plugin lifecycle tests
 # ---------------------------------------------------------------------------
 
 
-def test_plugin_install_not_found(bootstrap):
-    """install() returns False when the djay Pro directory doesn't exist."""
+def test_plugin_detect_not_found(bootstrap):
+    """detect() returns False when the djay Pro directory does not exist."""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
     config.userdocs = pathlib.Path("/nonexistent/path")
 
-    result = plugin.install()
-    assert result is False
+    result = plugin.detect()
+    assert not result
 
 
 def test_plugin_defaults(bootstrap):
-    """defaults() writes sensible initial configuration values."""
+    """defaults() records the library it found, or leaves the key blank.
+
+    Blank matters as much as the path: record_detected() only fills keys that
+    are still blank, so a guess written here would make detect()'s real finding
+    unusable. Which branch runs depends on whether djay Pro is installed on the
+    machine running the test, so both are accepted -- what is asserted is that
+    it never invents a path.
+    """
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
@@ -776,14 +828,14 @@ def test_plugin_defaults(bootstrap):
 
     directory = config.cparser.value("djaypro/directory")
     assert isinstance(directory, str)
-    assert directory.strip() != ""
-
-    directory_path = pathlib.Path(directory)
-    expected_suffixes = {
-        "djay Media Library.djayMediaLibrary",
-        "djay Media Library",
-    }
-    assert any(str(directory_path).endswith(suffix) for suffix in expected_suffixes)
+    if directory:
+        expected_suffixes = {
+            "djay Media Library.djayMediaLibrary",
+            "djay Media Library",
+        }
+        assert any(directory.endswith(suffix) for suffix in expected_suffixes)
+        # Only reported when it is a real library, not just a folder.
+        assert pathlib.Path(directory).joinpath("MediaLibrary.db").exists()
 
     scope = config.cparser.value("djaypro/artist_query_scope")
     assert scope == "entire_library"

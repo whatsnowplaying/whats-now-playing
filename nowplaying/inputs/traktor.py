@@ -31,6 +31,7 @@ import nowplaying.utils.xml
 import nowplaying.wizard
 from nowplaying.db import LISTFIELDS
 from nowplaying.exceptions import PluginVerifyError
+from nowplaying.inputs import Detected
 
 from .icecast import Plugin as IcecastPlugin
 
@@ -161,9 +162,18 @@ class _TraktorWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
 
         self._path_edit.setText(str(config.cparser.value("traktor/collections", defaultValue="")))
 
-    def commit(self) -> None:
-        """Write the collection path to config."""
-        self.config.cparser.setValue("traktor/collections", self._path_edit.text().strip())
+        # Set here rather than as a class attribute so the real port can be
+        # named; this page has no port field of its own to point at.
+        port = config.cparser.value("traktor/port", type=str, defaultValue="8000")
+        self.verification_prompt = (
+            "Traktor sends tracks over Icecast, not through the collection file. "
+            "In Traktor, open Preferences → Broadcasting, set the server to "
+            f"127.0.0.1 port {port}, choose Ogg Vorbis, then start broadcasting."
+        )
+
+    def collected(self) -> dict[str, object]:
+        """The collection path the user pointed at."""
+        return {"traktor/collections": self._path_edit.text().strip()}
 
 
 class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
@@ -213,19 +223,17 @@ class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes
         all_collections.sort(key=lambda p: p.stat().st_mtime)
         return all_collections[-1]
 
-    def detect(self) -> bool:
-        """Return True if a Traktor collection.nml can be found."""
-        return self._find_best_collection() is not None
+    def detect(self) -> Detected:
+        """Report the Traktor collection here, preferring the most recently used.
 
-    def install(self):
-        """auto-install for Traktor; picks most-recently-used version when multiple installed"""
+        The broadcast port is not reported: detection knows nothing about it and
+        defaults() already sets it, so offering it would only invite a Redetect
+        to undo a port the user deliberately changed.
+        """
         best = self._find_best_collection()
         if best is None:
-            return False
-        self.config.cparser.setValue("traktor/collections", str(best))
-        self.config.cparser.setValue("settings/input", "traktor")
-        self.config.cparser.setValue("traktor/port", "8000")
-        return True
+            return Detected()
+        return Detected(True, {"traktor/collections": str(best)})
 
     def defaults(self, qsettings):
         """(re-)set the default configuration values for this plugin"""

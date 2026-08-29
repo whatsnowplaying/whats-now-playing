@@ -150,6 +150,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         """default values for things"""
         logging.debug("set defaults")
 
+        # SystemScope here is NOT a second settings layer. There is one layer,
+        # the application layer, and every write goes to it: no lower-priority
+        # store holds defaults for a user value to shadow, and nothing you write
+        # will be overridden by a user setting. To keep from clobbering the
+        # user's value you have to check first; the store will not do it for you.
+        #
+        # Do not reach for this scope to explain why some write is or is not
+        # persisted. On macOS it resolves under /Library/Preferences, where
+        # isWritable() is False and a write returns Status.AccessError without
+        # creating a file -- and the value still reads back through the platform
+        # preference cache. A failed write is therefore indistinguishable from a
+        # successful one, which is what makes the phantom-layer reasoning so easy
+        # to fall into and so wrong.
         settings = QSettings(
             self.qsettingsformat,
             QSettings.SystemScope,
@@ -350,9 +363,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                     qtwidgets[f"{plugintype}_{widgetkey}"], uihelp
                 )
 
-    def plugins_load_settingsui(self, qtwidgets: dict[str, QWidget]) -> None:
-        """configure the defaults for plugins"""
+    def plugins_load_settingsui(
+        self, qtwidgets: dict[str, QWidget], plugintypes: "list[str] | None" = None
+    ) -> None:
+        """configure the defaults for plugins
+
+        plugintypes narrows the refresh to those types. A caller adopting what
+        one guided setup wrote wants only its own widgets reloaded: refreshing
+        the rest would discard edits the user has made elsewhere in Settings
+        and not yet saved.
+        """
         for plugintype, plugtypelist in self.plugins.items():
+            if plugintypes is not None and plugintype not in plugintypes:
+                continue
             for key in plugtypelist:
                 widgetkey = key.split(".")[-1]
                 if qtwidgets[f"{plugintype}_{widgetkey}"]:
@@ -522,6 +545,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except re.error as error:
             logging.error("Filter error with '%s': %s", error.pattern, error.msg)
         return self.striprelist
+
+    def record_detected(self, key: str, value: str, force: bool = False) -> bool:
+        """Write something discovered about this machine. True if written.
+
+        Blank keys only, so detection cannot override the user's choice. Blank
+        rather than absent because defaults() registers most of these as "".
+        String settings only: a deliberate False or 0 reads as blank.
+
+        force is for an explicit Redetect. Forcing automatically on a path that
+        looks missing would repoint anyone whose library is on an unplugged drive.
+        """
+        if not force and self.cparser.value(key, defaultValue=""):
+            return False
+        logging.debug("recording detected %s = %s (force=%s)", key, value, force)
+        self.cparser.setValue(key, value)
+        return True
 
     def get_path_keys(self) -> frozenset[str]:
         """Collect filesystem path keys from all loaded plugins plus base process keys."""

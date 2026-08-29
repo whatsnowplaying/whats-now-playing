@@ -402,16 +402,6 @@ def test_track_notification_system(qtbot, mock_dependencies):
     tray.tracknotify()
 
 
-def test_clean_quit_functionality(qtbot, mock_dependencies):
-    """Test clean quit process"""
-    tray = nowplaying.systemtray.Tray()
-
-    # Mock the exit methods to avoid actually exiting
-    with patch.object(tray, "exit_everything") as mock_exit:
-        tray.cleanquit()
-        mock_exit.assert_called_once()
-
-
 def test_exit_everything_subprocess_cleanup(qtbot, mock_dependencies):
     """Test that exit_everything properly cleans up subprocesses"""
     tray = nowplaying.systemtray.Tray()

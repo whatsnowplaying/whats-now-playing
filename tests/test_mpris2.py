@@ -38,11 +38,12 @@ def test_plugin_init_without_dbus():
         assert plugin.available is False
 
 
-def test_plugin_install():
-    """Test install method"""
-    with patch("nowplaying.inputs.mpris2.DBUS_STATUS", True):
+@pytest.mark.parametrize("dbus_available", [True, False])
+def test_plugin_detect_follows_dbus(dbus_available):
+    """MPRIS2 is available wherever D-Bus is, and nowhere else."""
+    with patch("nowplaying.inputs.mpris2.DBUS_STATUS", dbus_available):
         plugin = nowplaying.inputs.mpris2.Plugin()  # pylint: disable=no-member
-        assert plugin.install() is False
+        assert bool(plugin.detect()) is dbus_available
 
 
 @pytest.mark.asyncio

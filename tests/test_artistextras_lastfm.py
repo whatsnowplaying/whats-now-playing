@@ -274,9 +274,7 @@ async def test_lastfm_429_sets_cooldown(bootstrap, isolated_datacache_client):  
 
     # Second call during cooldown must not touch the network
     with respx.mock(using="httpcore2", assert_all_called=False) as mock_http2:
-        mock_http2.get(WNP_MOCK_URL).mock(
-            return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE)
-        )
+        mock_http2.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result2 = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
@@ -306,9 +304,7 @@ async def test_lastfm_429_cooldown_expires_allows_retry(bootstrap, isolated_data
     assert not isolated_datacache_client.in_cooldown("lastfm")
 
     with respx.mock(using="httpcore2", assert_all_called=False) as mock_http2:
-        mock_http2.get(WNP_MOCK_URL).mock(
-            return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE)
-        )
+        mock_http2.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
         result = await plugin.download_async(
             {"artist": "WNP Mock Artist", "imagecacheartist": "wnpmockartist"},
         )
@@ -499,9 +495,7 @@ async def test_lastfm_coverart_queued(bootstrap):  # pylint: disable=redefined-o
         mock_http.get(WNP_MOCK_ALBUM_URL).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(
-            return_value=httpx.Response(200, content=MINIMAL_JPEG)
-        )
+        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",
@@ -622,9 +616,7 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):  # pylint: disable=re
         mock_http.get(mbid_url).mock(
             return_value=httpx.Response(200, json=WNP_MOCK_ALBUM_RESPONSE)
         )
-        mock_http.get(COVER_IMAGE_URL).mock(
-            return_value=httpx.Response(200, content=MINIMAL_JPEG)
-        )
+        mock_http.get(COVER_IMAGE_URL).mock(return_value=httpx.Response(200, content=MINIMAL_JPEG))
         result = await plugin.download_async(
             {
                 "artist": "WNP Mock Artist",

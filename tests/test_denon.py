@@ -62,7 +62,7 @@ async def test_token_generation():
 @pytest.mark.asyncio
 async def test_install_returns_false(denon_plugin):
     """Test install returns False (network devices can't auto-install)"""
-    assert denon_plugin.install() is False
+    assert not denon_plugin.detect()
 
 
 @pytest.mark.asyncio

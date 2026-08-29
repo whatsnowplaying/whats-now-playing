@@ -31,11 +31,38 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="bot_enable_checkbox">
-     <property name="text">
-      <string>Enable Bot Mode</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="bot_enable_layout">
+     <item>
+      <widget class="QCheckBox" name="bot_enable_checkbox">
+       <property name="text">
+        <string>Enable Bot Mode</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="bot_enable_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="setup_button">
+       <property name="text">
+        <string>Guided Setup ...</string>
+       </property>
+       <property name="toolTip">
+        <string>Walks through creating the Discord application, inviting the bot, and finding the channel ID, then fills in the fields below.</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QWidget" name="settings_form_widget" native="true">

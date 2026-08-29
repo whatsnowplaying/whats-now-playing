@@ -1,16 +1,40 @@
 #!/usr/bin/env python3
 """Twitch-related constants"""
 
+from typing import TYPE_CHECKING
+
 import twitchAPI.helper
 from twitchAPI.type import AuthScope
 
 import nowplaying.oauth2
+
+if TYPE_CHECKING:
+    import nowplaying.config
 
 # Public OAuth2 client identifier for the bundled WNP Twitch application.
 # This is NOT a secret — Twitch client IDs are public by design (analogous to
 # an app's bundle ID). The implicit grant flow used here has no client secret;
 # security comes from CSRF state validation and Twitch's redirect-URI allowlist.
 TWITCH_BUNDLED_CLIENT_ID = "l89y18ioij2pk7zgk7tzbenc39z2xn"
+
+# The bundled application's registered redirect URI names this port, so the
+# bundled client ID is unusable when the web server is anywhere else and the
+# user has to register their own application.
+TWITCH_BUNDLED_APP_PORT = 8899
+
+
+def bundled_app_port_ok(config: "nowplaying.config.ConfigFile") -> bool:
+    """True when the web server is on the port the bundled app's redirect URI names.
+
+    Callers layer their own policy on top: authorization also wants to know
+    whether a custom Client ID was supplied, while first-run setup only needs to
+    know whether asking for one is unavoidable.
+    """
+    port = config.cparser.value(
+        "weboutput/httpport", type=int, defaultValue=TWITCH_BUNDLED_APP_PORT
+    )
+    return port == TWITCH_BUNDLED_APP_PORT
+
 
 # OAuth and API endpoints
 OAUTH_HOST = "https://id.twitch.tv"

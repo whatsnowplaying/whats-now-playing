@@ -29,7 +29,7 @@ import nowplaying.serato.plugin
 import nowplaying.uihelp
 import nowplaying.wizard
 from nowplaying.exceptions import PluginVerifyError
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 
 from .crate import SeratoCrateReader
 from .database import SeratoDatabaseV2Reader
@@ -106,11 +106,13 @@ class _SeratoLegacyWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=
         self._url_label.setVisible(not local)
         self._url_edit.setVisible(not local)
 
-    def commit(self) -> None:
-        """Write Serato mode, library path, and URL to config."""
-        self.config.cparser.setValue("serato/local", self._local_radio.isChecked())
-        self.config.cparser.setValue("serato/libpath", self._dir_edit.text().strip())
-        self.config.cparser.setValue("serato/url", self._url_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """Whether to read locally, plus the library path and Live Playlist URL."""
+        return {
+            "serato/local": self._local_radio.isChecked(),
+            "serato/libpath": self._dir_edit.text().strip(),
+            "serato/url": self._url_edit.text().strip(),
+        }
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -164,18 +166,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-m
             logging.exception("serato3: serato4 detect() raised; treating as absent")
         return seratodir
 
-    def detect(self) -> bool:
-        """Return True if a legacy Serato 3 library exists and serato4 would not claim it."""
-        return self._find_serato3_dir() is not None
-
-    def install(self):
-        """auto-install for Serato"""
+    def detect(self) -> Detected:
+        """Report the legacy Serato 3 library, when serato4 would not claim it."""
         seratodir = self._find_serato3_dir()
         if seratodir is None:
-            return False
-        self.config.cparser.setValue("settings/input", "serato3")
-        self.config.cparser.setValue("serato/libpath", str(seratodir))
-        return True
+            return Detected()
+        return Detected(True, {"serato/libpath": str(seratodir)})
 
     async def gethandler(self):
         """setup the SeratoHandler for this session"""
@@ -327,12 +323,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-m
         return None
 
     def defaults(self, qsettings: "QSettings"):
-        qsettings.setValue(
-            "serato/libpath",
-            os.path.join(
-                QStandardPaths.standardLocations(QStandardPaths.MusicLocation)[0], "_Serato_"
-            ),
-        )
+        # Same finder detect() uses; see the note in virtualdj.defaults(). It
+        # also declines when Serato 4 would claim the library, so an upgraded
+        # machine no longer starts out pointed at its leftover _Serato_ dir.
+        seratodir = self._find_serato3_dir()
+        qsettings.setValue("serato/libpath", str(seratodir) if seratodir else "")
         qsettings.setValue("serato/interval", 10.0)
         qsettings.setValue("serato/local", True)
         qsettings.setValue("serato/mixmode", "newest")

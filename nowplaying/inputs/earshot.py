@@ -26,15 +26,21 @@ class Plugin(nowplaying.inputs.remote.Plugin):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "EarShot"
 
-    def detect(self) -> bool:
-        """Detect WNP EarShot.app in /Applications on macOS."""
-        if sys.platform != "darwin":
-            return False
-        return pathlib.Path("/Applications/WNP EarShot.app").exists()
+    # Ships as WNPEarShot.app; the spaced name is accepted too since older
+    # builds used it and the two are indistinguishable to a user.
+    _APP_NAMES = ("WNPEarShot.app", "WNP EarShot.app")
 
-    def install(self) -> bool:
-        """Auto-install for EarShot — detection only, nothing to configure."""
-        return self.detect()
+    def detect(self) -> nowplaying.inputs.Detected:
+        """Detect EarShot in /Applications or ~/Applications on macOS.
+
+        Nothing to configure: EarShot pushes to the webserver, so there is no
+        local path or library to find.
+        """
+        if sys.platform != "darwin":
+            return nowplaying.inputs.Detected()
+        roots = (pathlib.Path("/Applications"), pathlib.Path.home() / "Applications")
+        found = any((root / name).exists() for root in roots for name in self._APP_NAMES)
+        return nowplaying.inputs.Detected(found)
 
     def get_source_agent_data(self) -> dict:
         """EarShot preserves source_agent data set by the sender."""

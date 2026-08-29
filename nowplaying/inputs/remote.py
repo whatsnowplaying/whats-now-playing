@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
 )
 
 import nowplaying.db
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
 
@@ -34,19 +34,17 @@ class _RemoteWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
     ) -> None:
         super().__init__(parent)
         self.config = config
-        self.setTitle("Remote / Multi-PC Setup")
+        self.setTitle("Receiving From Another Machine")
         self.setSubTitle(
-            "What's Now Playing will receive track data from another source — "
-            "a second PC running WNP, or the EarShot app."
+            "Tracks arrive here from somewhere else, so there is nothing on this "
+            "machine to point at."
         )
 
         info = QLabel(
-            "The remote database is created automatically — no path to configure.\n\n"
-            "Multi-PC: on your primary DJ PC, install What's Now Playing, set it up "
-            "with your DJ software, and enable 'Remote Source' in its Outputs "
-            "settings to point it at this machine.\n\n"
-            "EarShot: install the WNP EarShot app and it will push identified "
-            "tracks to this machine automatically."
+            "From a DJ machine: run this setup over there too and choose the DJ "
+            "machine role. It will find this machine on its own.\n\n"
+            "From EarShot: nothing more to do. It starts sending as soon as it "
+            "runs."
         )
         info.setWordWrap(True)
 
@@ -65,9 +63,9 @@ class _RemoteWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
         layout.addStretch()
         self.setLayout(layout)
 
-    def commit(self) -> None:
-        """Write the shared secret to config."""
-        self.config.cparser.setValue("remote/remote_key", self._secret_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The shared secret, blank when the user wants no authentication."""
+        return {"remote/remote_key": self._secret_edit.text().strip()}
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -95,9 +93,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.observer = None
         self._reset_meta()
 
-    def install(self):
-        """remote install"""
-        return False
+    def detect(self) -> Detected:
+        """Never detected: tracks arrive from another machine, not from software here."""
+        return Detected()
 
     def get_source_agent_data(self) -> dict:
         """Remote input preserves source_agent data set by the sender."""

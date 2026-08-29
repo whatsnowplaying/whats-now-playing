@@ -596,7 +596,7 @@ def test_plugin_detect(rekordbox_bootstrap, path_exists, expected):
     mock_path = unittest.mock.Mock()
     mock_path.exists.return_value = path_exists
     with unittest.mock.patch.object(plugin.config_reader, "get_data_path", return_value=mock_path):
-        assert plugin.detect() is expected
+        assert bool(plugin.detect()) is expected
 
 
 def test_plugin_detect_exception_returns_false(rekordbox_bootstrap):
@@ -604,22 +604,22 @@ def test_plugin_detect_exception_returns_false(rekordbox_bootstrap):
     with unittest.mock.patch.object(
         plugin.config_reader, "get_data_path", side_effect=OSError("no access")
     ):
-        assert plugin.detect() is False
+        assert not plugin.detect()
 
 
-def test_plugin_install_writes_config(rekordbox_bootstrap):
+def test_detect_does_not_choose_the_source(rekordbox_bootstrap):
+    """detect() must not write settings/input.
+
+    Recording what is on the machine is the plugin's job; deciding which source
+    to use belongs to Tray.installer() on a fresh install and to the user in the
+    setup wizard. A plugin doing it would take a decision that is not its own.
+    """
     plugin = nowplaying.rekordbox.plugin.RekordboxPlugin(config=rekordbox_bootstrap)
-    with unittest.mock.patch.object(plugin, "detect", return_value=True):
-        result = plugin.install()
-    assert result is True
-    assert rekordbox_bootstrap.cparser.value("settings/input") == "rekordbox"
-
-
-def test_plugin_install_detect_fails(rekordbox_bootstrap):
-    plugin = nowplaying.rekordbox.plugin.RekordboxPlugin(config=rekordbox_bootstrap)
-    with unittest.mock.patch.object(plugin, "detect", return_value=False):
-        result = plugin.install()
-    assert result is False
+    rekordbox_bootstrap.cparser.remove("settings/input")
+    with unittest.mock.patch.object(plugin.config_reader, "get_data_path") as get_data_path:
+        get_data_path.return_value.exists.return_value = True
+        assert plugin.detect()
+    assert not rekordbox_bootstrap.cparser.value("settings/input", defaultValue="")
 
 
 # ---------------------------------------------------------------------------

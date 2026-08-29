@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QWidget,
 )
 
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
 
@@ -434,6 +434,11 @@ class IcecastProtocol(asyncio.Protocol):
 class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
     """First-run wizard page for Icecast SOURCE protocol port configuration."""
 
+    verification_prompt = (
+        "Point your broadcaster (Traktor, Mixxx, butt, …) at 127.0.0.1 on the "
+        "port below, in Ogg Vorbis, and start broadcasting."
+    )
+
     def __init__(
         self, config: "nowplaying.config.ConfigFile", parent: QWidget | None = None
     ) -> None:
@@ -458,9 +463,9 @@ class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
         layout.addStretch()
         self.setLayout(layout)
 
-    def commit(self) -> None:
-        """Write the Icecast port to config."""
-        self.config.cparser.setValue("icecast/port", self._port_edit.text().strip() or "8000")
+    def collected(self) -> dict[str, object]:
+        """The port the broadcaster will connect to."""
+        return {"icecast/port": self._port_edit.text().strip() or "8000"}
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -487,9 +492,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Callback to receive metadata from the protocol"""
         self._current_metadata = metadata
 
-    def install(self) -> bool:
-        """auto-install for Icecast"""
-        return False
+    def detect(self) -> Detected:
+        """Never detected: this listens for a broadcaster rather than reading software."""
+        return Detected()
 
     #### Settings UI methods
 

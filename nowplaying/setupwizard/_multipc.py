@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Multi-PC setup pages for the installation wizard."""
+"""Multi-PC setup pages for the setup wizard."""
 
 # pylint: disable=no-name-in-module
 
@@ -18,13 +18,14 @@ from PySide6.QtWidgets import (
 )
 
 import nowplaying.config
-from nowplaying.installwizard._constants import (
+from nowplaying.setupwizard._constants import (
     PAGE_FINISH,
     PAGE_INPUT,
     PAGE_INPUT_CONFIG,
     PAGE_MULTIPC_ROLE,
     PAGE_REMOTE_OUTPUT,
 )
+from nowplaying.setupwizard._host import drop_page, setup_wizard
 
 
 class _MultiPcQuestionPage(QWizardPage):
@@ -67,13 +68,13 @@ class _MultiPcQuestionPage(QWizardPage):
 
     def validatePage(self) -> bool:  # pylint: disable=invalid-name
         """Store the single/multi choice on the wizard for later pages to read."""
-        wizard = self.wizard()
+        wizard = setup_wizard(self)
         if wizard is not None:
-            wizard.multipc = self._is_multipc()  # type: ignore[union-attr]
-            if not wizard.multipc:  # type: ignore[union-attr]
+            wizard.multipc = self._is_multipc()
+            if not wizard.multipc:
                 # Reset role in case user went back and changed answer
-                wizard.multipc_role = None  # type: ignore[union-attr]
-                wizard.after_input_config_page = None  # type: ignore[union-attr]
+                wizard.multipc_role = None
+                wizard.after_input_config_page = None
         return True
 
     def nextId(self) -> int:  # pylint: disable=invalid-name
@@ -93,10 +94,7 @@ class _MultiPcRolePage(QWizardPage):
         self._config = config
         self._remote_page_registered: bool = False
         self.setTitle("Which Machine Is This?")
-        self.setSubTitle(
-            "We'll configure each machine for its role in your setup. "
-            "You can always adjust settings later."
-        )
+        self.setSubTitle("Each machine gets configured for the role you pick here.")
 
         self._dj = QRadioButton("DJ / Source machine")
         dj_detail = QLabel(
@@ -134,20 +132,20 @@ class _MultiPcRolePage(QWizardPage):
 
     def validatePage(self) -> bool:  # pylint: disable=invalid-name
         """Store the role on the wizard and prepare dynamic pages."""
-        wizard = self.wizard()
+        wizard = setup_wizard(self)
         if wizard is None:
             return True
 
         if self._is_display():
-            wizard.multipc_role = "display"  # type: ignore[union-attr]
-            wizard.after_input_config_page = None  # type: ignore[union-attr]
+            wizard.multipc_role = "display"
+            wizard.after_input_config_page = None
             self._remote_page_registered = self._register_remote_input_page(wizard)
         else:
-            wizard.multipc_role = "dj"  # type: ignore[union-attr]
-            wizard.after_input_config_page = PAGE_REMOTE_OUTPUT  # type: ignore[union-attr]
+            wizard.multipc_role = "dj"
+            wizard.after_input_config_page = PAGE_REMOTE_OUTPUT
             # Clear any remote input page left from a previous display selection
             if PAGE_INPUT_CONFIG in wizard.pageIds():
-                wizard.removePage(PAGE_INPUT_CONFIG)
+                drop_page(wizard, PAGE_INPUT_CONFIG, self._config)
         return True
 
     def _register_remote_input_page(self, wizard: QWizard) -> bool:
@@ -163,8 +161,11 @@ class _MultiPcRolePage(QWizardPage):
             plugin_obj = module.Plugin(config=self._config)
             if plugin_obj.wizardpage is not None:
                 if PAGE_INPUT_CONFIG in wizard.pageIds():
-                    wizard.removePage(PAGE_INPUT_CONFIG)
+                    drop_page(wizard, PAGE_INPUT_CONFIG, self._config)
                 page = plugin_obj.wizardpage(config=self._config)
+                # Same handoff _InputSourcePage does; without it the display
+                # machine is the one path that never verifies.
+                page.verification_module = module
                 wizard.setPage(PAGE_INPUT_CONFIG, page)
                 return True
         except Exception:  # pylint: disable=broad-exception-caught
@@ -188,19 +189,18 @@ class _RemoteOutputPage(QWizardPage):
         self._config = config
         self.setTitle("Remote Output")
         self.setSubTitle(
-            "What's Now Playing will automatically find your display machine "
-            "on the local network using Bonjour/mDNS. "
-            "Make sure What's Now Playing is running on the display machine."
+            "This machine will send its tracks to the display machine, and finds "
+            "it on the local network with no address to enter."
         )
 
         explain = QLabel(
-            "No manual address entry is needed — autodiscovery handles it. "
-            "If both machines share a secret key, enter it below so they can authenticate."
+            "The display machine needs What's Now Playing running too. Start them "
+            "in either order, since this one keeps looking."
         )
         explain.setWordWrap(True)
 
         self._secret = QLineEdit()
-        self._secret.setPlaceholderText("optional — must match the display machine's secret")
+        self._secret.setPlaceholderText("optional, must match the display machine")
         self._secret.setText(str(self._config.cparser.value("remote/remote_key", defaultValue="")))
 
         form = QFormLayout()

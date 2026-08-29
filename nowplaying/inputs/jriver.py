@@ -74,12 +74,14 @@ class _JRiverWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
         """Require a host before allowing Next."""
         return bool(self._host_edit.text().strip())
 
-    def commit(self) -> None:
-        """Write JRiver connection settings to config."""
-        self.config.cparser.setValue("jriver/host", self._host_edit.text().strip())
-        self.config.cparser.setValue("jriver/port", self._port_edit.text().strip() or "52199")
-        self.config.cparser.setValue("jriver/username", self._user_edit.text().strip())
-        self.config.cparser.setValue("jriver/password", self._pass_edit.text())
+    def collected(self) -> dict[str, object]:
+        """The MCWS connection details the user entered."""
+        return {
+            "jriver/host": self._host_edit.text().strip(),
+            "jriver/port": self._port_edit.text().strip() or "52199",
+            "jriver/username": self._user_edit.text().strip(),
+            "jriver/password": self._pass_edit.text(),
+        }
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes

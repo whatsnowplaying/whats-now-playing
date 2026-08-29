@@ -50,7 +50,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from nowplaying.exceptions import PluginVerifyError
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
 
@@ -86,9 +86,9 @@ class _DjucedWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
 
         self._dir_edit.setText(str(config.cparser.value("djuced/directory", defaultValue="")))
 
-    def commit(self) -> None:
-        """Write the DJUCED library path to config."""
-        self.config.cparser.setValue("djuced/directory", self._dir_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The DJUCED library path the user pointed at."""
+        return {"djuced/directory": self._dir_edit.text().strip()}
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -121,18 +121,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         djuceddir = self.config.userdocs.joinpath("DJUCED")
         return djuceddir if djuceddir.exists() else None
 
-    def detect(self) -> bool:
-        """Return True if the DJUCED library directory exists."""
-        return self._find_djuced_dir() is not None
-
-    def install(self) -> bool:
-        """Auto-install for DJUCED: detect and write default library path."""
+    def detect(self) -> Detected:
+        """Report the DJUCED library directory found here."""
         djuceddir = self._find_djuced_dir()
         if djuceddir is None:
-            return False
-        self.config.cparser.setValue("settings/input", "djuced")
-        self.config.cparser.setValue("djuced/directory", str(djuceddir))
-        return True
+            return Detected()
+        return Detected(True, {"djuced/directory": str(djuceddir)})
 
     def _reset_meta(self):
         """reset the metadata"""
@@ -576,8 +570,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def defaults(self, qsettings: "QSettings"):
         """(re-)set the default configuration values for this plugin"""
-        djuced = self.config.userdocs.joinpath("DJUCED")
-        qsettings.setValue("djuced/directory", str(djuced))
+        # Same finder detect() uses; see the note in virtualdj.defaults().
+        djuced = self._find_djuced_dir()
+        qsettings.setValue("djuced/directory", str(djuced) if djuced else "")
         qsettings.setValue("djuced/artist_query_scope", "entire_library")
         qsettings.setValue("djuced/selected_playlists", "")
 

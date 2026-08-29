@@ -38,7 +38,7 @@ async def test_remote_plugin_install(remote_bootstrap):  # pylint: disable=redef
     config = remote_bootstrap
     plugin = nowplaying.inputs.remote.Plugin(config=config)
 
-    assert plugin.install() is False
+    assert not plugin.detect()
 
 
 @pytest.mark.asyncio
