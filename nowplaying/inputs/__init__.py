@@ -58,6 +58,15 @@ class InputPlugin(WNPBasePlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.plugintype: str = "input"
 
+    def required_port(self) -> int | None:  # pylint: disable=no-self-use
+        """The TCP port this input has to bind, or None if it binds nothing.
+
+        Reported so the main process can check the port before starting
+        trackpoll, which is where the bind actually happens. Most inputs read a
+        file or a database and have no answer here.
+        """
+        return None
+
     #### Additional UI method
 
     def desc_settingsui(self, qwidget: "QWidget") -> None:  # pylint: disable=no-self-use

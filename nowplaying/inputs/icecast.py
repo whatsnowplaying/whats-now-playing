@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QFormLayout,
+    QLabel,
     QVBoxLayout,
     QWidget,
 )
@@ -455,13 +456,27 @@ class _IcecastWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
             config.cparser.value("icecast/port", type=str, defaultValue="8000")
         )
 
+        self._busy_note = QLabel()
+        self._busy_note.setWordWrap(True)
+        self._busy_note.setVisible(False)
+
         form = QFormLayout()
         form.addRow("Icecast port:", self._port_edit)
 
         layout = QVBoxLayout()
         layout.addLayout(form)
+        layout.addWidget(self._busy_note)
         layout.addStretch()
         self.setLayout(layout)
+
+    def initializePage(self) -> None:  # pylint: disable=invalid-name
+        """Move off a port something else already holds.
+
+        Checked on show rather than in __init__ so it reflects what is running
+        now. A busy port is silent otherwise: the listener logs the failed bind
+        and carries on, so verification just never sees a track.
+        """
+        self.retune_port_once(self._port_edit, self._busy_note, "8000")
 
     def collected(self) -> dict[str, object]:
         """The port the broadcaster will connect to."""
@@ -565,6 +580,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """give back the current metadata"""
         await self._restart_if_port_changed()
         return self._current_metadata.copy()  # type: ignore
+
+    def required_port(self) -> int | None:
+        """The SOURCE port the broadcaster connects to.
+
+        Subclasses set _port_config_key, so Traktor answers with its own port.
+        """
+        if not self.config:
+            return None
+        port: int = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)
+        return port
 
     async def start(self) -> None:
         """any initialization before actual polling starts"""
