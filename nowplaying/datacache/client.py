@@ -118,6 +118,21 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
             )
             self._initialized = True
 
+    async def _ensure_session(self) -> "httpx2.AsyncClient | None":
+        """Return a usable session, rebuilding it if it has gone.
+
+        A fetch can get past the guard in _fetch_and_store and still find the
+        session missing: reset_client() drops a live one during test teardown,
+        and initialize() and close() can interleave. Rebuilding here rather than
+        letting the AttributeError fall into the network-retry path, which spent
+        the backoff on an error waiting could not fix and read as a connection
+        failure in the log. The rate limit token for this request is already
+        spent either way -- the bucket has no way to give one back.
+        """
+        if self._session is None:
+            await self.initialize()
+        return self._session
+
     async def close(self) -> None:
         """Close the client and cleanup resources"""
         self._initialized = False
@@ -292,7 +307,7 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         logging.warning("Rate limited by %s on final attempt, cooldown %ds", provider, retry_after)
         return False
 
-    async def _fetch_with_retry(  # pylint: disable=too-many-arguments
+    async def _fetch_with_retry(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         url: str,
         provider: str,
@@ -310,8 +325,12 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         """
         last_result = FetchResult()
         for attempt in range(retries + 1):
+            session = await self._ensure_session()
+            if session is None:
+                logging.error("no HTTP session for %s", self._redact_url(url))
+                return FetchResult(terminal=True)
             try:
-                async with self._session.stream(  # type: ignore[union-attr]
+                async with session.stream(
                     "GET", url, timeout=httpx2.Timeout(timeout), headers=headers
                 ) as response:
                     if response.status_code == 200:
