@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import aiosqlite  # pylint: disable=import-error
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QFormLayout,
     QLabel,
     QVBoxLayout,
     QWidget,
@@ -154,17 +155,38 @@ class _TraktorWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
             startdir=config.userdocs.joinpath("Native Instruments"),
         )
 
+        self._port_edit = nowplaying.wizard.WizardPage.port_edit("8000")
+        self._port_edit.setText(
+            str(config.cparser.value("traktor/port", type=str, defaultValue="8000"))
+        )
+        self._port_edit.textChanged.connect(self._refresh_prompt)
+
+        self._busy_note = QLabel()
+        self._busy_note.setWordWrap(True)
+        self._busy_note.setVisible(False)
+
+        form = QFormLayout()
+        form.addRow("Broadcast port:", self._port_edit)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Collection file (collection.nml):"))
         layout.addWidget(self._path_edit)
+        layout.addLayout(form)
+        layout.addWidget(self._busy_note)
         layout.addStretch()
         self.setLayout(layout)
 
         self._path_edit.setText(str(config.cparser.value("traktor/collections", defaultValue="")))
+        self._refresh_prompt()
 
-        # Set here rather than as a class attribute so the real port can be
-        # named; this page has no port field of its own to point at.
-        port = config.cparser.value("traktor/port", type=str, defaultValue="8000")
+    def initializePage(self) -> None:  # pylint: disable=invalid-name
+        """Move off a busy port before telling the user which one to broadcast to."""
+        self.retune_port_once(self._port_edit, self._busy_note, "8000")
+        self._refresh_prompt()
+
+    def _refresh_prompt(self) -> None:
+        """Keep the instructions naming the port actually being listened on."""
+        port = self._port_edit.text().strip() or "8000"
         self.verification_prompt = (
             "Traktor sends tracks over Icecast, not through the collection file. "
             "In Traktor, open Preferences → Broadcasting, set the server to "
@@ -172,8 +194,11 @@ class _TraktorWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
         )
 
     def collected(self) -> dict[str, object]:
-        """The collection path the user pointed at."""
-        return {"traktor/collections": self._path_edit.text().strip()}
+        """The collection path and the port Traktor will broadcast to."""
+        return {
+            "traktor/collections": self._path_edit.text().strip(),
+            "traktor/port": self._port_edit.text().strip() or "8000",
+        }
 
 
 class Plugin(IcecastPlugin):  # pylint: disable=too-many-instance-attributes

@@ -516,6 +516,25 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         inputplugin = self.plugins["inputs"][f"nowplaying.inputs.{plugin}"].Plugin(config=self)
         return inputplugin.getmixmode()
 
+    def input_required_port(self) -> int | None:
+        """The port the configured input has to bind, or None.
+
+        Tolerant of an absent or unknown source, unlike its neighbours here:
+        this runs on the startup path, where the value has not been validated
+        yet and no answer is a fine answer.
+        """
+        plugin = self.cparser.value("settings/input", defaultValue=None)
+        if not plugin:
+            return None
+        module = self.plugins["inputs"].get(f"nowplaying.inputs.{plugin}")
+        if not module:
+            return None
+        try:
+            return module.Plugin(config=self).required_port()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.exception("could not ask %s for its port", plugin)
+            return None
+
     @staticmethod
     def getbundledir() -> pathlib.Path | None:
         """get the bundle dir"""

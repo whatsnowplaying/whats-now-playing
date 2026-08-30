@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.uihelp
+import nowplaying.utils.network
 from nowplaying.wizard.verify import (
     POLL_TIMEOUT,
     START_TIMEOUT,
@@ -110,6 +111,41 @@ class WizardPage(QWizardPage):  # pylint: disable=too-few-public-methods
         edit.setMaximumWidth(width)
         edit.setValidator(QIntValidator(1, 65535))
         return edit
+
+    # Retuning happens once per page, not on every showing. Verification binds
+    # the port itself and its teardown is not awaited, so a second look can find
+    # our own closing listener and move the user off a port that was fine.
+    _port_retuned: bool = False
+
+    def retune_port_once(self, edit: QLineEdit, note: QLabel, fallback: str) -> None:
+        """Move a port field off a port something else is already holding.
+
+        Says which port it moved to and why, because the number has to be typed
+        into the DJ software by hand, so silently changing it would send the user
+        to a listener that is not there.
+        """
+        if self._port_retuned:
+            return
+        self._port_retuned = True
+
+        current = edit.text().strip() or fallback
+        if not current.isdigit() or nowplaying.utils.network.port_available(int(current)):
+            note.setVisible(False)
+            return
+
+        free = nowplaying.utils.network.first_free_port(int(current) + 1)
+        if free is None:
+            note.setText(
+                f"Port {current} is in use and nothing nearby is free. Enter a "
+                f"port yourself, and use the same one in your DJ software."
+            )
+        else:
+            edit.setText(str(free))
+            note.setText(
+                f"Port {current} is already in use on this computer, so this is "
+                f"set to {free}. Use {free} in your DJ software."
+            )
+        note.setVisible(True)
 
     # Set by the host wizard when it registers the page, for flows that need to
     # leave the declared page order -- the multi-PC DJ role skips the output

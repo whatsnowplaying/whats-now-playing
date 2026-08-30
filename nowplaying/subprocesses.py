@@ -5,7 +5,6 @@ import concurrent.futures
 import importlib
 import logging
 import multiprocessing
-import socket
 import typing as t
 
 from PySide6.QtCore import Qt  # pylint: disable=import-error,no-name-in-module
@@ -16,6 +15,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-modul
 
 import nowplaying
 import nowplaying.config
+import nowplaying.utils.network
 
 PROCESS_NAMES: list[str] = [
     "trackpoll",
@@ -160,12 +160,7 @@ class SubprocessManager:
     @staticmethod
     def _check_port_available(host: str, port: int) -> bool:
         """Check if a port is available for binding"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.bind((host, port))
-                return True
-        except OSError:
-            return False
+        return nowplaying.utils.network.port_available(port, host)
 
     def start_process(self, processname: str) -> None:
         """Start a specific process"""
@@ -196,21 +191,50 @@ class SubprocessManager:
             port = self.config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
             if not self._check_port_available(host, port):
                 logging.error("Cannot start webserver: port %s:%s is already in use", host, port)
-                dialog = QMessageBox(
-                    QMessageBox.Critical,
+                self._port_busy_dialog(
                     "Web Server Error",
                     f"Cannot start web server:\nPort {host}:{port} is already in use.\n\n"
                     f"Please close any application using this port or change the port in "
                     f"Settings → Web Server.",
-                    QMessageBox.Ok,
-                    QApplication.activeWindow(),
                 )
-                dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
-                dialog.exec()
                 return
+
+        # Icecast and Traktor bind inside trackpoll, which cannot raise a dialog
+        # from a subprocess, and start_port() only logs a failed bind. Warn here
+        # and start anyway: the source is unusable but the rest of WNP is not.
+        if processname == "trackpoll" and not self.testmode:
+            self._warn_if_input_port_busy()
 
         # trackpoll always starts - it's the core monitoring process
         self._start_process(processname)
+
+    def _warn_if_input_port_busy(self) -> None:
+        """Say so when the configured input cannot bind the port it needs."""
+        if not self.config:
+            return
+        port = self.config.input_required_port()
+        if port is None or nowplaying.utils.network.port_available(port):
+            return
+        logging.error("input source cannot bind port %s; it is already in use", port)
+        self._port_busy_dialog(
+            "Track Source Error",
+            f"Nothing can be received on port {port}: it is already in use by "
+            f"another application.\n\nClose that application, or set a different "
+            f"port in Settings under Input Source and in your DJ software.",
+        )
+
+    @staticmethod
+    def _port_busy_dialog(title: str, text: str) -> None:
+        """Blocking, always on top: a port conflict is worth interrupting startup for."""
+        dialog = QMessageBox(
+            QMessageBox.Critical,
+            title,
+            text,
+            QMessageBox.Ok,
+            QApplication.activeWindow(),
+        )
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+        dialog.exec()
 
     def stop_process(self, processname: str) -> None:
         """Stop a specific process"""

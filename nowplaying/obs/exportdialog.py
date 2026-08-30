@@ -52,7 +52,10 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         self._preview_row: int = -1
         self._templates: list[tuple[str, str]] = self._load_templates()
         self.setWindowTitle("Export for OBS")
-        self.resize(980, 300)
+        # 300 before the intro. 360 is where the longest variant of it stops
+        # needing a scrollbar (sizeHint 356) and no further: the table does not
+        # stretch, so anything above that is dead space under the last row.
+        self.resize(980, 360)
         self._setup_ui()
         self._populate_table()
 
@@ -79,8 +82,41 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
                 entries.append((stem_to_label.get(tmpl.stem, name), name))
         return entries
 
+    _INTRO = (
+        "What's Now Playing can write an OBS scene collection with the track display "
+        "already sized and positioned as a browser source. Nothing is written until "
+        "you pick your sources and press Export.\n\n"
+        "Quit OBS first. OBS rewrites its scene collections when it closes, so "
+        "anything exported while it is running is lost."
+    )
+
+    # Only worth saying to someone who did not come from that menu item.
+    _INTRO_FROM_SETUP = (
+        "\n\nYou can come back to this at any time from Export for OBS in the tray menu."
+    )
+
+    def set_opened_from_setup(self, from_setup: bool) -> None:
+        """Adjust the intro for how the dialog was reached.
+
+        Per showing rather than per construction: the tray keeps one instance and
+        reuses it, so a flag fixed at build time would be wrong on every later
+        open.
+        """
+        self._intro_label.setText(self._INTRO + (self._INTRO_FROM_SETUP if from_setup else ""))
+        # Refreshed here too, since whether OBS is running can change between
+        # showings of the same dialog.
+        self.status_label.setText(
+            "OBS is running right now, so exporting will not work until you quit it."
+            if self._obs_is_running()
+            else ""
+        )
+
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
+
+        self._intro_label = QLabel(self._INTRO)
+        self._intro_label.setWordWrap(True)
+        layout.addWidget(self._intro_label)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -266,8 +302,8 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         """Collect checked rows and call scenebuilder.build_and_save."""
         if self._obs_is_running():
             self.status_label.setText(
-                "OBS is running — please quit OBS before exporting, "
-                "then relaunch it to load the new scene collection."
+                "OBS is running. Quit OBS before exporting, then relaunch it to "
+                "load the new scene collection."
             )
             return
 

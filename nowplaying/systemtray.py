@@ -227,13 +227,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self._show_installation_error("settings UI files")
             self.settingswindow = None
 
-    def _show_obs_export(self) -> None:
+    def _show_obs_export(self, from_setup: bool = False) -> None:
         """Open the OBS scene export dialog (non-modal)."""
         if self._obs_export_dialog is None:
             self._obs_export_dialog = nowplaying.obs.exportdialog.OBSExportDialog(
                 config=self.config
             )
+        self._obs_export_dialog.set_opened_from_setup(from_setup)
         nowplaying.utils.qt.focus_window(self._obs_export_dialog)
+
+    def _show_obs_export_from_menu(self) -> None:
+        """Tray menu route. Named rather than connected directly, because
+        QAction.triggered would otherwise pass its checked flag as from_setup."""
+        self._show_obs_export(from_setup=False)
 
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
@@ -264,7 +270,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu.addAction(self.settings_action)
 
         self.obs_export_action = QAction("Export for OBS...")
-        self.obs_export_action.triggered.connect(self._show_obs_export)
+        self.obs_export_action.triggered.connect(self._show_obs_export_from_menu)
         self.menu.addAction(self.obs_export_action)
 
         self.request_action = QAction("Requests")
@@ -398,9 +404,22 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             return
         self.config.cparser.remove("settings/pending_obs_export")
         if nowplaying.obs.scenebuilder.get_obs_scenes_dir() is None:
-            logging.debug("no OBS scenes directory; skipping the export offer")
+            # Setup was asked for this, so say why it is not happening rather
+            # than drop it into the log.
+            logging.debug("no OBS scenes directory; telling the user instead")
+            dialog = QMessageBox(
+                QMessageBox.Information,
+                "Set Up OBS",
+                "OBS Studio was not found on this computer, so there is no scene "
+                "collection to write to.\n\nInstall OBS, then use Export for OBS "
+                "in the tray menu.",
+                QMessageBox.Ok,
+                QApplication.activeWindow(),
+            )
+            dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+            dialog.exec()
             return
-        self._show_obs_export()
+        self._show_obs_export(from_setup=True)
 
     def _on_oauth_poller_finished(self) -> None:
         """Drop our reference to the OAuth poller thread once it finishes."""
