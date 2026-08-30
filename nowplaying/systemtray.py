@@ -908,7 +908,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # that source is the one selected.
         detections: list[tuple[str, nowplaying.inputs.Detected]] = []
         for plugin in plugins:
-            found = plugins[plugin].detect()
+            try:
+                found = plugins[plugin].detect()
+            except Exception:  # pylint: disable=broad-exception-caught
+                # One plugin's detection is not worth the startup it runs in.
+                # Traktor walks the filesystem, so a collection that disappears
+                # between the glob and the stat raises here.
+                logging.exception("installer: detect() failed for %s", plugin)
+                continue
             if not found:
                 continue
             for key, value in found.settings.items():
