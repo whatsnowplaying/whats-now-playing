@@ -12,15 +12,20 @@ In-place updates (e.g. a file move) are not reflected until rebuild() is
 called, which is acceptable for a live-set workflow.
 """
 
+import contextlib
 import logging
 import pathlib
 import sqlite3
 import time
 
-from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QLockFile, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.djaypro.tsaf
 import nowplaying.utils.sqlite
+
+# Ten minutes: long enough that a large library's rebuild is never treated
+# as abandoned, short enough to recover from a crash within one session.
+STALE_LOCK_TIMEOUT_MS = 600000
 
 _LOCATION_COLLECTIONS = ("localMediaItemLocations", "globalMediaItemLocations")
 _LOCATION_PLACEHOLDERS = ",".join("?" * len(_LOCATION_COLLECTIONS))
@@ -259,6 +264,39 @@ def lookup_direct(djay_dbfile: pathlib.Path, title_id: str) -> tuple[str | None,
     except (sqlite3.OperationalError, FileNotFoundError) as err:
         logging.debug("djaypro locationdb: lookup_direct failed: %s", err)
         return None, None
+
+
+@contextlib.contextmanager
+def side_db_lock(side_db: pathlib.Path):
+    """Hold an exclusive claim on the side index across processes.
+
+    Yields True when the caller may proceed, False when someone else is
+    already indexing.  Both rebuild() and catchup_index() mutate the same
+    file -- rebuild via tmp-then-rename, catchup by writing in place -- and
+    nothing else coordinates them.  Two instances can easily coexist: the
+    setup wizard polls a plugin while trackpoll runs its own.
+
+    Generous stale time on purpose: a large library takes minutes to index,
+    and reclaiming a live rebuild's lock would recreate the race it exists to
+    prevent.  QLockFile still reclaims promptly if the holder actually died.
+    """
+    # The lock is now the first thing to touch this directory, and QLockFile
+    # cannot create its file in one that does not exist -- it fails the same way
+    # a held lock does. On a fresh install that made the index unbuildable: the
+    # only mkdir lives in catchup_index(), which is gated behind this lock, and
+    # _do_rebuild() clears djaypro/rebuild_location_db in its finally either way.
+    side_db.parent.mkdir(parents=True, exist_ok=True)
+
+    lock = QLockFile(str(side_db.with_suffix(".lock")))
+    lock.setStaleLockTime(STALE_LOCK_TIMEOUT_MS)
+    if not lock.tryLock(0):
+        logging.debug("djaypro locationdb: another process is indexing; skipping")
+        yield False
+        return
+    try:
+        yield True
+    finally:
+        lock.unlock()
 
 
 def rebuild(djay_dbfile: pathlib.Path, side_db: pathlib.Path) -> None:

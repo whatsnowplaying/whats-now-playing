@@ -16,7 +16,7 @@ from watchdog.observers.polling import PollingObserver
 import nowplaying.utils
 import nowplaying.wizard
 from nowplaying.exceptions import PluginVerifyError
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -55,9 +55,9 @@ class _M3UWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-p
 
         self._dir_edit.setText(str(config.cparser.value("m3u/directory", defaultValue="")))
 
-    def commit(self) -> None:
-        """Write the M3U directory path to config."""
-        self.config.cparser.setValue("m3u/directory", self._dir_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The directory the user pointed at."""
+        return {"m3u/directory": self._dir_edit.text().strip()}
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -81,9 +81,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def get_path_keys(cls) -> frozenset[str]:
         return frozenset({"m3u/directory"})
 
-    def install(self):
-        """locate Virtual DJ"""
-        return False
+    def detect(self) -> Detected:
+        """Never detected.
+
+        M3U is the fallback for software WNP has no plugin for, so there is no
+        signature to look for. This used to try to locate VirtualDJ, which now
+        has a plugin of its own.
+        """
+        return Detected()
 
     def _reset_meta(self):
         """reset the metadata"""

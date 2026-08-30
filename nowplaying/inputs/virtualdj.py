@@ -24,6 +24,7 @@ import nowplaying.utils.sqlite
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
 from nowplaying.exceptions import PluginVerifyError
+from nowplaying.inputs import Detected
 
 from .m3u import Plugin as M3UPlugin
 
@@ -200,10 +201,12 @@ class _VirtualDJWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too
             str(config.cparser.value("virtualdj/playlists", defaultValue=""))
         )
 
-    def commit(self) -> None:
-        """Write the VirtualDJ directory paths to config."""
-        self.config.cparser.setValue("virtualdj/history", self._history_edit.text().strip())
-        self.config.cparser.setValue("virtualdj/playlists", self._playlist_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The VirtualDJ directories the user pointed at."""
+        return {
+            "virtualdj/history": self._history_edit.text().strip(),
+            "virtualdj/playlists": self._playlist_edit.text().strip(),
+        }
 
 
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -222,6 +225,9 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         self.playlists_databasefile = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
         ).joinpath("virtualdj", "virtualdj-playlists.db")
+        # Both databases live here, and connecting does not create the
+        # directory. Nothing on the songs path would otherwise.
+        self.songs_databasefile.parent.mkdir(parents=True, exist_ok=True)
         self.database = None
         self.lastmetadata: dict[str, str | None] = {}
 
@@ -543,19 +549,18 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                 return vdjdir
         return None
 
-    def detect(self) -> bool:
-        """Return True if a VirtualDJ directory can be found."""
-        return self._find_vdj_dir() is not None
-
-    def install(self) -> bool:
-        """Auto-install for VirtualDJ: detect and write default history/playlists paths."""
+    def detect(self) -> Detected:
+        """Report the VirtualDJ history and playlists folders found here."""
         vdjdir = self._find_vdj_dir()
         if vdjdir is None:
-            return False
-        self.config.cparser.setValue("settings/input", "virtualdj")
-        self.config.cparser.setValue("virtualdj/history", str(vdjdir.joinpath("History")))
-        self.config.cparser.setValue("virtualdj/playlists", str(vdjdir.joinpath("Playlists")))
-        return True
+            return Detected()
+        return Detected(
+            True,
+            {
+                "virtualdj/history": str(vdjdir.joinpath("History")),
+                "virtualdj/playlists": str(vdjdir.joinpath("Playlists")),
+            },
+        )
 
     async def start(self) -> None:
         """setup the watcher to run in a separate thread"""
@@ -791,9 +796,14 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
     def defaults(self, qsettings):
         """(re-)set the default configuration values for this plugin"""
-        vdjdir = self.config.userdocs.joinpath("VirtualDJ")
-        qsettings.setValue("virtualdj/history", str(vdjdir.joinpath("History")))
-        qsettings.setValue("virtualdj/playlists", str(vdjdir.joinpath("Playlists")))
+        # Same finder detect() uses, and blank when it finds nothing. Writing a
+        # guess instead would make record_detected() refuse the real path it
+        # later reports, since that only fills keys that are still blank.
+        vdjdir = self._find_vdj_dir()
+        qsettings.setValue("virtualdj/history", str(vdjdir.joinpath("History")) if vdjdir else "")
+        qsettings.setValue(
+            "virtualdj/playlists", str(vdjdir.joinpath("Playlists")) if vdjdir else ""
+        )
         qsettings.setValue("virtualdj/useremix", True)
         qsettings.setValue("virtualdj/max_age_days", 7)
         qsettings.setValue("virtualdj/artist_query_scope", "entire_library")

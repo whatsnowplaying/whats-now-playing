@@ -6,9 +6,9 @@ import time
 
 from PySide6.QtCore import QTimer, Slot  # pylint: disable=no-name-in-module
 
-import nowplaying.authwizard
 import nowplaying.preview.textwindow
 import nowplaying.twitch.oauth2
+import nowplaying.twitch.wizard
 import nowplaying.utils.qt
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
@@ -243,6 +243,6 @@ class TwitchSettings:
         """Open the authentication wizard for Twitch."""
         if not self.oauth:
             return
-        wizard = nowplaying.authwizard.AuthWizard(self.oauth.config, ["twitch"])
+        wizard = nowplaying.twitch.wizard.TwitchWizard(self.oauth.config)
         wizard.exec()
         self.update_oauth_status()

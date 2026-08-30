@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Welcome page for the installation wizard."""
+"""Welcome page for the setup wizard."""
 
 # pylint: disable=no-name-in-module,too-few-public-methods
 
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget, QWizardPage
 
-from nowplaying.installwizard._constants import PAGE_MULTIPC
+from nowplaying.setupwizard._constants import PAGE_MULTIPC
 
 
 class _WelcomePage(QWizardPage):
@@ -16,10 +16,10 @@ class _WelcomePage(QWizardPage):
         self.setTitle("Welcome to What's Now Playing")
         layout = QVBoxLayout()
         intro = QLabel(
-            "This wizard will help you get started quickly.\n\n"
-            "You will choose your DJ software source, configure "
-            "artist information services, and select outputs. "
-            "Everything can be changed later via Settings.\n\n"
+            "You will pick the DJ software to read from, confirm that What's Now "
+            "Playing can see the current track, and choose where that "
+            "information goes.\n\n"
+            "Everything else can be changed later in Settings.\n\n"
             "Click Next to begin."
         )
         intro.setWordWrap(True)

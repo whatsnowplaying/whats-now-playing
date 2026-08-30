@@ -28,7 +28,7 @@ except ImportError:
 from multidict import CIMultiDict
 from PySide6.QtCore import Qt  # pylint: disable=no-name-in-module
 
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 
 MPRIS2_BASE = "org.mpris.MediaPlayer2"
 
@@ -258,9 +258,14 @@ class Plugin(InputPlugin):
         self.mpris2 = MPRIS2Handler()
         self.dbus_status = True
 
-    def install(self):
-        """Auto-install for MPRIS2"""
-        return False
+    def detect(self) -> Detected:
+        """Present wherever D-Bus is usable, which is where MPRIS2 can work.
+
+        Nothing to configure: which player to follow is a choice, not something
+        that can be found by looking. A fallback for the same reason -- this is
+        true on every D-Bus machine, so it must not outrank real DJ software.
+        """
+        return Detected(DBUS_STATUS, fallback=True)
 
     async def gethandler(self):
         """setup the MPRIS2Handler for this session"""

@@ -22,12 +22,11 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QSystemTrayIcon,
 )
 
-import nowplaying.authwizard
-import nowplaying.installwizard
 import nowplaying.upgrade
 import nowplaying.upgrades
 import nowplaying.upgrades.background
 import nowplaying.obs.exportdialog
+import nowplaying.obs.scenebuilder
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.bootstrap
 import nowplaying.config
@@ -35,6 +34,7 @@ import nowplaying.datacache
 import nowplaying.db
 import nowplaying.firstinstall
 import nowplaying.guessgame
+import nowplaying.inputs
 import nowplaying.notifications.charts
 import nowplaying.oauth2
 import nowplaying.settingsui
@@ -42,6 +42,7 @@ import nowplaying.subprocesses
 import nowplaying.tlstrust
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
+import nowplaying.twitch.wizard
 import nowplaying.utils.charts_api
 import nowplaying.utils.qt
 
@@ -90,7 +91,9 @@ class _WebserverPollThread(QThread):  # pylint: disable=too-few-public-methods
                     return
             except OSError:
                 self.sleep(1)
-        logging.warning("wizard: webserver did not start within 60s; skipping OAuth prompt")
+        logging.warning(
+            "wizard: webserver did not start within 60s; skipping pending setup prompts"
+        )
 
 
 class Tray:  # pylint: disable=too-many-instance-attributes
@@ -232,11 +235,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             )
         nowplaying.utils.qt.focus_window(self._obs_export_dialog)
 
-    def _show_setup_wizard(self) -> None:
-        """Open the setup wizard, re-running it regardless of initialized state."""
-        wizard = nowplaying.installwizard.InstallWizard(self.config)
-        wizard.exec()
-
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         if not self.settingswindow:
@@ -264,10 +262,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self._show_settings)
         self.menu.addAction(self.settings_action)
-
-        self.wizard_action = QAction("Setup Wizard...")
-        self.wizard_action.triggered.connect(self._show_setup_wizard)
-        self.menu.addAction(self.wizard_action)
 
         self.obs_export_action = QAction("Export for OBS...")
         self.obs_export_action.triggered.connect(self._show_obs_export)
@@ -346,32 +340,67 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # launch can skip the download step and install immediately.
         self._start_background_prefetch()
 
-        # If the first-run wizard configured Twitch/Kick, wait for the webserver
-        # to be ready, then prompt the user to complete OAuth.
-        self._schedule_oauth_prompt()
+        # Anything the first run deferred until the webserver exists happens here.
+        self._schedule_pending_prompts()
 
-    def _schedule_oauth_prompt(self) -> None:
-        """Start webserver polling if first-run wizard left a pending OAuth flag."""
-        pending = str(self.config.cparser.value("settings/pending_oauth", defaultValue=""))
-        if not pending:
+    def _schedule_pending_prompts(self) -> None:
+        """Wait for the webserver, then run whatever setup left pending.
+
+        Twitch needs it listening, because its redirect URI points at it. The
+        OBS export only needs it for the dialog's Preview; the scene file it
+        writes is just a URL string OBS resolves later.
+        """
+        if self._oauth_poller is not None and self._oauth_poller.isRunning():
+            return
+        pending_oauth = str(self.config.cparser.value("settings/pending_oauth", defaultValue=""))
+        pending_export = self.config.cparser.value(
+            "settings/pending_obs_export", type=bool, defaultValue=False
+        )
+        if not pending_oauth and not pending_export:
             return
         port = int(str(self.config.cparser.value("weboutput/httpport", defaultValue="8899")))
         self._oauth_poller = _WebserverPollThread(port, parent=self.tray)
-        self._oauth_poller.ready.connect(self._handle_pending_oauth)
+        self._oauth_poller.ready.connect(self._handle_pending_prompts)
         self._oauth_poller.finished.connect(self._on_oauth_poller_finished)
         self._oauth_poller.start()
 
+    def _handle_pending_prompts(self) -> None:
+        """Run the deferred setup steps in order, once the webserver is up."""
+        self._handle_pending_oauth()
+        self._handle_pending_obs_export()
+
     def _handle_pending_oauth(self) -> None:
-        """Launch the auth wizard for platforms configured during first-run setup."""
+        """Authorize a platform setup enabled but could not finish.
+
+        Only Twitch reaches here; it is the one credential-bearing output setup
+        still offers.
+        """
         pending = str(self.config.cparser.value("settings/pending_oauth", defaultValue=""))
         if not pending:
             return
         self.config.cparser.remove("settings/pending_oauth")
-        platforms = [p.strip() for p in pending.split(",") if p.strip()]
-        if not platforms:
+        if "twitch" not in (p.strip() for p in pending.split(",")):
+            logging.warning("unexpected pending_oauth value: %s", pending)
             return
-        wizard = nowplaying.authwizard.AuthWizard(self.config, platforms)
+        wizard = nowplaying.twitch.wizard.TwitchWizard(self.config)
         wizard.exec()
+
+    def _handle_pending_obs_export(self) -> None:
+        """Offer to build an OBS scene now that the browser sources would work.
+
+        Only offered, never done: the dialog writes nothing until the user picks
+        sources and presses Export, and it refuses while OBS is running because
+        OBS rewrites its scene collections on exit.
+        """
+        if not self.config.cparser.value(
+            "settings/pending_obs_export", type=bool, defaultValue=False
+        ):
+            return
+        self.config.cparser.remove("settings/pending_obs_export")
+        if nowplaying.obs.scenebuilder.get_obs_scenes_dir() is None:
+            logging.debug("no OBS scenes directory; skipping the export offer")
+            return
+        self._show_obs_export()
 
     def _on_oauth_poller_finished(self) -> None:
         """Drop our reference to the OAuth poller thread once it finishes."""
@@ -874,10 +903,34 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         plugins = self.config.pluginobjs["inputs"]
 
+        # detect() only reports; recording and choosing are this method's job.
+        # Record everything found, since a path is worth having whether or not
+        # that source is the one selected.
+        detections: list[tuple[str, nowplaying.inputs.Detected]] = []
         for plugin in plugins:
-            if plugins[plugin].install():
-                self.config.cparser.setValue("settings/input", plugin.split(".")[-1])
-                break
+            try:
+                found = plugins[plugin].detect()
+            except Exception:  # pylint: disable=broad-exception-caught
+                # One plugin's detection is not worth the startup it runs in.
+                # Traktor walks the filesystem, so a collection that disappears
+                # between the glob and the stat raises here.
+                logging.exception("installer: detect() failed for %s", plugin)
+                continue
+            if not found:
+                continue
+            for key, value in found.settings.items():
+                self.config.record_detected(key, value)
+            detections.append((plugin, found))
+
+        # Real finds beat fallbacks. Iteration is alphabetical, so mpris2 would
+        # otherwise win on every Linux box over the Traktor or VirtualDJ sitting
+        # further down the list.
+        chosen = next(
+            (name for name, found in detections if not found.fallback),
+            next((name for name, _ in detections), None),
+        )
+        if chosen:
+            self.config.cparser.setValue("settings/input", chosen.split(".")[-1])
 
         twitchchatsettings = nowplaying.twitch.chat.TwitchChatSettings()
         twitchchatsettings.update_twitchbot_commands(self.config)

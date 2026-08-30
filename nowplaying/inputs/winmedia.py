@@ -17,7 +17,7 @@ except ImportError:
     WINMEDIA_STATUS = False
 
 import nowplaying.utils
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 
 
 class Plugin(InputPlugin):
@@ -35,9 +35,17 @@ class Plugin(InputPlugin):
             self.available = False
             self.winmedia_status = False
 
-    def install(self):
-        """Auto-install for WinMedia"""
-        return False
+    def detect(self) -> Detected:
+        """Present wherever the Windows transport-controls API is usable.
+
+        WINMEDIA_STATUS rather than a platform check: it says the winrt
+        bindings actually imported, which is what start() needs.
+
+        Nothing to configure. It reports whatever Windows says is playing, so
+        there is no path or library to find -- and a fallback for that reason,
+        since it is true on every such machine regardless of what is installed.
+        """
+        return Detected(WINMEDIA_STATUS, fallback=True)
 
     def desc_settingsui(self, qwidget):
         """provide a description for the plugins page"""

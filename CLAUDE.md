@@ -12,7 +12,10 @@ code in this repository.
 - tests should be methods not classes
 - tests should be parameterized when possible
 - tests should be aware of the fixtures in conftest.py to bootstrap the config
-- **Tests that read or write config MUST use the `bootstrap` fixture.** Never hand-roll a
+- **Anything that reads or writes config MUST use the `bootstrap` fixture** — not just things
+  called "tests". A scratch script, a `python -c`, or a "quick probe" is covered by this rule;
+  see "Touching config outside pytest" below for why, and for the only sanctioned alternative.
+  Never hand-roll a
   `MagicMock` config with a `cparser.value.side_effect`. A mock only replays the assumptions
   of whoever wrote it, so it passes whether or not `defaults()` actually registers the key,
   and it silently keeps passing when a call site stops supplying `defaultValue=`. The
@@ -182,10 +185,20 @@ print('minimum', shell.minimumSizeHint(), 'opens at', shell.size())
   `nowplaying/tlstrust.py` keeps its probe verdict in a JSON file next to the logs for
   exactly this reason, and validates every field on the way back in because that file
   is user-visible.
-- **Do not write to `QSettings.SystemScope`.** On macOS it resolves to
+- **There is one settings layer -- the application layer -- and every write goes to
+  it. There is no SystemScope.** Do not reason about scopes as a hierarchy: there is
+  no lower-priority store holding defaults for a user value to shadow, and no way to
+  write a value that a user setting will override. If you want a value not to
+  clobber the user's, you have to check before writing; the store will not do it for
+  you.
+
+  Concretely, do not write to `QSettings.SystemScope`. On macOS it resolves to
   `/Library/Preferences/...`, where `isWritable()` is `False` and a write returns
-  `Status.AccessError` without creating a file; the value can still read back through
-  the platform preference cache, so a write appears to work when nothing persisted.
+  `Status.AccessError` without creating a file -- and yet the value still reads back
+  through the platform preference cache. So a failed write looks exactly like a
+  successful one, which is what makes the phantom-layer mistake so easy to make.
+  Note `config.py:defaults()` constructs a SystemScope QSettings; that is not
+  evidence a second layer exists.
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
@@ -299,24 +312,61 @@ except Exception as exc:  # pylint: disable=broad-exception-caught
 - Test both happy path and failure scenarios for production reliability
 - Use meaningful test names that clearly indicate what scenario is being tested
 
-**Custom Test Scripts:**
+**Touching config outside pytest — the live-preferences trap:**
 
-If you write a custom test script that instantiates `ConfigFile` directly
-(outside the pytest framework), you **MUST** call the Qt bootstrap code
-before creating the config. This ensures proper Qt application
-initialization and prevents configuration errors.
+The trigger for this rule is the **operation, not what you call the script**. It applies the
+moment a line you are about to run constructs `ConfigFile(...)`, constructs a bare
+`QSettings(...)`, or calls `cparser.setValue()` / `remove()` / `clear()`. Renaming the
+activity does not change what the code does, so the rule does not care whether you are
+writing:
 
-```python
-# Required bootstrap for custom test scripts using ConfigFile
-import nowplaying.bootstrap
-nowplaying.bootstrap.set_qt_names()
+- a test, or a "quick probe", or a "sanity check", or a "one-liner"
+- `python -c "..."` or `python - <<EOF` from Bash
+- a throwaway repro, a benchmark, a migration dry-run, a `tools/` script
+- a script that only **reads** ("just looking at one value")
+- a verification step for a fix you just made, or a review finding you are confirming
+- anything a subagent runs on your behalf
 
-# Now safe to use ConfigFile
-from nowplaying.config import ConfigFile
-config = ConfigFile()
-```
+`nowplaying.bootstrap.set_qt_names()` **with no arguments points at the live user
+configuration** — `domain="com.whatsnowplaying"`, `appname="WhatsNowPlaying"`, which is
+`~/Library/Preferences/com.whatsnowplaying.WhatsNowPlaying.plist` on macOS. That is the real
+settings file of whoever is running you. There are two distinct harms:
 
-This is **NOT** needed for regular pytest tests as the `bootstrap` fixture handles Qt initialization automatically.
+- **Writes are unrecoverable.** `cparser.setValue()` on the live domain overwrites the user's
+  value with no undo. WNP's config backups are written only by the upgrade path, so there is
+  usually nothing to restore from. Assume any live write is permanent data loss.
+- **Reads silently corrupt your conclusions.** A `ConfigFile` on the live domain is populated
+  with the user's real keys, so a probe reads values you did not set and you draw a confident
+  wrong conclusion from them. Do not talk yourself into "constructing it is harmless because
+  of where the write goes" — there is one settings layer and no scope reasoning makes a live
+  construction safe. Point it at a throwaway domain instead.
+
+In order of preference:
+
+1. **Use pytest with the `bootstrap` fixture.** The only option that is isolated *and*
+   self-cleaning: temp dir, `testmode=True`, and its own domain/appname. Prefer this even for
+   a single assertion — one throwaway test file plus `pytest -k` is not meaningfully slower
+   than `python -c`, and it cannot leak.
+2. **If it truly cannot be pytest, pass a throwaway domain AND appname**, and say in the
+   script why it is not a test:
+
+   ```python
+   import nowplaying.bootstrap
+   # Throwaway domain+appname: never the live com.whatsnowplaying/WhatsNowPlaying pair.
+   nowplaying.bootstrap.set_qt_names(
+       domain="com.github.whatsnowplaying.scratch", appname="scratch-probe"
+   )
+   from nowplaying.config import ConfigFile
+   config = ConfigFile()
+   ```
+
+3. **Never run the zero-argument `set_qt_names()`** in a scratch script. It exists for the
+   real application entry point.
+
+The Qt bootstrap itself is still required before constructing `ConfigFile` outside pytest, for
+Qt initialization. Note the ordering trap: with a GUI script, construct `QApplication` *before*
+`set_qt_names()`, or the first widget aborts with SIGABRT. Regular pytest tests need none of
+this; the `bootstrap` fixture handles Qt initialization and isolation together.
 
 **Test Coverage Requirements for Artistextras Plugins:**
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Input Plugin definition"""
 
+import dataclasses
+
 # import logging
 from typing import TYPE_CHECKING
 
@@ -12,6 +14,37 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     import nowplaying.config
+
+
+@dataclasses.dataclass(frozen=True)
+class Detected:
+    """What an input plugin found on this machine.
+
+    Truthy when the software is present, so `if plugin.detect():` still reads
+    the way it always did.
+
+    `settings` is what the plugin *would* configure, not what it did: nothing is
+    written. Callers decide, because the policy differs -- first run fills
+    blanks, Redetect overwrites, and the wizard wants to show a found path next
+    to a configured one rather than silently replace it.
+
+    Present with an empty `settings` is normal and distinct from absent. Serato
+    4 derives its library path on demand and Rekordbox needs a key that cannot
+    be detected, so both are findable with nothing to record.
+
+    `fallback` marks presence that comes from a platform capability rather than
+    from finding the user's music software: MPRIS2 works wherever D-Bus does and
+    WinMedia wherever the winrt bindings import, on every such machine, whether
+    or not anything is playing. Still worth offering, but never worth choosing
+    over software that was actually found.
+    """
+
+    present: bool = False
+    settings: dict[str, str] = dataclasses.field(default_factory=dict)
+    fallback: bool = False
+
+    def __bool__(self) -> bool:
+        return self.present
 
 
 class InputPlugin(WNPBasePlugin):
@@ -33,13 +66,17 @@ class InputPlugin(WNPBasePlugin):
 
     #### Autoinstallation methods ####
 
-    def detect(self) -> bool:  # pylint: disable=no-self-use
-        """return True if this DJ software is installed on the machine; no side-effects"""
-        return False
+    def detect(self) -> Detected:  # pylint: disable=no-self-use
+        """Report whether this DJ software is here, and what it would configure.
 
-    def install(self) -> bool:  # pylint: disable=no-self-use
-        """if a fresh install, run this"""
-        return False
+        Writes nothing: return findings in Detected.settings and let the caller
+        record them, since only it knows whether to fill blanks or overwrite.
+        Staying side-effect free is what lets serato3 call serato4's detect() to
+        ask whether it claims the shared library.
+
+        Never include settings/input; choosing the source is the caller's.
+        """
+        return Detected()
 
     #### Mix Mode menu item methods
 

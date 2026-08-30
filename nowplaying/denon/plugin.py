@@ -13,7 +13,7 @@ import time
 from typing import TYPE_CHECKING
 
 import nowplaying.upgrades
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 
 from .connection import ConnectionManager
@@ -59,10 +59,9 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # last (found, connected) discovery counts, to log only on change
         self._last_discovery_counts: tuple[int, int] | None = None
 
-    def install(self) -> bool:
-        """Auto-install detection - StagelinQ devices are network-based"""
-        # Cannot auto-detect network devices, user must configure manually
-        return False
+    def detect(self) -> Detected:
+        """Never detected: StagelinQ devices are on the network, not this machine."""
+        return Detected()
 
     def get_source_agent_data(self) -> dict:
         """Return source agent data including device software version from StagelinQ discovery."""

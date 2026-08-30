@@ -180,8 +180,9 @@ def test_import_skips_nonexistent_paths(temp_config):  # pylint: disable=redefin
         # Non-path setting imported normally
         assert temp_config.cparser.value("settings/delay") == "1.0"
         # Path settings from another OS are NOT applied (bad cross-OS paths are skipped).
-        # Keys may fall back to system-scope defaults after import clears the user scope;
-        # we only verify the imported values were rejected.
+        # Asserted as "not the imported value" rather than a specific one: import
+        # clears the key and defaults() may re-register it, so what is left
+        # depends on the machine. Only the rejection is the contract here.
         assert temp_config.cparser.value("serato/libpath") != "/Users/someuser/Music/Serato"
         assert (
             temp_config.cparser.value("textoutput/file")

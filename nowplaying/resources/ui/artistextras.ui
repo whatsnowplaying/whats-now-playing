@@ -33,6 +33,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="setup_button">
+       <property name="text">
+        <string>Guided Setup ...</string>
+       </property>
+       <property name="toolTip">
+        <string>Walks through which artist information services to use and their API keys, then fills in the fields below.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>

@@ -6,7 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Slot  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QDialog  # pylint: disable=no-name-in-module
 
+import nowplaying.discord.wizard
 import nowplaying.preview.textwindow
 import nowplaying.utils.qt
 
@@ -42,6 +44,26 @@ class DiscordSettings:
         widget.bot_enable_checkbox.toggled.connect(
             lambda _: DiscordSettings._update_fields(widget)
         )
+        widget.setup_button.clicked.connect(self._launch_setup_wizard)
+
+    def _launch_setup_wizard(self) -> None:
+        """Run the guided setup wizard and adopt whatever it wrote.
+
+        The wizard writes to config directly, so its values have to be mirrored
+        back into the widgets -- otherwise the next Save would write the stale
+        on-screen values straight back over them.
+        """
+        if not self._widget or not self.config:
+            return
+        wizard = nowplaying.discord.wizard.DiscordWizard(self.config)
+        if wizard.exec() != QDialog.DialogCode.Accepted:
+            return
+        cparser = self.config.cparser
+        self._widget.token_lineedit.setText(cparser.value("discord/token") or "")
+        self._widget.clientid_lineedit.setText(cparser.value("discord/clientid") or "")
+        self._widget.channel_id_lineedit.setText(cparser.value("discord/channel_id") or "")
+        self._widget.bot_enable_checkbox.setChecked(True)
+        DiscordSettings._update_fields(self._widget)
 
     def load(
         self,

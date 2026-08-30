@@ -21,7 +21,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import nowplaying.wizard
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 
 from .config import ConfigReader
 from .database import DatabaseReader
@@ -40,8 +40,9 @@ if TYPE_CHECKING:
 class _RekordboxWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-few-public-methods
     """First-run wizard page for Rekordbox configuration."""
 
-    def __init__(self, config=None):
-        super().__init__(config=config)
+    def __init__(self, config=None, parent=None):
+        super().__init__(parent)
+        self.config = config
         self.setTitle("Rekordbox Setup")
 
         self._key_edit = QLineEdit()
@@ -63,9 +64,9 @@ class _RekordboxWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too
         """Pre-populate the key field from saved configuration."""
         self._key_edit.setText(self.config.cparser.value("rekordbox/custom_key", defaultValue=""))
 
-    def commit(self):
-        """Save the database key to configuration."""
-        self.config.cparser.setValue("rekordbox/custom_key", self._key_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The database key the user supplied."""
+        return {"rekordbox/custom_key": self._key_edit.text().strip()}
 
 
 class RekordboxPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -93,20 +94,17 @@ class RekordboxPlugin(InputPlugin):  # pylint: disable=too-many-instance-attribu
         self._wal_timer: threading.Timer | None = None
         self._wal_timer_lock = threading.Lock()
 
-    def detect(self) -> bool:
-        """Return True if the Rekordbox data directory exists on this machine."""
+    def detect(self) -> Detected:
+        """Report whether the Rekordbox data directory exists on this machine.
+
+        Nothing to configure: the data path is found automatically, and the one
+        setting Rekordbox needs is the database key, which cannot be detected.
+        """
         try:
-            return self.config_reader.get_data_path().exists()
+            return Detected(self.config_reader.get_data_path().exists())
         except Exception:  # pylint: disable=broad-exception-caught
             logging.exception("Rekordbox detect() failed")
-            return False
-
-    def install(self) -> bool:
-        """Write rekordbox as the active input source when detected."""
-        if not self.detect():
-            return False
-        self.config.cparser.setValue("settings/input", "rekordbox")
-        return True
+            return Detected()
 
     def defaults(self, qsettings: "QSettings"):
         """Set default configuration values"""

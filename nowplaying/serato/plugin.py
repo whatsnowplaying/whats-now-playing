@@ -89,10 +89,12 @@ class _SeratoWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-fe
         self._url_label.setVisible(remote)
         self._url_edit.setVisible(remote)
 
-    def commit(self) -> None:
-        """Write Serato mode and URL to config."""
-        self.config.cparser.setValue("serato4/local", self._local_radio.isChecked())
-        self.config.cparser.setValue("serato4/url", self._url_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """Whether to read locally, and the Live Playlist URL if not."""
+        return {
+            "serato4/local": self._local_radio.isChecked(),
+            "serato4/url": self._url_edit.text().strip(),
+        }
 
 
 class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -262,20 +264,14 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             await self._http_session.close()
             self._http_session = None
 
-    def detect(self) -> bool:
-        """Return True if a Serato 4+ library can be found on this machine."""
-        return bool(self.detected_serato_library_path)
+    def detect(self) -> nowplaying.inputs.Detected:
+        """Report whether a Serato 4+ library is on this machine.
 
-    def install(self) -> bool:
-        """Auto-install for Serato 4"""
-        serato_lib_path = self.detected_serato_library_path
-        if serato_lib_path:
-            logging.info("Auto-installing Serato plugin with library at: %s", serato_lib_path)
-            self.config.cparser.setValue("settings/input", "serato")
-            return True
-
-        logging.debug("Serato 4+ installation not found for auto-install")
-        return False
+        Nothing to configure: the library path is derived on demand by
+        detected_serato_library_path rather than stored, so there is no key to
+        offer.
+        """
+        return nowplaying.inputs.Detected(bool(self.detected_serato_library_path))
 
     def validmixmodes(self) -> list[str]:
         """Valid mix modes for Serato"""

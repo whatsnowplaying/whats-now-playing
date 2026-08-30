@@ -18,7 +18,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
-import nowplaying.installwizard
+import nowplaying.setupwizard
 import nowplaying.singleinstance
 import nowplaying.startup
 import nowplaying.systemtray
@@ -91,7 +91,7 @@ def actualmain():  # pragma: no cover
             logging.getLogger().setLevel(config.loglevel)
             logging.captureWarnings(True)
 
-            nowplaying.installwizard.maybe_show_wizard(config)
+            nowplaying.setupwizard.maybe_show_wizard(config)
 
             startup_window.update_progress("Starting system tray...")
             qapp.processEvents()

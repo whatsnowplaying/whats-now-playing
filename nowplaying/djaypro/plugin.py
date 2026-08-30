@@ -60,7 +60,7 @@ import nowplaying.djaypro.locationdb
 import nowplaying.djaypro.mediadb
 import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
-from nowplaying.inputs import InputPlugin
+from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
 
@@ -104,9 +104,9 @@ class _DjayProWizardPage(nowplaying.wizard.WizardPage):  # pylint: disable=too-f
 
         self._dir_edit.setText(str(config.cparser.value("djaypro/directory", defaultValue="")))
 
-    def commit(self) -> None:
-        """Write the djay Pro library path to config."""
-        self.config.cparser.setValue("djaypro/directory", self._dir_edit.text().strip())
+    def collected(self) -> dict[str, object]:
+        """The djay Pro library path the user pointed at."""
+        return {"djaypro/directory": self._dir_edit.text().strip()}
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -161,18 +161,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 return candidate
         return None
 
-    def detect(self) -> bool:
-        """Return True if djay Pro is installed with a valid media library."""
-        return self._find_djaypro_dir() is not None
-
-    def install(self) -> bool:
-        """Auto-install for djay Pro: detect and write default library path."""
+    def detect(self) -> Detected:
+        """Report the djay Pro media library found here."""
         djaypro_dir = self._find_djaypro_dir()
         if djaypro_dir is None:
-            return False
-        self.config.cparser.setValue("settings/input", "djaypro")
-        self.config.cparser.setValue("djaypro/directory", str(djaypro_dir))
-        return True
+            return Detected()
+        return Detected(True, {"djaypro/directory": str(djaypro_dir)})
 
     def _reset_meta(self):
         """reset the metadata"""
@@ -208,7 +202,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         try:
             dbfile = self._get_db_path()
             if dbfile:
-                nowplaying.djaypro.locationdb.rebuild(dbfile, self._location_db_path)
+                with nowplaying.djaypro.locationdb.side_db_lock(self._location_db_path) as owned:
+                    if owned:
+                        nowplaying.djaypro.locationdb.rebuild(dbfile, self._location_db_path)
         finally:
             self.config.cparser.setValue("djaypro/rebuild_location_db", False)
             with self._rebuild_lock:
@@ -219,7 +215,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         try:
             dbfile = self._get_db_path()
             if dbfile:
-                nowplaying.djaypro.locationdb.catchup_index(dbfile, self._location_db_path)
+                with nowplaying.djaypro.locationdb.side_db_lock(self._location_db_path) as owned:
+                    if owned:
+                        nowplaying.djaypro.locationdb.catchup_index(dbfile, self._location_db_path)
         finally:
             with self._rebuild_lock:
                 self._rebuilding = False
@@ -768,15 +766,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def defaults(self, qsettings: "QSettings"):
         """set the default configuration values for this plugin"""
-        # Auto-detect djay Pro directory (macOS vs Windows)
-        music_dir = self.config.userdocs.parent.joinpath("Music")
-        # Try macOS path first
-        djaypro = music_dir.joinpath("djay", "djay Media Library.djayMediaLibrary")
-        if not djaypro.exists():
-            # Try Windows path
-            djaypro = music_dir.joinpath("djay", "djay Media Library")
-
-        qsettings.setValue("djaypro/directory", str(djaypro))
+        # Same finder detect() uses; see the note in virtualdj.defaults(). It
+        # also requires MediaLibrary.db, which the old inline check here did
+        # not, so an empty djay folder no longer counts as a library.
+        djaypro = self._find_djaypro_dir()
+        qsettings.setValue("djaypro/directory", str(djaypro) if djaypro else "")
         qsettings.setValue("djaypro/artist_query_scope", "entire_library")
         qsettings.setValue("djaypro/selected_playlists", "")
         qsettings.setValue("djaypro/analyzed_data_delay", _ANALYZED_DATA_RETRY_DEFAULT)

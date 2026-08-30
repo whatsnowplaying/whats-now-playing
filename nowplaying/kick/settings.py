@@ -8,7 +8,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QTimer, Slot  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-name-in-module
 
-import nowplaying.authwizard
+import nowplaying.kick.wizard
 import nowplaying.config
 import nowplaying.utils.templatepaths
 import nowplaying.kick.oauth2
@@ -112,7 +112,7 @@ class KickSettings:
         """Open the authentication wizard for Kick."""
         if not self.oauth:
             return
-        wizard = nowplaying.authwizard.AuthWizard(self.oauth.config, ["kick"])
+        wizard = nowplaying.kick.wizard.KickWizard(self.oauth.config)
         wizard.exec()
         self.update_oauth_status()
 
