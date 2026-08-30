@@ -130,7 +130,15 @@ class DataCacheClient:  # pylint: disable=too-many-instance-attributes
         spent either way -- the bucket has no way to give one back.
         """
         if self._session is None:
-            await self.initialize()
+            try:
+                await self.initialize()
+            except Exception:  # pylint: disable=broad-except
+                # Returned rather than raised: the caller turns None into a
+                # terminal FetchResult, and an exception here would escape
+                # _fetch_with_retry entirely, since this runs outside its try.
+                # Artist extras must degrade rather than raise mid-set.
+                logging.exception("could not rebuild the HTTP session")
+                return None
         return self._session
 
     async def close(self) -> None:

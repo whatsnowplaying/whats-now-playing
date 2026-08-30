@@ -688,3 +688,30 @@ async def test_fetch_gives_up_when_the_session_cannot_be_rebuilt(temp_client):  
     assert not result.ok
     assert result.terminal, "must be terminal so callers do not treat it as retryable"
     assert ensure.await_count == 1, "one look, not one per retry"
+
+
+@pytest.mark.asyncio
+async def test_fetch_survives_a_failed_session_rebuild(temp_client):  # pylint: disable=redefined-outer-name
+    """A rebuild that itself fails must not raise out of the fetch.
+
+    _ensure_session() runs outside the retry loop's try, so an exception from
+    initialize() would escape _fetch_with_retry and reach the artist extras
+    plugins, which have to degrade rather than raise during a set.
+    """
+    temp_client._session = None  # pylint: disable=protected-access
+    temp_client._initialized = False  # pylint: disable=protected-access
+
+    with unittest.mock.patch.object(
+        temp_client, "initialize", side_effect=RuntimeError("no ssl context for you")
+    ):
+        result = await temp_client._fetch_with_retry(  # pylint: disable=protected-access
+            url="https://api.example.com/broken.json",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            headers=None,
+            rate_limiter=temp_client.rate_limiters.get_limiter("test"),
+        )
+
+    assert not result.ok
+    assert result.terminal, "a failed rebuild is not worth retrying"
