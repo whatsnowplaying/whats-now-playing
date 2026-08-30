@@ -636,3 +636,82 @@ async def test_negative_ttl_caches_404_and_suppresses_retry(
         )
         assert result2 is None, "negative cache hit should suppress retry and return None"
         assert call_count == 1, "fetch_func must NOT be called again on negative cache hit"
+
+
+@pytest.mark.asyncio
+async def test_fetch_rebuilds_a_session_that_went_away(temp_client):  # pylint: disable=redefined-outer-name
+    """A session dropped mid-flight must be rebuilt, not retried against.
+
+    reset_client() nulls a live session during test teardown, so a fetch already
+    past the guard in _fetch_and_store can find it gone. Retrying an
+    AttributeError spends the backoff on something waiting cannot fix, and the
+    rate limit token for the request is already gone: the bucket has no release.
+    """
+    test_data = {"recovered": True}
+
+    with respx.mock(using="httpcore2") as mock_responses:
+        mock_responses.get("https://api.example.com/dropped.json").mock(
+            return_value=httpx.Response(
+                200, json=test_data, headers={"content-type": "application/json"}
+            )
+        )
+
+        temp_client._session = None  # pylint: disable=protected-access
+        temp_client._initialized = False  # pylint: disable=protected-access
+
+        result = await temp_client._fetch_with_retry(  # pylint: disable=protected-access
+            url="https://api.example.com/dropped.json",
+            provider="test",
+            timeout=30.0,
+            retries=0,  # no retry budget, so recovery cannot come from a second attempt
+            headers=None,
+            rate_limiter=temp_client.rate_limiters.get_limiter("test"),
+        )
+
+        assert result.ok, "a dropped session should be rebuilt on the first attempt"
+        assert orjson.loads(result.data) == test_data
+
+
+@pytest.mark.asyncio
+async def test_fetch_gives_up_when_the_session_cannot_be_rebuilt(temp_client):  # pylint: disable=redefined-outer-name
+    """With no session obtainable, stop rather than burn the retry budget."""
+    with unittest.mock.patch.object(temp_client, "_ensure_session", return_value=None) as ensure:
+        result = await temp_client._fetch_with_retry(  # pylint: disable=protected-access
+            url="https://api.example.com/never.json",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            headers=None,
+            rate_limiter=temp_client.rate_limiters.get_limiter("test"),
+        )
+
+    assert not result.ok
+    assert result.terminal, "must be terminal so callers do not treat it as retryable"
+    assert ensure.await_count == 1, "one look, not one per retry"
+
+
+@pytest.mark.asyncio
+async def test_fetch_survives_a_failed_session_rebuild(temp_client):  # pylint: disable=redefined-outer-name
+    """A rebuild that itself fails must not raise out of the fetch.
+
+    _ensure_session() runs outside the retry loop's try, so an exception from
+    initialize() would escape _fetch_with_retry and reach the artist extras
+    plugins, which have to degrade rather than raise during a set.
+    """
+    temp_client._session = None  # pylint: disable=protected-access
+    temp_client._initialized = False  # pylint: disable=protected-access
+
+    with unittest.mock.patch.object(
+        temp_client, "initialize", side_effect=RuntimeError("no ssl context for you")
+    ):
+        result = await temp_client._fetch_with_retry(  # pylint: disable=protected-access
+            url="https://api.example.com/broken.json",
+            provider="test",
+            timeout=30.0,
+            retries=3,
+            headers=None,
+            rate_limiter=temp_client.rate_limiters.get_limiter("test"),
+        )
+
+    assert not result.ok
+    assert result.terminal, "a failed rebuild is not worth retrying"
