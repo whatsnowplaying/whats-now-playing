@@ -3,7 +3,6 @@
 
 import asyncio
 import logging
-import logging.config
 import os
 import pathlib
 import sqlite3
@@ -18,15 +17,6 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QVBoxLayout,
     QWidget,
 )
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-    }
-)
-
-# pylint: disable=wrong-import-position
 
 import nowplaying.utils.xml
 import nowplaying.wizard

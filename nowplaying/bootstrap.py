@@ -123,7 +123,18 @@ def setuplogging(
     )
     logging.captureWarnings(True)
     # These libraries emit very noisy DEBUG-level tracing
-    logging.getLogger("httpx2").setLevel(logging.WARNING)
-    logging.getLogger("httpcore2").setLevel(logging.WARNING)
-    logging.getLogger("hpack").setLevel(logging.WARNING)
+    for noisy in (
+        "httpx2",
+        "httpcore2",
+        "hpack",
+        # Named here rather than silenced by a blanket dictConfig in the module
+        # that imported them: disable_existing_loggers takes out every logger
+        # that already exists, which included wnpmb's and cost us all of its
+        # rate-limit and retry reporting.
+        "aiosqlite",
+        "aiohttp",
+        "zeroconf",
+        "simpleobsws",
+    ):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     return logpath

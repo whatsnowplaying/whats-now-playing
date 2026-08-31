@@ -5,7 +5,6 @@ import asyncio
 import base64
 import contextlib
 import logging
-import logging.config
 import os
 import pathlib
 import secrets
@@ -36,15 +35,6 @@ from nowplaying.webserver.static_handlers import StaticContentHandler
 #
 # quiet down our imports
 #
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-    }
-)
-
-# pylint: disable=wrong-import-position
 
 import nowplaying.bootstrap
 import nowplaying.config
