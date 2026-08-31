@@ -28,6 +28,7 @@ def getmusicbrainz(bootstrap):
     return nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_15ghosts2_orig(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test just a recording id"""
@@ -42,6 +43,7 @@ async def test_15ghosts2_orig(getmusicbrainz):  # pylint: disable=redefined-oute
     assert metadata["title"] == "15 Ghosts II"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_15ghosts2_fullytagged(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test an isrc"""
@@ -56,6 +58,7 @@ async def test_15ghosts2_fullytagged(getmusicbrainz):  # pylint: disable=redefin
     assert metadata["title"] == "15 Ghosts II"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_nin(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test standard/well known name+title"""
@@ -68,6 +71,7 @@ async def test_fallback_nin(getmusicbrainz):  # pylint: disable=redefined-outer-
     assert newdata["album"] == "Ghosts I–IV"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_dansesociety(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test slightly wrong artist (missing the) + semi-obscure single"""
@@ -78,6 +82,7 @@ async def test_fallback_dansesociety(getmusicbrainz):  # pylint: disable=redefin
     assert newdata["album"] == "Somewhere"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_recordingid_api_cache_call_count(
     getmusicbrainz,  # pylint: disable=redefined-outer-name
@@ -122,6 +127,7 @@ async def test_recordingid_api_cache_call_count(
         mbhelper._recordingid_uncached = original  # pylint: disable=protected-access
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.xfail(reason="Returns wrong data")
 @pytest.mark.asyncio
 async def test_fallback_prince_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
@@ -172,6 +178,7 @@ async def test_fallback_prince_compblue(getmusicbrainz):  # pylint: disable=rede
 #     assert newdata.get('musicbrainzrecordingid') in COMPBLUERID
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_princeandther_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """same, but without album"""
@@ -188,6 +195,7 @@ async def test_fallback_princeandther_compblue(getmusicbrainz):  # pylint: disab
     assert newdata.get("musicbrainzrecordingid") in COMPBLUERID
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_snapvsmartin(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test compilation + two artists"""
@@ -201,6 +209,7 @@ async def test_fallback_snapvsmartin(getmusicbrainz):  # pylint: disable=redefin
     assert newdata["album"] == "The Cult of Snap! 1990>>2003"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_sandervsrobbie(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test two artists + single"""
@@ -217,6 +226,7 @@ async def test_fallback_sandervsrobbie(getmusicbrainz):  # pylint: disable=redef
     assert newdata["album"] == "Close My Eyes"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_klfvsent(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test two artists + remix"""
@@ -239,6 +249,7 @@ async def test_fallback_klfvsent(getmusicbrainz):  # pylint: disable=redefined-o
     }
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_mareux(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test single but w/wrong remix"""
@@ -248,6 +259,7 @@ async def test_fallback_mareux(getmusicbrainz):  # pylint: disable=redefined-out
     assert newdata["musicbrainzartistid"] == ["09095919-c549-4f33-9555-70df9dd941e1"]
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_trslashst(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test TR/ST"""
@@ -259,6 +271,7 @@ async def test_fallback_trslashst(getmusicbrainz):  # pylint: disable=redefined-
     assert newdata["album"] in ["Iris", "The Destroyer — 2", "Destroyer Vol 1 & 2"]
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.xfail(reason="MusicBrainz returns inconsistent results for popular artists")
 @pytest.mark.asyncio
 async def test_fallback_queen(getmusicbrainz):  # pylint: disable=redefined-outer-name
@@ -273,6 +286,7 @@ async def test_fallback_queen(getmusicbrainz):  # pylint: disable=redefined-oute
     ]  # can pull album or a single
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_grimesfeatjanelle(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test feat"""
@@ -286,6 +300,7 @@ async def test_fallback_grimesfeatjanelle(getmusicbrainz):  # pylint: disable=re
     assert newdata["album"] in ["Venus Fly", "Art Angels"]
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_utterlunancy(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test various artist as only source"""
@@ -297,6 +312,7 @@ async def test_fallback_utterlunancy(getmusicbrainz):  # pylint: disable=redefin
     assert newdata["album"] == "Leatherface: The Texas Chainsaw Massacre III"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_jackielipson(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test missing entirely"""
@@ -308,6 +324,7 @@ async def test_fallback_jackielipson(getmusicbrainz):  # pylint: disable=redefin
     assert not newdata.get("album")
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_acdc_tnt_nodots(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test missing song and remix with wrong name"""
@@ -321,6 +338,7 @@ async def test_fallback_acdc_tnt_nodots(getmusicbrainz):  # pylint: disable=rede
     assert not metadata.get("musicbrainzrecordingid")
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_acdc_tnt_dots(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test missing song but at least this time remix has correct name"""
@@ -334,6 +352,7 @@ async def test_fallback_acdc_tnt_dots(getmusicbrainz):  # pylint: disable=redefi
     assert not metadata.get("musicbrainzrecordingid")
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_davidbowie(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """this one failed to get bio once"""
@@ -344,6 +363,7 @@ async def test_fallback_davidbowie(getmusicbrainz):  # pylint: disable=redefined
     assert not newdata.get("musicbrainzrecordingid")
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """MB returns a mismatched title (reference track), so recording id is rejected"""
@@ -357,6 +377,7 @@ async def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: dis
     assert not newdata.get("musicbrainzrecordingid")
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_musicbrainz_malformed_ids(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test handling of malformed MusicBrainz IDs"""
@@ -389,6 +410,7 @@ async def test_musicbrainz_malformed_ids(getmusicbrainz):  # pylint: disable=red
             logging.warning("Malformed ID %d raised exception: %s", i, exc)
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_musicbrainz_missing_metadata_fields(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test handling of missing or invalid metadata fields"""

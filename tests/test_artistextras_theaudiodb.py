@@ -42,6 +42,7 @@ def _setup_theaudiodb_plugin_no_key(bootstrap):
     return plugin
 
 
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_theaudiodb_artist_name_correction(bootstrap):
     """test theaudiodb artist name correction for name-based vs musicbrainz searches"""
@@ -78,6 +79,7 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
         logging.info("Artist name preserved for MusicBrainz search: %s", result2["artist"])
 
 
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_theaudiodb_datacache_duplicate_artists(bootstrap):
     """test TheAudioDB two-level caching with duplicate artist names"""
@@ -131,6 +133,7 @@ async def test_theaudiodb_datacache_duplicate_artists(bootstrap):
     # Test passes if two-level caching works correctly (search + individual artist ID)
 
 
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
     """test theaudiodb plugin falls back to name-based search when MusicBrainz ID is invalid"""
@@ -513,6 +516,7 @@ async def test_theaudiodb_coverart_album_api_error(bootstrap):  # pylint: disabl
     )
 
 
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_theaudiodb_live_coverart(bootstrap):  # pylint: disable=redefined-outer-name
     """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""

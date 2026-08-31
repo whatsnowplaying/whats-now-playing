@@ -84,3 +84,83 @@ async def isolated_datacache_client():
                 yield client
             finally:
                 await client.close()
+
+
+def _providers(item) -> frozenset[str]:
+    """Services a live test talks to, from @pytest.mark.live("discogs", ...)."""
+    marker = item.get_closest_marker("live")
+    return frozenset(marker.args) if marker else frozenset()
+
+
+def _spread_by_provider(live: list) -> list:
+    """Order live tests so neighbours share no service.
+
+    Greedy rather than exact: at each step take the waiting test whose services
+    were used longest ago. Good enough, and it keeps the artist extras tests
+    that touch four providers at once away from the single-provider ones.
+    """
+    remaining = list(live)
+    last_used: dict[str, int] = {}
+    out: list = []
+    while remaining:
+        # Highest "staleness" first: the further back a test's services were
+        # touched, the safer it is to run now.
+        best = max(
+            remaining,
+            key=lambda item: min(
+                (len(out) - last_used.get(name, -len(live)) for name in _providers(item)),
+                default=len(out),
+            ),
+        )
+        remaining.remove(best)
+        for name in _providers(best):
+            last_used[name] = len(out)
+        out.append(best)
+    return out
+
+
+def _splittable(item) -> bool:
+    """Whether moving items around this one can be done without cost.
+
+    False when the item uses a module- or class-scoped fixture: separating it
+    from its neighbours makes pytest tear that fixture down and rebuild it, and
+    tests/webserver's builds a real server on a real port.
+    """
+    info = getattr(item, "_fixtureinfo", None)
+    if info is None:
+        return True
+    return not any(
+        str(getattr(fixturedef, "scope", "")) in {"module", "class"}
+        for defs in getattr(info, "name2fixturedefs", {}).values()
+        for fixturedef in defs
+    )
+
+
+def pytest_collection_modifyitems(session, config, items):  # pylint: disable=unused-argument
+    """Reorder the live-API tests so consecutive ones hit different services.
+
+    Each live test builds its own client and wnpmb's adaptive pacing lives on
+    the instance, so a file's worth of them arrives at one service with no
+    spacing at all. Running them round-robin across providers gives each one
+    roughly as many test-lengths of breathing room as there are providers.
+
+    Live tests only ever land in slots live tests already held, so nothing else
+    is reordered and tests-qt stays first -- qtbot has to initialize before
+    anything starts asyncio or threads, which is what testpaths orders. This
+    hook is handed every collected item, not just this directory's, so that
+    cannot be assumed.
+
+    A slot is skipped when the item there, or the one being moved, uses a
+    module- or class-scoped fixture. Swapping across modules does separate a
+    module's items, and doing that to a shared fixture would rebuild it
+    mid-run. Reordering only within each module would be a no-op instead: every
+    module's live tests name the same provider.
+    """
+    slots = [
+        i for i, item in enumerate(items) if item.get_closest_marker("live") and _splittable(item)
+    ]
+    if len(slots) < 2:
+        return
+    ordered = _spread_by_provider([items[i] for i in slots])
+    for slot, item in zip(slots, ordered, strict=True):
+        items[slot] = item

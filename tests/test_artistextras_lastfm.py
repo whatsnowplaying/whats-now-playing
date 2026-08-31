@@ -107,6 +107,7 @@ def _setup_plugin(bootstrap, lang: str = "en", en_fallback: bool = True):
     return nowplaying.artistextras.lastfm.Plugin(config=config)
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 async def test_lastfm_disabled(bootstrap):
     """disabled plugin returns None"""
@@ -118,6 +119,7 @@ async def test_lastfm_disabled(bootstrap):
     assert result is None
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 async def test_lastfm_no_apikey(bootstrap):
     """missing API key returns None"""
@@ -129,6 +131,7 @@ async def test_lastfm_no_apikey(bootstrap):
     assert result is None
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 async def test_lastfm_no_artist(bootstrap):
     """missing artist returns None"""
@@ -426,6 +429,7 @@ def _setup_live_plugin(bootstrap, lang: str = "en", en_fallback: bool = True):
     return nowplaying.artistextras.lastfm.Plugin(config=config)
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 @skip_no_lastfm_key
 async def test_lastfm_live_bio_and_website(bootstrap):
@@ -443,6 +447,7 @@ async def test_lastfm_live_bio_and_website(bootstrap):
     assert any("last.fm" in url for url in result["artistwebsites"])
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 @skip_no_lastfm_key
 async def test_lastfm_live_cache_consistency(bootstrap):
@@ -456,6 +461,7 @@ async def test_lastfm_live_cache_consistency(bootstrap):
     assert result1 == result2
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 @skip_no_lastfm_key
 async def test_lastfm_live_unknown_artist(bootstrap):
@@ -471,6 +477,7 @@ async def test_lastfm_live_unknown_artist(bootstrap):
         pytest.fail(f"Plugin raised exception for unknown artist: {exc}")
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 @skip_no_lastfm_key
 async def test_lastfm_live_lang_fallback(bootstrap):
@@ -634,6 +641,7 @@ async def test_lastfm_coverart_with_album_mbid(bootstrap):  # pylint: disable=re
     assert keys, "Cover art should be stored after queue processing"
 
 
+@pytest.mark.live("lastfm")
 @pytest.mark.asyncio
 @skip_no_lastfm_key
 async def test_lastfm_live_coverart(bootstrap):  # pylint: disable=redefined-outer-name

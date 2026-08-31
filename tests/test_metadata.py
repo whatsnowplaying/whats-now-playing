@@ -469,6 +469,7 @@ def test_youtube_title_no_match(title):
     assert not nowplaying.metadata.processors.YOUTUBE_TITLE_MATCH_RE.match(title)
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-name
     """noimagecache"""
@@ -499,6 +500,7 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     assert metadataout["title"] == "Iris"
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-outer-name
     """noimagecache"""

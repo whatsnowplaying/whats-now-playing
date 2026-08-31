@@ -93,7 +93,7 @@ testpaths = ["tests-qt", "tests"]
 markers = [
   "serato3settings: custom settings for older serato",
   "templatesettings: custom settings for templates",
-  "live: tests that hit real external network hosts (may be slow or flaky in CI)",
+  "live(*providers): hits real external hosts, named so conftest can space same-service tests apart",
 ]
 qt_api = "pyside6"
 #log_cli = true

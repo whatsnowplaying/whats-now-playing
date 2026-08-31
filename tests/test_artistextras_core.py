@@ -84,6 +84,7 @@ async def test_nodata(getconfiguredplugin):  # pylint: disable=redefined-outer-n
         assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """noimagecache"""
@@ -116,6 +117,7 @@ async def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=red
         assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """artist"""
@@ -145,6 +147,7 @@ async def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-ou
             assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """artist"""
@@ -183,6 +186,7 @@ async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-out
             )
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """artist"""
@@ -206,6 +210,7 @@ async def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-out
             )
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
@@ -223,6 +228,7 @@ async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-
         assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
@@ -238,6 +244,7 @@ async def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer
         assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
@@ -272,6 +279,7 @@ async def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefine
             assert not data
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """badmbid"""
@@ -303,6 +311,7 @@ async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             )
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.xfail(reason="Non-deterministic at the moment")
 @pytest.mark.asyncio
 async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
@@ -338,6 +347,7 @@ async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-n
         )
 
 
+@pytest.mark.live(*PLUGINS)
 @pytest.mark.asyncio
 async def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     """discogs"""
