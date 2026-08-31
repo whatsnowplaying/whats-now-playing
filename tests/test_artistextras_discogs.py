@@ -21,6 +21,7 @@ import nowplaying.discogsclient  # pylint: disable=import-error
 import nowplaying.metadata  # pylint: disable=import-error
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_note_stripping(bootstrap):
@@ -49,6 +50,7 @@ async def test_discogs_note_stripping(bootstrap):
     assert "Note:" not in mpproc.metadata["artistshortbio"]
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_weblocation1(bootstrap):
@@ -81,6 +83,7 @@ async def test_discogs_weblocation1(bootstrap):
     assert "NOTE: If The Revolution are credited without Prince" in data["artistlongbio"]
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_datacache_usage(bootstrap):
@@ -116,6 +119,7 @@ async def test_discogs_datacache_usage(bootstrap):
         assert result1 == result2
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_website_lookup_cache(bootstrap):
@@ -156,6 +160,7 @@ async def test_discogs_website_lookup_cache(bootstrap):
         )
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_artist_duplicates(bootstrap):
@@ -231,6 +236,7 @@ async def test_discogs_artist_duplicates(bootstrap):
 # Error Handling and Network Resilience Tests
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_timeout_handling(bootstrap):
@@ -272,6 +278,7 @@ async def test_discogs_timeout_handling(bootstrap):
                 plugin.client.search_async = original_search
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_http_error_handling(bootstrap):
@@ -327,6 +334,7 @@ async def test_discogs_http_error_handling(bootstrap):
                     plugin.client.search_async = original_search
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_malformed_json_handling(bootstrap):
@@ -385,6 +393,7 @@ async def test_discogs_malformed_json_handling(bootstrap):
 # Input Validation and Edge Case Tests
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.parametrize(
     "metadata,test_id",
     [
@@ -427,6 +436,7 @@ async def test_discogs_malformed_metadata_input(bootstrap, metadata, test_id):
         )
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.parametrize(
     "artist_name,test_id",
     [
@@ -477,6 +487,7 @@ async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
         )
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.parametrize(
     "test_urls,test_id",
     [
@@ -623,6 +634,7 @@ def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
 # Cache Failure Scenario Tests
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_cache_corruption_handling(bootstrap):
@@ -667,6 +679,7 @@ async def test_discogs_cache_corruption_handling(bootstrap):
 # Search Result Edge Case Tests
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_empty_search_results(bootstrap):
@@ -721,6 +734,7 @@ async def test_discogs_empty_search_results(bootstrap):
                 plugin.client.search_async = original_search
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_missing_artist_data(bootstrap):
@@ -788,6 +802,7 @@ async def test_discogs_missing_artist_data(bootstrap):
 # DJ-Specific Reliability Tests
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_rapid_track_changes(bootstrap):
@@ -840,6 +855,7 @@ async def test_discogs_rapid_track_changes(bootstrap):
         )
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_common_dj_genres(bootstrap):
@@ -903,6 +919,7 @@ async def test_discogs_common_dj_genres(bootstrap):
             )
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_live_performance_timeout_recovery(bootstrap):
@@ -966,6 +983,7 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
                 plugin.client.search_async = original_search
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_memory_usage_stability(bootstrap):
@@ -1062,6 +1080,7 @@ def test_discogs_configuration_validation_for_djs(bootstrap):
         logging.info("DJ config scenario %d validated successfully", i)
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
@@ -1130,6 +1149,7 @@ async def test_discogs_api_call_count(bootstrap):  # pylint: disable=redefined-o
                 plugin.client.search_async = original_search
 
 
+@pytest.mark.live("discogs")
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_coverart(bootstrap):  # pylint: disable=redefined-outer-name

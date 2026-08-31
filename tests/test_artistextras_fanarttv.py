@@ -102,6 +102,7 @@ async def test_fanarttv_datacache_api_failure_behavior(bootstrap):  # pylint: di
         _ = result2
 
 
+@pytest.mark.live("fanarttv")
 @pytest.mark.asyncio
 @skip_no_fanarttv_key
 async def test_fanarttv_coverart(bootstrap):
@@ -130,6 +131,7 @@ async def test_fanarttv_coverart(bootstrap):
     )
 
 
+@pytest.mark.live("fanarttv")
 @pytest.mark.asyncio
 async def test_fanarttv_coverart_no_album_mbid(bootstrap):
     """test that cover art is not queued when musicbrainzalbumid is absent"""

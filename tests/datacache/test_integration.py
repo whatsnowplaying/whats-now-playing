@@ -452,7 +452,7 @@ async def test_random_image_bytes_returns_none_when_nothing_cached(  # pylint: d
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.live
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
     """Immediate fetch of a real image URL returns bytes and caches them"""
@@ -487,7 +487,7 @@ async def test_live_immediate_fetch(bootstrap):  # pylint: disable=unused-argume
     assert result2.data == result.data
 
 
-@pytest.mark.live
+@pytest.mark.live("theaudiodb")
 @pytest.mark.asyncio
 async def test_live_queue_and_random_image_bytes(bootstrap):  # pylint: disable=unused-argument,redefined-outer-name
     """get_or_fetch(immediate=False) + process_queue → get_random_image returns bytes"""

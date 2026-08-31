@@ -22,6 +22,7 @@ def getacoustidplugin(bootstrap):
     yield nowplaying.recognition.acoustid.Plugin(config=config)
 
 
+@pytest.mark.live("acoustid", "musicbrainz")
 @pytest.mark.asyncio
 async def test_15ghosts2_orig(getacoustidplugin, getroot):  # pylint: disable=redefined-outer-name
     """automated integration test"""
@@ -38,6 +39,7 @@ async def test_15ghosts2_orig(getacoustidplugin, getroot):  # pylint: disable=re
     assert metadata["title"] == "15 Ghosts II"
 
 
+@pytest.mark.live("acoustid", "musicbrainz")
 @pytest.mark.asyncio
 async def test_15ghosts2_fullytagged(getacoustidplugin, getroot):  # pylint: disable=redefined-outer-name
     """automated integration test"""

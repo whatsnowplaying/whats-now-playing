@@ -126,6 +126,7 @@ def test_dj_collaboration_formats(artist_string, expected):
 
 
 # Integration tests with real MusicBrainz API calls
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_integration_single_artist_known_to_mb(bootstrap):
     """Test that artists known to MusicBrainz don't get split"""
@@ -161,6 +162,7 @@ async def test_integration_single_artist_known_to_mb(bootstrap):
             )
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_integration_collaboration_not_in_mb(bootstrap):
     """Test that collaborations not in MB get resolved to individual artists"""
@@ -205,6 +207,7 @@ async def test_integration_collaboration_not_in_mb(bootstrap):
                 )
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_integration_hierarchical_breakdown(bootstrap):
     """Test hierarchical breakdown with a case that requires splitting"""
@@ -246,6 +249,7 @@ async def test_integration_hierarchical_breakdown(bootstrap):
     )
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.parametrize("artist_name", SINGLE_ARTIST_WITH_DELIMITERS)
 @pytest.mark.asyncio
 async def test_integration_single_artists_not_split(bootstrap, artist_name):
@@ -295,6 +299,7 @@ async def test_integration_single_artists_not_split(bootstrap, artist_name):
         )
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.parametrize("collaboration,expected_artists", COLLABORATION_CASES)
 @pytest.mark.asyncio
 async def test_integration_collaborations_split(bootstrap, collaboration, expected_artists):
@@ -340,6 +345,7 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
         logging.warning("Could not resolve %s - may be due to network issues", collaboration)
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_integration_real_collaboration_example(bootstrap):
     """Test our known working example: Disclosure ft. AlunaGeorge"""
@@ -381,6 +387,7 @@ async def test_integration_real_collaboration_example(bootstrap):
         )
 
 
+@pytest.mark.live("musicbrainz")
 @pytest.mark.asyncio
 async def test_integration_conservative_splitting(bootstrap):
     """Test that ambiguous cases are handled conservatively"""

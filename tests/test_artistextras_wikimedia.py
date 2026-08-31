@@ -37,6 +37,7 @@ async def test_wikimedia_datacache_usage(bootstrap):
     )
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_langfallback_zh_to_en(bootstrap):
     """test wikimedia language fallback from zh to en"""
@@ -56,6 +57,7 @@ async def test_wikimedia_langfallback_zh_to_en(bootstrap):
     assert "video" in data.get("artistlongbio")
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_langfallback_zh_to_none(bootstrap):
     """test wikimedia language fallback disabled"""
@@ -75,6 +77,7 @@ async def test_wikimedia_langfallback_zh_to_none(bootstrap):
     assert not data.get("artistlongbio")
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_humantetris_en(bootstrap):
     """test wikimedia english content"""
@@ -95,6 +98,7 @@ async def test_wikimedia_humantetris_en(bootstrap):
     assert not data.get("artistlongbio")
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_humantetris_de(bootstrap):
     """test wikimedia german content"""
@@ -121,6 +125,7 @@ async def test_wikimedia_humantetris_de(bootstrap):
 # Error Handling and Network Resilience Tests
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_timeout_handling(bootstrap):
     """test handling of API timeouts (Wikipedia can be slow)"""
@@ -158,6 +163,7 @@ async def test_wikimedia_timeout_handling(bootstrap):
         nowplaying.wikiclient.get_page_async = original_get_page
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_http_error_handling(bootstrap):
     """test handling of various HTTP error codes from Wikipedia"""
@@ -218,6 +224,7 @@ async def test_wikimedia_http_error_handling(bootstrap):
             nowplaying.wikiclient.get_page_async = original_get_page
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_ssl_error_handling(bootstrap):
     """test handling of SSL certificate errors"""
@@ -258,6 +265,7 @@ async def test_wikimedia_ssl_error_handling(bootstrap):
 # Input Validation and URL Parsing Tests
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.parametrize(
     "malformed_urls,test_id",
     [
@@ -307,6 +315,7 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
         )
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.parametrize(
     "metadata,test_id",
     [
@@ -347,6 +356,7 @@ async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
 # Language Handling Edge Cases
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.parametrize(
     "invalid_language,test_id",
     [
@@ -393,6 +403,7 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
         )
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_language_fallback_chain(bootstrap):
     """test complex language fallback scenarios"""
@@ -433,6 +444,7 @@ async def test_wikimedia_language_fallback_chain(bootstrap):
 # Content Processing and Sanitization Tests
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_large_content_handling(bootstrap):
     """test handling of very large Wikipedia articles"""
@@ -496,6 +508,7 @@ async def test_wikimedia_large_content_handling(bootstrap):
         nowplaying.wikiclient.get_page_async = original_get_page
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_malformed_content_handling(bootstrap):
     """test handling of malformed content from Wikipedia"""
@@ -599,6 +612,7 @@ def test_wikimedia_configuration_scenarios(bootstrap):
 # Performance and DJ-Critical Scenario Tests
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_rapid_entity_lookups(bootstrap):
     """test handling of rapid consecutive Wikidata lookups (DJ scenario)"""
@@ -651,6 +665,7 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
         )
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_cache_corruption_handling(bootstrap):
     """test handling of corrupted cache data"""
@@ -690,6 +705,7 @@ async def test_wikimedia_cache_corruption_handling(bootstrap):
         nowplaying.datacache.cached_fetch = original_cached_fetch
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_memory_stability_long_session(bootstrap):
     """test memory stability during extended DJ sessions"""
@@ -749,6 +765,7 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
     )
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_api_call_count(bootstrap):  # pylint: disable=redefined-outer-name
     """test that wikimedia plugin makes only one API call when cache is used"""
@@ -820,6 +837,7 @@ async def test_wikimedia_api_call_count(bootstrap):  # pylint: disable=redefined
         nowplaying.wikiclient.get_page_async = original_get_page
 
 
+@pytest.mark.live("wikimedia")
 @pytest.mark.asyncio
 async def test_wikimedia_failure_cache(bootstrap):  # pylint: disable=redefined-outer-name
     """test that wikimedia plugin handles cache failures gracefully"""
