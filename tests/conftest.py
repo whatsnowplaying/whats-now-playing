@@ -119,6 +119,23 @@ def _spread_by_provider(live: list) -> list:
     return out
 
 
+def _splittable(item) -> bool:
+    """Whether moving items around this one can be done without cost.
+
+    False when the item uses a module- or class-scoped fixture: separating it
+    from its neighbours makes pytest tear that fixture down and rebuild it, and
+    tests/webserver's builds a real server on a real port.
+    """
+    info = getattr(item, "_fixtureinfo", None)
+    if info is None:
+        return True
+    return not any(
+        str(getattr(fixturedef, "scope", "")) in {"module", "class"}
+        for defs in getattr(info, "name2fixturedefs", {}).values()
+        for fixturedef in defs
+    )
+
+
 def pytest_collection_modifyitems(session, config, items):  # pylint: disable=unused-argument
     """Reorder the live-API tests so consecutive ones hit different services.
 
@@ -127,14 +144,21 @@ def pytest_collection_modifyitems(session, config, items):  # pylint: disable=un
     spacing at all. Running them round-robin across providers gives each one
     roughly as many test-lengths of breathing room as there are providers.
 
-    Only the live tests move, and only into slots live tests already occupied,
-    so nothing else is reordered. That matters twice over: tests-qt has to stay
-    first because qtbot must initialize before anything starts asyncio or
-    threads, and tests/webserver's module-scoped fixture starts a real server
-    that must not be torn down mid-module. This hook is handed every collected
-    item, not just this directory's, so neither can be assumed.
+    Live tests only ever land in slots live tests already held, so nothing else
+    is reordered and tests-qt stays first -- qtbot has to initialize before
+    anything starts asyncio or threads, which is what testpaths orders. This
+    hook is handed every collected item, not just this directory's, so that
+    cannot be assumed.
+
+    A slot is skipped when the item there, or the one being moved, uses a
+    module- or class-scoped fixture. Swapping across modules does separate a
+    module's items, and doing that to a shared fixture would rebuild it
+    mid-run. Reordering only within each module would be a no-op instead: every
+    module's live tests name the same provider.
     """
-    slots = [i for i, item in enumerate(items) if item.get_closest_marker("live")]
+    slots = [
+        i for i, item in enumerate(items) if item.get_closest_marker("live") and _splittable(item)
+    ]
     if len(slots) < 2:
         return
     ordered = _spread_by_provider([items[i] for i in slots])
