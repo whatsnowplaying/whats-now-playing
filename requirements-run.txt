@@ -26,7 +26,7 @@ pypresence==4.6.2
 # 6.11.1 ships unsigned .cpp.o build artifacts in qml/Qt/labs/assetdownloader/ that break
 # macOS Gatekeeper at runtime; skip until upstream cleans up the wheel.
 pyside6>=6.5.4,!=6.11.1,<6.12.0
-rapidfuzz==3.14.5
+rapidfuzz==3.14.6
 requests-cache==1.3.3
 requests==2.34.2
 simpleobsws==1.4.3
