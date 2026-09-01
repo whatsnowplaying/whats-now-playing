@@ -76,6 +76,31 @@ def set_qt_names(
     app.setApplicationName(appname)
 
 
+# Extremely verbose at DEBUG. Named individually rather than silenced with a
+# dictConfig(disable_existing_loggers=True), which takes out every logger that
+# already exists -- that used to include wnpmb's, costing us all of its
+# rate-limit and 503 reporting.
+NOISY_LIBRARIES: tuple[str, ...] = (
+    "aiohttp",
+    "aiosqlite",
+    "hpack",
+    "httpcore2",
+    "httpx2",
+    "simpleobsws",
+    "zeroconf",
+)
+
+
+def quiet_noisy_libraries(extra: tuple[str, ...] = ()) -> None:
+    """Hold the noisy libraries down to WARNING.
+
+    Shared with the test suite, which does not call setuplogging() and would
+    otherwise drown in aiosqlite statement tracing.
+    """
+    for name in NOISY_LIBRARIES + extra:
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def setuplogging(
     logdir: pathlib.Path | str | None = None, logname: str = "debug.log", rotate: bool = False
 ) -> pathlib.Path:
@@ -123,18 +148,5 @@ def setuplogging(
     )
     logging.captureWarnings(True)
     # These libraries emit very noisy DEBUG-level tracing
-    for noisy in (
-        "httpx2",
-        "httpcore2",
-        "hpack",
-        # Named here rather than silenced by a blanket dictConfig in the module
-        # that imported them: disable_existing_loggers takes out every logger
-        # that already exists, which included wnpmb's and cost us all of its
-        # rate-limit and retry reporting.
-        "aiosqlite",
-        "aiohttp",
-        "zeroconf",
-        "simpleobsws",
-    ):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+    quiet_noisy_libraries()
     return logpath

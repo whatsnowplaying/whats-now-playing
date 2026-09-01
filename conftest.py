@@ -50,13 +50,12 @@ def enforce_single_pytest_instance():
     _PYTEST_LOCKFILE.unlink(missing_ok=True)
 
 
-# These libraries are extremely verbose at DEBUG level; suppress them so they
-# don't overwhelm test output.  (bootstrap.setuplogging() does the same for
-# the running app but is not called during tests.)
-logging.getLogger("hpack").setLevel(logging.WARNING)
-logging.getLogger("httpx2").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)  # respx still pulls httpx
-logging.getLogger("httpcore2").setLevel(logging.WARNING)
+# setuplogging() is not called during tests, so borrow its list rather than
+# keeping a second copy: the copies drifted, and aiosqlite statement tracing
+# ended up burying everything else in CI.
+nowplaying.bootstrap.quiet_noisy_libraries(
+    extra=("httpcore",)  # respx still pulls plain httpx
+)
 
 # DO NOT CHANGE THIS TO BE com.github.whatsnowplaying
 # otherwise your actual bits will disappear!

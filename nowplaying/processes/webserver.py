@@ -32,10 +32,6 @@ from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
 from nowplaying.webserver.requests_handlers import RequestsHandler
 from nowplaying.webserver.static_handlers import StaticContentHandler
 
-#
-# quiet down our imports
-#
-
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
