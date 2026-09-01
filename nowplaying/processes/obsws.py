@@ -4,20 +4,10 @@ see https://github.com/Palakis/obs-websocket"""
 
 import asyncio
 import logging
-import logging.config
 import sys
 import threading
 
 import simpleobsws
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-    }
-)
-
-# pylint: disable=wrong-import-position
 
 import nowplaying.bootstrap
 import nowplaying.config
