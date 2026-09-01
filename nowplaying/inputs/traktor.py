@@ -3,7 +3,6 @@
 
 import asyncio
 import logging
-import logging.config
 import os
 import pathlib
 import sqlite3
@@ -13,15 +12,6 @@ from typing import TYPE_CHECKING
 import aiosqlite  # pylint: disable=import-error
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=import-error, no-name-in-module
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-    }
-)
-
-# pylint: disable=wrong-import-position
 
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
