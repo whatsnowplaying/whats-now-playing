@@ -3547,11 +3547,14 @@
     tagged the other</li>
 <li>A momentary MusicBrainz outage no longer leaves a track missing its album,
     label, and date for up to a week afterward</li>
+<li>The settings window fits a 1200x600 screen again, and no longer opens larger
+    than it needs to be</li>
 </ul>
 <h3 id="platform">Platform<a class="headerlink" href="#platform" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The private directory inside a build now carries the version in its name,
     so an upgrade can put the new copy in place before removing the old one</li>
+<li>Debug logs record MusicBrainz rate limiting and retries again</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3559,11 +3562,14 @@
     encrypted connection. The request previously went out unencrypted with
     the fanart.tv API key attached, exposing the key to anything between
     this computer and fanart.tv</li>
-<li>Updated nltk to 3.10.3 (security advisory)</li>
-<li>Updated aiohttp to 3.14.3, certifi to 2026.7.22, lxml to 6.1.2,
-    pillow to 12.3.0, pillow-avif-plugin to 1.6.0, pyinstaller to 6.22.2,
-    pypresence to 4.6.2, requests-cache to 1.3.3, setuptools to 83.0.0,
-    wnpmb to 0.6.0, and zeroconf to 0.150.0</li>
+<li>Updated aiohttp to 3.14.3, nltk to 3.10.3, and pillow to 12.3.0, each of
+    which closes published security advisories. The aiohttp ones include the
+    web server WNP runs for overlays, and the pillow ones cover image decoding,
+    which handles artwork downloaded from outside</li>
+<li>Updated certifi to 2026.7.22, lxml to 6.1.2, pillow-avif-plugin to 1.6.0,
+    pyinstaller to 6.22.2, pypresence to 4.6.2, rapidfuzz to 3.14.6,
+    requests-cache to 1.3.3, setuptools to 83.0.0, wnpmb to 0.6.0, and
+    zeroconf to 0.151.3</li>
 </ul>
 <h2 id="version-522-2026-06-20">Version 5.2.2 - 2026-06-20<a class="headerlink" href="#version-522-2026-06-20" title="Permanent link">&para;</a></h2>
 <h3 id="new-features_1">New Features<a class="headerlink" href="#new-features_1" title="Permanent link">&para;</a></h3>
