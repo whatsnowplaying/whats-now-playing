@@ -72,11 +72,14 @@
     tagged the other
 * A momentary MusicBrainz outage no longer leaves a track missing its album,
     label, and date for up to a week afterward
+* The settings window fits a 1200x600 screen again, and no longer opens larger
+    than it needs to be
 
 ### Platform
 
 * The private directory inside a build now carries the version in its name,
     so an upgrade can put the new copy in place before removing the old one
+* Debug logs record MusicBrainz rate limiting and retries again
 
 ### Security
 
@@ -84,11 +87,14 @@
     encrypted connection. The request previously went out unencrypted with
     the fanart.tv API key attached, exposing the key to anything between
     this computer and fanart.tv
-* Updated nltk to 3.10.3 (security advisory)
-* Updated aiohttp to 3.14.3, certifi to 2026.7.22, lxml to 6.1.2,
-    pillow to 12.3.0, pillow-avif-plugin to 1.6.0, pyinstaller to 6.22.2,
-    pypresence to 4.6.2, requests-cache to 1.3.3, setuptools to 83.0.0,
-    wnpmb to 0.6.0, and zeroconf to 0.150.0
+* Updated aiohttp to 3.14.3, nltk to 3.10.3, and pillow to 12.3.0, each of
+    which closes published security advisories. The aiohttp ones include the
+    web server WNP runs for overlays, and the pillow ones cover image decoding,
+    which handles artwork downloaded from outside
+* Updated certifi to 2026.7.22, lxml to 6.1.2, pillow-avif-plugin to 1.6.0,
+    pyinstaller to 6.22.2, pypresence to 4.6.2, rapidfuzz to 3.14.6,
+    requests-cache to 1.3.3, setuptools to 83.0.0, wnpmb to 0.6.0, and
+    zeroconf to 0.151.3
 
 ## Version 5.2.2 - 2026-06-20
 
