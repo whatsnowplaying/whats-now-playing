@@ -165,9 +165,8 @@ class RekordboxPlugin(InputPlugin):  # pylint: disable=too-many-instance-attribu
             "Requires Performance Mode."
         )
 
-    def _fs_event(self, event):
+    def _fs_event(self, event):  # pylint: disable=unused-argument
         """File system event handler - called from watchdog thread"""
-        logging.debug("Rekordbox FS event: %s", event.src_path)
         with self._wal_timer_lock:
             if self._wal_timer is not None:
                 self._wal_timer.cancel()
@@ -177,6 +176,7 @@ class RekordboxPlugin(InputPlugin):  # pylint: disable=too-many-instance-attribu
 
     def _wal_timer_fired(self) -> None:
         """Called after debounce silence; clears the timer reference and flags a refresh."""
+        logging.debug("processing rekordbox database change")
         with self._wal_timer_lock:
             self._wal_timer = None
         self._needs_refresh = True

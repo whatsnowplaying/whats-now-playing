@@ -102,9 +102,13 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
 
         self.tasks.clear()
 
-    def process_sessions(self, event):  # pylint: disable=unused-argument
+    def process_sessions(self, event):
         """handle incoming session file updates"""
-        # Simple synchronous processing - just set a flag that async methods can check
+        # The pattern here is "*", so a burst of writes to the library database
+        # lands here in full. They all collapse into the one refresh the async
+        # side will do, so only the edge into that state is worth a line.
+        if not self._db_needs_refresh:
+            logging.debug("processing %s", event.src_path)
         self._db_needs_refresh = True
 
     def _has_track_changed(self, new_track: dict[str, t.Any] | None) -> bool:

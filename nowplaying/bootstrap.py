@@ -83,10 +83,18 @@ def set_qt_names(
 NOISY_LIBRARIES: tuple[str, ...] = (
     "aiohttp",
     "aiosqlite",
+    "discord",
     "hpack",
     "httpcore2",
     "httpx2",
     "simpleobsws",
+    # watchdog narrates every raw filesystem event, but everything that acts on
+    # one says so itself -- "Track change detected in Serato 4" and friends --
+    # so the tracing only repeats what we already log, under paths we write.
+    # The macOS observer hardcodes getLogger("fsevents") instead of __name__,
+    # so it needs naming separately from the inotify observers.
+    "fsevents",
+    "watchdog",
     "zeroconf",
 )
 

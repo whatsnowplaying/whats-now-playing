@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import contextlib
+import ipaddress
 import logging
 import os
 import pathlib
@@ -161,6 +162,32 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
+    def _advertisable_address(ip_addr: str, netmask: str | None) -> bool:
+        """Whether an interface address is worth publishing as a way to reach us.
+
+        Anything advertised here is something a client will try to connect to,
+        so an address that cannot answer is worse than one fewer address. macOS
+        bridge interfaces have been seen holding the network address itself
+        (192.168.97.0/24), which nothing can route to.
+        """
+        try:
+            interface = ipaddress.IPv4Interface(f"{ip_addr}/{netmask or '255.255.255.255'}")
+        except ValueError:
+            return False
+
+        address = interface.ip
+        if address.is_loopback or address.is_link_local or address.is_unspecified:
+            return False
+        # /31 and /32 have no network or broadcast address to collide with; a
+        # point-to-point tunnel legitimately sits on what looks like one.
+        if interface.network.prefixlen < 31 and address in (
+            interface.network.network_address,
+            interface.network.broadcast_address,
+        ):
+            return False
+        return True
+
+    @staticmethod
     def _mdns_safe_hostname(raw: str) -> str:
         """Return a valid mDNS label from raw hostname.
 
@@ -195,22 +222,30 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             service_name = "WhatsNowPlaying"
             service_type = "_whatsnowplaying._tcp.local."
 
-            # Get all non-loopback IPv4 addresses from network interfaces
-            addresses = []
+            # Get all reachable IPv4 addresses from network interfaces
+            usable_ips: list[str] = []
             # pylint: disable=no-member
             for interface in netifaces.interfaces():
                 addrs = netifaces.ifaddresses(interface)
                 if netifaces.AF_INET in addrs:
                     for addr_info in addrs[netifaces.AF_INET]:
                         ip_addr = addr_info.get("addr")
-                        # Skip loopback addresses
-                        if ip_addr and not ip_addr.startswith("127."):
-                            addresses.append(socket.inet_aton(ip_addr))
+                        if ip_addr and self._advertisable_address(
+                            ip_addr, addr_info.get("netmask")
+                        ):
+                            usable_ips.append(ip_addr)
 
             # Fallback to localhost if no network interfaces found
-            if not addresses:
+            if not usable_ips:
                 logging.warning("No network interfaces found, using localhost")
-                addresses = [socket.inet_aton("127.0.0.1")]
+                usable_ips = ["127.0.0.1"]
+
+            # Left to itself zeroconf opens a socket on every interface, which
+            # on one it cannot send from means a warning and a traceback per
+            # announcement, from inside its own transport where we cannot catch
+            # it. It announces from exactly the addresses we advertise, so a
+            # service reachable only on loopback is announced only there.
+            addresses = [socket.inet_aton(ip) for ip in usable_ips]
 
             hostname = self._mdns_safe_hostname(socket.gethostname())
 
@@ -229,7 +264,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             )
 
             # Register the service
-            self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
+            self.aiozc = AsyncZeroconf(interfaces=usable_ips, ip_version=IPVersion.V4Only)
             await self.aiozc.async_register_service(info, allow_name_change=True)
             self.service_info = info
 

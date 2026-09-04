@@ -266,6 +266,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         filename = event.src_path
 
         if filename.endswith("NowPlaying.txt"):
+            logging.debug("processing %s", filename)
             self._check_for_new_track()
             return
 
@@ -283,6 +284,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _wal_timer_fired(self) -> None:
         """Called by the debounce timer; clears the timer reference then checks."""
+        logging.debug("processing MediaLibrary.db-wal")
         with self._wal_timer_lock:
             self._wal_timer = None
         if self.config.cparser.value("djaypro/rebuild_location_db", type=bool, defaultValue=False):
