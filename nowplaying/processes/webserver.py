@@ -24,7 +24,7 @@ import netifaces
 import requests
 from aiohttp import WSCloseCode, web
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from zeroconf import InterfaceChoice, IPVersion
+from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
@@ -235,16 +235,16 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                         ):
                             usable_ips.append(ip_addr)
 
-            # Left to itself zeroconf opens a socket on every interface, which
-            # on one it cannot send from means a warning and a traceback per
-            # announcement, from inside its own transport where we cannot catch
-            # it. Hand it the same addresses we are willing to advertise.
-            listen_on: list[str] | InterfaceChoice = usable_ips or InterfaceChoice.Default
-
             # Fallback to localhost if no network interfaces found
             if not usable_ips:
                 logging.warning("No network interfaces found, using localhost")
                 usable_ips = ["127.0.0.1"]
+
+            # Left to itself zeroconf opens a socket on every interface, which
+            # on one it cannot send from means a warning and a traceback per
+            # announcement, from inside its own transport where we cannot catch
+            # it. It announces from exactly the addresses we advertise, so a
+            # service reachable only on loopback is announced only there.
             addresses = [socket.inet_aton(ip) for ip in usable_ips]
 
             hostname = self._mdns_safe_hostname(socket.gethostname())
@@ -264,7 +264,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             )
 
             # Register the service
-            self.aiozc = AsyncZeroconf(interfaces=listen_on, ip_version=IPVersion.V4Only)
+            self.aiozc = AsyncZeroconf(interfaces=usable_ips, ip_version=IPVersion.V4Only)
             await self.aiozc.async_register_service(info, allow_name_change=True)
             self.service_info = info
 
