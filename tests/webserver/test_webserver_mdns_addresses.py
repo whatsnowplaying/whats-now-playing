@@ -43,8 +43,8 @@ def advertisable(ip_addr, netmask):
         ("10.8.0.0", "255.255.255.254", True, "/31 point-to-point, low half"),
         ("10.8.0.1", "255.255.255.254", True, "/31 point-to-point, high half"),
         ("192.168.5.7", None, True, "missing netmask falls back to /32"),
-        ("garbage", "255.255.255.0", False, "unparseable address"),
-        ("192.168.1.5", "not-a-mask", False, "unparseable netmask"),
+        ("garbage", "255.255.255.0", False, "unparsable address"),
+        ("192.168.1.5", "not-a-mask", False, "unparsable netmask"),
     ],
 )
 def test_advertisable_address(ip_addr, netmask, expected, why):
