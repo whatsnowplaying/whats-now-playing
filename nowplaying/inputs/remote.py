@@ -60,7 +60,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if self.observer:
             return
 
-        self.remotedbfile.unlink(missing_ok=True)
         logging.info("Opening %s for input", self.remotedbfile)
         self.observer = nowplaying.db.DBWatcher(databasefile=str(self.remotedbfile))
         self.observer.start(customhandler=self._read_track)
@@ -69,6 +68,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if event.is_directory:
             return
 
+        logging.debug("remote db event: %s", event.src_path)
         if not self.remotedb:
             logging.error("remotedb isn't opened yet.")
             return
@@ -82,8 +82,13 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     async def start(self):
         """setup the watcher to run in a separate thread"""
-        await self.setup_watcher()
+        # Discard the last session's tracks, open the database, then watch. The
+        # unlink used to live in setup_watcher(), which put it after the watcher
+        # was already running: its own delete and recreate were the first events
+        # delivered, and they arrived before there was a database to read.
+        self.remotedbfile.unlink(missing_ok=True)
         self.remotedb = nowplaying.db.MetadataDB(databasefile=str(self.remotedbfile))
+        await self.setup_watcher()
 
     async def getplayingtrack(self) -> TrackMetadata | None:
         """wrapper to call getplayingtrack"""
