@@ -22,7 +22,8 @@ and guessed differently.
 2. `start()` is atomic: it either succeeds or leaves nothing allocated
 3. `stop()` is safe at any time, including after a failed or never-called
    `start()`. Callers run it on every path out, so check what is held rather
-   than assuming
+   than assuming. It has no deadline of its own, so trackpoll bounds every call
+   through `_stop_plugin()`
 4. Recoverable conditions are the plugin's to retry, silently. No raising, no
    caller-side loop
 5. `start()` does not raise for anything operational. A busy port, an
@@ -106,6 +107,8 @@ earshot or remote, because it can always accept input. Consequences:
   selected, so two observers can want the same file
 * trackpoll keeps calling `gettrack()` even when the chosen source is unusable,
   because that is the only caller of `_check_earshot_override()`
+* its `status()` is read too, on its own restart clock, since it inherits the
+  watcher above and is the plugin most likely to lose it
 
 ## Detection
 

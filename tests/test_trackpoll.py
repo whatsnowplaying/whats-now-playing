@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """test the trackpoller"""
 
 import asyncio
@@ -997,3 +998,86 @@ async def test_losing_the_input_setting_still_manages_earshot(trackpoll_testmode
     assert trackpoll_testmode.earshot_plugin is not None, (
         "EarShot should still be managed, not orphaned"
     )
+
+
+@pytest.mark.asyncio
+async def test_an_input_wedged_in_stop_does_not_hang_the_switch(
+    bootstrap, trackpoll_testmode, monkeypatch
+):  # pylint: disable=redefined-outer-name
+    """A plugin that never returns from stop() must not take the poll loop.
+
+    The contract asks stop() to be safe at any time but sets no bound on how
+    long it may take, so every caller here has to impose one.
+    """
+    monkeypatch.setattr(nowplaying.processes.trackpoll, "_STOP_TIMEOUT_SECONDS", 0.05)
+
+    class Wedges:  # pylint: disable=no-self-use,too-few-public-methods
+        """Starts fine, then never returns from stop()."""
+
+        def __init__(self, config=None):  # pylint: disable=unused-argument
+            pass
+
+        async def start(self):
+            """Succeed, per the contract."""
+
+        async def stop(self):
+            """Never return."""
+            await asyncio.sleep(3600)
+
+        def status(self):
+            """Healthy right up to the switch."""
+            return nowplaying.inputs.InputStatus()
+
+        async def getplayingtrack(self):
+            """No track."""
+            return None
+
+    _use_plugin(trackpoll_testmode, bootstrap, Wedges)
+    assert await trackpoll_testmode.switch_input_plugin() is True
+
+    # Switching away stops the old plugin, which is where it wedges.
+    bootstrap.cparser.setValue("settings/input", "other")
+    trackpoll_testmode.plugins["nowplaying.inputs.other"] = unittest.mock.MagicMock(
+        Plugin=_status_plugin(nowplaying.inputs.InputStatus())
+    )
+
+    await asyncio.wait_for(trackpoll_testmode.switch_input_plugin(), timeout=5)
+    assert trackpoll_testmode.previousinput == "other", "the switch never completed"
+
+
+@pytest.mark.asyncio
+async def test_a_dead_earshot_monitor_is_rebuilt(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """EarShot's watcher can die after start() and nothing else would notice.
+
+    It subclasses remote, so it inherits the watcher that dies when another
+    observer already holds remotedb, and then stores arriving tracks where
+    nobody reads them.
+    """
+    config = trackpoll_testmode.config
+    config.cparser.setValue("settings/input", "pretend")
+    started = []
+    trackpoll_testmode.plugins = {
+        "nowplaying.inputs.pretend": unittest.mock.MagicMock(
+            Plugin=_status_plugin(nowplaying.inputs.InputStatus())
+        ),
+        "nowplaying.inputs.earshot": unittest.mock.MagicMock(
+            Plugin=_status_plugin(
+                nowplaying.inputs.InputStatus.needs_restart("Stopped watching for tracks."),
+                started=started,
+            )
+        ),
+    }
+
+    assert await trackpoll_testmode.switch_input_plugin() is True
+    assert len(started) == 1
+
+    for _ in range(10):  # still inside the delay
+        await trackpoll_testmode.switch_input_plugin()
+    assert len(started) == 1, "rebuilt before the delay elapsed"
+
+    # Arrive at the far side of the wait without sleeping through it.
+    trackpoll_testmode._restart_earshot_at = time.monotonic() - 1  # pylint: disable=protected-access
+    await trackpoll_testmode.switch_input_plugin()  # drops the dead monitor
+    assert trackpoll_testmode.earshot_plugin is None
+    await trackpoll_testmode.switch_input_plugin()  # rebuilds it
+    assert len(started) == 2, "the dead monitor was never rebuilt"
