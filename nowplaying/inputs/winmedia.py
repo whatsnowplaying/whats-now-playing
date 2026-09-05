@@ -17,6 +17,7 @@ except ImportError:
     WINMEDIA_STATUS = False
 
 import nowplaying.utils
+import nowplaying.inputs
 from nowplaying.inputs import Detected, InputPlugin
 
 
@@ -31,6 +32,7 @@ class Plugin(InputPlugin):
         self.stopevent = asyncio.Event()
         self.metadata = {}
         self.tasks = set()
+        self._started = False
         if not WINMEDIA_STATUS:
             self.available = False
             self.winmedia_status = False
@@ -131,8 +133,27 @@ class Plugin(InputPlugin):
         """not supported"""
         return None
 
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report on the reader task.
+
+        No winrt bindings means this plugin cannot work on this machine, which
+        is BROKEN rather than something to wait for. Otherwise the task added by
+        start() discards itself when it finishes, so an empty set after start
+        means the loop ended and nothing is reading any more.
+        """
+        if not WINMEDIA_STATUS:
+            return nowplaying.inputs.InputStatus.broken(
+                "Windows media APIs are not available on this machine."
+            )
+        if self._started and not self.tasks:
+            return nowplaying.inputs.InputStatus.needs_restart(
+                "Stopped reading from Windows media.", "the reader task ended"
+            )
+        return nowplaying.inputs.InputStatus()
+
     async def start(self):
         """start loop"""
+        self._started = True
         loop = asyncio.get_running_loop()
         task = loop.create_task(self._data_loop())
         self.tasks.add(task)

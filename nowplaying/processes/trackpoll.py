@@ -31,6 +31,15 @@ from nowplaying.types import TrackMetadata
 
 COREMETA = ["artist", "filename", "title"]
 
+# A plugin that asks to be restarted gets one attempt this long after asking.
+# Fixed, not escalating: a plugin that keeps asking must not be able to turn
+# the poll loop into a restart loop.
+_RESTART_DELAY_SECONDS = 30.0
+
+# stop() during cleanup is bounded so a plugin wedged in it cannot take the
+# poll loop with it.
+_STOP_TIMEOUT_SECONDS = 20.0
+
 
 def compute_final_sleep(fill_duration: float, configured_delay: float) -> float:
     """Compute grace-period sleep before checkagain.
@@ -74,6 +83,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.input: nowplaying.inputs.InputPlugin | None = None
         self.previousinput: str | None = None
         self.inputname: str | None = None
+        self._reported_health: "nowplaying.inputs.InputHealth | None" = None
+        self._restart_input_at: float = 0.0
+        self._input_pollable: bool = False
         self.tasks: set[asyncio.Task[Any]] = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
 
@@ -155,38 +167,123 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     async def switch_input_plugin(self) -> bool:
         """Handle user switching source input while running.
 
-        Returns True when an input plugin is active and ready for gettrack(),
-        False when no input is configured or the plugin failed to start.
-        Callers use the False return to skip polling until the next cycle.
+        Returns True when there is something for gettrack() to do, which the
+        EarShot monitor satisfies on its own. _input_pollable carries whether
+        the chosen source is worth asking; every path through here has to reach
+        _manage_earshot_plugin(), because EarShot accepts input regardless of
+        what the chosen source is doing and nothing else stops or reads it.
         """
         configured: str | None = self.config.cparser.value("settings/input")
+
         if not configured:
-            if self.input:
-                logging.info("stopping %s", self.previousinput)
-                await self.input.stop()
-                self.input = None
-                self.previousinput = None
-            return False
-        if self.previousinput != configured:
-            if self.input:
-                logging.info("stopping %s", self.previousinput)
-                await self.input.stop()
+            await self._drop_input()
+        elif self.previousinput != configured:
+            await self._drop_input()
             self.previousinput: str | None = configured
-            self.input = self.plugins[f"nowplaying.inputs.{self.previousinput}"].Plugin(
-                config=self.config
-            )
-            logging.info("Starting %s plugin", self.previousinput)
-            if not self.input:
-                return False
+            await self._start_input(configured)
 
-            try:
-                await self.input.start()
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("cannot start %s: %s", self.previousinput, error)
-                return False
+        self._input_pollable = bool(configured) and self._act_on_status()
 
+        # One exit, because every path has to get here: EarShot is managed and
+        # read from nowhere else, and forgetting it at one return was the same
+        # bug three times over.
         await self._manage_earshot_plugin()
-        return True
+        return self._input_pollable or self.earshot_plugin is not None
+
+    async def _drop_input(self) -> None:
+        """Stop the current input, if any, and forget everything about it.
+
+        The health and the restart deadline belong to the plugin that is going
+        away: carrying either into the next one reports its first failure as
+        old news, or lets it skip the wait on an already-elapsed clock.
+        """
+        if self.input:
+            logging.info("stopping %s", self.previousinput)
+            await self.input.stop()
+        self.input = None
+        self.previousinput = None
+        self._reported_health = None
+        self._restart_input_at = 0.0
+
+    async def _start_input(self, configured: str) -> None:
+        """Build and start the configured plugin.
+
+        Per the input contract, start() does not raise for anything operational,
+        so an exception here is a defect rather than a misconfiguration. It still
+        has to be survivable: stop() runs first because start() may have got as
+        far as a watcher or a port, and it is bounded because a plugin wedged in
+        stop() would otherwise take the poll loop with it.
+
+        A failure clears self.input and sets the restart clock, so the caller
+        learns about it from status() like everything else.
+        """
+        self.input = self.plugins[f"nowplaying.inputs.{configured}"].Plugin(config=self.config)
+        logging.info("Starting %s plugin", configured)
+        try:
+            await self.input.start()
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("cannot start %s", configured)
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(self.input.stop(), timeout=_STOP_TIMEOUT_SECONDS)
+            self.input = None
+            self._restart_input_at = time.monotonic() + _RESTART_DELAY_SECONDS
+            self._reported_health = nowplaying.inputs.InputHealth.BROKEN
+
+    def _act_on_status(self) -> bool:
+        """Consult the plugin and decide whether it is worth polling.
+
+        Only the plugin knows whether a problem is one it is handling, one a
+        person has to fix, or one a restart would clear, so the decision is
+        taken here rather than inferred from a poll that returned nothing.
+        """
+        if not self.input:
+            # start() failed, which set the clock; this only runs it down.
+            self._await_restart()
+            return False
+
+        status = self.input.status()
+        if status.health is not self._reported_health:
+            self._report_health(status)
+            self._reported_health = status.health
+
+        if status:
+            self._restart_input_at = 0.0
+            return True
+        if status.health is nowplaying.inputs.InputHealth.NEEDS_RESTART:
+            self._await_restart()
+        # NEEDS_USER clears when the plugin sees its setting corrected and
+        # reports STARTING. BROKEN never clears itself, so the only way out is
+        # the user choosing a different input, which the previousinput check
+        # above catches. Either way there is nothing to do here.
+        return False
+
+    def _await_restart(self) -> None:
+        """Run the clock on a restart request, and rebuild when it runs out.
+
+        Clearing previousinput is what causes the rebuild: the next cycle sees
+        it differ from the configured input and goes through the whole
+        stop-construct-start path.
+        """
+        now = time.monotonic()
+        if not self._restart_input_at:
+            self._restart_input_at = now + _RESTART_DELAY_SECONDS
+        elif now >= self._restart_input_at:
+            self._restart_input_at = 0.0
+            self.previousinput = None
+
+    @staticmethod
+    def _report_health(status: "nowplaying.inputs.InputStatus") -> None:
+        """Log a health change once, at a level that matches whose problem it is."""
+        health = status.health
+        text = status.message or health.value
+        if health is nowplaying.inputs.InputHealth.NEEDS_USER:
+            logging.error("input needs attention: %s", text)
+        elif health is nowplaying.inputs.InputHealth.BROKEN:
+            logging.error("input has stopped working: %s", text)
+        elif health is nowplaying.inputs.InputHealth.NEEDS_RESTART:
+            logging.warning("input asked to be restarted: %s", text)
+        else:
+            logging.debug("input health %s: %s", health.value, text)
 
     async def _manage_earshot_plugin(self):
         """Start or stop the secondary EarShot monitor based on config and active source."""
@@ -479,7 +576,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ""
         return metadata
 
-    async def gettrack(  # pylint: disable=too-many-branches,too-many-statements
+    async def gettrack(  # pylint: disable=too-many-branches,too-many-statements,too-many-return-statements
         self,
     ):
         """get currently playing track, returns None if not new or not found"""
@@ -488,17 +585,21 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         while self.config.getpause() and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(0.5)
 
-        if nowplaying.utils.safe_stopevent_check(self.stopevent) or not self.input:
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
-        try:
-            nextmeta = await self.input.getplayingtrack() or {}
-            for key, value in self.input.get_source_agent_data().items():
-                if key not in nextmeta:
-                    nextmeta[key] = value
-        except Exception as err:  # pylint: disable=broad-except
-            logging.exception("Failed during getplayingtrack() (%s)", err)
-            await asyncio.sleep(1)
+        nextmeta: TrackMetadata = {}
+        if self._input_pollable and self.input:
+            try:
+                nextmeta = await self.input.getplayingtrack() or {}
+                for key, value in self.input.get_source_agent_data().items():
+                    if key not in nextmeta:
+                        nextmeta[key] = value
+            except Exception as err:  # pylint: disable=broad-except
+                logging.exception("Failed during getplayingtrack() (%s)", err)
+                await asyncio.sleep(1)
+                return
+        elif not self.earshot_plugin:
             return
 
         nextmeta, _ = await self._check_earshot_override(nextmeta)
@@ -577,7 +678,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._process_artistextras()
 
         # checkagain
-        nextcheck = await self.input.getplayingtrack() or {}
+        nextcheck = {}
+        if self._input_pollable and self.input:
+            nextcheck = await self.input.getplayingtrack() or {}
         if not self._ismetaempty(nextcheck) and not self._ismetasame(nextcheck):
             logging.info("Track changed during delay, skipping")
             self.currentmeta = oldmeta

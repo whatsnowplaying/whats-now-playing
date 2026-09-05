@@ -165,3 +165,49 @@ def test_display_machine_page_gets_verification(bootstrap, qtbot):  # pylint: di
     assert page.verification_module is not None, (
         "display machine page has no verification_module, so it never verifies"
     )
+
+
+def test_a_plugin_that_cannot_work_says_so_instead_of_no_track_yet():
+    """Its own message reaches the user, rather than being inferred from silence."""
+    status = nowplaying.inputs.InputStatus(
+        health=nowplaying.inputs.InputHealth.NEEDS_USER,
+        message="Rekordbox key does not open the database.",
+        detail="file is not a database",
+    )
+    result = nowplaying.wizard.verify._from_status(status)  # pylint: disable=protected-access
+    assert result is not None
+    assert result.status is nowplaying.wizard.verify.VerifyStatus.FAILED
+    assert result.message == "Rekordbox key does not open the database."
+    assert result.detail == "file is not a database"
+
+
+def test_healthy_and_waiting_plugins_keep_being_polled():
+    """WAITING is the plugin handling something, not a verdict to report."""
+    for health in (
+        nowplaying.inputs.InputHealth.OK,
+        nowplaying.inputs.InputHealth.STARTING,
+        nowplaying.inputs.InputHealth.WAITING,
+    ):
+        status = nowplaying.inputs.InputStatus(health=health, message="hold on")
+        assert (
+            nowplaying.wizard.verify._from_status(status) is None  # pylint: disable=protected-access
+        ), f"{health.name} should keep polling"
+
+
+def test_waiting_message_replaces_the_generic_label():
+    """A stalled source explains itself instead of looking unplayed."""
+    stalled = nowplaying.wizard.verify._classify(None, waiting="Port 8000 is in use.")  # pylint: disable=protected-access
+    assert stalled.status is nowplaying.wizard.verify.VerifyStatus.WAITING
+    assert stalled.message == "Port 8000 is in use."
+
+    quiet = nowplaying.wizard.verify._classify(None)  # pylint: disable=protected-access
+    assert quiet.message == "No track yet."
+
+
+def test_a_track_beats_any_waiting_message():
+    """Something playing is the answer the page is waiting for."""
+    result = nowplaying.wizard.verify._classify(  # pylint: disable=protected-access
+        {"artist": "Wire", "title": "The 15th"}, waiting="Port 8000 is in use."
+    )
+    assert result.status is nowplaying.wizard.verify.VerifyStatus.OK
+    assert "Wire" in result.message and "The 15th" in result.message

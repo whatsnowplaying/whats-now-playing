@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QWidget,
 )
 
+import nowplaying.inputs
 from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
@@ -575,6 +576,23 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         await self.start_port(new_port)
         if self.server is None:
             self._port_retry_after = time.monotonic() + 30.0
+
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report WAITING while the SOURCE port is not bound.
+
+        Not NEEDS_USER: the port is usually held by something that will let go,
+        and this plugin already retries on its own timer, so there is nothing
+        for a caller to do but keep asking. Not silence either, because a
+        broadcaster pointed at a port nobody is listening on otherwise looks
+        exactly like one that has not connected yet.
+        """
+        if self.server is None:
+            port = self.config.cparser.value(self._port_config_key, type=int, defaultValue=8000)
+            return nowplaying.inputs.InputStatus.waiting(
+                f"Waiting for port {port}. Another program may be using it.",
+                f"{self._port_config_key}={port} not bound",
+            )
+        return nowplaying.inputs.InputStatus()
 
     async def getplayingtrack(self) -> TrackMetadata:
         """give back the current metadata"""

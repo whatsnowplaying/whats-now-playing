@@ -11,6 +11,7 @@ import pytest
 import pytest_asyncio
 from utils_aiohttp import simulate_client_exception
 
+import nowplaying.inputs  # pylint: disable=import-error,no-name-in-module
 import nowplaying.inputs.jriver  # pylint: disable=import-error,no-name-in-module
 
 
@@ -1212,3 +1213,79 @@ def test_log_rate_limiting():
     # After waiting, should allow logging again
     time.sleep(0.2)
     assert plugin._should_log_error()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_jriver_without_a_host_needs_the_user(bootstrap):  # pylint: disable=redefined-outer-name
+    """No host configured cannot be fixed by waiting."""
+    bootstrap.cparser.remove("jriver/host")
+    plugin = nowplaying.inputs.jriver.Plugin(config=bootstrap)
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.NEEDS_USER
+    assert not status, "nothing to poll until a host is set"
+
+
+@pytest.mark.asyncio
+async def test_jriver_unreachable_host_is_waiting(bootstrap):  # pylint: disable=redefined-outer-name
+    """A host that will not answer may come back, so keep polling.
+
+    Points at a port nothing is listening on, so this needs no JRiver.
+    """
+    bootstrap.cparser.setValue("jriver/host", "127.0.0.1")
+    bootstrap.cparser.setValue("jriver/port", "52198")
+    plugin = nowplaying.inputs.jriver.Plugin(config=bootstrap)
+    await plugin.start()
+    try:
+        status = plugin.status()
+        assert status.health is nowplaying.inputs.InputHealth.WAITING
+        assert status, "it may come back, so keep asking"
+        assert "127.0.0.1" in status.message
+    finally:
+        await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_jriver_reports_ok_once_it_has_a_server(aiointercept_mock, bootstrap):  # pylint: disable=redefined-outer-name
+    """A reachable server reports OK, so the caller polls it.
+
+    Verified against a real Media Center 36 during development; kept mocked so
+    it means the same thing on a machine that has no JRiver.
+    """
+    bootstrap.cparser.setValue("jriver/host", "localhost")
+    bootstrap.cparser.setValue("jriver/port", "52199")
+    aiointercept_mock.get(
+        "http://localhost:52199/MCWS/v1/Alive",
+        body='<Response Status="OK"><Item Name="ProgramName">JRiver Media Center</Item></Response>',
+    )
+
+    plugin = nowplaying.inputs.jriver.Plugin(config=bootstrap)  # pylint: disable=no-member
+    assert await plugin.start() is True
+    try:
+        status = plugin.status()
+        assert status.health is nowplaying.inputs.InputHealth.OK
+        assert status, "a working server is worth polling"
+    finally:
+        await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_a_host_entered_later_reports_starting(bootstrap):  # pylint: disable=redefined-outer-name
+    """start() gave up with no host, so nothing was built to poll with.
+
+    Reporting OK once the host appears would promise a working plugin while
+    getplayingtrack() went on returning None off the base_url guard. STARTING
+    is what licenses the connect.
+    """
+    bootstrap.cparser.remove("jriver/host")
+    plugin = nowplaying.inputs.jriver.Plugin(config=bootstrap)  # pylint: disable=no-member
+    await plugin.start()
+    try:
+        assert plugin.status().health is nowplaying.inputs.InputHealth.NEEDS_USER
+
+        bootstrap.cparser.setValue("jriver/host", "localhost")
+        bootstrap.cparser.setValue("jriver/port", "52199")
+        status = plugin.status()
+        assert status.health is nowplaying.inputs.InputHealth.STARTING
+        assert status, "STARTING is polled, which is how the connect happens"
+    finally:
+        await plugin.stop()

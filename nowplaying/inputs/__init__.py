@@ -2,6 +2,7 @@
 """Input Plugin definition"""
 
 import dataclasses
+import enum
 
 # import logging
 from typing import TYPE_CHECKING
@@ -45,6 +46,70 @@ class Detected:
 
     def __bool__(self) -> bool:
         return self.present
+
+
+class InputHealth(enum.Enum):
+    """What a caller should do about an input plugin right now.
+
+    The useful question is not whether something is wrong, it is what to do
+    about it, and only the plugin knows. An exception can only say "dead",
+    which is why these are separate cases rather than error subclasses.
+    """
+
+    OK = "ok"
+    STARTING = "starting"
+    WAITING = "waiting"
+    NEEDS_USER = "needs_user"
+    NEEDS_RESTART = "needs_restart"
+    BROKEN = "broken"
+
+
+@dataclasses.dataclass(frozen=True)
+class InputStatus:
+    """An input plugin's own account of how it is doing.
+
+    `message` is shown to a person, so it says what is wrong and what would fix
+    it. `detail` is for the log. A plugin reporting anything other than OK is
+    expected to fill in `message`: the caller cannot write one, which is how
+    verify ended up scraping exception text to find something to display.
+    """
+
+    health: InputHealth = InputHealth.OK
+    message: str = ""
+    detail: str = ""
+
+    def __bool__(self) -> bool:
+        """True while the plugin is worth polling."""
+        return self.health in (InputHealth.OK, InputHealth.STARTING, InputHealth.WAITING)
+
+    # Named constructors, so that `message` is required by the signature rather
+    # than by the docstring above. Plain InputStatus() remains the OK case,
+    # which is the only one with nothing to tell anybody.
+
+    @classmethod
+    def starting(cls, message: str, detail: str = "") -> "InputStatus":
+        """Not ready yet. Being polled is what lets it finish."""
+        return cls(health=InputHealth.STARTING, message=message, detail=detail)
+
+    @classmethod
+    def waiting(cls, message: str, detail: str = "") -> "InputStatus":
+        """Something is missing and the plugin is dealing with it."""
+        return cls(health=InputHealth.WAITING, message=message, detail=detail)
+
+    @classmethod
+    def needs_user(cls, message: str, detail: str = "") -> "InputStatus":
+        """Only a person can fix this, so say what and where."""
+        return cls(health=InputHealth.NEEDS_USER, message=message, detail=detail)
+
+    @classmethod
+    def needs_restart(cls, message: str, detail: str = "") -> "InputStatus":
+        """A stop() and start() would clear it."""
+        return cls(health=InputHealth.NEEDS_RESTART, message=message, detail=detail)
+
+    @classmethod
+    def broken(cls, message: str, detail: str = "") -> "InputStatus":
+        """Nothing will change by waiting or by restarting."""
+        return cls(health=InputHealth.BROKEN, message=message, detail=detail)
 
 
 class InputPlugin(WNPBasePlugin):
@@ -136,9 +201,43 @@ class InputPlugin(WNPBasePlugin):
 
     #### Control methods
 
+    def status(self) -> InputStatus:  # pylint: disable=no-self-use
+        """How this plugin is doing, and what the caller should do about it.
+
+        Called every cycle, including while the caller has stopped polling,
+        which is how a plugin gets itself out of NEEDS_USER: re-read the setting
+        that was wrong, and report STARTING once it looks right. Icecast already
+        does this for its port, from getplayingtrack().
+
+        Reading configuration here is expected. Opening a socket, a database or
+        a file is not: a plugin that needs to check something like that does it
+        on its own schedule and records the answer for status() to hand back.
+
+        The default suits any plugin with nothing that can go wrong after it has
+        started, which is most of the file watchers.
+        """
+        return InputStatus()
+
     async def start(self) -> None:
-        """any initialization before actual polling starts"""
+        """Get ready to be polled.
+
+        Returns promptly, or says in its own docstring that it does not: Denon
+        runs discovery and Icecast waits on a broadcaster, and callers bound
+        those with a timeout.
+
+        Does not raise for anything operational. A busy port, an unreachable
+        host or a key that does not work are all reported through status(),
+        because only status() can distinguish "I am retrying" from "a person
+        has to fix this". Exceptions are for bugs.
+
+        Either succeeds or leaves nothing allocated. A caller that sees start()
+        fail is entitled to drop the plugin without calling stop().
+        """
 
     async def stop(self) -> None:
-        """stopping either the entire program or just this
-        input"""
+        """Release whatever start() acquired.
+
+        Safe at any point, including on a plugin that never started or whose
+        start() failed part way. Callers run it on every path out, so it checks
+        what it holds rather than assuming.
+        """

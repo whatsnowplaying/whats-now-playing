@@ -12,6 +12,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+import nowplaying.inputs
 import nowplaying.upgrades
 from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
@@ -171,6 +172,35 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def getmixmode(self) -> str:
         """Get the current mix mode"""
         return self.metadata_processor.get_mixmode()
+
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report on discovery and connected players.
+
+        WAITING is the state that fires in practice: announcements go out every
+        few seconds and nothing is connected until a player answers.
+
+        A task ending is insurance rather than a working state. The discovery
+        loop catches Exception and goes round again, so it only ends on
+        cancellation, on something that is not an Exception at all, or if the
+        handler itself throws. But start() returns before any of that could
+        happen, so if it ever does there is otherwise nothing to notice it.
+
+        Cancelled tasks are excluded: stop() cancels these, and a deliberate
+        shutdown must not read as a fault.
+        """
+        stopped = [
+            task for task in self.connection_manager.tasks if task.done() and not task.cancelled()
+        ]
+        if stopped:
+            return nowplaying.inputs.InputStatus.needs_restart(
+                "Stopped looking for Denon players.",
+                f"{len(stopped)} of {len(self.connection_manager.tasks)} tasks ended",
+            )
+        if not self.connection_manager.active:
+            return nowplaying.inputs.InputStatus.waiting(
+                "Looking for Denon players on the network."
+            )
+        return nowplaying.inputs.InputStatus()
 
     async def start(self):
         """Initialize the StagelinQ connection"""

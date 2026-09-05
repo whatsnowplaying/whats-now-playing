@@ -7,11 +7,13 @@ import logging
 import pathlib
 import sys
 import threading
+import time
 import unittest.mock
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
 
+import nowplaying.inputs  # pylint: disable=import-error
 import nowplaying.processes.trackpoll  # pylint: disable=import-error
 from tests.utils_images import jpeg_bytes, png_bytes
 
@@ -745,3 +747,253 @@ async def test_check_earshot_override_ignores_same_as_main(trackpoll_testmode): 
     assert result == main_meta
     # earshot_last_meta updated so next poll does not recheck
     assert tptest.earshot_last_meta == earshot_meta  # pylint: disable=protected-access
+
+
+def _status_plugin(status, started=None, stopped=None):
+    """Build a Plugin class reporting a fixed status."""
+
+    class Reports:  # pylint: disable=no-self-use,too-few-public-methods
+        """Starts fine and reports whatever the test asked for."""
+
+        def __init__(self, config=None):  # pylint: disable=unused-argument
+            pass
+
+        async def start(self):
+            """Succeed, per the contract."""
+            if started is not None:
+                started.append(True)
+
+        async def stop(self):
+            """Release nothing."""
+            if stopped is not None:
+                stopped.append(True)
+
+        def status(self):
+            """Report the health under test."""
+            return status
+
+        async def getplayingtrack(self):
+            """No track."""
+            return None
+
+    return Reports
+
+
+def _use_plugin(trackpoll, config, plugin_cls):
+    """Point trackpoll at a single fake input."""
+    config.cparser.setValue("settings/input", "pretend")
+    trackpoll.plugins = {"nowplaying.inputs.pretend": unittest.mock.MagicMock(Plugin=plugin_cls)}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "health,pollable",
+    [
+        (nowplaying.inputs.InputHealth.OK, True),
+        (nowplaying.inputs.InputHealth.STARTING, True),
+        (nowplaying.inputs.InputHealth.WAITING, True),
+        (nowplaying.inputs.InputHealth.NEEDS_USER, False),
+        (nowplaying.inputs.InputHealth.NEEDS_RESTART, False),
+        (nowplaying.inputs.InputHealth.BROKEN, False),
+    ],
+)
+async def test_status_decides_whether_to_poll(bootstrap, trackpoll_testmode, health, pollable):  # pylint: disable=redefined-outer-name
+    """WAITING is the plugin saying it has this in hand, so polling continues."""
+    status = nowplaying.inputs.InputStatus(health=health, message="because")
+    _use_plugin(trackpoll_testmode, bootstrap, _status_plugin(status))
+    assert await trackpoll_testmode.switch_input_plugin() is pollable
+
+
+@pytest.mark.asyncio
+async def test_needs_user_is_reported_once(bootstrap, trackpoll_testmode, caplog):  # pylint: disable=redefined-outer-name
+    """The message cannot change until the user acts, so say it once."""
+    status = nowplaying.inputs.InputStatus(
+        health=nowplaying.inputs.InputHealth.NEEDS_USER,
+        message="Rekordbox key does not open the database",
+    )
+    _use_plugin(trackpoll_testmode, bootstrap, _status_plugin(status))
+
+    with caplog.at_level(logging.ERROR):
+        for _ in range(10):
+            assert await trackpoll_testmode.switch_input_plugin() is False
+
+    said = [r for r in caplog.records if "needs attention" in r.message]
+    assert len(said) == 1, f"reported {len(said)} times"
+    assert "does not open the database" in said[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_needs_restart_waits_then_rebuilds(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """A restart is honoured once, after the delay, not on the next cycle."""
+    started = []
+    status = nowplaying.inputs.InputStatus(
+        health=nowplaying.inputs.InputHealth.NEEDS_RESTART, message="discovery died"
+    )
+    _use_plugin(trackpoll_testmode, bootstrap, _status_plugin(status, started=started))
+
+    assert await trackpoll_testmode.switch_input_plugin() is False
+    assert len(started) == 1
+
+    for _ in range(10):  # still inside the delay
+        await trackpoll_testmode.switch_input_plugin()
+    assert len(started) == 1, "restarted before the delay elapsed"
+
+    # Arrive at the far side of the wait without sleeping through it.
+    trackpoll_testmode._restart_input_at = time.monotonic() - 1  # pylint: disable=protected-access
+    await trackpoll_testmode.switch_input_plugin()  # notices the wait is over
+    await trackpoll_testmode.switch_input_plugin()  # rebuilds
+    assert len(started) == 2, "the restart never happened"
+
+
+@pytest.mark.asyncio
+async def test_earshot_is_still_read_when_the_main_source_cannot_run(
+    bootstrap, trackpoll_testmode
+):  # pylint: disable=redefined-outer-name
+    """gettrack() is the only thing that reads EarShot, so it has to keep running.
+
+    EarShot writes whether or not the chosen source works, and returning False
+    from switch_input_plugin() skips gettrack() entirely -- so a source stuck on
+    NEEDS_USER would silently discard everything EarShot produced.
+    """
+    config = bootstrap
+    config.cparser.setValue("settings/input", "pretend")
+    status = nowplaying.inputs.InputStatus(
+        health=nowplaying.inputs.InputHealth.NEEDS_USER, message="fix me"
+    )
+    healthy = nowplaying.inputs.InputStatus()
+    trackpoll_testmode.plugins = {
+        "nowplaying.inputs.pretend": unittest.mock.MagicMock(Plugin=_status_plugin(status)),
+    }
+
+    # No EarShot available: nothing to run, so the loop skips gettrack().
+    assert await trackpoll_testmode.switch_input_plugin() is False
+    assert trackpoll_testmode._input_pollable is False  # pylint: disable=protected-access
+
+    # EarShot present, so _manage_earshot_plugin() starts it and the loop has
+    # to reach gettrack() even though the chosen source cannot run.
+    trackpoll_testmode.plugins["nowplaying.inputs.earshot"] = unittest.mock.MagicMock(
+        Plugin=_status_plugin(healthy)
+    )
+    assert await trackpoll_testmode.switch_input_plugin() is True
+    assert trackpoll_testmode.earshot_plugin is not None
+    assert trackpoll_testmode._input_pollable is False, (  # pylint: disable=protected-access
+        "the main source is still not worth polling"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_restart_deadline_does_not_carry_across_plugins(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """A deadline from a previous plugin would skip the wait the constant exists for."""
+    config = bootstrap
+    config.cparser.setValue("settings/input", "pretend")
+    status = nowplaying.inputs.InputStatus(
+        health=nowplaying.inputs.InputHealth.NEEDS_RESTART, message="again"
+    )
+    trackpoll_testmode.plugins = {
+        "nowplaying.inputs.pretend": unittest.mock.MagicMock(Plugin=_status_plugin(status)),
+        "nowplaying.inputs.other": unittest.mock.MagicMock(Plugin=_status_plugin(status)),
+    }
+
+    await trackpoll_testmode.switch_input_plugin()
+    # Pretend its wait already expired, then switch to a different input.
+    trackpoll_testmode._restart_input_at = time.monotonic() - 1  # pylint: disable=protected-access
+    config.cparser.setValue("settings/input", "other")
+    await trackpoll_testmode.switch_input_plugin()
+
+    pending = trackpoll_testmode._restart_input_at  # pylint: disable=protected-access
+    assert pending == 0.0 or pending > time.monotonic(), (
+        "the new plugin inherited an expired deadline"
+    )
+
+
+@pytest.mark.asyncio
+async def test_earshot_overrides_a_source_reporting_nothing(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """EarShot always accepts input, so it has to win against an empty source.
+
+    A source that cannot run contributes {} now rather than not being polled,
+    and EarShot's identification has to come through that.
+    """
+    heard = {"artist": "Wire", "title": "The 15th"}
+    earshot = unittest.mock.AsyncMock()
+    earshot.getplayingtrack.return_value = heard
+    trackpoll_testmode.earshot_plugin = earshot
+
+    used, overrode = await trackpoll_testmode._check_earshot_override({})  # pylint: disable=protected-access
+
+    assert overrode is True, "EarShot should have overridden an empty source"
+    assert used["artist"] == "Wire" and used["title"] == "The 15th"
+    assert not trackpoll_testmode.main_source_suppressed_meta, (
+        "there is no stale main track to suppress"
+    )
+
+
+@pytest.mark.asyncio
+async def test_earshot_is_managed_even_when_the_source_will_not_start(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """A source that cannot start must not leave EarShot unmanaged for a cycle.
+
+    Returning early on start failure skipped _manage_earshot_plugin(), so
+    EarShot was neither started nor stopped until the next pass.
+    """
+    config = trackpoll_testmode.config
+    config.cparser.setValue("settings/input", "pretend")
+
+    class WillNotStart:  # pylint: disable=no-self-use,too-few-public-methods
+        """Raises out of start(), which the contract calls a defect."""
+
+        def __init__(self, config=None):  # pylint: disable=unused-argument
+            pass
+
+        async def start(self):
+            """Fail."""
+            raise RuntimeError("no soup for you")
+
+        async def stop(self):
+            """Nothing held."""
+
+    trackpoll_testmode.plugins = {
+        "nowplaying.inputs.pretend": unittest.mock.MagicMock(Plugin=WillNotStart),
+        "nowplaying.inputs.earshot": unittest.mock.MagicMock(
+            Plugin=_status_plugin(nowplaying.inputs.InputStatus())
+        ),
+    }
+
+    assert await trackpoll_testmode.switch_input_plugin() is True, (
+        "EarShot is running, so the loop still has work"
+    )
+    assert trackpoll_testmode.earshot_plugin is not None, "EarShot was left unmanaged"
+    assert trackpoll_testmode.input is None
+    assert trackpoll_testmode._input_pollable is False  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_losing_the_input_setting_still_manages_earshot(trackpoll_testmode):  # pylint: disable=redefined-outer-name
+    """A config reset clears settings/input while EarShot may be running.
+
+    Returning early there left the monitor neither stopped nor read: it keeps
+    its watcher on remotedb, which is the collision hazard for the remote
+    plugin, and keeps writing with nobody looking.
+    """
+    config = trackpoll_testmode.config
+    config.cparser.setValue("settings/input", "pretend")
+    trackpoll_testmode.plugins = {
+        "nowplaying.inputs.pretend": unittest.mock.MagicMock(
+            Plugin=_status_plugin(nowplaying.inputs.InputStatus())
+        ),
+        "nowplaying.inputs.earshot": unittest.mock.MagicMock(
+            Plugin=_status_plugin(nowplaying.inputs.InputStatus())
+        ),
+    }
+
+    assert await trackpoll_testmode.switch_input_plugin() is True
+    assert trackpoll_testmode.earshot_plugin is not None
+
+    # The setting goes away underneath us.
+    config.cparser.remove("settings/input")
+    assert await trackpoll_testmode.switch_input_plugin() is True, (
+        "EarShot alone is still something to poll"
+    )
+    assert trackpoll_testmode.input is None
+    assert trackpoll_testmode._input_pollable is False  # pylint: disable=protected-access
+    assert trackpoll_testmode.earshot_plugin is not None, (
+        "EarShot should still be managed, not orphaned"
+    )

@@ -13,6 +13,7 @@ try:
 except ImportError:
     DBUS_FAST_AVAILABLE = False
 
+import nowplaying.inputs
 import nowplaying.inputs.mpris2  # pylint: disable=import-error,no-member,no-name-in-module
 
 
@@ -242,3 +243,25 @@ async def test_getplayingtrack_multiple_artists():
         assert result["artist"] == "Artist One/Artist Two/Artist Three"
         assert result["title"] == "Collaboration Song"
         assert result["duration"] == 180
+
+
+def test_choosing_a_player_later_is_recoverable(bootstrap):  # pylint: disable=redefined-outer-name
+    """Clearing the handler used to be permanent.
+
+    gethandler() guarded on self.mpris2 and then set it to None when no player
+    was chosen, so choosing one afterwards left nothing to rebuild it. Patches
+    dbus_status because this machine has no D-Bus.
+    """
+    plugin = nowplaying.inputs.mpris2.Plugin(config=bootstrap)
+    plugin.dbus_status = True
+    plugin.mpris2 = None
+    bootstrap.cparser.remove("mpris2/service")
+
+    assert plugin.status().health is nowplaying.inputs.InputHealth.NEEDS_USER
+
+    bootstrap.cparser.setValue("mpris2/service", "spotify")
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.STARTING, (
+        "reporting OK here would promise a plugin with no handler"
+    )
+    assert status, "STARTING is polled, which is how the handler gets rebuilt"
