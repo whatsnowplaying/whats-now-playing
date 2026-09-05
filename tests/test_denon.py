@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """Tests for Denon DJ StagelinQ input plugin"""
+
+# pylint: disable=too-many-lines
 # pylint: disable=protected-access,redefined-outer-name
 
 import asyncio
+import contextlib
 import struct
 import time
 
 import pytest
 
-import nowplaying.inputs.denon
 from nowplaying.denon import StagelinqError
 from nowplaying.denon.connection import ConnectionManager, DeviceConnection
 from nowplaying.denon.protocol import StagelinqProtocol
 from nowplaying.denon.types import MSG_SERVICES_REQUEST, DenonDevice, DenonService, DenonState
+import nowplaying.inputs
+import nowplaying.inputs.denon
 
 DEVICE_TOKEN_1 = b"\x01" * 16
 DEVICE_TOKEN_2 = b"\x02" * 16
@@ -975,3 +979,62 @@ def test_get_broadcast_addresses():
     assert "255.255.255.255" in addresses
     for address in addresses:
         assert not address.startswith("127.")
+
+
+@pytest.mark.asyncio
+async def test_denon_asks_for_a_restart_when_discovery_stops(bootstrap):  # pylint: disable=redefined-outer-name
+    """A discovery task that ended is the failure start() could never report.
+
+    start() launches endless tasks and returns, so nothing raises when one of
+    them falls out of its loop; the plugin simply stops finding players. This is
+    the only way a caller learns.
+    """
+    plugin = nowplaying.inputs.denon.Plugin(config=bootstrap)
+
+    async def _ended():
+        """A task that has already finished."""
+
+    task = asyncio.create_task(_ended())
+    await task
+    plugin.connection_manager.tasks.append(task)
+
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.NEEDS_RESTART
+    assert not status, "nothing is looking for players, so do not keep polling"
+    assert "Denon" in status.message
+
+
+@pytest.mark.asyncio
+async def test_denon_waits_while_it_looks_for_players(bootstrap):  # pylint: disable=redefined-outer-name
+    """No players yet is WAITING: normal, and worth saying rather than silence."""
+    plugin = nowplaying.inputs.denon.Plugin(config=bootstrap)
+
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.WAITING
+    assert status, "still expects to find something, so keep polling"
+
+
+@pytest.mark.asyncio
+async def test_denon_shutdown_is_not_a_fault(bootstrap):  # pylint: disable=redefined-outer-name
+    """stop() cancels the discovery tasks, which must not read as failure.
+
+    Without excluding cancelled tasks, a deliberate shutdown looks exactly like
+    the catastrophic case and the plugin asks to be restarted on its way out.
+    """
+    plugin = nowplaying.inputs.denon.Plugin(config=bootstrap)
+
+    async def _forever():
+        await asyncio.sleep(3600)
+
+    task = asyncio.create_task(_forever())
+    await asyncio.sleep(0)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+    plugin.connection_manager.tasks.append(task)
+
+    status = plugin.status()
+    assert status.health is not nowplaying.inputs.InputHealth.NEEDS_RESTART, (
+        "a cancelled task is a shutdown, not a failure"
+    )

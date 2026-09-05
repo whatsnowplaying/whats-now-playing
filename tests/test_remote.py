@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import nowplaying.db
+import nowplaying.inputs
 import nowplaying.inputs.remote
 
 
@@ -179,15 +180,18 @@ async def test_remote_plugin_stop(remote_bootstrap):  # pylint: disable=redefine
     config = remote_bootstrap
     plugin = nowplaying.inputs.remote.Plugin(config=config)
 
-    # Set up observer
-    plugin.observer = MagicMock()
+    # Set up observer. Held in a local because stop() drops the reference, so
+    # status() cannot mistake a stopped watcher for a dead one.
+    observer = MagicMock()
+    plugin.observer = observer
     plugin.metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
     await plugin.stop()
 
     # Should reset metadata and stop observer
     assert plugin.metadata == {"artist": None, "title": None, "filename": None}
-    plugin.observer.stop.assert_called_once()
+    observer.stop.assert_called_once()
+    assert plugin.observer is None
 
 
 @pytest.mark.asyncio
@@ -318,3 +322,68 @@ async def test_remote_plugin_integration_with_metadatadb_write(remote_bootstrap)
     assert plugin.metadata["artist"] == "Artist Two"
     assert plugin.metadata["title"] == "Title Two"
     assert plugin.metadata["filename"] == "track2.mp3"
+
+
+@pytest.mark.asyncio
+async def test_remote_reports_needs_restart_when_the_watcher_dies(bootstrap):  # pylint: disable=redefined-outer-name
+    """A dead watcher delivers nothing and looks like nobody is sending.
+
+    Scheduling the same directory another observer already holds kills the
+    emitter thread after start() has returned, so nothing raises and the plugin
+    goes quiet. status() is the only way that becomes visible.
+    """
+    plugin = nowplaying.inputs.remote.Plugin(config=bootstrap)
+    await plugin.start()
+    try:
+        assert plugin.status().health is nowplaying.inputs.InputHealth.OK
+
+        # Kill the emitter, not the dispatcher: an "already scheduled"
+        # RuntimeError takes out the emitter thread and leaves the observer's
+        # own thread looping happily, which is what made this reportable.
+        for emitter in list(plugin.observer.observer.emitters):
+            emitter.stop()
+            emitter.join()
+        assert plugin.observer.observer.is_alive(), (
+            "the dispatcher should still be up -- otherwise this tests the wrong thread"
+        )
+
+        status = plugin.status()
+        assert status.health is nowplaying.inputs.InputHealth.NEEDS_RESTART
+        assert not status, "a plugin needing a restart is not worth polling"
+        assert "tracks" in status.message
+    finally:
+        await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_remote_is_ok_while_the_watcher_runs(bootstrap):  # pylint: disable=redefined-outer-name
+    """The healthy case has to stay quiet or the restart means nothing."""
+    plugin = nowplaying.inputs.remote.Plugin(config=bootstrap)
+    await plugin.start()
+    try:
+        for _ in range(5):
+            assert plugin.status().health is nowplaying.inputs.InputHealth.OK
+    finally:
+        await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_a_cleanly_stopped_remote_does_not_report_needs_restart(bootstrap):  # pylint: disable=redefined-outer-name
+    """ "Stopped" and "the watcher died" must not be the same signal.
+
+    DBWatcher.stop() clears its own inner observer, so a DBWatcher that was
+    asked to stop is indistinguishable from one whose emitter died unless the
+    plugin drops the reference too. trackpoll rebuilds on NEEDS_RESTART, so
+    leaving it set after a deliberate stop invites a restart loop.
+    """
+    plugin = nowplaying.inputs.remote.Plugin(config=bootstrap)
+    await plugin.start()
+    assert plugin.status().health is nowplaying.inputs.InputHealth.OK
+
+    await plugin.stop()
+
+    assert plugin.observer is None, "stop() has to drop the watcher, not just stop it"
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.OK, (
+        f"a stopped plugin reported {status.health}, which would trigger a rebuild"
+    )

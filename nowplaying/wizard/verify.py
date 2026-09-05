@@ -11,9 +11,13 @@ import contextlib
 import dataclasses
 import enum
 import logging
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QThread, Signal  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
+
+if TYPE_CHECKING:
+    import nowplaying.inputs
 
 # A plugin's start() may never return -- Denon runs discovery, Icecast waits on
 # a broadcaster -- so every call the worker makes is bounded.
@@ -122,8 +126,12 @@ class VerifyWorker(QThread):
         assert self._stop is not None
         while not self._stop.is_set():
             try:
-                meta = await asyncio.wait_for(plugin.getplayingtrack(), timeout=POLL_TIMEOUT)
-                self.observed.emit(_classify(meta))
+                status = plugin.status()
+                if (settled := _from_status(status)) is not None:
+                    self.observed.emit(settled)
+                else:
+                    meta = await asyncio.wait_for(plugin.getplayingtrack(), timeout=POLL_TIMEOUT)
+                    self.observed.emit(_classify(meta, waiting=status.message))
             except TimeoutError:
                 self.observed.emit(
                     VerifyResult(VerifyStatus.TIMEOUT, "This source stopped responding.")
@@ -139,24 +147,53 @@ class VerifyWorker(QThread):
                 await asyncio.wait_for(self._stop.wait(), timeout=POLL_INTERVAL)
 
 
+def _from_status(status: "nowplaying.inputs.InputStatus") -> VerifyResult | None:
+    """Report what the plugin says about itself, or None to go on polling.
+
+    A plugin that cannot work knows why and says so in terms fit to show
+    someone, which is the whole reason status() carries a message. Polling it
+    anyway would produce "No track yet." indefinitely and leave the user to
+    guess whether they had done something wrong.
+    """
+    if status:
+        # OK, STARTING and WAITING all expect to produce a track, so carry on
+        # polling; WAITING's message becomes the label if nothing arrives.
+        return None
+    return VerifyResult(
+        VerifyStatus.FAILED,
+        status.message or "This source cannot run right now.",
+        detail=status.detail or None,
+    )
+
+
 def _explain(error: BaseException) -> str:
     """Prefer the plugin's own words.
 
     Plugins raise domain errors that already say what to do -- Rekordbox's
     names the missing key and where to enter it -- and replacing that with a
     generic "could not start" throws away the only actionable part.
+
+    Only start() failures reach this now: per the input contract those are
+    defects rather than misconfiguration, so there is no message written for a
+    user to read and the exception text is the best available.
     """
     text = str(error).strip()
     return text or "Could not start this source."
 
 
-def _classify(meta) -> VerifyResult:
-    """Turn a getplayingtrack() result into something worth showing a user."""
+def _classify(meta, waiting: str = "") -> VerifyResult:
+    """Turn a getplayingtrack() result into something worth showing a user.
+
+    `waiting` is what the plugin said it was waiting on, used in place of the
+    generic label so a stalled source explains itself rather than looking the
+    same as one nobody has played a track on yet.
+    """
+    nothing = waiting or "No track yet."
     if not meta:
-        return VerifyResult(VerifyStatus.WAITING, "No track yet.")
+        return VerifyResult(VerifyStatus.WAITING, nothing)
     artist = meta.get("artist") or ""
     title = meta.get("title") or ""
     if not (artist or title):
-        return VerifyResult(VerifyStatus.WAITING, "No track yet.")
+        return VerifyResult(VerifyStatus.WAITING, nothing)
     seen = " — ".join(part for part in (artist, title) if part)
     return VerifyResult(VerifyStatus.OK, f"Reading: {seen}")

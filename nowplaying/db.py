@@ -138,6 +138,26 @@ class DBWatcher:
         self.observer.schedule(self.event_handler, directory, recursive=False)
         self.observer.start()
 
+    def is_alive(self) -> bool:
+        """Whether the watch is actually delivering events.
+
+        The emitter can die after start() returned without anything raising
+        here -- scheduling a path another observer already holds kills it that
+        way -- and it delivers nothing afterwards while looking exactly like a
+        quiet directory.
+
+        The observer's own thread is the wrong thing to ask: it is the event
+        dispatcher, it loops on dispatch_events() swallowing queue.Empty, and it
+        stays up whether or not any emitter is left feeding it. A dead emitter
+        stays in the set, so each one has to be checked. An empty set is not
+        alive rather than vacuously true; schedule() adds the emitter before
+        start() returns, so empty means nothing is watching.
+        """
+        if not self.observer or not self.observer.is_alive():
+            return False
+        emitters = list(self.observer.emitters)
+        return bool(emitters) and all(emitter.is_alive() for emitter in emitters)
+
     def update_time(self, event):  # pylint: disable=unused-argument
         """just need to update the time"""
         self.updatetime = time.time()

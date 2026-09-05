@@ -464,7 +464,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """stop the djuced plugin"""
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            await asyncio.to_thread(self.observer.join)
             self.observer = None
 
     async def has_tracks_by_artist(self, artist_name: str) -> bool:

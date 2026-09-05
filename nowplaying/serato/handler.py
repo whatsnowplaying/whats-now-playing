@@ -89,7 +89,7 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         """Stop the handler and clean up resources"""
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            await asyncio.to_thread(self.observer.join)
             self.observer = None
 
         # Cancel any pending tasks and wait for them to finish

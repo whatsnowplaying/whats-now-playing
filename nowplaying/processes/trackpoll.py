@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """thread to poll music player"""
 
 import asyncio
@@ -30,6 +31,18 @@ import nowplaying.version  # pylint: disable=import-error,no-name-in-module
 from nowplaying.types import TrackMetadata
 
 COREMETA = ["artist", "filename", "title"]
+
+# A plugin that asks to be restarted gets one attempt this long after asking.
+# Fixed, not escalating: a plugin that keeps asking must not be able to turn
+# the poll loop into a restart loop.
+_RESTART_DELAY_SECONDS = 30.0
+
+# stop() during cleanup is bounded so a plugin wedged in it cannot take the
+# poll loop with it.
+_STOP_TIMEOUT_SECONDS = 20.0
+
+# No configured name to log: it runs alongside whatever the user did choose.
+_EARSHOT_NAME = "EarShot secondary monitor"
 
 
 def compute_final_sleep(fill_duration: float, configured_delay: float) -> float:
@@ -74,6 +87,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.input: nowplaying.inputs.InputPlugin | None = None
         self.previousinput: str | None = None
         self.inputname: str | None = None
+        self._reported_health: "nowplaying.inputs.InputHealth | None" = None
+        self._restart_input_at: float = 0.0
+        self._input_pollable: bool = False
         self.tasks: set[asyncio.Task[Any]] = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
 
@@ -88,6 +104,8 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         # EarShot secondary monitor (runs alongside any non-EarShot source)
         self.earshot_plugin: nowplaying.inputs.InputPlugin | None = None
         self.earshot_last_meta: TrackMetadata = {}
+        self._reported_earshot_health: "nowplaying.inputs.InputHealth | None" = None
+        self._restart_earshot_at: float = 0.0
         # When EarShot overrides, remember what the main source was reporting
         # so its stale data does not immediately win back.
         self.main_source_suppressed_meta: TrackMetadata = {}
@@ -155,41 +173,180 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     async def switch_input_plugin(self) -> bool:
         """Handle user switching source input while running.
 
-        Returns True when an input plugin is active and ready for gettrack(),
-        False when no input is configured or the plugin failed to start.
-        Callers use the False return to skip polling until the next cycle.
+        Returns True when there is something for gettrack() to do, which the
+        EarShot monitor satisfies on its own. _input_pollable carries whether
+        the chosen source is worth asking; every path through here has to reach
+        _manage_earshot_plugin(), because EarShot accepts input regardless of
+        what the chosen source is doing and nothing else stops or reads it.
         """
         configured: str | None = self.config.cparser.value("settings/input")
+
         if not configured:
-            if self.input:
-                logging.info("stopping %s", self.previousinput)
-                await self.input.stop()
-                self.input = None
-                self.previousinput = None
-            return False
-        if self.previousinput != configured:
-            if self.input:
-                logging.info("stopping %s", self.previousinput)
-                await self.input.stop()
+            await self._drop_input()
+        elif self.previousinput != configured:
+            await self._drop_input()
             self.previousinput: str | None = configured
-            self.input = self.plugins[f"nowplaying.inputs.{self.previousinput}"].Plugin(
-                config=self.config
-            )
-            logging.info("Starting %s plugin", self.previousinput)
-            if not self.input:
-                return False
+            await self._start_input(configured)
 
-            try:
-                await self.input.start()
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("cannot start %s: %s", self.previousinput, error)
-                return False
+        self._input_pollable = bool(configured) and self._act_on_status()
 
+        # One exit, because every path has to get here: EarShot is managed and
+        # read from nowhere else, and an early return skipped it three times.
         await self._manage_earshot_plugin()
-        return True
+        return self._input_pollable or self.earshot_plugin is not None
+
+    @staticmethod
+    async def _stop_plugin(plugin: "nowplaying.inputs.InputPlugin", name: str | None) -> None:
+        """Stop a plugin without letting it take the poll loop with it.
+
+        Every caller is on a path that has to continue regardless: an input
+        switch, a restart, or shutdown. The contract asks stop() to be safe at
+        any time but says nothing about how long it may take.
+        """
+        logging.info("stopping %s", name)
+        try:
+            await asyncio.wait_for(plugin.stop(), timeout=_STOP_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            logging.error("%s did not stop within %ss", name, _STOP_TIMEOUT_SECONDS)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("error stopping %s", name)
+
+    async def _drop_input(self) -> None:
+        """Stop the current input, if any, and forget everything about it.
+
+        The health and the restart deadline belong to the plugin going away:
+        carrying either into the next one reports its first failure as old
+        news, or lets it skip the wait on an already-elapsed clock.
+        """
+        if self.input:
+            await self._stop_plugin(self.input, self.previousinput)
+        self.input = None
+        self.previousinput = None
+        self._reported_health = None
+        self._restart_input_at = 0.0
+
+    async def _start_input(self, configured: str) -> None:
+        """Build and start the configured plugin.
+
+        Per the input contract, start() does not raise for anything operational,
+        so an exception here is a defect rather than a misconfiguration. It still
+        has to be survivable: stop() runs first because start() may have got as
+        far as a watcher or a port.
+
+        A failure clears self.input and sets the restart clock, so the caller
+        learns about it from status() like everything else.
+        """
+        plugin: nowplaying.inputs.InputPlugin = self.plugins[
+            f"nowplaying.inputs.{configured}"
+        ].Plugin(config=self.config)
+        self.input = plugin
+        logging.info("Starting %s plugin", configured)
+        try:
+            await plugin.start()
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("cannot start %s", configured)
+            await self._stop_plugin(plugin, configured)
+            self.input = None
+            self._restart_input_at = time.monotonic() + _RESTART_DELAY_SECONDS
+            self._reported_health = nowplaying.inputs.InputHealth.BROKEN
+
+    def _act_on_status(self) -> bool:
+        """Consult the plugin and decide whether it is worth polling.
+
+        Only the plugin knows whether a problem is one it is handling, one a
+        person has to fix, or one a restart would clear, so the decision is
+        taken here rather than inferred from a poll that returned nothing.
+        """
+        if not self.input:
+            # start() failed, which set the clock; this only runs it down.
+            self._await_restart()
+            return False
+
+        status = self.input.status()
+        if status.health is not self._reported_health:
+            self._report_health(status)
+            self._reported_health = status.health
+
+        if status:
+            self._restart_input_at = 0.0
+            return True
+        if status.health is nowplaying.inputs.InputHealth.NEEDS_RESTART:
+            self._await_restart()
+        # NEEDS_USER clears when the plugin sees its setting corrected and
+        # reports STARTING. BROKEN never clears itself, so the only way out is
+        # the user choosing a different input, which the previousinput check
+        # above catches. Either way there is nothing to do here.
+        return False
+
+    def _await_restart(self) -> None:
+        """Run the clock on a restart request, and rebuild when it runs out.
+
+        Clearing previousinput is what causes the rebuild: the next cycle sees
+        it differ from the configured input and goes through the whole
+        stop-construct-start path.
+        """
+        now = time.monotonic()
+        if not self._restart_input_at:
+            self._restart_input_at = now + _RESTART_DELAY_SECONDS
+        elif now >= self._restart_input_at:
+            self._restart_input_at = 0.0
+            self.previousinput = None
+
+    @staticmethod
+    def _report_health(status: "nowplaying.inputs.InputStatus", label: str = "input") -> None:
+        """Log a health change once, at a level that matches whose problem it is."""
+        health = status.health
+        text = status.message or health.value
+        if health is nowplaying.inputs.InputHealth.NEEDS_USER:
+            logging.error("%s needs attention: %s", label, text)
+        elif health is nowplaying.inputs.InputHealth.BROKEN:
+            logging.error("%s has stopped working: %s", label, text)
+        elif health is nowplaying.inputs.InputHealth.NEEDS_RESTART:
+            logging.warning("%s asked to be restarted: %s", label, text)
+        else:
+            logging.debug("%s health %s: %s", label, health.value, text)
+
+    async def _act_on_earshot_status(self) -> None:
+        """Rebuild the EarShot monitor when it asks.
+
+        It inherits remote's watcher, which dies when another observer already
+        holds the same file and then stores arriving tracks where nobody reads
+        them. Only NEEDS_RESTART is acted on: nothing here can clear NEEDS_USER
+        or BROKEN for a monitor the user never chose.
+        """
+        if not self.earshot_plugin:
+            return
+
+        status = self.earshot_plugin.status()
+        if status.health is not self._reported_earshot_health:
+            self._report_health(status, _EARSHOT_NAME)
+            self._reported_earshot_health = status.health
+
+        if status:
+            self._restart_earshot_at = 0.0
+            return
+        if status.health is not nowplaying.inputs.InputHealth.NEEDS_RESTART:
+            return
+
+        now = time.monotonic()
+        if not self._restart_earshot_at:
+            self._restart_earshot_at = now + _RESTART_DELAY_SECONDS
+        elif now >= self._restart_earshot_at:
+            # Dropping it is the rebuild: next cycle sees no monitor and starts one.
+            await self._stop_earshot_plugin()
+
+    async def _stop_earshot_plugin(self) -> None:
+        """Stop the EarShot monitor and clear everything derived from it."""
+        if self.earshot_plugin:
+            await self._stop_plugin(self.earshot_plugin, _EARSHOT_NAME)
+        self.earshot_plugin = None
+        self.earshot_last_meta = {}
+        self.main_source_suppressed_meta = {}
+        self._reported_earshot_health = None
+        self._restart_earshot_at = 0.0
 
     async def _manage_earshot_plugin(self):
-        """Start or stop the secondary EarShot monitor based on config and active source."""
+        """Start, stop or restart the secondary EarShot monitor."""
         active = self.config.cparser.value("settings/input")
         always_accept = self.config.cparser.value(
             "earshot/always_accept", type=bool, defaultValue=True
@@ -200,19 +357,19 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         )
 
         if should_run and self.earshot_plugin is None:
-            logging.info("Starting secondary EarShot monitor")
+            logging.info("Starting %s", _EARSHOT_NAME)
             self.earshot_plugin = self.plugins[earshot_key].Plugin(config=self.config)
+            self._reported_earshot_health = None
+            self._restart_earshot_at = 0.0
             try:
                 await self.earshot_plugin.start()
             except Exception as err:  # pylint: disable=broad-except
-                logging.error("Cannot start EarShot secondary monitor: %s", err)
+                logging.error("Cannot start %s: %s", _EARSHOT_NAME, err)
                 self.earshot_plugin = None
         elif not should_run and self.earshot_plugin is not None:
-            logging.info("Stopping secondary EarShot monitor")
-            await self.earshot_plugin.stop()
-            self.earshot_plugin = None
-            self.earshot_last_meta = {}
-            self.main_source_suppressed_meta = {}
+            await self._stop_earshot_plugin()
+        elif self.earshot_plugin is not None:
+            await self._act_on_earshot_status()
 
     async def run(self):
         """track polling process"""
@@ -266,11 +423,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._publish(self._pending_meta)
             self._pending_meta = None
         self.stopevent.set()
-        if self.earshot_plugin:
-            await self.earshot_plugin.stop()
-            self.earshot_plugin = None
+        await self._stop_earshot_plugin()
         if self.input:
-            await self.input.stop()
+            await self._stop_plugin(self.input, self.previousinput)
         self.plugins = None
         loop = asyncio.get_running_loop()
         if not self.testmode:
@@ -479,7 +634,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ""
         return metadata
 
-    async def gettrack(  # pylint: disable=too-many-branches,too-many-statements
+    async def gettrack(  # pylint: disable=too-many-branches,too-many-statements,too-many-return-statements
         self,
     ):
         """get currently playing track, returns None if not new or not found"""
@@ -488,17 +643,21 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         while self.config.getpause() and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(0.5)
 
-        if nowplaying.utils.safe_stopevent_check(self.stopevent) or not self.input:
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
-        try:
-            nextmeta = await self.input.getplayingtrack() or {}
-            for key, value in self.input.get_source_agent_data().items():
-                if key not in nextmeta:
-                    nextmeta[key] = value
-        except Exception as err:  # pylint: disable=broad-except
-            logging.exception("Failed during getplayingtrack() (%s)", err)
-            await asyncio.sleep(1)
+        nextmeta: TrackMetadata = {}
+        if self._input_pollable and self.input:
+            try:
+                nextmeta = await self.input.getplayingtrack() or {}
+                for key, value in self.input.get_source_agent_data().items():
+                    if key not in nextmeta:
+                        nextmeta[key] = value
+            except Exception as err:  # pylint: disable=broad-except
+                logging.exception("Failed during getplayingtrack() (%s)", err)
+                await asyncio.sleep(1)
+                return
+        elif not self.earshot_plugin:
             return
 
         nextmeta, _ = await self._check_earshot_override(nextmeta)
@@ -577,7 +736,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._process_artistextras()
 
         # checkagain
-        nextcheck = await self.input.getplayingtrack() or {}
+        nextcheck = {}
+        if self._input_pollable and self.input:
+            nextcheck = await self.input.getplayingtrack() or {}
         if not self._ismetaempty(nextcheck) and not self._ismetasame(nextcheck):
             logging.info("Track changed during delay, skipping")
             self.currentmeta = oldmeta

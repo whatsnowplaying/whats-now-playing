@@ -2,6 +2,7 @@
 """Test Rekordbox plugin"""
 # pylint: disable=protected-access,missing-function-docstring,redefined-outer-name
 
+import base64
 import json
 import pathlib
 import sys
@@ -10,13 +11,28 @@ from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
+from Crypto.Cipher import Blowfish
 
+import nowplaying.inputs  # pylint: disable=import-error
 import nowplaying.rekordbox.config
 import nowplaying.rekordbox.database
 import nowplaying.rekordbox.plugin
 import nowplaying.rekordbox.types
 
 _TEST_KEY = "0123456789abcdef" * 4  # valid 64-char hex key for tests
+
+
+def _make_dp_blob(plaintext: str) -> str:
+    """Encrypt plaintext the same way Rekordbox's options.json 'dp' field is
+    encrypted, so tests can exercise a real decrypt round-trip."""
+    magic = nowplaying.rekordbox.config._decode_secret(
+        nowplaying.rekordbox.config._RB6_MAGIC_BLOB
+    ).encode()
+    cipher = Blowfish.new(magic, Blowfish.MODE_ECB)
+    data = plaintext.encode("utf-8")
+    pad_len = 8 - (len(data) % 8)
+    padded = data + bytes([pad_len]) * pad_len
+    return base64.b64encode(cipher.encrypt(padded)).decode()
 
 
 class MockSqlCipher:  # pylint: disable=too-few-public-methods
@@ -167,6 +183,9 @@ async def _db_reader(mock_database_path, mock_data=None):
     ):
         reader = nowplaying.rekordbox.database.DatabaseReader(config_reader)
         await reader.initialize(custom_key=_TEST_KEY)
+        # initialize() validates the key with a query of its own. Drop it so
+        # callers can index executed_queries by what they actually exercised.
+        mock_sq.executed_queries.clear()
         yield mock_sq, reader
 
 
@@ -238,8 +257,8 @@ def test_config_data_path_windows_fallback(monkeypatch):
     assert path.parts[-4:] == ("AppData", "Roaming", "Pioneer", "rekordbox")
 
 
-def test_config_get_password_rb7_fallback():
-    """get_password() returns empty string for RB7 (no embedded key)"""
+def test_config_get_password_missing_options_file():
+    """get_password() returns empty string when options.json doesn't exist"""
     config = nowplaying.rekordbox.config.ConfigReader()
     with unittest.mock.patch(
         "nowplaying.rekordbox.config._get_options_path",
@@ -249,8 +268,28 @@ def test_config_get_password_rb7_fallback():
     assert password == ""
 
 
-def test_config_get_password_rb7_from_options(tmp_path):
-    """get_password() returns empty string when options.json reports app_ver=7.x"""
+@pytest.mark.parametrize("app_ver", ["6.8.5", "7.1.4"])
+def test_config_get_password_decrypts_dp_regardless_of_version(tmp_path, app_ver):
+    """get_password() decrypts a valid 'dp' field regardless of app_ver.
+
+    RB6 and RB7 installs upgraded from RB6 both carry this field; only a
+    fresh RB7 install may lack it, which callers must handle separately
+    by validating the returned key actually opens the database.
+    """
+    options_file = tmp_path / "options.json"
+    options_file.write_text(
+        json.dumps({"options": [["dp", _make_dp_blob(_TEST_KEY)], ["app_ver", app_ver]]})
+    )
+    config = nowplaying.rekordbox.config.ConfigReader()
+    with unittest.mock.patch(
+        "nowplaying.rekordbox.config._get_options_path",
+        return_value=options_file,
+    ):
+        assert config.get_password() == _TEST_KEY
+
+
+def test_config_get_password_undecryptable_dp_returns_empty(tmp_path):
+    """get_password() gracefully returns empty string when 'dp' can't be decrypted"""
     options_file = tmp_path / "options.json"
     options_file.write_text(
         '{"options":[["db-path","/tmp/master.db"],["dp","ignored"],["app_ver","7.1.4"]]}'
@@ -359,8 +398,12 @@ def test_types_track_to_metadata():
 @pytest.mark.asyncio
 async def test_database_initialization(mock_database_path):
     config_reader = nowplaying.rekordbox.config.ConfigReader()
-    with unittest.mock.patch.object(
-        config_reader, "get_database_path", return_value=mock_database_path
+    mock_sq = MockSqlCipher()
+    with (
+        unittest.mock.patch.object(
+            config_reader, "get_database_path", return_value=mock_database_path
+        ),
+        unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sq),
     ):
         reader = nowplaying.rekordbox.database.DatabaseReader(config_reader)
         await reader.initialize(custom_key=_TEST_KEY)
@@ -424,6 +467,8 @@ async def test_database_get_random_track_from_playlist(mock_database_path):
 
 @pytest.mark.asyncio
 async def test_database_connection_failure(mock_database_path):
+    """A connection failure during the key-validation query now surfaces from
+    initialize() itself rather than later from get_recent_track()."""
     config_reader = nowplaying.rekordbox.config.ConfigReader()
     mock_sqlite = unittest.mock.Mock()
     mock_sqlite.connect.side_effect = Exception("Connection failed")
@@ -434,9 +479,8 @@ async def test_database_connection_failure(mock_database_path):
         unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite),
     ):
         reader = nowplaying.rekordbox.database.DatabaseReader(config_reader)
-        await reader.initialize(custom_key=_TEST_KEY)
         with pytest.raises(nowplaying.rekordbox.types.RekordboxError):
-            await reader.get_recent_track()
+            await reader.initialize(custom_key=_TEST_KEY)
 
 
 @pytest.mark.asyncio
@@ -570,6 +614,30 @@ async def test_plugin_get_random_track(rekordbox_plugin, mock_sqlcipher):
 
 
 @pytest.mark.asyncio
+async def test_plugin_reports_needs_user_when_key_does_not_validate(rekordbox_plugin):
+    """A key that cannot open the database is the user's to fix, not an exception.
+
+    Reporting it through status() is what lets the wizard show the reason and
+    trackpoll stop polling, neither of which an exception could express.
+    """
+    mock_sqlite = unittest.mock.Mock()
+    mock_sqlite.connect.side_effect = Exception("file is not a database")
+    with unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite):
+        await rekordbox_plugin.start(testmode=True)
+
+    try:
+        status = rekordbox_plugin.status()
+        assert status.health is nowplaying.inputs.InputHealth.NEEDS_USER
+        assert status.message, "the user needs to be told what to do"
+        assert not status, "a plugin needing the user is not worth polling"
+        # _running means the watcher is up, which it is: whether the plugin can
+        # actually read anything is what status() answers.
+        assert rekordbox_plugin._running  # pylint: disable=protected-access
+    finally:
+        await rekordbox_plugin.stop()
+
+
+@pytest.mark.asyncio
 async def test_plugin_components_connected(mock_database_path):
     """Plugin wires config_reader into database_reader at construction"""
     mock_config = unittest.mock.Mock()
@@ -636,3 +704,95 @@ async def test_database_bpm_scaling_end_to_end(mock_database_path):
     assert track is not None
     assert track.bpm == 128.0
     assert track.to_metadata()["bpm"] == "128"
+
+
+@pytest.mark.asyncio
+async def test_a_corrected_key_recovers_without_a_restart(rekordbox_plugin):
+    """status() notices the new key, and getplayingtrack() does the reopening.
+
+    status() is called every cycle, so it stays a config read; the database work
+    happens in the call that is already allowed to do work.
+    """
+    mock_sqlite = unittest.mock.Mock()
+    mock_sqlite.connect.side_effect = Exception("file is not a database")
+    with unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite):
+        await rekordbox_plugin.start(testmode=True)
+        assert rekordbox_plugin.status().health is nowplaying.inputs.InputHealth.NEEDS_USER
+
+        # Same key: still the user's problem, and no further database attempts.
+        attempts = mock_sqlite.connect.call_count
+        for _ in range(5):
+            assert rekordbox_plugin.status().health is nowplaying.inputs.InputHealth.NEEDS_USER
+        assert mock_sqlite.connect.call_count == attempts, "status() must not touch the database"
+
+        # The user enters a different key.
+        rekordbox_plugin.config.cparser.setValue("rekordbox/custom_key", "b" * 64)
+        assert rekordbox_plugin.status().health is nowplaying.inputs.InputHealth.STARTING
+
+
+@pytest.mark.asyncio
+async def test_a_bad_key_still_leaves_the_watcher_running(rekordbox_plugin):
+    """The directory to watch comes from options.json, not from decrypting anything.
+
+    Returning early on a bad key would leave no observer, and the later reopen
+    does not create one, so the plugin would spend the session on
+    _check_wal_mtime() stat polling instead of file events.
+    """
+    mock_sqlite = unittest.mock.Mock()
+    mock_sqlite.connect.side_effect = Exception("file is not a database")
+    with unittest.mock.patch("nowplaying.rekordbox.database.sqlite", mock_sqlite):
+        await rekordbox_plugin.start(testmode=True)
+    try:
+        assert rekordbox_plugin.status().health is nowplaying.inputs.InputHealth.NEEDS_USER
+        assert rekordbox_plugin.observer is not None, "no observer was created"
+        assert rekordbox_plugin.observer.is_alive(), "the observer is not running"
+        assert rekordbox_plugin._running  # pylint: disable=protected-access
+    finally:
+        await rekordbox_plugin.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("polling", [False, True])
+async def test_a_missing_library_waits_instead_of_raising(bootstrap, tmp_path, polling):  # pylint: disable=redefined-outer-name
+    """start() must not raise for a library that is not there.
+
+    PollingObserver and inotify both raise FileNotFoundError from schedule() on
+    a missing path, where macOS fsevents does not, so this is parameterized:
+    testing only the default observer passes on a Mac and breaks elsewhere.
+    """
+    bootstrap.cparser.setValue("quirks/pollingobserver", polling)
+    bootstrap.cparser.setValue("quirks/pollinginterval", 0.5)
+    missing = tmp_path / "not-here" / "master.db"
+
+    plugin = nowplaying.rekordbox.plugin.RekordboxPlugin(config=bootstrap)
+    with unittest.mock.patch.object(
+        plugin.config_reader, "get_database_path", return_value=missing
+    ):
+        await plugin.start(testmode=True)
+        try:
+            status = plugin.status()
+            assert status.health is nowplaying.inputs.InputHealth.WAITING
+            assert status, "a library that may yet appear is worth polling"
+            assert plugin.observer is None, "nothing to watch, so no observer"
+        finally:
+            await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_the_library_appearing_moves_to_starting(bootstrap, tmp_path):  # pylint: disable=redefined-outer-name
+    """WAITING lifts only once the file is actually there.
+
+    Reporting STARTING on a still-missing library would have getplayingtrack()
+    redo the setup every cycle.
+    """
+    later = tmp_path / "master.db"
+    plugin = nowplaying.rekordbox.plugin.RekordboxPlugin(config=bootstrap)
+    with unittest.mock.patch.object(plugin.config_reader, "get_database_path", return_value=later):
+        await plugin.start(testmode=True)
+        try:
+            assert plugin.status().health is nowplaying.inputs.InputHealth.WAITING
+
+            later.write_bytes(b"not a real database, but it exists")
+            assert plugin.status().health is nowplaying.inputs.InputHealth.STARTING
+        finally:
+            await plugin.stop()

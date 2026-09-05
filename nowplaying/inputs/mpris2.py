@@ -28,6 +28,7 @@ except ImportError:
 from multidict import CIMultiDict
 from PySide6.QtCore import Qt  # pylint: disable=no-name-in-module
 
+import nowplaying.inputs
 from nowplaying.inputs import Detected, InputPlugin
 
 MPRIS2_BASE = "org.mpris.MediaPlayer2"
@@ -267,10 +268,27 @@ class Plugin(InputPlugin):
         """
         return Detected(DBUS_STATUS, fallback=True)
 
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report on D-Bus and the chosen player.
+
+        No D-Bus at all is BROKEN: this plugin cannot work on this machine and
+        no amount of waiting changes that. A player that has not been chosen, or
+        one that is not running, is the user's to sort out.
+        """
+        if not self.dbus_status:
+            return nowplaying.inputs.InputStatus.broken("D-Bus is not available on this machine.")
+        if not self.config.cparser.value("mpris2/service"):
+            return nowplaying.inputs.InputStatus.needs_user("No MPRIS2 player chosen.")
+        if not self.mpris2:
+            # A player chosen after start() cleared the handler: getplayingtrack()
+            # rebuilds it, and STARTING is what licenses that.
+            return nowplaying.inputs.InputStatus.starting("Connecting to the chosen player.")
+        return nowplaying.inputs.InputStatus()
+
     async def gethandler(self):
         """setup the MPRIS2Handler for this session"""
 
-        if not self.mpris2 or not self.dbus_status:
+        if not self.dbus_status:
             return
 
         sameservice = self.config.cparser.value("mpris2/service")
@@ -279,6 +297,13 @@ class Plugin(InputPlugin):
             self.service = None
             self.mpris2 = None
             return
+
+        if not self.mpris2:
+            # Clearing the handler when no player was chosen used to be
+            # permanent, because the guard above tested it: choosing one later
+            # left nothing to rebuild it.
+            self.mpris2 = MPRIS2Handler()
+            self.service = None
 
         if self.service and self.service == sameservice:
             return

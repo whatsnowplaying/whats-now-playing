@@ -83,7 +83,9 @@ playing" information from various DJ software.
 
 - `nowplaying/plugin.py` - Base plugin class (WNPBasePlugin)
 - Input plugins in `nowplaying/inputs/` - Read track data from DJ software
-  (Serato, Traktor, etc.)
+  (Serato, Traktor, etc.). Read `nowplaying/inputs/CLAUDE.md` before working in
+  here — it covers the `start()`/`stop()`/`status()` contract, which exists
+  because trackpoll and the wizard drive plugins independently
 - Output processes in `nowplaying/processes/` - Send data to various
   destinations (OBS, Twitch, Discord)
 - Artist extras in `nowplaying/artistextras/` - Fetch additional metadata

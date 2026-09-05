@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QWidget,
 )
 
+import nowplaying.inputs
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
@@ -116,6 +117,28 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return True
         return False
 
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report on the connection to the JRiver server.
+
+        A missing host is the user's to fill in. A host that will not answer is
+        WAITING rather than broken: it is usually another machine, and the
+        plugin already re-authenticates when it comes back, so there is nothing
+        for a caller to do but keep asking.
+        """
+        if not self.config.cparser.value("jriver/host"):
+            return nowplaying.inputs.InputStatus.needs_user("No JRiver host configured.")
+        if not self.session or not self.base_url:
+            # A host entered after start() gave up leaves nothing built, and
+            # getplayingtrack() returns None on exactly that. STARTING is what
+            # licenses it to connect; reporting OK here would promise a working
+            # plugin that never does anything.
+            return nowplaying.inputs.InputStatus.starting("Connecting to JRiver.")
+        if self._connection_failed:
+            return nowplaying.inputs.InputStatus.waiting(
+                f"Cannot reach JRiver on {self.host}.", f"host={self.host} port={self.port}"
+            )
+        return nowplaying.inputs.InputStatus()
+
     async def start(self) -> bool:
         """Initialize the plugin and authenticate"""
         self.host = self.config.cparser.value("jriver/host")
@@ -140,9 +163,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self._connection_failed = False
             return True
 
-        # Don't close session on failed initialization - keep it for auto-recovery
+        # An unreachable server is not a failed start: the plugin is up and
+        # WAITING, status() says so, and the session is what it reconnects
+        # with. The return value is vestigial -- no caller reads it.
         self._connection_failed = True
-        return True  # Return True to allow plugin to be enabled for auto-recovery
+        return True
 
     async def _test_connection(self) -> bool:
         """Test connection to JRiver server"""
@@ -289,7 +314,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get currently playing track from JRiver"""
         if not self.base_url or not self.session:
-            return None
+            # status() reported STARTING for this; do the connecting here, where
+            # I/O belongs, rather than in the call made every cycle.
+            if self.config and self.config.cparser.value("jriver/host"):
+                await self.start()
+            if not self.base_url or not self.session:
+                return None
 
         # Attempt auto-recovery if needed
         if not await self._attempt_auto_recovery():

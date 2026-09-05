@@ -665,7 +665,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 self._wal_timer = None
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            await asyncio.to_thread(self.observer.join)
             self.observer = None
         self._deck_tracks.clear()
         self._started = False

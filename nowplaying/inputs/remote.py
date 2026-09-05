@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Beam input plugin"""
 
+import asyncio
 import logging
 import os
 import pathlib
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
 )
 
 import nowplaying.db
+import nowplaying.inputs
 from nowplaying.inputs import Detected, InputPlugin
 from nowplaying.types import TrackMetadata
 import nowplaying.wizard
@@ -116,6 +118,22 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.observer = nowplaying.db.DBWatcher(databasefile=str(self.remotedbfile))
         self.observer.start(customhandler=self._read_track)
 
+    def status(self) -> "nowplaying.inputs.InputStatus":
+        """Report whether the watch is still delivering.
+
+        The watcher can die after start() succeeded: scheduling this directory
+        while another observer already holds it kills the emitter thread, which
+        then delivers nothing and is indistinguishable from nobody sending any
+        tracks. EarShot subclasses this plugin and watches the same file, which
+        is how two observers come to want it at once.
+        """
+        if self.observer and not self.observer.is_alive():
+            return nowplaying.inputs.InputStatus.needs_restart(
+                "Stopped watching for incoming tracks.",
+                f"watcher on {self.remotedbfile} is not running",
+            )
+        return nowplaying.inputs.InputStatus()
+
     def _read_track(self, event):
         if event.is_directory:
             return
@@ -154,7 +172,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """stop the remote plugin"""
         self._reset_meta()
         if self.observer:
-            self.observer.stop()
+            # DBWatcher.stop() is synchronous and joins the observer thread, so
+            # the whole call goes off the loop: a coroutine that never awaits
+            # cannot be bounded by the caller's timeout.
+            await asyncio.to_thread(self.observer.stop)
+            # Dropping the reference is what keeps status() honest. DBWatcher
+            # clears its own observer, so a stopped watcher and a dead one look
+            # identical from here.
+            self.observer = None
 
     def on_m3u_dir_button(self):
         """filename button clicked action"""

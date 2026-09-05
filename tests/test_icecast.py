@@ -13,6 +13,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import nowplaying.inputs
+import nowplaying.utils.network
 import nowplaying.inputs.icecast
 
 
@@ -818,3 +820,35 @@ def test_empty_explicit_fields_do_not_clobber_song(query, expected, description)
         f"GET /admin/metadata?mode=updinfo&{query} HTTP/1.0".encode()
     )
     assert callback.call_args[0][0] == expected
+
+
+@pytest.mark.asyncio
+async def test_icecast_reports_waiting_when_the_port_is_not_bound(bootstrap):  # pylint: disable=redefined-outer-name
+    """An unbound port is WAITING, not the user's problem.
+
+    Whatever holds the port usually lets go, and this plugin already retries on
+    its own timer, so there is nothing for a caller to do but keep asking. It
+    still has to say so: a broadcaster aimed at a port nobody is listening on
+    otherwise looks like one that simply has not connected.
+    """
+    plugin = nowplaying.inputs.icecast.Plugin(config=bootstrap)
+    assert plugin.server is None
+
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.WAITING
+    assert status, "WAITING still expects to produce a track, so keep polling"
+    assert "port" in status.message.lower()
+
+
+@pytest.mark.asyncio
+async def test_icecast_is_ok_once_the_port_is_bound(bootstrap):  # pylint: disable=redefined-outer-name
+    """The healthy case has to be quiet or WAITING carries no information."""
+    plugin = nowplaying.inputs.icecast.Plugin(config=bootstrap)
+    port = nowplaying.utils.network.first_free_port(8010)
+    bootstrap.cparser.setValue(plugin._port_config_key, port)  # pylint: disable=protected-access
+    await plugin.start()
+    try:
+        assert plugin.server is not None, f"could not bind {port} for the test"
+        assert plugin.status().health is nowplaying.inputs.InputHealth.OK
+    finally:
+        await plugin.stop()
