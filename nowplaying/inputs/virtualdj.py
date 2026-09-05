@@ -633,7 +633,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         self._reset_meta()
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            await asyncio.to_thread(self.observer.join)
             self.observer = None
 
         # Signal background processors to shutdown cleanly

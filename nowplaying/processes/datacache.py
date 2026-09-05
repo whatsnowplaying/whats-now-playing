@@ -119,7 +119,9 @@ async def _run(
                 last_watcher_time = watcher.updatetime
                 await asyncio.sleep(0.1)
     finally:
-        watcher.stop()
+        # Off the loop: DBWatcher.stop() joins the observer thread, and the
+        # close() below still has to run.
+        await asyncio.to_thread(watcher.stop)
         await client.close()
         logging.info("DataCache worker stopped")
 

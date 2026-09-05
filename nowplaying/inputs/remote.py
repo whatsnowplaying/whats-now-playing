@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Beam input plugin"""
 
+import asyncio
 import logging
 import os
 import pathlib
@@ -171,7 +172,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """stop the remote plugin"""
         self._reset_meta()
         if self.observer:
-            self.observer.stop()
+            # DBWatcher.stop() is synchronous and joins the observer thread, so
+            # the whole call goes off the loop: a coroutine that never awaits
+            # cannot be bounded by the caller's timeout.
+            await asyncio.to_thread(self.observer.stop)
+            # Dropping the reference is what keeps status() honest. DBWatcher
+            # clears its own observer, so a stopped watcher and a dead one look
+            # identical from here.
+            self.observer = None
 
     def on_m3u_dir_button(self):
         """filename button clicked action"""

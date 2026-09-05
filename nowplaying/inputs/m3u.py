@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read m3u files"""
 
+import asyncio
 import contextlib
 import logging
 import os
@@ -271,7 +272,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._reset_meta()
         if self.observer:
             self.observer.stop()
-            self.observer.join()
+            await asyncio.to_thread(self.observer.join)
             self.observer = None
 
     def on_m3u_dir_button(self):

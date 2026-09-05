@@ -191,7 +191,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-m
             self.local = stilllocal
             self.url = stillurl
             if self.serato:
-                self.serato.stop()
+                await asyncio.to_thread(self.serato.stop)
             polling_interval = self.config.cparser.value(
                 "quirks/pollinginterval", type=float, defaultValue=1.0
             )
@@ -366,7 +366,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes,too-m
     async def stop(self):
         """stop the handler"""
         if self.serato:
-            self.serato.stop()
+            await asyncio.to_thread(self.serato.stop)
         # Clear crate cache on stop
         self._crate_count_cache.clear()
 

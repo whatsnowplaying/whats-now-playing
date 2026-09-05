@@ -22,13 +22,34 @@ and guessed differently.
 2. `start()` is atomic: it either succeeds or leaves nothing allocated
 3. `stop()` is safe at any time, including after a failed or never-called
    `start()`. Callers run it on every path out, so check what is held rather
-   than assuming. It has no deadline of its own, so trackpoll bounds every call
-   through `_stop_plugin()`
-4. Recoverable conditions are the plugin's to retry, silently. No raising, no
+   than assuming
+4. `stop()` never blocks without awaiting. Joining a thread goes through
+   `await asyncio.to_thread(...)`, because the caller's timeout can only
+   interrupt work that reaches an await -- see below
+5. Recoverable conditions are the plugin's to retry, silently. No raising, no
    caller-side loop
-5. `start()` does not raise for anything operational. A busy port, an
+6. `start()` does not raise for anything operational. A busy port, an
    unreachable host or a key that does not work are reported through `status()`.
    Exceptions are for bugs
+
+### Rule 4 is not a style preference
+
+`trackpoll._stop_plugin()` wraps every `stop()` in `asyncio.wait_for`, but a
+deadline in asyncio is cooperative: it can only interrupt a coroutine that
+reaches an await. `async def` promises a signature, not that the body ever
+suspends, so a bare `observer.join()` blocks the whole event loop and
+`wait_for` returns *late without raising*. Measured at 1.00s against a 0.1s
+timeout.
+
+That makes the failure worse than the one the bound was added for -- the poll
+loop is only part of what stops. So the bound is real only if the plugin
+cooperates, which is why this is the plugin's rule and not the caller's.
+`tests/test_input_contract.py` checks it statically, since nothing at runtime
+distinguishes a slow join from a wedged one.
+
+Note this reaches beyond the obvious files: `remote.py` holds a
+`db.DBWatcher`, whose `stop()` is synchronous and joins, so the async caller
+offloads the whole call rather than the join.
 
 ## status()
 

@@ -180,15 +180,18 @@ async def test_remote_plugin_stop(remote_bootstrap):  # pylint: disable=redefine
     config = remote_bootstrap
     plugin = nowplaying.inputs.remote.Plugin(config=config)
 
-    # Set up observer
-    plugin.observer = MagicMock()
+    # Set up observer. Held in a local because stop() drops the reference, so
+    # status() cannot mistake a stopped watcher for a dead one.
+    observer = MagicMock()
+    plugin.observer = observer
     plugin.metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
     await plugin.stop()
 
     # Should reset metadata and stop observer
     assert plugin.metadata == {"artist": None, "title": None, "filename": None}
-    plugin.observer.stop.assert_called_once()
+    observer.stop.assert_called_once()
+    assert plugin.observer is None
 
 
 @pytest.mark.asyncio
@@ -362,3 +365,25 @@ async def test_remote_is_ok_while_the_watcher_runs(bootstrap):  # pylint: disabl
             assert plugin.status().health is nowplaying.inputs.InputHealth.OK
     finally:
         await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_a_cleanly_stopped_remote_does_not_report_needs_restart(bootstrap):  # pylint: disable=redefined-outer-name
+    """ "Stopped" and "the watcher died" must not be the same signal.
+
+    DBWatcher.stop() clears its own inner observer, so a DBWatcher that was
+    asked to stop is indistinguishable from one whose emitter died unless the
+    plugin drops the reference too. trackpoll rebuilds on NEEDS_RESTART, so
+    leaving it set after a deliberate stop invites a restart loop.
+    """
+    plugin = nowplaying.inputs.remote.Plugin(config=bootstrap)
+    await plugin.start()
+    assert plugin.status().health is nowplaying.inputs.InputHealth.OK
+
+    await plugin.stop()
+
+    assert plugin.observer is None, "stop() has to drop the watcher, not just stop it"
+    status = plugin.status()
+    assert status.health is nowplaying.inputs.InputHealth.OK, (
+        f"a stopped plugin reported {status.health}, which would trigger a rebuild"
+    )
