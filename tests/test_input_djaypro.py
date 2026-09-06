@@ -1254,16 +1254,23 @@ async def test_get_available_playlists_missing_db(bootstrap):
 # ---------------------------------------------------------------------------
 
 
-def _wal_state(dbfile: pathlib.Path) -> tuple | None:
-    """Snapshot MediaLibrary.db-wal so a write of any size is visible.
+def _wal_state(dbfile: pathlib.Path) -> tuple[int, bytes] | None:
+    """Snapshot MediaLibrary.db-wal so any write to it is visible.
 
     Only the -wal file, because that is the one _fs_event acts on. Even a
     read-only connection writes -shm, which is why the filter there has to stay
     narrow.
+
+    Contents and mtime, because neither is sufficient alone. After a read-only
+    open the -wal is zero length, so the regression this guards -- a read-write
+    close checkpointing and deleting it, then the next read recreating it --
+    leaves the bytes identical and moves only the mtime. A rewrite in place
+    would do the reverse.
     """
     wal = dbfile.with_name(dbfile.name + "-wal")
-    stat = wal.stat() if wal.exists() else None
-    return None if stat is None else (stat.st_size, stat.st_mtime_ns)
+    if not wal.exists():
+        return None
+    return (wal.stat().st_mtime_ns, wal.read_bytes())
 
 
 def test_reading_djay_db_does_not_touch_the_wal(tmp_path):
