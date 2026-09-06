@@ -1247,3 +1247,53 @@ async def test_get_available_playlists_missing_db(bootstrap):
         # No MediaLibrary.db created
 
         assert await plugin.get_available_playlists() == []
+
+
+# ---------------------------------------------------------------------------
+# read-only access to djay's database
+# ---------------------------------------------------------------------------
+
+
+def _wal_state(dbfile: pathlib.Path) -> tuple | None:
+    """Snapshot MediaLibrary.db-wal so a write of any size is visible.
+
+    Only the -wal file, because that is the one _fs_event acts on. Even a
+    read-only connection writes -shm, which is why the filter there has to stay
+    narrow.
+    """
+    wal = dbfile.with_name(dbfile.name + "-wal")
+    stat = wal.stat() if wal.exists() else None
+    return None if stat is None else (stat.st_size, stat.st_mtime_ns)
+
+
+def test_reading_djay_db_does_not_touch_the_wal(tmp_path):
+    """Reading djay's database must not write its WAL sidecars.
+
+    A read-write connection checkpoints on close and deletes -wal and -shm, so
+    the plugin's own watcher on MediaLibrary.db-wal saw every read as a djay Pro
+    write: each event scheduled a debounce whose handler read the database
+    again, at several events per second, with djay Pro not even running.
+    """
+    dbfile = tmp_path / "MediaLibrary.db"
+    blob = _build_tsaf_blob(
+        "ADCMediaItemAnalyzedData", [("DJ", "artist"), ("Track", "title"), (128.0, "bpm")]
+    )
+    _make_db_with_collections(dbfile, {"historySessionItems": [("key-0", blob)]})
+    with sqlite3.connect(dbfile) as conn:
+        assert conn.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
+    conn.close()
+
+    # Settle the empty -wal a first open legitimately creates, then confirm
+    # further reads leave it alone.
+    nowplaying.djaypro.mediadb.query_recent_history(dbfile)
+    before = _wal_state(dbfile)
+
+    # A read-only open does create the -wal, so its absence means the open
+    # failed. query_recent_history() swallows OperationalError and returns [],
+    # which is what a DSN this platform cannot parse produces -- without this
+    # the loop below would compare None to None and pass.
+    assert before is not None, "the read never opened the database"
+
+    for _ in range(3):
+        nowplaying.djaypro.mediadb.query_recent_history(dbfile)
+        assert _wal_state(dbfile) == before

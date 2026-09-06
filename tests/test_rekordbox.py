@@ -43,7 +43,8 @@ class MockSqlCipher:  # pylint: disable=too-few-public-methods
         self.executed_queries = []
         self.executed_pragmas = []
 
-    def connect(self, _db_path):
+    def connect(self, _db_path, uri=False):  # pylint: disable=unused-argument
+        """Mirror sqlcipher3.connect's signature, which takes uri."""
         return MockConnection(self)
 
     class dbapi2:  # pylint: disable=too-few-public-methods,invalid-name
