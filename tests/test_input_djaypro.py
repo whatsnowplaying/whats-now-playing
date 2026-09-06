@@ -1195,3 +1195,60 @@ async def test_get_available_playlists_missing_db(bootstrap):
         # No MediaLibrary.db created
 
         assert await plugin.get_available_playlists() == []
+
+
+# ---------------------------------------------------------------------------
+# read-only access to djay's database
+# ---------------------------------------------------------------------------
+
+
+def _wal_state(dbfile: pathlib.Path) -> tuple[int, bytes] | None:
+    """Snapshot MediaLibrary.db-wal so any write to it is visible.
+
+    Only the -wal file, because that is the one _fs_event acts on. Even a
+    read-only connection writes -shm, which is why the filter there has to stay
+    narrow.
+
+    Contents and mtime, because neither is sufficient alone. After a read-only
+    open the -wal is zero length, so the regression this guards -- a read-write
+    close checkpointing and deleting it, then the next read recreating it --
+    leaves the bytes identical and moves only the mtime. A rewrite in place
+    would do the reverse.
+    """
+    wal = dbfile.with_name(dbfile.name + "-wal")
+    if not wal.exists():
+        return None
+    return (wal.stat().st_mtime_ns, wal.read_bytes())
+
+
+def test_reading_djay_db_does_not_touch_the_wal(tmp_path):
+    """Reading djay's database must not write its WAL sidecars.
+
+    A read-write connection checkpoints on close and deletes -wal and -shm, so
+    the plugin's own watcher on MediaLibrary.db-wal saw every read as a djay Pro
+    write: each event scheduled a debounce whose handler read the database
+    again, at several events per second, with djay Pro not even running.
+    """
+    dbfile = tmp_path / "MediaLibrary.db"
+    blob = _build_tsaf_blob(
+        "ADCMediaItemAnalyzedData", [("DJ", "artist"), ("Track", "title"), (128.0, "bpm")]
+    )
+    _make_db_with_collections(dbfile, {"historySessionItems": [("key-0", blob)]})
+    with sqlite3.connect(dbfile) as conn:
+        assert conn.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
+    conn.close()
+
+    # Settle the empty -wal a first open legitimately creates, then confirm
+    # further reads leave it alone.
+    nowplaying.djaypro.mediadb.query_recent_history(dbfile)
+    before = _wal_state(dbfile)
+
+    # A read-only open does create the -wal, so its absence means the open
+    # failed. query_recent_history() swallows OperationalError and returns [],
+    # which is what a DSN this platform cannot parse produces -- without this
+    # the loop below would compare None to None and pass.
+    assert before is not None, "the read never opened the database"
+
+    for _ in range(3):
+        nowplaying.djaypro.mediadb.query_recent_history(dbfile)
+        assert _wal_state(dbfile) == before

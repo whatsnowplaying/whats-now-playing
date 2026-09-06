@@ -46,6 +46,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import nowplaying.utils
+import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
@@ -188,7 +189,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "FROM tracks WHERE album=? AND artist=? AND title=? "
             "ORDER BY last_played"
         )
-        async with aiosqlite.connect(dbfile, timeout=30) as connection:
+        async with aiosqlite.connect(
+            nowplaying.utils.sqlite.read_only_dsn(str(dbfile)), uri=True, timeout=30
+        ) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             params = (
@@ -260,7 +263,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
         playlists = []
 
-        async with aiosqlite.connect(dbfile, timeout=30) as connection:
+        async with aiosqlite.connect(
+            nowplaying.utils.sqlite.read_only_dsn(str(dbfile)), uri=True, timeout=30
+        ) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
 
@@ -393,7 +398,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Get a random track from playlist (handles both static and smart playlists)"""
         dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
 
-        async with aiosqlite.connect(dbfile, timeout=30) as connection:
+        async with aiosqlite.connect(
+            nowplaying.utils.sqlite.read_only_dsn(str(dbfile)), uri=True, timeout=30
+        ) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
 
@@ -436,7 +443,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         )
 
         try:
-            async with aiosqlite.connect(dbfile, timeout=30) as connection:
+            async with aiosqlite.connect(
+                nowplaying.utils.sqlite.read_only_dsn(str(dbfile)), uri=True, timeout=30
+            ) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
 

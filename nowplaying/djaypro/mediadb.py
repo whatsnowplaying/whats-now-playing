@@ -45,7 +45,9 @@ def query_recent_history(dbfile: pathlib.Path, limit: int = 20) -> list[dict]:
 
     def query_db():
         records = []
-        with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            str(dbfile), timeout=1, read_only=True
+        ) as connection:
             cursor = connection.cursor()
             cursor.execute(
                 "SELECT data FROM database2 "
@@ -76,7 +78,9 @@ def get_analyzed_data_by_uuid(dbfile: pathlib.Path | None, track_uuid: str) -> d
         return {}
 
     def query_db() -> dict:
-        with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=1) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            str(dbfile), timeout=1, read_only=True
+        ) as connection:
             cursor = connection.cursor()
             cursor.execute(
                 "SELECT data FROM database2 WHERE collection='mediaItemAnalyzedData' AND key=?",
@@ -147,7 +151,7 @@ def has_tracks_in_entire_library(dbfile: pathlib.Path | None, artist_name: str) 
     if not dbfile or not artist_lower:
         return False
 
-    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5, read_only=True) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT data FROM database2 WHERE collection='mediaItemTitleIDs'")
         for (blob,) in cursor:
@@ -188,7 +192,7 @@ def has_tracks_in_playlists(
         ' WHERE p."group" = ?'
         "   AND d.collection = 'mediaItemTitleIDs'"
     )
-    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5, read_only=True) as conn:
         cursor = conn.cursor()
         for playlist_name in playlist_names:
             try:
@@ -210,7 +214,7 @@ def get_available_playlists_sync(dbfile: pathlib.Path | None) -> list[str]:
     """Return sorted list of playlist names from view_mediaItemPlaylistView_page."""
     if not dbfile:
         return []
-    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(dbfile), timeout=5, read_only=True) as conn:
         cursor = conn.cursor()
         try:
             cursor.execute(
