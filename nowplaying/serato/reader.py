@@ -34,7 +34,9 @@ class Serato4SQLiteReader:
             return {}
 
         async def _query_locations() -> dict[int, pathlib.Path]:
-            async with aiosqlite.connect(self.db_path) as connection:
+            async with aiosqlite.connect(
+                nowplaying.utils.sqlite.read_only_dsn(str(self.db_path)), uri=True
+            ) as connection:
                 connection.row_factory = aiosqlite.Row
 
                 # Query location_connections view to get database paths for each location
@@ -91,7 +93,9 @@ class Serato4SQLiteReader:
             return []
 
         async def _query_db_paths() -> list[pathlib.Path]:
-            async with aiosqlite.connect(self.db_path) as connection:
+            async with aiosqlite.connect(
+                nowplaying.utils.sqlite.read_only_dsn(str(self.db_path)), uri=True
+            ) as connection:
                 connection.row_factory = aiosqlite.Row
 
                 # Query location_connections view to get all database paths
@@ -133,7 +137,9 @@ class Serato4SQLiteReader:
         played_filter = "AND played = 1" if self.require_played else ""
 
         async def _query_tracks() -> list[dict[str, t.Any]]:
-            async with aiosqlite.connect(self.db_path) as connection:
+            async with aiosqlite.connect(
+                nowplaying.utils.sqlite.read_only_dsn(str(self.db_path)), uri=True
+            ) as connection:
                 # Let Serato manage its own journal mode - we're just a read-only client
                 connection.row_factory = aiosqlite.Row  # Enable column access by name
 
@@ -239,7 +245,9 @@ class Serato4RootReader:  # pylint: disable=too-few-public-methods
             return False
 
         async def _query_crates() -> bool:
-            async with aiosqlite.connect(self.db_path) as connection:
+            async with aiosqlite.connect(
+                nowplaying.utils.sqlite.read_only_dsn(str(self.db_path)), uri=True
+            ) as connection:
                 connection.row_factory = aiosqlite.Row
 
                 # Build placeholders for crate names

@@ -44,8 +44,6 @@ timeout.
 That makes the failure worse than the one the bound was added for -- the poll
 loop is only part of what stops. So the bound is real only if the plugin
 cooperates, which is why this is the plugin's rule and not the caller's.
-`tests/test_input_contract.py` checks it statically, since nothing at runtime
-distinguishes a slow join from a wedged one.
 
 Note this reaches beyond the obvious files: `remote.py` holds a
 `db.DBWatcher`, whose `stop()` is synchronous and joins, so the async caller

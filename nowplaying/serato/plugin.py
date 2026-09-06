@@ -569,7 +569,9 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         try:
 
             async def _query_library() -> bool:
-                async with aiosqlite.connect(db_path) as connection:
+                async with aiosqlite.connect(
+                    nowplaying.utils.sqlite.read_only_dsn(str(db_path)), uri=True
+                ) as connection:
                     connection.row_factory = aiosqlite.Row
 
                     # Search asset table for artist (case-insensitive)

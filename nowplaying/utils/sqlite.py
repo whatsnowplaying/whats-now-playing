@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import pathlib
 import random
 import sqlite3
 import time
@@ -139,9 +140,20 @@ async def retry_sqlite_operation_async(
             raise
 
 
+def read_only_dsn(database_path: str | pathlib.Path) -> str:
+    """URI for a database WNP does not own. Pass uri=True alongside it.
+
+    as_uri() rather than a hand-built f-string because a Windows path has no
+    leading slash, which SQLite would read as a relative URI. resolve() first
+    because as_uri() rejects a relative path, and a settings wipe can leave a
+    plugin holding one.
+    """
+    return pathlib.Path(database_path).resolve().as_uri() + "?mode=ro"
+
+
 @contextlib.contextmanager
 def sqlite_connection(
-    database_path: str, timeout: int = 10, row_factory=None
+    database_path: str, timeout: int = 10, row_factory=None, read_only: bool = False
 ) -> Iterator[sqlite3.Connection]:
     """Context manager for sqlite3 connections that properly handles cleanup in Python 3.13.
 
@@ -152,6 +164,7 @@ def sqlite_connection(
         database_path: Path to SQLite database file
         timeout: Connection timeout in seconds
         row_factory: Optional row factory (e.g., sqlite3.Row)
+        read_only: Open through read_only_dsn(), for a database WNP does not own.
 
     Yields:
         sqlite3.Connection object ready for use
@@ -163,7 +176,11 @@ def sqlite_connection(
             rows = cursor.fetchall()
             cursor.close()
     """
-    with contextlib.closing(sqlite3.connect(database_path, timeout=timeout)) as connection:
+    if read_only:
+        opener = sqlite3.connect(read_only_dsn(database_path), timeout=timeout, uri=True)
+    else:
+        opener = sqlite3.connect(database_path, timeout=timeout)
+    with contextlib.closing(opener) as connection:
         if row_factory:
             connection.row_factory = row_factory
         with connection:

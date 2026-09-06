@@ -131,7 +131,9 @@ class DatabaseReader:
         """
 
         def _query() -> None:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
                 # Cheapest thing that forces SQLCipher to decrypt a page;
                 # count(*) would scan the whole table to prove the same point.
@@ -237,7 +239,9 @@ class DatabaseReader:
         """Synchronous database query using sqlcipher3"""
 
         def _query() -> RekordboxTrack | None:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
 
                 # Query history only to avoid false positives from tracks
@@ -306,7 +310,9 @@ class DatabaseReader:
         """Synchronous playlist query"""
 
         def _query() -> list[tuple[str, str]]:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
 
                 query = """
@@ -345,7 +351,9 @@ class DatabaseReader:
         """Synchronous random track from playlist query"""
 
         def _query() -> RekordboxTrack | None:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
 
                 query = f"""
@@ -405,7 +413,9 @@ class DatabaseReader:
         """Synchronous check if artist exists in entire library"""
 
         def _query() -> bool:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
 
                 query = """
@@ -449,7 +459,9 @@ class DatabaseReader:
         """Synchronous check if artist exists in a specific playlist"""
 
         def _query() -> bool:
-            with sqlite.connect(str(self.database_path)) as conn:  # pylint: disable=no-member
+            with sqlite.connect(  # pylint: disable=no-member
+                nowplaying.utils.sqlite.read_only_dsn(str(self.database_path)), uri=True
+            ) as conn:
                 self._open_conn(conn)
 
                 query = """
