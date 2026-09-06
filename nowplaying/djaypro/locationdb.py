@@ -97,7 +97,9 @@ def _probe_djay_max_rowid(djay_dbfile: pathlib.Path) -> int | None:
     """Return MAX(rowid) for location collections in djay's DB, or None on error."""
 
     def query() -> int:
-        with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            str(djay_dbfile), timeout=1, read_only=True
+        ) as conn:
             row = conn.execute(
                 f"SELECT MAX(rowid) FROM database2 WHERE collection IN ({_LOCATION_PLACEHOLDERS})",
                 _LOCATION_COLLECTIONS,
@@ -123,7 +125,9 @@ def _fetch_new_rows(
 
     def query() -> list[tuple[str, str, str, str | None, str | None]]:
         results: list[tuple[str, str, str, str | None, str | None]] = []
-        with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            str(djay_dbfile), timeout=1, read_only=True
+        ) as conn:
             cursor = conn.execute(
                 f"SELECT key, data FROM database2"
                 f" WHERE collection IN ({_LOCATION_PLACEHOLDERS}) AND rowid > ?",
@@ -238,7 +242,9 @@ def lookup_direct(djay_dbfile: pathlib.Path, title_id: str) -> tuple[str | None,
     """
 
     def query() -> tuple[str | None, str | None]:
-        with nowplaying.utils.sqlite.sqlite_connection(str(djay_dbfile), timeout=1) as conn:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            str(djay_dbfile), timeout=1, read_only=True
+        ) as conn:
             row = conn.execute(
                 "SELECT data FROM database2"
                 f" WHERE collection IN ({_LOCATION_PLACEHOLDERS}) AND key = ?",
