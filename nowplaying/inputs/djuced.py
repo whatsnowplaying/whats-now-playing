@@ -184,6 +184,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     async def _try_db(self, deck: str) -> TrackMetadata:
         metadata = {}
         dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
+        if not dbfile.exists():
+            # DJUCED has not written it yet. Returning empty lets the caller
+            # fall back to playing.txt; raising would lose the track, since
+            # nothing reports the exception of the task we run in.
+            logging.debug("%s does not exist yet; using playing.txt only", dbfile)
+            return metadata
         sql = (
             "SELECT  artist, comment, coverimage, title, bpm, tracknumber, length, absolutepath "
             "FROM tracks WHERE album=? AND artist=? AND title=? "
