@@ -77,6 +77,8 @@
 * WNP now opens DJ software libraries read-only. It never wrote to them, but
     opening them for writing was enough to make WNP re-read djay Pro's
     library several times a second, even with djay Pro closed
+* DJUCED tracks no longer go missing before DJUCED has created its database.
+    The artist and title still come through; only the extra details are lost
 
 ### Platform
 
