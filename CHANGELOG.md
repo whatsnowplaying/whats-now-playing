@@ -74,6 +74,9 @@
     label, and date for up to a week afterward
 * The settings window fits a 1200x600 screen again, and no longer opens larger
     than it needs to be
+* WNP now opens DJ software libraries read-only. It never wrote to them, but
+    opening them for writing was enough to make WNP re-read djay Pro's
+    library several times a second, even with djay Pro closed
 
 ### Platform
 
