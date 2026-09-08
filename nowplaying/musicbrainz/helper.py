@@ -12,7 +12,9 @@ import orjson
 from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
+    NetworkError,
     RateLimitError,
+    ServerBusyError,
     extract_artist_urls,
 )
 from wnpmb.client._base import RetrySettings
@@ -130,6 +132,11 @@ class MusicBrainzHelper:
                 if attempt < max_attempts - 1:
                     continue
                 logger.warning("Rate limited after %d attempts: %s", max_attempts, error_msg)
+                return default
+            except (NetworkError, ServerBusyError) as err:
+                # Slow or busy says nothing about our request, so no traceback:
+                # an outage otherwise logs a full stack per affected lookup.
+                logger.warning("MusicBrainz unavailable for %s: %s", error_msg, err)
                 return default
             except MusicBrainzError:
                 logger.exception("MusicBrainz error: %s", error_msg)
@@ -469,6 +476,17 @@ class MusicBrainzHelper:
                     webdata = await self.mb_client.get_artist_by_id(
                         artistid, includes=["url-rels"]
                     )
+                except RateLimitError as err:
+                    # break, not continue: being rate limited means the rest of
+                    # idlist is limited too, so carrying on would blame every
+                    # remaining id for the same condition.
+                    logger.warning("MusicBrainz rate limited; skipping artist URLs: %s", err)
+                    break
+                except (NetworkError, ServerBusyError) as err:
+                    # Same reason as above; only a real response supports
+                    # saying MusicBrainz does not know this id.
+                    logger.warning("MusicBrainz unavailable for artistid %s: %s", artistid, err)
+                    continue
                 except Exception:  # pylint: disable=broad-exception-caught
                     logger.exception("MusicBrainz does not know artistid %s", artistid)
                     continue
