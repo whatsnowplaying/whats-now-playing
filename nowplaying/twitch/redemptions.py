@@ -45,6 +45,10 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
         self.watcher = None
         self.twitch: Twitch | None = None
         self.user_id: str | None = None
+        # Dedicated login for redemptions (broadcaster account only), kept for
+        # the lifetime of this object so its report-once state survives the
+        # retry loop in run_redemptions().
+        self.redemption_login = nowplaying.twitch.utils.TwitchLogin(self.config)
 
     async def callback_redemption(self, data: ChannelPointsCustomRewardRedemptionAddEvent):
         """handle the channel point redemption"""
@@ -141,8 +145,11 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
 
     async def _setup_eventsub_connection(self) -> bool:
         """Set up EventSub connection and authentication"""
-        # Create dedicated TwitchLogin for redemptions (broadcaster account only)
-        redemption_login = nowplaying.twitch.utils.TwitchLogin(self.config)
+        # Held on the instance, not built per call: the retry loop above runs
+        # this every 10 seconds while there is no token, and a fresh TwitchLogin
+        # each pass would have an empty _said and so report the same missing
+        # token six times a minute.
+        redemption_login = self.redemption_login
         self.twitch = await redemption_login.api_login()
         if not self.twitch:
             logging.debug("something happened getting twitch api_login; aborting")

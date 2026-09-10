@@ -44,6 +44,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             total=nowplaying.kick.constants.KICK_CHAT_TIMEOUT
         )
         self.authenticated: bool = False
+        self._reported_no_tokens: bool = False
         self._watcher_lock: asyncio.Lock = asyncio.Lock()
         self._watcher_running: bool = False
         self.last_announced: dict[str, str | None] = {"artist": None, "title": None}
@@ -59,10 +60,14 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         # Use consolidated token refresh function
         if await nowplaying.kick.utils.attempt_token_refresh(self.config):
             self.authenticated = True
+            self._reported_no_tokens = False
             logging.info("Kick chat authentication successful")
             return True
 
-        logging.error("No valid Kick tokens available for chat")
+        # run_chat() retries every 60s; same condition as the launcher's prompt.
+        if not self._reported_no_tokens:
+            logging.error("No valid Kick tokens available for chat")
+            self._reported_no_tokens = True
         return False
 
     async def _send_message(self, message: str) -> bool:
