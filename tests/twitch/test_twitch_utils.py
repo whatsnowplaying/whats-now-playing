@@ -2,6 +2,7 @@
 """Unit tests for Twitch utils functionality."""
 
 import json
+import logging
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -402,3 +403,27 @@ async def test_get_user_image_error():
     with simulate_client_exception(Exception("Network error")):
         result = await nowplaying.twitch.utils.get_user_image(mock_oauth, "test_user")
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_login_failure_is_reported_once_not_every_retry(bootstrap, caplog):
+    """The callers retry every 10-60s and the user cannot fix it any faster.
+
+    One five-hour log was a third re-authentication lines. The report-once
+    state lives on the TwitchLogin instance, so this only holds while callers
+    keep the instance -- building a fresh one per attempt gives it an empty
+    set and restores the flood, which is what redemptions.py did.
+    """
+    login = nowplaying.twitch.utils.TwitchLogin(bootstrap)
+
+    with (
+        patch.object(login, "attempt_token_refresh", new=AsyncMock(return_value=False)),
+        caplog.at_level(logging.DEBUG),
+    ):
+        for _ in range(10):
+            assert await login.api_login() is None
+
+    said = [r for r in caplog.records if "No valid Twitch tokens" in r.getMessage()]
+    assert len(said) == 10, "expected one record per attempt"
+    above_debug = [r for r in said if r.levelno > logging.DEBUG]
+    assert len(above_debug) == 1, f"reported {len(above_debug)} times across 10 attempts"

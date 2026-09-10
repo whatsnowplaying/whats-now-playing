@@ -38,6 +38,7 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
             self.config
         )
         self.tasks: set[asyncio.Task[Any]] = set()
+        self._asked_for_reauth: bool = False
 
         # Register signal handler in main thread during initialization
         signal.signal(signal.SIGINT, self.forced_stop)
@@ -96,11 +97,16 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
             # Use consolidated token refresh function
             if await nowplaying.kick.utils.attempt_token_refresh(self.config):
                 logging.info("Kick token is valid - proceeding with chat")
+                self._asked_for_reauth = False
                 self.config.cparser.setValue(OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED)
                 self.config.cparser.sync()
                 return True
 
-            logging.error("Please re-authenticate via Settings -> Kick -> Authenticate")
+            # Every 97s from the retry loop, and the user cannot re-authenticate
+            # any harder than they already have not.
+            if not self._asked_for_reauth:
+                logging.error("Please re-authenticate via Settings -> Kick -> Authenticate")
+                self._asked_for_reauth = True
             self.config.cparser.setValue(OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
             self.config.cparser.sync()
 

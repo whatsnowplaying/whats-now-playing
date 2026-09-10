@@ -163,6 +163,26 @@ class TwitchLogin:
 
     def __init__(self, config: "nowplaying.config.ConfigFile"):
         self.config = config
+        self._said: set[str] = set()
+
+    def _say_once(self, key: str, level, msg: str, *args) -> None:
+        """Report a condition on the way in, then stay quiet about it.
+
+        run_chat retries every 60 seconds, so anything the user has to fix
+        themselves would otherwise fill a set's worth of log. Kept in memory
+        rather than off the oauth status keys: those are QSettings, so they
+        survive a restart, and they are written by the failure paths here --
+        keying on them would suppress the first occurrence.
+        """
+        if key in self._said:
+            logging.debug(msg, *args)
+            return
+        self._said.add(key)
+        level(msg, *args)
+
+    def _clear_said(self) -> None:
+        """Authentication worked, so the next failure is worth hearing about."""
+        self._said.clear()
 
     async def get_oauth_client(self):
         """Get or create OAuth2 client"""
@@ -174,7 +194,7 @@ class TwitchLogin:
                 TwitchLogin.OAUTH_CLIENT = nowplaying.twitch.oauth2.TwitchOAuth2(self.config)
             return TwitchLogin.OAUTH_CLIENT
 
-    async def attempt_token_refresh(self):
+    async def attempt_token_refresh(self):  # pylint: disable=too-many-statements
         """Try to refresh existing tokens"""
         oauth_client = await self.get_oauth_client()
 
@@ -206,6 +226,7 @@ class TwitchLogin:
                     self.config.cparser.setValue(
                         BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
                     )
+                    self._clear_said()
                     self.config.cparser.setValue(
                         BROADCASTER_USERNAME_KEY, validation.get("login", "")
                     )
@@ -231,6 +252,7 @@ class TwitchLogin:
                     self.config.cparser.setValue(
                         BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
                     )
+                    self._clear_said()
                     new_validation = await oauth_client.validate_token_async(new_access_token)
                     if new_validation:
                         self.config.cparser.setValue(
@@ -244,7 +266,9 @@ class TwitchLogin:
                 logging.debug("No refresh_token available")
 
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Token refresh failed: %s", error)
+            # exception, not error: the first occurrence is worth a traceback
+            # and the repeats are not.
+            self._say_once("refresh", logging.exception, "Token refresh failed: %s", error)
 
         self.config.cparser.setValue(BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
         self.config.cparser.sync()
@@ -303,11 +327,15 @@ class TwitchLogin:
                 return twitch
 
             except Exception as error:  # pylint: disable=broad-except
-                logging.error("Failed to create TwitchAPI object: %s", error)
+                self._say_once(
+                    "client", logging.exception, "Failed to create TwitchAPI object: %s", error
+                )
                 return None
 
         # If no valid tokens, need to initiate OAuth flow
-        logging.info("No valid Twitch tokens found. OAuth flow required.")
+        self._say_once(
+            "notokens", logging.info, "No valid Twitch tokens found. OAuth flow required."
+        )
         return None
 
     async def save_refreshed_tokens(self, access_token: str, refresh_token: str):
