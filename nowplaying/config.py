@@ -217,7 +217,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def _defaults_general_settings(self, settings: QSettings) -> None:
         """default values for general settings"""
-        settings.setValue("settings/delay", "1.0")
+        settings.setValue("settings/delay", "10.0")
         settings.setValue("settings/initialized", False)
         settings.setValue(nowplaying.tlstrust.MODE_KEY, nowplaying.tlstrust.MODE_AUTO)
         settings.setValue("settings/loglevel", self.loglevel)

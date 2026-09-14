@@ -575,10 +575,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         # Get configured delay for optimization calculations
         try:
             configured_delay = self.config.cparser.value(
-                "settings/delay", type=float, defaultValue=1.0
+                "settings/delay", type=float, defaultValue=10.0
             )
         except ValueError:
-            configured_delay = 1.0
+            configured_delay = 10.0
 
         if not self.currentmeta.get("cache_warmed", False):
             # try to interleave downloads in-between the delay
@@ -740,9 +740,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
     async def _half_delay_write(self, elapsed_time: float = 0.0):
         try:
-            delay = self.config.cparser.value("settings/delay", type=float, defaultValue=1.0)
+            delay = self.config.cparser.value("settings/delay", type=float, defaultValue=10.0)
         except ValueError:
-            delay = 1.0
+            delay = 10.0
         delay /= 2
 
         # Reduce delay by time already spent processing

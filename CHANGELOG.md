@@ -55,6 +55,11 @@
 
 ### Bug Fixes
 
+* The track delay now defaults to 10 seconds rather than 1. The old default
+    disagreed with what the metadata lookups already assumed, so the setting
+    did not describe what WNP was actually doing. Anyone who has set a delay
+    keeps it; on a fresh install tracks are now held about 10 seconds before
+    publishing, which better matches the latency of most broadcasts
 * Fixed WebSocket heartbeat handling in the built-in web server
 * Fixed DJUCED install-time configuration writes being silently
     ignored
