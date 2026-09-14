@@ -99,10 +99,22 @@ class MusicBrainzHelper:
 
         self.test_mode = test_mode
         self.emailaddressset = False
+        # timeout_wait is set rather than inherited: wnpmb defaults it to 2.0,
+        # which is most of the budget a track has before the next one starts.
         self.mb_client = MusicBrainzClient(
             timeout=5.0,
-            # timeout_wait is set rather than inherited: wnpmb defaults it to 2.0,
-            # which is most of the budget a track has before the next one starts.
+            retry_settings=RetrySettings(
+                max_retries=2, wait=0.5, timeout_retries=1, timeout_wait=0.5
+            ),
+            ca_bundle=nowplaying.tlstrust.ca_bundle(),
+        )
+        # Cover art gets its own client because timeout and RetrySettings live on
+        # the client, and coverartarchive.org wants different ones from the API:
+        # it is a separate service that transfers image bytes rather than a small
+        # XML document. Same values as the API for now, so that tuning either one
+        # is a change to that client alone.
+        self.caa_client = MusicBrainzClient(
+            timeout=5.0,
             retry_settings=RetrySettings(
                 max_retries=2, wait=0.5, timeout_retries=1, timeout_wait=0.5
             ),
@@ -151,8 +163,9 @@ class MusicBrainzHelper:
                 self.config.cparser.value("musicbrainz/emailaddress")
                 or "wnp@effectivemachines.com"
             )
-            self.mb_client.set_useragent(emailaddress)
-            self.mb_client.cache_service = _WNPDatacacheAdapter()
+            for client in (self.mb_client, self.caa_client):
+                client.set_useragent(emailaddress)
+                client.cache_service = _WNPDatacacheAdapter()
             self.emailaddressset = True
 
     async def _lastditchrid(self, metadata) -> _RecordingLookup:
@@ -358,9 +371,9 @@ class MusicBrainzHelper:
         async def _try(entity_id: str, entity_type: str) -> bytes | None:
             async def _do_fetch() -> dict | None:
                 try:
-                    async with self.mb_client:
+                    async with self.caa_client:
                         logger.debug("Fetching CAA cover art for %s/%s", entity_type, entity_id)
-                        raw = await self.mb_client.get_image_front(entity_id, entity_type)
+                        raw = await self.caa_client.get_image_front(entity_id, entity_type)
                         if raw:
                             logger.debug(
                                 "Got CAA cover art (%d bytes) for %s/%s",
