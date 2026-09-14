@@ -3530,6 +3530,11 @@
 </ul>
 <h3 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h3>
 <ul>
+<li>The track delay now defaults to 10 seconds rather than 1. The old default
+    disagreed with what the metadata lookups already assumed, so the setting
+    did not describe what WNP was actually doing. Anyone who has set a delay
+    keeps it; on a fresh install tracks are now held about 10 seconds before
+    publishing, which better matches the latency of most broadcasts</li>
 <li>Fixed WebSocket heartbeat handling in the built-in web server</li>
 <li>Fixed DJUCED install-time configuration writes being silently
     ignored</li>
