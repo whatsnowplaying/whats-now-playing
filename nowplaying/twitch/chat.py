@@ -353,8 +353,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         if self.twitch:
             return True
 
-        # If all fail, clear cached tokens
-        await twitchlogin.cache_token_del()
+        # No tokens are cleared here: this runs again every 60 seconds, and
+        # none of the three attempts above failing means the stored token is
+        # bad. api_login() has already recorded OAUTH_STATUS_EXPIRED for the
+        # settings page to report.
         return False
 
     async def _try_oauth2_authentication(self) -> bool:

@@ -55,6 +55,12 @@
 
 ### Bug Fixes
 
+* Twitch no longer throws away your saved login while it is trying to connect.
+    A connection attempt that failed for any reason, including the network being
+    down or no sign-in having happened yet, was treated as proof the stored
+    credentials were bad and deleted them. While not signed in that repeated
+    every ten seconds, and it could delete a token part-way through signing in
+    through the browser. Channel point redemptions and chat were both affected
 * The track delay now defaults to 10 seconds rather than 1. The old default
     disagreed with what the metadata lookups already assumed, so the setting
     did not describe what WNP was actually doing. Anyone who has set a delay
