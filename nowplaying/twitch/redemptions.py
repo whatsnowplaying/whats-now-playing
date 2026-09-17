@@ -3,7 +3,6 @@
 
 import asyncio
 import logging
-import traceback
 from typing import TYPE_CHECKING, Any
 
 from twitchAPI.eventsub.websocket import EventSubWebsocket
@@ -120,9 +119,7 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
                 else:
                     await asyncio.sleep(60)
             except Exception:  # pylint: disable=broad-except
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
-                logging.error("EventSub failed to start")
+                logging.exception("EventSub failed to start")
                 await asyncio.sleep(60)
                 continue
 
@@ -150,14 +147,22 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
         # each pass would have an empty _said and so report the same missing
         # token six times a minute.
         redemption_login = self.redemption_login
+        # api_login() builds a Twitch object with its own aiohttp session, and
+        # this runs again on every retry, so the previous one has to go back
+        # before the reference is overwritten.
+        await self._close_twitch()
         self.twitch = await redemption_login.api_login()
         if not self.twitch:
+            # Deliberately not clearing the stored tokens. api_login() returns
+            # None for a token that is merely absent, a client that would not
+            # construct, and a refresh that raised on a network error -- none of
+            # which says the stored token is bad, so a retry loop that cleared
+            # them would destroy working credentials six times a minute.
             logging.debug("something happened getting twitch api_login; aborting")
-            await redemption_login.cache_token_del()
             return False
 
         # Get authenticated user info
-        user = await self._get_authenticated_user(redemption_login)
+        user = await self._get_authenticated_user()
         if not user:
             return False
 
@@ -173,9 +178,7 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
         # Set up EventSub WebSocket
         return await self._setup_eventsub_websocket()
 
-    async def _get_authenticated_user(
-        self, redemption_login: nowplaying.twitch.utils.TwitchLogin
-    ) -> TwitchUser | None:
+    async def _get_authenticated_user(self) -> TwitchUser | None:
         """Get authenticated user info (must be broadcaster for channel points)"""
         try:
             # Get the authenticated user (token owner) instead of channel config
@@ -183,10 +186,9 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
                 users_gen = self.twitch.get_users()
                 return await first(users_gen)
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error("EventSub get authenticated user failed")
-            await redemption_login.cache_token_del()
+            # A failed get_users() is a request that did not come back, not a
+            # verdict on the token, so the credentials stay put here too.
+            logging.exception("EventSub get authenticated user failed")
         return None
 
     async def _check_custom_rewards(self, user: TwitchUser):
@@ -287,6 +289,17 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(10)
             return False
 
+    async def _close_twitch(self):
+        """Release the Twitch client and its aiohttp session, if we hold one."""
+        if not self.twitch:
+            return
+        try:
+            await self.twitch.close()
+        except Exception as error:  # pylint: disable=broad-except
+            logging.debug("Error closing Twitch client: %s", error)
+        finally:
+            self.twitch = None
+
     async def stop(self):
         """stop the twitch redemption support"""
         if self.eventsub:
@@ -298,3 +311,4 @@ class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
                 logging.error("Error stopping EventSub: %s", error)
             finally:
                 self.eventsub = None
+        await self._close_twitch()
