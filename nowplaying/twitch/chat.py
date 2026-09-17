@@ -29,6 +29,7 @@ from twitchAPI.chat import (  # pylint: disable=import-error
     ChatCommand,
     ChatEvent,
     ChatMessage,
+    EventData,
 )
 from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 from twitchAPI.twitch import Twitch  # pylint: disable=import-error
@@ -353,8 +354,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         if self.twitch:
             return True
 
-        # If all fail, clear cached tokens
-        await twitchlogin.cache_token_del()
+        # No tokens are cleared here: this runs again every 60 seconds, and
+        # none of the three attempts above failing means the stored token is
+        # bad. api_login() has already recorded OAUTH_STATUS_EXPIRED for the
+        # settings page to report.
         return False
 
     async def _try_oauth2_authentication(self) -> bool:
@@ -374,6 +377,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
     async def _setup_chat_connection(self, channel: str) -> None:
         """Setup chat connection with event handlers and commands"""
         self.chat = await Chat(self.twitch, initial_channel=[channel])
+        self.chat.register_event(ChatEvent.READY, self.on_twitchchat_ready)
         self.chat.register_event(ChatEvent.MESSAGE, self.on_twitchchat_incoming_message)
         self.chat.register_command(
             "whatsnowplayingversion", self.on_twitchchat_whatsnowplayingversion
@@ -407,6 +411,22 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         # launch.py.stop() handles clearing the in-memory OAUTH_CLIENT.
         if self.twitch:
             await self.twitch.close()
+
+    async def on_twitchchat_ready(self, ready_event: EventData) -> None:
+        """say hello in chat once the channel has actually been joined
+
+        Hooked to READY rather than placed after chat.start(): start() returns
+        before the join completes, so a message sent there would be dropped.
+        Matches what the Kick chat support already does on connect.
+        """
+        channel = self.config.cparser.value("twitchbot/channel")
+        if not channel:
+            return
+        content = f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat connected!"
+        try:
+            await ready_event.chat.send_message(channel, content)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Could not send the Twitch chat connect message")
 
     async def on_twitchchat_incoming_message(self, msg: ChatMessage):
         """handle incoming chat messages for special responses"""

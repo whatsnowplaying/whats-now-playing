@@ -116,24 +116,32 @@ class TwitchSettings:
 
     @staticmethod
     def _broadcaster_status_text(status: str, username: str, has_token: bool) -> str:
+        # Expiry is checked before the username because the username is written
+        # on every successful auth and cleared nowhere, so returning it first
+        # hid an expired token behind a stale account name for anyone who had
+        # ever signed in. Keep the name in the message: it says which account
+        # needs re-authenticating.
+        if status == OAUTH_STATUS_EXPIRED:
+            expired = "token expired, re-authenticate"
+            return f"{username}: {expired}" if username else expired
         if username:
             return username
         if status == OAUTH_STATUS_AUTHENTICATED:
             return "authenticated"
-        if status == OAUTH_STATUS_EXPIRED:
-            return "token expired — re-authenticate"
         if has_token:
             return "connecting..."
         return "Not authenticated"
 
     @staticmethod
     def _chat_status_text(status: str, username: str, has_token: bool) -> str:
+        # Same ordering as _broadcaster_status_text, for the same reason.
+        if status == OAUTH_STATUS_EXPIRED:
+            expired = "token expired, re-authenticate"
+            return f"{username}: {expired}" if username else expired
         if username:
             return username
         if status == OAUTH_STATUS_AUTHENTICATED:
             return "authenticated"
-        if status == OAUTH_STATUS_EXPIRED:
-            return "token expired — re-authenticate"
         if has_token:
             return "connecting..."
         return "Using broadcaster account"

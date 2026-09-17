@@ -3,6 +3,7 @@
 # pylint: disable=protected-access
 
 import asyncio
+import unittest.mock
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -439,3 +440,54 @@ async def test_configurable_help_keyword(bootstrap):
     assert kwargs["templatein"] == "twitch/track.txt"  # Normal template, not help
 
     stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_ready_announces_in_chat(bootstrap):
+    """Connecting says hello, the way the Kick support does."""
+    config = bootstrap
+    config.cparser.setValue("twitchbot/channel", "testchannel")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=asyncio.Event())
+    ready_event = MagicMock(chat=AsyncMock())
+
+    await chat.on_twitchchat_ready(ready_event)  # pylint: disable=no-member
+
+    ready_event.chat.send_message.assert_awaited_once_with(
+        "testchannel",
+        f"🤖 whatsnowplaying v{config.version} by @modernmeerkat connected!",
+    )
+
+
+@pytest.mark.asyncio
+async def test_ready_without_a_channel_says_nothing(bootstrap):
+    """No configured channel means there is nowhere to send it."""
+    config = bootstrap
+    config.cparser.remove("twitchbot/channel")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=asyncio.Event())
+    ready_event = MagicMock(chat=AsyncMock())
+
+    await chat.on_twitchchat_ready(ready_event)  # pylint: disable=no-member
+
+    ready_event.chat.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_setup_registers_the_ready_handler(bootstrap):
+    """The handler only fires if it is wired to READY, so pin the wiring too."""
+    config = bootstrap
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=asyncio.Event())
+
+    connection = MagicMock()
+    with unittest.mock.patch.object(
+        nowplaying.twitch.chat, "Chat", AsyncMock(return_value=connection)
+    ):
+        await chat._setup_chat_connection("testchannel")  # pylint: disable=protected-access
+
+    registered = {call.args[0] for call in connection.register_event.call_args_list}
+    assert nowplaying.twitch.chat.ChatEvent.READY in registered
+    connection.register_event.assert_any_call(
+        nowplaying.twitch.chat.ChatEvent.READY,
+        chat.on_twitchchat_ready,  # pylint: disable=no-member
+    )

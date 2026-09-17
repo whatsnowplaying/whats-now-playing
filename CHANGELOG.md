@@ -43,6 +43,9 @@
 
 ### New Features
 
+* Twitch chat now says hello when WNP connects, the same way Kick chat
+    already did, so it is clear the bot is live without waiting for a track
+    to change
 * The upgrade prompt can now show aggregated release notes for the
     versions between the installed and the offered build
 * WNP now checks whether this computer's certificate authorities can still
@@ -55,6 +58,12 @@
 
 ### Bug Fixes
 
+* Twitch no longer throws away your saved login while it is trying to connect.
+    A connection attempt that failed for any reason, including the network being
+    down or no sign-in having happened yet, was treated as proof the stored
+    credentials were bad and deleted them. While not signed in that repeated
+    every ten seconds, and it could delete a token part-way through signing in
+    through the browser. Channel point redemptions and chat were both affected
 * The track delay now defaults to 10 seconds rather than 1. The old default
     disagreed with what the metadata lookups already assumed, so the setting
     did not describe what WNP was actually doing. Anyone who has set a delay
