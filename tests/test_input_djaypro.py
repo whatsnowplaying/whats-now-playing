@@ -2,6 +2,7 @@
 """test djay Pro input plugin"""
 # pylint: disable=protected-access,too-many-lines
 
+import datetime
 import logging
 import pathlib
 import sqlite3
@@ -12,6 +13,7 @@ import pytest
 
 import nowplaying.djaypro.locationdb
 import nowplaying.djaypro.mediadb
+import nowplaying.djaypro.plugin
 import nowplaying.djaypro.tsaf
 import nowplaying.inputs.djaypro
 from nowplaying.djaypro.mediadb import DeckTrack
@@ -1304,3 +1306,88 @@ def test_reading_djay_db_does_not_touch_the_wal(tmp_path):
     for _ in range(3):
         nowplaying.djaypro.mediadb.query_recent_history(dbfile)
         assert _wal_state(dbfile) == before
+
+
+def _coredata_now() -> float:
+    """Current time on djay Pro's clock (seconds since 2001-01-01 UTC)."""
+    return (
+        datetime.datetime.now(datetime.timezone.utc) - nowplaying.djaypro.plugin._COREDATA_EPOCH
+    ).total_seconds()
+
+
+@pytest.mark.parametrize(
+    "launch_offset,start_offset,duration,expected",
+    [
+        # Started 2040s ago and ran 240s, so it ended 1800s ago: long finished,
+        # and therefore not the track NowPlaying.txt is naming now.
+        pytest.param(-1000, -2040, 240, False, id="finished-earlier-play-is-not-current"),
+        # Still on the deck from before WNP started: nominal end is ahead.
+        pytest.param(-30, -60, 600, True, id="still-running-from-before-launch"),
+        # Nothing to reason with, so report rather than suppress: the error
+        # directions are not symmetric.  A wrong publish is corrected by the
+        # next track change, whereas suppression is sticky and costs the rest
+        # of that track's time on the deck.
+        pytest.param(-1000, -3600, None, False, id="unknown-duration-reports"),
+        pytest.param(-1000, -500, 240, False, id="post-launch-start-is-never-pre-launch"),
+    ],
+)
+def test_pre_launch_play_uses_elapsed_time(
+    bootstrap, launch_offset, start_offset, duration, expected
+):
+    """Session identity cannot decide this; elapsed time can.
+
+    djay Pro is normally already running when WNP starts, so its current
+    session begins before _launch_time and contains both the earlier play and
+    the replay.  Whether the matched play has already ended is what separates
+    them.
+    """
+    now = _coredata_now()
+    plugin = nowplaying.inputs.djaypro.Plugin(config=bootstrap)
+    plugin._launch_time = now + launch_offset
+
+    assert plugin._is_pre_launch_play(now + start_offset, duration) is expected
+
+
+def test_pre_launch_play_without_a_starttime(bootstrap):
+    """No matched row means nothing is known, which is not grounds to suppress."""
+    plugin = nowplaying.inputs.djaypro.Plugin(config=bootstrap)
+    assert plugin._is_pre_launch_play(None, 240) is False
+
+
+@pytest.mark.parametrize(
+    "time_str,expected",
+    [
+        # The format djay Pro actually writes: zero-padded MM:SS.
+        pytest.param("04:03", 243, id="zero-padded-mm-ss-as-djay-writes-it"),
+        pytest.param("3:45", 225, id="mm-ss"),
+        # Not observed from djay Pro, which appears to overflow the minutes
+        # field instead; accepted so a long recording cannot land on "unknown".
+        pytest.param("1:09:45", 4185, id="h-mm-ss"),
+        pytest.param("64:03", 3843, id="overflowed-minutes"),
+        pytest.param("0:00", 0, id="zero"),
+        pytest.param("garbage", None, id="unparseable"),
+        pytest.param("", None, id="empty"),
+    ],
+)
+def test_nowplaying_duration_parse(tmp_path, bootstrap, time_str, expected):
+    """A long recording formats as H:MM:SS, which must not read as no duration.
+
+    An unknown duration leaves _is_pre_launch_play() unable to tell a replay
+    from a track still on the deck, so it falls back to reporting.
+    """
+    plugin = nowplaying.inputs.djaypro.Plugin(config=bootstrap)
+    plugin.djaypro_dir = str(tmp_path)
+    (tmp_path / "NowPlaying.txt").write_text(
+        f"Title: Long Mix\nArtist: Someone\nTime: {time_str}\n", encoding="utf-8"
+    )
+
+    captured = {}
+
+    def _capture(starttime, duration):  # pylint: disable=unused-argument
+        captured["duration"] = duration
+        return False
+
+    plugin._is_pre_launch_play = _capture
+    plugin._read_nowplaying_file()
+
+    assert captured.get("duration") == expected
