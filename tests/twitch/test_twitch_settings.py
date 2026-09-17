@@ -9,8 +9,8 @@ from nowplaying.twitch.constants import (  # pylint: disable=import-error
     OAUTH_STATUS_EXPIRED,
 )
 
-BROADCASTER = nowplaying.twitch.settings.TwitchSettings._broadcaster_status_text  # pylint: disable=protected-access
-CHAT = nowplaying.twitch.settings.TwitchSettings._chat_status_text  # pylint: disable=protected-access
+broadcaster_status_text = nowplaying.twitch.settings.TwitchSettings._broadcaster_status_text  # pylint: disable=protected-access
+chat_status_text = nowplaying.twitch.settings.TwitchSettings._chat_status_text  # pylint: disable=protected-access
 
 
 @pytest.mark.parametrize(
@@ -30,7 +30,7 @@ CHAT = nowplaying.twitch.settings.TwitchSettings._chat_status_text  # pylint: di
 )
 def test_broadcaster_status_text(status, username, has_token, expected):
     """Expiry must be reported even when a stale username is stored."""
-    assert BROADCASTER(status, username, has_token) == expected
+    assert broadcaster_status_text(status, username, has_token) == expected
 
 
 @pytest.mark.parametrize(
@@ -44,4 +44,4 @@ def test_broadcaster_status_text(status, username, has_token, expected):
 )
 def test_chat_status_text(status, username, has_token, expected):
     """Chat follows the same ordering as the broadcaster label."""
-    assert CHAT(status, username, has_token) == expected
+    assert chat_status_text(status, username, has_token) == expected
