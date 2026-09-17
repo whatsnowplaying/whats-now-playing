@@ -43,6 +43,9 @@
 
 ### New Features
 
+* Twitch chat now says hello when WNP connects, the same way Kick chat
+    already did, so it is clear the bot is live without waiting for a track
+    to change
 * The upgrade prompt can now show aggregated release notes for the
     versions between the installed and the offered build
 * WNP now checks whether this computer's certificate authorities can still
