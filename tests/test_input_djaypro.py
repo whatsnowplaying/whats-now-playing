@@ -1002,22 +1002,38 @@ def test_check_for_new_track_deck_switch_reports_new(bootstrap):
         assert plugin.metadata["artist"] == "Deck2 Artist"
 
 
-def test_check_for_new_track_skips_prelaunch(bootstrap):
-    """_check_for_new_track ignores a track whose starttime precedes WNP launch."""
+@pytest.mark.parametrize(
+    "seconds_before_launch,duration,reported",
+    [
+        # Still inside its runtime, so the row really is the deck's current track
+        pytest.param(60.0, 600.0, False, id="pre-launch-play-could-still-be-running"),
+        # Nominal end has passed.  djay Pro reloads the deck where the last
+        # session left off, so the newest row matches a play that has finished
+        # while the track itself is starting again right now.
+        pytest.param(3600.0, 240.0, True, id="pre-launch-play-has-ended"),
+        # Suppressing costs the rest of the track's time on the deck, so an
+        # unknown duration reports instead.
+        pytest.param(3600.0, None, True, id="duration-unknown"),
+    ],
+)
+def test_check_for_new_track_prelaunch_needs_a_running_play(
+    bootstrap, seconds_before_launch, duration, reported
+):
+    """A pre-launch row only suppresses while that play could still be running."""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
-    # Use a starttime well in the past (Core Data epoch: seconds since 2001-01-01)
-    past_starttime = plugin._launch_time - 3600.0  # 1 hour before launch
+    # Core Data epoch: seconds since 2001-01-01
+    past_starttime = plugin._launch_time - seconds_before_launch
 
-    blob = _build_tsaf_blob(
-        "ADCHistorySessionItem",
-        [
-            ("Old Artist", "artist"),
-            ("Old Track", "title"),
-            (past_starttime, "startTime"),
-        ],
-    )
+    fields = [
+        ("Old Artist", "artist"),
+        ("Old Track", "title"),
+        (past_starttime, "startTime"),
+    ]
+    if duration is not None:
+        fields.append((duration, "duration"))
+    blob = _build_tsaf_blob("ADCHistorySessionItem", fields)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         plugin.djaypro_dir = tmpdir
@@ -1026,8 +1042,7 @@ def test_check_for_new_track_skips_prelaunch(bootstrap):
 
         plugin._check_for_new_track()
 
-        # metadata should remain empty — pre-launch track is not reported
-        assert plugin.metadata.get("artist") is None
+        assert (plugin.metadata.get("artist") == "Old Artist") is reported
 
 
 def test_check_for_new_track_reports_postlaunch(bootstrap):

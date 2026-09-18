@@ -445,8 +445,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # Skip tracks that started before WNP launched — record state to avoid
         # re-processing on every poll, but do not report them as new tracks.
+        # The newest row is only evidence about the deck's current track while
+        # its play could still be running: djay Pro reloads the deck where the
+        # last session left off, so the first track of a new session matches a
+        # row from the previous one until its own row commits.
         starttime = track_data.get("starttime")
-        if isinstance(starttime, float) and starttime < self._launch_time:
+        duration = track_data.get("duration")
+        if self._is_pre_launch_play(
+            starttime if isinstance(starttime, float) else None,
+            duration if isinstance(duration, int) else None,
+        ):
             logging.debug(
                 "Skipping pre-launch track on deck %s: %s - %s",
                 deck_key,
@@ -697,16 +705,17 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def _is_pre_launch_play(self, starttime: float | None, duration: int | None) -> bool:
         """Whether the matched history row describes a play that predates WNP.
 
-        NowPlaying.txt survives between runs, so at startup it names whatever
-        was last on a deck; the history row's starttime is the only signal that
-        a track is new since WNP started.
+        Both callers need this.  NowPlaying.txt survives between runs, so at
+        startup it names whatever was last on a deck, and the database path's
+        newest row is the same kind of evidence; the row's starttime is the
+        only signal that a track is new since WNP started.
 
         The row is evidence about *this* play only if that play could still be
         running.  History persists across djay Pro sessions, and a replay finds
         the earlier play's row well before the new one commits -- that row's
         starttime really does predate launch, so taking it at face value drops a
         track that is playing right now.  A play whose nominal end has already
-        passed cannot be what NowPlaying.txt is naming.
+        passed cannot be the one currently on the deck.
 
         Note session identity cannot stand in for this: djay Pro is usually
         already running when WNP starts, so the current session begins before
