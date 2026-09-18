@@ -1365,7 +1365,7 @@ def test_pre_launch_play_without_a_starttime(bootstrap):
         pytest.param("1:09:45", 4185, id="h-mm-ss"),
         pytest.param("64:03", 3843, id="overflowed-minutes"),
         pytest.param("0:00", 0, id="zero"),
-        pytest.param("garbage", None, id="unparseable"),
+        pytest.param("garbage", None, id="unparsable"),
         pytest.param("", None, id="empty"),
     ],
 )
