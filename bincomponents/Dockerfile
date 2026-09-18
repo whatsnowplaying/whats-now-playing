@@ -69,7 +69,6 @@ RUN git config --system --add safe.directory /src
 
 # Tell builder.sh to use Python 3.12 explicitly
 ENV PYTHONBIN=/usr/bin/python3.12
-ENV NLTK_DATA=/tmp/nltk_data
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8

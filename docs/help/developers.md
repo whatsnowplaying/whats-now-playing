@@ -33,7 +33,7 @@ PYTHONBIN=/usr/local/bin/python3.12 ./builder.sh dev
 
 This creates a `venv/` directory in the source tree, installs all dependencies
 (including dev and test extras), syncs vendored libraries, writes version info,
-sets up NLTK data, compiles templates, and compiles Qt resources.
+compiles templates, and compiles Qt resources.
 
 Re-running `./builder.sh dev` after pulling updates will refresh all of the above
 without recreating the venv from scratch.

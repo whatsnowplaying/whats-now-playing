@@ -4,8 +4,6 @@
 # pylint: disable=invalid-name
 
 import datetime
-import glob
-import nltk
 import os
 import platform
 import sys
@@ -13,19 +11,6 @@ import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 sys.path.insert(0, os.path.abspath('.'))
-
-_nltk = next(p for p in nltk.data.path if os.path.exists(os.path.join(p, 'tokenizers')))
-
-
-def _nltk_datas(corpus):
-    """Collect NLTK corpus files excluding zip archives."""
-    src = os.path.join(_nltk, 'tokenizers', corpus)
-    result = []
-    for filepath in glob.glob(os.path.join(src, '**', '*'), recursive=True):
-        if os.path.isfile(filepath) and not filepath.endswith('.zip'):
-            rel_dir = os.path.relpath(os.path.dirname(filepath), _nltk)
-            result.append((filepath, os.path.join('nltk_data', rel_dir)))
-    return result
 
 from nowplaying.version import __VERSION__
 import pyinstaller_versionfile
@@ -180,8 +165,6 @@ for execname, execpy in executables.items():
                        # template registry and stock ws-* templates are
                        # missing from the frozen app.
                        collect_data_files('wnp_templates') +
-                       _nltk_datas('punkt') +
-                       _nltk_datas('punkt_tab') +
                        [d for pkg in KEEP_METADATA for d in copy_metadata(pkg)],
                  hiddenimports=ALL_PLUGIN_MODULES + [
                      # tufup 0.10.0 imports setuptools.config.expand

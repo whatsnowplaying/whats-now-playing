@@ -8,7 +8,6 @@ import logging
 import os
 import pathlib
 import re
-import string
 import sys
 import textwrap
 
@@ -50,6 +49,17 @@ _TRACK_COVER_PREFIX = "track_"
 NOTE_RE = re.compile("N(?i:ote):")
 YOUTUBE_COMMENT_MATCH_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/watch\?v=")
 YOUTUBE_TITLE_MATCH_RE = re.compile(r"^[^\s]+_-_[^\s]+")
+
+# Terminal punctuation, allowing for a closing quote or bracket after it. Bios
+# routinely end a sentence inside quotes ('dubbed "techno."'), and a bare
+# string.punctuation test accepts the quote itself -- which makes a sentence
+# that textwrap sliced at 450 characters look complete.
+_SENTENCE_ENDING_RE = re.compile(r"[.!?…][\"')\]’”]*$")
+
+
+def _ends_a_sentence(text: str) -> bool:
+    """Report whether text ends on sentence-terminating punctuation."""
+    return bool(_SENTENCE_ENDING_RE.search(text.rstrip()))
 
 
 def cover_cache_key(metadata: TrackMetadata) -> str | None:
@@ -872,13 +882,23 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         message = message.replace("\n", " ")
         message = message.replace("\r", " ")
         message = str(message).strip()
-        text = textwrap.TextWrapper(width=450).wrap(message)[0]
-        tokens = nowplaying.utils.tokenize_sentences(text)
+        wrapped = textwrap.TextWrapper(width=450).wrap(message)
+        if not wrapped:
+            return
+        tokens = [
+            sentence
+            for sentence in nowplaying.utils.tokenize_sentences(wrapped[0])
+            if not NOTE_RE.match(sentence)
+        ]
+        if not tokens:
+            return
 
-        nonotes = [sent for sent in tokens if not NOTE_RE.match(sent)]
-        tokens = nonotes
-
-        if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [":", ",", ";", "-"]:
+        # Wrapping to 450 characters usually cuts the last sentence mid-way, so
+        # drop it -- but only when wrapping actually truncated something, only
+        # when the sentence really is incomplete, and never when it is all we
+        # have. Plenty of bios end on a bracketed credit, a parenthesised list
+        # or a year, and those are whole sentences that happen to lack a period.
+        if len(wrapped) == 1 or _ends_a_sentence(tokens[-1]) or len(tokens) == 1:
             self.metadata["artistshortbio"] = " ".join(tokens)
         else:
             self.metadata["artistshortbio"] = " ".join(tokens[:-1])

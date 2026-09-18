@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import jinja2
-import nltk
 import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
 
@@ -29,6 +28,7 @@ from wnpmb import (
 )
 
 import nowplaying.tlstrust
+import nowplaying.utils.textsplit
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -318,158 +318,14 @@ def create_http_connector(
     return aiohttp.TCPConnector(**base_config)
 
 
-def ensure_nltk_data() -> None:
-    """Ensure NLTK punkt tokenizer data is available.
-
-    This function handles NLTK initialization in a centralized way to avoid
-    duplication across multiple modules (metadata.py, kick/chat.py, twitch/chat.py).
-    """
-    try:
-        # Test if punkt tokenizer is available
-        nltk.data.find("tokenizers/punkt")
-        logging.debug("NLTK punkt tokenizer already available")
-    except LookupError:
-        logging.info("Downloading NLTK punkt tokenizer data")
-        try:
-            nltk.download("punkt", quiet=True)
-            logging.info("NLTK punkt tokenizer downloaded successfully")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to download NLTK punkt tokenizer: %s", error)
-            # Continue anyway - sent_tokenize will fall back to basic splitting
-
-
 def smart_split_message(message: str, max_length: int = 500) -> list[str]:
-    """Intelligently split long messages at sentence or word boundaries.
+    """Split a long chat message so every part fits the platform's limit.
 
-    This function provides smart message splitting logic shared between
-    Kick and Twitch chat implementations to avoid code duplication.
-
-    Args:
-        message: The message to split
-        max_length: Maximum length for each message part
-
-    Returns:
-        List of message parts, each within the length limit
+    Shared by the Kick and Twitch chat implementations.
     """
-    if len(message) <= max_length:
-        return [message]
-
-    try:
-        ensure_nltk_data()
-        return _split_with_nltk(message, max_length)
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        logging.warning("Smart message splitting failed, using simple truncation: %s", error)
-        return _split_simple_fallback(message, max_length)
-
-
-def _split_with_nltk(message: str, max_length: int) -> list[str]:
-    """Split message using NLTK sentence tokenization."""
-    messages = []
-    sentences = nltk.sent_tokenize(message)
-    current_chunk = ""
-
-    for sentence in sentences:
-        if len(sentence) > max_length:
-            # Save current chunk before handling long sentence
-            if current_chunk:
-                messages.append(current_chunk.strip())
-                current_chunk = ""
-            messages.extend(_split_long_sentence(sentence, max_length))
-        elif _would_exceed_limit(current_chunk, sentence, max_length):
-            messages.append(current_chunk.strip())
-            current_chunk = sentence
-        else:
-            current_chunk = _combine_text(current_chunk, sentence)
-
-    if current_chunk:
-        messages.append(current_chunk.strip())
-
-    return [msg for msg in messages if msg.strip()]
-
-
-def _split_long_sentence(sentence: str, max_length: int) -> list[str]:
-    """Split a sentence that's too long at word boundaries."""
-    messages = []
-    words = sentence.split()
-    word_chunk = ""
-
-    for word in words:
-        if _would_exceed_limit(word_chunk, word, max_length):
-            if word_chunk:
-                messages.append(word_chunk.strip())
-                word_chunk = word
-            else:
-                # Single word is too long, truncate it
-                messages.append(f"{word[: max_length - 3]}...")
-                word_chunk = ""
-        else:
-            word_chunk = _combine_text(word_chunk, word)
-
-    if word_chunk:
-        messages.append(word_chunk.strip())
-
-    return messages
-
-
-def _would_exceed_limit(current: str, new: str, max_length: int) -> bool:
-    """Check if combining current and new text would exceed the limit."""
-    if not current:
-        return len(new) > max_length
-    return len(f"{current} {new}") > max_length
-
-
-def _combine_text(current: str, new: str) -> str:
-    """Combine text parts with appropriate spacing."""
-    return f"{current} {new}" if current else new
-
-
-def _split_simple_fallback(message: str, max_length: int) -> list[str]:
-    """Fallback splitting when NLTK fails."""
-    messages = []
-    remaining = message
-
-    while remaining:
-        if len(remaining) <= max_length:
-            messages.append(remaining)
-            break
-
-        split_pos = remaining.rfind(" ", 0, max_length)
-        if split_pos == -1:
-            # No space found, truncate
-            split_pos = max_length - 3
-            messages.append(f"{remaining[:split_pos]}...")
-            remaining = remaining[split_pos:]
-        else:
-            messages.append(remaining[:split_pos])
-            remaining = remaining[split_pos:].strip()
-
-    return [msg for msg in messages if msg.strip()]
+    return nowplaying.utils.textsplit.smart_split_message(message, max_length)
 
 
 def tokenize_sentences(text: str) -> list[str]:
-    """Split text into sentences using NLTK tokenizer.
-
-    This function provides centralized sentence tokenization for use
-    in metadata processing and other modules.
-
-    Args:
-        text: Text to split into sentences
-
-    Returns:
-        List of sentences
-    """
-    try:
-        ensure_nltk_data()
-        return nltk.sent_tokenize(text)
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        logging.warning("NLTK sentence tokenization failed, using simple splitting: %s", error)
-        # Fallback to simple sentence splitting
-        sentences = []
-        for sent in text.replace("!", ".").replace("?", ".").split("."):
-            if sent := sent.strip():
-                # Check if sentence already ends with punctuation
-                if sent.endswith((".", "!", "?", ":", ";")):
-                    sentences.append(sent)
-                else:
-                    sentences.append(f"{sent}.")
-        return sentences
+    """Split text into sentences, preserving punctuation exactly as written."""
+    return nowplaying.utils.textsplit.tokenize_sentences(text)

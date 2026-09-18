@@ -622,3 +622,123 @@ def test_coverurl_is_relative_on_both_branches(bootstrap, cachekey, expected):
 
     assert processors.metadata["coverurl"] == expected
     assert not processors.metadata["coverurl"].startswith("/")
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("A normal sentence.", True),
+        ("An exclamation!", True),
+        ("A question?", True),
+        # Terminal punctuation inside a closing quote still ends the sentence
+        ('He called it "genius."', True),
+        ("Often called the “Godfather of Goth.”", True),
+        ("A parenthetical aside (like this.)", True),
+        # A quote that textwrap sliced mid-sentence does not
+        ('would be dubbed "techno"', False),
+        ("albums such as “Dubnobasswithmyheadman”", False),
+        ("a trailing clause that just stops", False),
+        # Punctuation that never terminates a sentence
+        ("ends with a colon:", False),
+        ("ends with a comma,", False),
+        ("ends with a semicolon;", False),
+        ("ends with a dash -", False),
+        ("", False),
+    ],
+)
+def test_ends_a_sentence(text, expected):
+    """A bare string.punctuation test accepts a quote and mistakes fragments for sentences."""
+    assert nowplaying.metadata.processors._ends_a_sentence(text) is expected  # pylint: disable=protected-access
+
+
+def _short_bio_for(config, longbio):
+    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor.metadata = {"artistlongbio": longbio}
+    processor._generate_short_bio()  # pylint: disable=protected-access
+    return processor.metadata.get("artistshortbio")
+
+
+def test_generate_short_bio_drops_incomplete_trailing_sentence(bootstrap):
+    """The 450-character wrap usually cuts mid-sentence; that fragment is dropped."""
+    longbio = "First sentence is complete. " + "padding word " * 40 + "and then it just trails"
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result is not None
+    assert result.endswith(".")
+    assert "and then it just trails" not in result
+
+
+def test_generate_short_bio_keeps_sentence_ending_in_quote(bootstrap):
+    """A sentence whose period sits inside a closing quote is complete, not a fragment."""
+    longbio = 'Murphy has a distinctive voice. He is often called the "Godfather of Goth." '
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result is not None
+    assert result.endswith('"Godfather of Goth."')
+
+
+def test_generate_short_bio_drops_fragment_ending_in_quote(bootstrap):
+    """A quoted phrase with no terminal punctuation is still a truncated sentence."""
+    longbio = (
+        "May was born in Detroit in 1963. "
+        + "padding word " * 40
+        + 'he is credited with what would be dubbed "techno"'
+    )
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result is not None
+    assert not result.endswith('"techno"')
+
+
+def test_generate_short_bio_keeps_a_lone_truncated_sentence(bootstrap):
+    """One unterminated sentence is better than no bio at all."""
+    longbio = "an unbroken clause " * 30
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result
+    assert "unbroken clause" in result
+
+
+@pytest.mark.parametrize("longbio", ["", "   ", "\n\n"])
+def test_generate_short_bio_blank_input(bootstrap, longbio):
+    """Blank bio text must not raise on the empty wrap or token list."""
+    assert _short_bio_for(bootstrap, longbio) is None
+
+
+def test_generate_short_bio_all_notes_filtered(bootstrap):
+    """A bio made entirely of Note: lines leaves no sentences and must not raise."""
+    assert _short_bio_for(bootstrap, "Note: nothing to see here.") is None
+
+
+@pytest.mark.parametrize(
+    "longbio",
+    [
+        # Discogs profiles routinely close on a bracketed credit, a parenthesised
+        # list, or a year, none of which is terminal punctuation
+        "Phuture were a Chicago group. They made tracks like Acid Tracks [a=Phuture]",
+        "The Belleville Three pioneered techno. Members are (Atkins, May, Saunderson)",
+        "Aphex Twin is Richard James. He released *Selected Ambient Works 85-92*",
+        "A short bio here. It ends on a year 1996",
+    ],
+)
+def test_generate_short_bio_keeps_everything_when_nothing_was_truncated(bootstrap, longbio):
+    """A bio that fits in 450 characters was never cut, so no sentence is incomplete."""
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result == longbio
+
+
+def test_generate_short_bio_still_trims_when_truncation_happened(bootstrap):
+    """The trailing-fragment trim must survive the no-truncation guard."""
+    longbio = "First sentence is complete. " + "padding word " * 40 + "and then it just trails"
+    result = _short_bio_for(bootstrap, longbio)
+
+    assert result is not None
+    assert result.endswith(".")
+    assert "and then it just trails" not in result
+
+
+@pytest.mark.parametrize("ending", ["ends on an ellipsis…", "ends on a period."])
+def test_ends_a_sentence_accepts_unicode_ellipsis(ending):
+    """U+2026 terminates a sentence just as '.' does."""
+    assert nowplaying.metadata.processors._ends_a_sentence(ending) is True  # pylint: disable=protected-access

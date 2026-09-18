@@ -12,7 +12,6 @@ diskcache==5.6.3
 jinja2==3.1.6
 lxml==6.1.3
 netifaces-plus==0.12.5
-nltk==3.10.3
 orjson==3.12.0
 pillow==12.3.0
 pillow_avif_plugin==1.6.0
@@ -22,6 +21,7 @@ puremagic==2.2.0; python_version >= "3.12"
 pyacoustid==1.3.1
 pycryptodome==3.23.0
 pypresence==4.6.2
+pysbd==0.3.4
 # 6.5.0-6.5.3's rcc is broken on macOS; 6.5+ required for Qt.ColorScheme / colorSchemeChanged
 # 6.11.1 ships unsigned .cpp.o build artifacts in qml/Qt/labs/assetdownloader/ that break
 # macOS Gatekeeper at runtime; skip until upstream cleans up the wheel.

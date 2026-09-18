@@ -63,7 +63,8 @@ Kick templates support powerful formatting features:
 - **Message Splitting**: Use `{{ startnewmessage }}` to split long
   announcements across multiple messages
 - **Smart Splitting**: Messages longer than 500 characters are
-  automatically split at sentence or word boundaries using NLTK
+  automatically split at paragraph, line, sentence, or word boundaries,
+  and never in the middle of a URL
 
 Example announcement template:
 

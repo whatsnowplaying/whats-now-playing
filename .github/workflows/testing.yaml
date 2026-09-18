@@ -53,7 +53,6 @@ jobs:
           source /tmp/venv/bin/activate
           /tmp/venv/bin/python -m vendoring sync
           versioningit --write
-          /tmp/venv/bin/python tools/setupnltk.py
 
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: get week stamp
@@ -128,7 +127,6 @@ jobs:
         run: |
           vendoring sync
           versioningit --write
-          python tools/setupnltk.py
           pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: get week stamp
         id: week
@@ -235,7 +233,6 @@ jobs:
           source /tmp/venv/bin/activate
           /tmp/venv/bin/python -m vendoring sync
           versioningit --write
-          /tmp/venv/bin/python tools/setupnltk.py
 
           /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: get week stamp

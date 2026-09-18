@@ -60,7 +60,6 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   "${PYTHONBIN}" -m vendoring sync
   git checkout nowplaying/vendor/.gitkeep
   versioningit --write
-  "${PYTHONBIN}" tools/setupnltk.py
   "${PYTHONBIN}" tools/build_templates.py
   if [[ -x "${PYTHONBINDIR}/pyside6-rcc" ]]; then
     "${PYTHONBINDIR}/pyside6-rcc" nowplaying/resources/settings.qrc > nowplaying/qtrc.py
@@ -196,12 +195,6 @@ echo "* Installing vendored dependencies"
 echo "****"
 
 "${PYTHONBIN}" -m vendoring sync
-
-echo "*****"
-echo "* Setting up NLTK"
-echo "****"
-
-"${PYTHONBIN}"  tools/setupnltk.py
 
 echo "*****"
 echo "* Update templates"
