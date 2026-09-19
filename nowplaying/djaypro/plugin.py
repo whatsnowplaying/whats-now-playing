@@ -445,16 +445,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # Skip tracks that started before WNP launched — record state to avoid
         # re-processing on every poll, but do not report them as new tracks.
-        # The newest row is only evidence about the deck's current track while
-        # its play could still be running: djay Pro reloads the deck where the
-        # last session left off, so the first track of a new session matches a
-        # row from the previous one until its own row commits.
         starttime = track_data.get("starttime")
-        duration = track_data.get("duration")
-        if self._is_pre_launch_play(
-            starttime if isinstance(starttime, float) else None,
-            duration if isinstance(duration, int) else None,
-        ):
+        if isinstance(starttime, float) and starttime < self._launch_time:
             logging.debug(
                 "Skipping pre-launch track on deck %s: %s - %s",
                 deck_key,
@@ -558,19 +550,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not artist or not title:
             return
 
-        # Convert time to duration in seconds.  H:MM:SS as well as MM:SS
-        # because a long live recording or mix would otherwise leave the
-        # duration unknown, which _is_pre_launch_play() cannot reason with.
+        # Convert time to duration in seconds (format: MM:SS)
         duration = None
         if time_str:
             try:
-                parts = [int(part) for part in time_str.split(":")]
-            except ValueError:
-                parts = []
-            if len(parts) == 2:
-                duration = parts[0] * 60 + parts[1]
-            elif len(parts) == 3:
-                duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+                time_parts = time_str.split(":")
+                if len(time_parts) == 2:
+                    minutes, seconds = time_parts
+                    duration = int(minutes) * 60 + int(seconds)
+            except (ValueError, IndexError):
+                pass
 
         # Get deck from historySessionItems first — needed for deckskip check
         # before doing the expensive file-path / analysis-data lookup.
@@ -587,7 +576,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if existing and existing.artist == artist and existing.title == title:
             return
 
-        if self._is_pre_launch_play(extras.starttime, duration):
+        # Skip tracks that started before WNP launched.  NowPlaying.txt is
+        # never deleted between sessions so it persists from previous runs;
+        # the starttime from historySessionItems is the only reliable signal
+        # that the track is actually new since WNP started.
+        if extras.starttime is not None and extras.starttime < self._launch_time:
             logging.debug(
                 "Skipping pre-launch track on deck %s: %s - %s",
                 deck_key,
@@ -701,47 +694,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """wrapper to call getplayingtrack"""
         await self.start()
         return self.metadata
-
-    def _is_pre_launch_play(self, starttime: float | None, duration: int | None) -> bool:
-        """Whether the matched history row describes a play that predates WNP.
-
-        Both callers need this.  NowPlaying.txt survives between runs, so at
-        startup it names whatever was last on a deck, and the database path's
-        newest row is the same kind of evidence; the row's starttime is the
-        only signal that a track is new since WNP started.
-
-        The row is evidence about *this* play only if that play could still be
-        running.  History persists across djay Pro sessions, and a replay finds
-        the earlier play's row well before the new one commits -- that row's
-        starttime really does predate launch, so taking it at face value drops a
-        track that is playing right now.  A play whose nominal end has already
-        passed cannot be the one currently on the deck.
-
-        Note session identity cannot stand in for this: djay Pro is usually
-        already running when WNP starts, so the current session begins before
-        _launch_time and contains both plays.
-
-        An unknown duration errs toward reporting the track, because the two
-        error directions are not symmetric.  Reporting a stale one costs a
-        single wrong publish, corrected by the next track change; suppressing
-        costs the rest of that track's time on the deck, because the caller
-        records the deck state and its dedup check then returns early on every
-        later poll for the same artist and title.
-        """
-        if starttime is None or starttime >= self._launch_time:
-            return False
-        if duration is None:
-            return False
-        now = (datetime.datetime.now(datetime.timezone.utc) - _COREDATA_EPOCH).total_seconds()
-        if starttime + duration <= now:
-            logging.debug(
-                "History row started %.0fs before launch and ended %.0fs ago, so it is an"
-                " earlier play; treating the track as current",
-                self._launch_time - starttime,
-                now - (starttime + duration),
-            )
-            return False
-        return True
 
     def _get_db_path(self) -> pathlib.Path | None:
         """Return the MediaLibrary.db path, or None if not found.
