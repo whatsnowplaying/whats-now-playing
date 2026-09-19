@@ -27,6 +27,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
+from nowplaying.webserver.events_websocket import EventsWebSocketHandler
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
 from nowplaying.webserver.guessgame_websocket import GuessgameWebSocketHandler
 from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
@@ -60,6 +61,11 @@ REMOTEDB_KEY = web.AppKey("remotedb", nowplaying.db.MetadataDB)
 WS_KEY = web.AppKey("websockets", weakref.WeakSet)
 DC_STORAGE_KEY: web.AppKey[nowplaying.datacache.DataStorage] = web.AppKey("datacache_storage")
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
+REQUESTS_WATCHER_KEY = web.AppKey("requests_watcher", nowplaying.db.DBWatcher)
+# Broadcast target for /v1/events -- one asyncio.Queue per connection, not sockets
+# themselves. Deliberately not in on_shutdown, at the cost of up to a 30s shutdown
+# delay; see events_websocket.py for the full rationale.
+EVENTS_WS_KEY = web.AppKey("events_websockets", weakref.WeakSet)
 JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
 HTTP_SESSION_KEY = web.AppKey("http_session", aiohttp.ClientSession)
@@ -128,6 +134,16 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
 
         self.requests_handler = RequestsHandler(config_key=CONFIG_KEY)
+
+        self.events_ws_handler = EventsWebSocketHandler(
+            stopevent=self.stopevent,
+            config_key=CONFIG_KEY,
+            metadb_key=METADB_KEY,
+            watcher_key=WATCHER_KEY,
+            requests_watcher_key=REQUESTS_WATCHER_KEY,
+            events_ws_key=EVENTS_WS_KEY,
+            requests_handler=self.requests_handler,
+        )
 
         while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             try:
@@ -756,6 +772,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         threading.current_thread().name = "WebServer-runner"
         app = web.Application()
         app[WS_KEY] = weakref.WeakSet()
+        app[EVENTS_WS_KEY] = weakref.WeakSet()
         app.on_startup.append(self.on_startup)
         app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
@@ -800,6 +817,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                     "/wsguessgamestream", self.guessgame_ws_handler.websocket_guessgame_streamer
                 ),
                 web.get("/v1/images/ws", self.images_ws_handler.websocket_images_handler),
+                web.get("/v1/events", self.events_ws_handler.websocket_events_handler),
                 web.get(
                     "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
                 ),
@@ -856,6 +874,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self.tasks.add(guessgame_task)
         guessgame_task.add_done_callback(self.tasks.discard)
 
+        events_task = asyncio.create_task(
+            self.events_ws_handler.events_broadcast_task(self.runner.app)
+        )
+        self.tasks.add(events_task)
+        events_task.add_done_callback(self.tasks.discard)
+
         await self.site.start()
 
         # Register mDNS/Bonjour service after server starts
@@ -887,6 +911,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         app[DC_STORAGE_KEY] = nowplaying.datacache.get_client().storage
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()
+        # Requests() runs a sync DB migration; to_thread keeps it off the event loop.
+        requests_instance = await asyncio.to_thread(self.requests_handler.get_requests, app)
+        app[REQUESTS_WATCHER_KEY] = nowplaying.db.DBWatcher(requests_instance.databasefile)
+        app[REQUESTS_WATCHER_KEY].start()
         if os.environ.get("WNP_REMOTEDB_TEST_FILE"):
             remotedb: pathlib.Path | None = pathlib.Path(os.environ["WNP_REMOTEDB_TEST_FILE"])
         else:
@@ -927,6 +955,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await app["statedb"].close()
         await app[HTTP_SESSION_KEY].close()
         app[WATCHER_KEY].stop()
+        app[REQUESTS_WATCHER_KEY].stop()
         await app[DC_STORAGE_KEY].close()
 
         # Cleanup runner last (site cleanup happens automatically)
