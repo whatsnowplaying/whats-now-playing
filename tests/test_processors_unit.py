@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for nowplaying/metadata/processors.py targeting uncovered code paths."""
 
+import logging
 import unittest.mock
 
 import pytest
@@ -622,3 +623,44 @@ def test_coverurl_is_relative_on_both_branches(bootstrap, cachekey, expected):
 
     assert processors.metadata["coverurl"] == expected
     assert not processors.metadata["coverurl"].startswith("/")
+
+
+def test_recognition_replacement_does_not_log_binary_fields(bootstrap, caplog):
+    """coverimageraw is bytes; %r on it produced 359KB log lines."""
+    config = bootstrap
+    for field in ("artist", "title", "artistwebsites"):
+        config.cparser.setValue(f"recognition/replace{field}", True)
+    metadata = {
+        "artist": "A",
+        "coverimageraw": b"\x89PNG" + b"\x00" * 4096,
+        "musicbrainzartistid": ["aaa"],
+    }
+    addmeta = {
+        "artist": "B",
+        "coverimageraw": b"\x89PNG" + b"\xff" * 4096,
+        "musicbrainzartistid": ["bbb"],
+    }
+
+    with caplog.at_level(logging.DEBUG):
+        nowplaying.metadata.processors.recognition_replacement(
+            config=config, metadata=metadata, addmeta=addmeta
+        )
+
+    logged = [rec.getMessage() for rec in caplog.records if "recognition " in rec.getMessage()]
+    assert not any("coverimageraw" in message for message in logged)
+    assert max((len(message) for message in logged), default=0) < 500
+
+
+@pytest.mark.parametrize("field", ["artist", "title", "artistwebsites"])
+def test_recognition_replacement_logs_the_fields_it_governs(bootstrap, caplog, field):
+    """The kept-existing branch has to cover the replace-list fields, not everything else."""
+    config = bootstrap
+    config.cparser.setValue(f"recognition/replace{field}", False)
+    value, other = (["https://a/"], ["https://b/"]) if field == "artistwebsites" else ("A", "B")
+
+    with caplog.at_level(logging.DEBUG):
+        nowplaying.metadata.processors.recognition_replacement(
+            config=config, metadata={field: value}, addmeta={field: other}
+        )
+
+    assert any(f"kept existing {field}" in rec.getMessage() for rec in caplog.records)
