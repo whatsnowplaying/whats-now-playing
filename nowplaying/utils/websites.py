@@ -4,14 +4,26 @@
 import re
 
 _SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://", re.IGNORECASE)
+_AUTHORITY_END = re.compile(r"[/?#]")
 
 
 def canonical_key(url: str) -> str:
-    """Comparison key identifying the resource a URL points at."""
-    key = _SCHEME.sub("", url.strip().lower())
-    if key.startswith("www."):
-        key = key[4:]
-    return key.rstrip("/")
+    """Comparison key identifying the resource a URL points at.
+
+    Only the host folds case; paths are case-sensitive, and wikidata puts a
+    capital in one (/wiki/Q175195).
+    """
+    key = _SCHEME.sub("", url.strip())
+    end = _AUTHORITY_END.search(key)
+    cut = end.start() if end else len(key)
+    host = key[:cut].lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return (host + key[cut:]).rstrip("/")
+
+
+def _is_https(url: str) -> bool:
+    return url[:8].lower() == "https://"
 
 
 def merge_websites(*sources) -> list[str]:
@@ -26,8 +38,6 @@ def merge_websites(*sources) -> list[str]:
             if not key:
                 continue
             current = chosen.get(key)
-            if current is None or (
-                current.startswith("http://") and stripped.startswith("https://")
-            ):
+            if current is None or (not _is_https(current) and _is_https(stripped)):
                 chosen[key] = stripped
     return list(chosen.values())

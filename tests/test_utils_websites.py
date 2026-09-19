@@ -24,11 +24,26 @@ def test_same_resource_collapses(left, right):
     [
         ("http://example.com/", "https://example.com/"),
         ("https://example.com/", "http://example.com/"),
+        ("HTTP://example.com/", "https://example.com/"),
+        ("example.com/", "https://example.com/"),
     ],
 )
-def test_https_wins_regardless_of_order(first, second):
-    """An http spelling is upgraded when the https one also shows up"""
+def test_https_wins_over_any_other_spelling(first, second):
+    """Whatever the other spelling is -- http, HTTP, scheme-less -- https wins"""
     assert nowplaying.utils.websites.merge_websites([first], [second]) == ["https://example.com/"]
+
+
+@pytest.mark.parametrize(
+    "left,right",
+    [
+        # paths are case-sensitive; wikidata puts a capital in one
+        ("https://www.wikidata.org/wiki/Q175195", "https://www.wikidata.org/wiki/q175195"),
+        ("https://example.com/Artist", "https://example.com/artist"),
+    ],
+)
+def test_path_case_is_significant(left, right):
+    """Only the host folds case, so differing paths stay separate entries"""
+    assert nowplaying.utils.websites.merge_websites([left], [right]) == [left, right]
 
 
 def test_distinct_resources_survive_in_order():
