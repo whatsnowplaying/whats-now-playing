@@ -25,6 +25,7 @@ import nowplaying.metadata.tinytag_runner
 import nowplaying.musicbrainz
 import nowplaying.utils
 import nowplaying.utils.filters
+import nowplaying.utils.websites
 from nowplaying.types import TrackMetadata
 
 import nowplaying.datacache
@@ -425,27 +426,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                         "Unexpected error normalizing URL '%s': %s", url, error, exc_info=True
                     )
                     newlist.append(url)  # Keep original URL if normalization fails
-            self.metadata["artistwebsites"] = newlist
+            self.metadata["artistwebsites"] = sorted(
+                nowplaying.utils.websites.merge_websites(newlist)
+            )
 
-        lists = ["artistwebsites", "isrc", "musicbrainzartistid"]
-        for listname in lists:
+        for listname in ["isrc", "musicbrainzartistid"]:
             if self.metadata.get(listname):
-                newlist = sorted(set(self.metadata[listname]))
-                self.metadata[listname] = newlist
-
-        if self.metadata.get("artistwebsites"):
-            newlist = []
-            for url in self.metadata["artistwebsites"]:
-                if "wikidata" in url:
-                    continue
-                if "http:" not in url:
-                    newlist.append(url)
-                    continue
-
-                testurl = url.replace("http:", "https:")
-                if testurl not in self.metadata.get("artistwebsites"):
-                    newlist.append(url)
-            self.metadata["artistwebsites"] = newlist
+                self.metadata[listname] = sorted(set(self.metadata[listname]))
 
     def _process_hostmeta(self) -> None:
         """add the host metadata so other subsystems can use it"""
@@ -905,7 +892,18 @@ def recognition_replacement(
                 or not metadata.get(meta)
                 and addmeta.get(meta)
             ):
+                if metadata.get(meta) and metadata[meta] != addmeta[meta]:
+                    logging.debug(
+                        "recognition replaced %s: %r -> %r", meta, metadata[meta], addmeta[meta]
+                    )
                 metadata[meta] = addmeta[meta]
+            elif addmeta.get(meta) and metadata.get(meta) != addmeta.get(meta):
+                logging.debug(
+                    "recognition kept existing %s=%r, discarding %r",
+                    meta,
+                    metadata[meta],
+                    addmeta[meta],
+                )
         elif not metadata.get(meta) and addmeta.get(meta):
             metadata[meta] = addmeta[meta]
     return metadata
