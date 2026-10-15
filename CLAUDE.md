@@ -194,13 +194,16 @@ print('minimum', shell.minimumSizeHint(), 'opens at', shell.size())
   clobber the user's, you have to check before writing; the store will not do it for
   you.
 
-  Concretely, do not write to `QSettings.SystemScope`. On macOS it resolves to
-  `/Library/Preferences/...`, where `isWritable()` is `False` and a write returns
-  `Status.AccessError` without creating a file -- and yet the value still reads back
-  through the platform preference cache. So a failed write looks exactly like a
-  successful one, which is what makes the phantom-layer mistake so easy to make.
-  Note `config.py:defaults()` constructs a SystemScope QSettings; that is not
-  evidence a second layer exists.
+  Concretely, do not write to `QSettings.SystemScope`, and never explain a value by
+  saying a write to it may not have persisted. Values registered in
+  `config.py:defaults()` resolve at read time, so a bare `value(key, type=bool)` at a
+  call site is not evidence the key is unset. `defaults()` constructs a SystemScope
+  QSettings; that is not evidence a second layer exists.
+
+  **To find what a setting resolves to, read it with the `bootstrap` fixture.** Do not
+  derive it from `defaults()`, from the scope, or from the absence of a
+  `defaultValue=` at a call site. This one is answered wrong repeatedly, always by
+  reasoning rather than measuring, and the measurement is one `pytest -k` away.
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts

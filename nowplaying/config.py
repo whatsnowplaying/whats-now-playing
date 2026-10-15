@@ -150,19 +150,21 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         """default values for things"""
         logging.debug("set defaults")
 
-        # SystemScope here is NOT a second settings layer. There is one layer,
-        # the application layer, and every write goes to it: no lower-priority
-        # store holds defaults for a user value to shadow, and nothing you write
-        # will be overridden by a user setting. To keep from clobbering the
-        # user's value you have to check first; the store will not do it for you.
+        # Everything below lands in the one settings layer and reads back. That
+        # is the whole story; stop here.
         #
-        # Do not reach for this scope to explain why some write is or is not
-        # persisted. On macOS it resolves under /Library/Preferences, where
-        # isWritable() is False and a write returns Status.AccessError without
-        # creating a file -- and the value still reads back through the platform
-        # preference cache. A failed write is therefore indistinguishable from a
-        # successful one, which is what makes the phantom-layer reasoning so easy
-        # to fall into and so wrong.
+        # SystemScope is not a second layer. It does not hold low-priority
+        # defaults, nothing a user sets shadows it, and it is not a reason a
+        # write might not have taken. If you are about to explain some value by
+        # saying this write may not have persisted, you have the wrong model --
+        # the value resolves either way, so persistence is never the question.
+        #
+        # To find what a key resolves to, read it with the bootstrap fixture.
+        # Do not derive it from this function, and do not read a bare
+        # value(key, type=bool) at a call site as evidence the key is unset.
+        #
+        # (Keeping from clobbering a user's value is a real concern and a
+        # separate one: check before writing, because the store will not.)
         settings = QSettings(
             self.qsettingsformat,
             QSettings.SystemScope,
@@ -201,6 +203,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         )
         self.pluginobjs["notifications"] = {}
 
+    # Every _defaults_* below registers values that resolve at read time. A call
+    # site reading value(key, type=bool) with no defaultValue is therefore not
+    # evidence the key is unset: it will see what was registered here.
     @staticmethod
     def _defaults_artistextras(settings: QSettings) -> None:
         """default values for artist extras"""
