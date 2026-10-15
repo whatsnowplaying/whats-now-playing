@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for nowplaying/metadata/processors.py targeting uncovered code paths."""
 
+import logging
 import unittest.mock
 
 import pytest
@@ -622,3 +623,123 @@ def test_coverurl_is_relative_on_both_branches(bootstrap, cachekey, expected):
 
     assert processors.metadata["coverurl"] == expected
     assert not processors.metadata["coverurl"].startswith("/")
+
+
+def test_recognition_replacement_does_not_log_binary_fields(bootstrap, caplog):
+    """coverimageraw is bytes; %r on it produced 359KB log lines."""
+    config = bootstrap
+    for field in ("artist", "title", "artistwebsites"):
+        config.cparser.setValue(f"recognition/replace{field}", True)
+    metadata = {
+        "artist": "A",
+        "coverimageraw": b"\x89PNG" + b"\x00" * 4096,
+        "musicbrainzartistid": ["aaa"],
+    }
+    addmeta = {
+        "artist": "B",
+        "coverimageraw": b"\x89PNG" + b"\xff" * 4096,
+        "musicbrainzartistid": ["bbb"],
+    }
+
+    with caplog.at_level(logging.DEBUG):
+        nowplaying.metadata.processors.recognition_replacement(
+            config=config, metadata=metadata, addmeta=addmeta
+        )
+
+    logged = [rec.getMessage() for rec in caplog.records if "recognition " in rec.getMessage()]
+    assert not any("coverimageraw" in message for message in logged)
+    assert max((len(message) for message in logged), default=0) < 500
+
+
+@pytest.mark.parametrize("field", ["artist", "title", "artistwebsites"])
+def test_recognition_replacement_logs_the_fields_it_governs(bootstrap, caplog, field):
+    """The kept-existing branch has to cover the replace-list fields, not everything else."""
+    config = bootstrap
+    config.cparser.setValue(f"recognition/replace{field}", False)
+    value, other = (["https://a/"], ["https://b/"]) if field == "artistwebsites" else ("A", "B")
+
+    with caplog.at_level(logging.DEBUG):
+        nowplaying.metadata.processors.recognition_replacement(
+            config=config, metadata={field: value}, addmeta={field: other}
+        )
+
+    assert any(f"kept existing {field}" in rec.getMessage() for rec in caplog.records)
+
+
+def test_plugin_websites_merge_instead_of_competing(bootstrap):
+    """Two plugins each know a different corner of the same artist.
+
+    recognition_replacement() gates artistwebsites like artist and title, so
+    with the default replaceartistwebsites=False the second plugin's list was
+    dropped: only whichever arrived first survived to the dedupe.
+    """
+    config = bootstrap
+    config.cparser.setValue("recognition/replaceartistwebsites", False)
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    processors.metadata = {"artist": "WNP Mock Artist"}
+
+    first = processors._merge_plugin_websites(  # pylint: disable=protected-access
+        {"artistwebsites": ["https://www.discogs.com/artist/1"]}
+    )
+    second = processors._merge_plugin_websites(  # pylint: disable=protected-access
+        {"artistwebsites": ["https://last.fm/music/x"], "artistlongbio": "bio"}
+    )
+
+    assert processors.metadata["artistwebsites"] == [
+        "https://last.fm/music/x",
+        "https://www.discogs.com/artist/1",
+    ]
+    # artistwebsites is handled here, so it must not also reach the gate.
+    assert "artistwebsites" not in first
+    assert "artistwebsites" not in second
+    # Everything else the plugin returned still goes through untouched.
+    assert second["artistlongbio"] == "bio"
+
+
+def test_plugin_websites_merge_folds_spellings(bootstrap):
+    """One resource, two spellings, one survivor -- https wins."""
+    config = bootstrap
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    processors.metadata = {"artistwebsites": ["http://www.discogs.com/artist/1/"]}
+
+    processors._merge_plugin_websites(  # pylint: disable=protected-access
+        {"artistwebsites": ["https://discogs.com/artist/1"]}
+    )
+
+    assert processors.metadata["artistwebsites"] == ["https://discogs.com/artist/1"]
+
+
+@pytest.mark.asyncio
+async def test_artist_extras_keeps_every_plugin_url(bootstrap):
+    """End to end through _artist_extras: both plugins' URLs reach the metadata.
+
+    Covers the wiring as well as the merge -- calling _merge_plugin_websites()
+    directly still passes if _artist_extras() never calls it.
+    """
+    config = bootstrap
+    config.cparser.setValue("recognition/replaceartistwebsites", False)
+
+    class _FakePlugin:  # pylint: disable=too-few-public-methods
+        def __init__(self, url):
+            self.url = url
+
+        async def download_async(self, metadata, **_kwargs):  # pylint: disable=unused-argument
+            """Contribute this plugin's one URL, as the real plugins do."""
+            return {"artistwebsites": [self.url]}
+
+    # Construct first: __init__ runs _sortextras(), which looks up the real
+    # plugin names in pluginobjs.
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    config.pluginobjs["artistextras"] = {
+        "one": _FakePlugin("https://www.discogs.com/artist/1"),
+        "two": _FakePlugin("https://last.fm/music/x"),
+    }
+    processors.extraslist = {0: ["one", "two"]}
+    processors.metadata = {"artist": "WNP Mock Artist"}
+
+    await processors._artist_extras()  # pylint: disable=protected-access
+
+    assert processors.metadata["artistwebsites"] == [
+        "https://last.fm/music/x",
+        "https://www.discogs.com/artist/1",
+    ]

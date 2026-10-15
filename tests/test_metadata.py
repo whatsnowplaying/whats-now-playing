@@ -490,7 +490,10 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
     metadataout.pop("coverimageraw", None)
     assert metadataout["album"] in ["Iris", "The Destroyer — 2", "Destroyer Vol 1 & 2"]
-    assert metadataout["artistwebsites"] == ["https://www.discogs.com/artist/2028711"]
+    assert metadataout["artistwebsites"] == [
+        "https://www.discogs.com/artist/2028711",
+        "https://www.wikidata.org/wiki/Q3541171",
+    ]
     assert metadataout["artist"] == "TR/ST"
     assert metadataout["date"] in ["2019-07-25", "2019-11-01"]
     assert metadataout["imagecacheartist"] == "tr st"

@@ -74,9 +74,11 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
     result2 = await plugin.download_async(metadata_with_mbid.copy())
 
     if result2:  # Only test if we got data back
-        # Should NOT have corrected the artist name (MusicBrainz is authoritative)
-        assert result2["artist"] == "nine inch nails"
-        logging.info("Artist name preserved for MusicBrainz search: %s", result2["artist"])
+        # Should NOT offer an artist name at all: MusicBrainz is authoritative,
+        # and the plugin returns only what it contributes, so absence is how it
+        # says "keep what you have".
+        assert "artist" not in result2
+        logging.info("Artist name not offered for MusicBrainz search")
 
 
 @pytest.mark.live("theaudiodb")

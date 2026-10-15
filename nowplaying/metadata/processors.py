@@ -25,6 +25,7 @@ import nowplaying.metadata.tinytag_runner
 import nowplaying.musicbrainz
 import nowplaying.utils
 import nowplaying.utils.filters
+import nowplaying.utils.websites
 from nowplaying.types import TrackMetadata
 
 import nowplaying.datacache
@@ -425,27 +426,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                         "Unexpected error normalizing URL '%s': %s", url, error, exc_info=True
                     )
                     newlist.append(url)  # Keep original URL if normalization fails
-            self.metadata["artistwebsites"] = newlist
+            self.metadata["artistwebsites"] = sorted(
+                nowplaying.utils.websites.merge_websites(newlist)
+            )
 
-        lists = ["artistwebsites", "isrc", "musicbrainzartistid"]
-        for listname in lists:
+        for listname in ["isrc", "musicbrainzartistid"]:
             if self.metadata.get(listname):
-                newlist = sorted(set(self.metadata[listname]))
-                self.metadata[listname] = newlist
-
-        if self.metadata.get("artistwebsites"):
-            newlist = []
-            for url in self.metadata["artistwebsites"]:
-                if "wikidata" in url:
-                    continue
-                if "http:" not in url:
-                    newlist.append(url)
-                    continue
-
-                testurl = url.replace("http:", "https:")
-                if testurl not in self.metadata.get("artistwebsites"):
-                    newlist.append(url)
-            self.metadata["artistwebsites"] = newlist
+                self.metadata[listname] = sorted(set(self.metadata[listname]))
 
     def _process_hostmeta(self) -> None:
         """add the host metadata so other subsystems can use it"""
@@ -791,6 +778,30 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata.pop("artistlongbio", None)
             self.metadata.pop("artistshortbio", None)
 
+    def _merge_plugin_websites(self, addmeta: TrackMetadata) -> TrackMetadata:
+        """Fold a plugin's artistwebsites into what we already have.
+
+        recognition_replacement() treats artistwebsites like artist and title,
+        where one source has to win.  That is right for a scalar and wrong for
+        a set: these plugins are not competing with the file tags or with each
+        other, they each know about a different corner of the same artist, so
+        gating keeps whichever arrived first and drops the rest.
+
+        Merging here rather than in recognition_replacement() leaves
+        recognition/replaceartistwebsites meaning what it says -- whether a
+        lookup may overrule the tags -- which is a different question from
+        whether two lookups can both contribute.
+        """
+        websites = addmeta.get("artistwebsites")
+        if not websites:
+            return addmeta
+        addmeta = dict(addmeta)
+        del addmeta["artistwebsites"]
+        self.metadata["artistwebsites"] = sorted(
+            nowplaying.utils.websites.merge_websites(self.metadata.get("artistwebsites"), websites)
+        )
+        return addmeta
+
     async def _artist_extras(self) -> None:  # pylint: disable=too-many-branches,too-many-nested-blocks
         """Efficiently process artist extras plugins using native async calls"""
         bio_state = await self._bio_dedup_setup()
@@ -832,6 +843,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             logging.error("%s plugin failed: %s", plugin, error, exc_info=True)
                             continue
                         if addmeta:
+                            addmeta = self._merge_plugin_websites(addmeta)
                             self.metadata = recognition_replacement(
                                 config=self.config, metadata=self.metadata, addmeta=addmeta
                             )
@@ -905,7 +917,18 @@ def recognition_replacement(
                 or not metadata.get(meta)
                 and addmeta.get(meta)
             ):
+                if metadata.get(meta) and metadata[meta] != addmeta[meta]:
+                    logging.debug(
+                        "recognition replaced %s: %r -> %r", meta, metadata[meta], addmeta[meta]
+                    )
                 metadata[meta] = addmeta[meta]
+            elif addmeta.get(meta) and metadata.get(meta) != addmeta.get(meta):
+                logging.debug(
+                    "recognition kept existing %s=%r, discarding %r",
+                    meta,
+                    metadata[meta],
+                    addmeta[meta],
+                )
         elif not metadata.get(meta) and addmeta.get(meta):
             metadata[meta] = addmeta[meta]
     return metadata

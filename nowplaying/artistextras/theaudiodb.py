@@ -92,19 +92,29 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         metadata: TrackMetadata,
         used_musicbrainz: bool = False,
     ) -> TrackMetadata:
-        """deal with the various bits of data"""
+        """deal with the various bits of data
+
+        Writes land in a dict of our own rather than in the caller's.  Mutating
+        the metadata we were handed returns the same object the caller passed
+        in, so recognition_replacement() compares it against itself and every
+        gate becomes a no-op -- which let the artist correction below overrule
+        a tag even with recognition/replaceartist off.  Reads still come from
+        the caller's copy, since that is what says whether a field is already
+        filled.
+        """
+        mymeta: TrackMetadata = {}
         if bio := self._extract_bio_data(extradata, metadata):
-            metadata["artistlongbio"] = bio
+            mymeta["artistlongbio"] = bio
 
         for artdata in extradata:
             if not self._check_artist(artdata):
                 continue
 
-            self._handle_website_data(artdata, metadata)
+            self._handle_website_data(artdata, mymeta)
             await self._handle_image_data(artdata, metadata)
 
-        self._correct_artist_name(extradata, metadata, used_musicbrainz)
-        return metadata
+        self._correct_artist_name(extradata, metadata, mymeta, used_musicbrainz)
+        return mymeta
 
     def _extract_bio_data(self, extradata: list[dict[str, Any]], metadata: TrackMetadata) -> str:
         """Extract biography data from TheAudioDB response"""
@@ -134,8 +144,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
         return bio
 
-    def _handle_website_data(self, artdata: dict[str, Any], metadata: TrackMetadata) -> None:
-        """Handle website data from TheAudioDB response"""
+    def _handle_website_data(self, artdata: dict[str, Any], mymeta: TrackMetadata) -> None:
+        """Collect website data from TheAudioDB into our own result"""
         if not (
             self.config.cparser.value("theaudiodb/websites", type=bool)
             and artdata.get("strWebsite")
@@ -143,9 +153,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return
 
         webstr = "https://" + artdata["strWebsite"]
-        if not metadata.get("artistwebsites"):
-            metadata["artistwebsites"] = []
-        metadata["artistwebsites"].append(webstr)
+        if not mymeta.get("artistwebsites"):
+            mymeta["artistwebsites"] = []
+        mymeta["artistwebsites"].append(webstr)
 
     async def _handle_image_data(self, artdata: dict[str, Any], metadata: TrackMetadata) -> None:
         """Handle image data from TheAudioDB response"""
@@ -211,10 +221,19 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     provider="theaudiodb",
                 )
 
-    def _correct_artist_name(
-        self, extradata: list[dict[str, Any]], metadata: TrackMetadata, used_musicbrainz: bool
+    def _correct_artist_name(  # pylint: disable=too-many-arguments
+        self,
+        extradata: list[dict[str, Any]],
+        metadata: TrackMetadata,
+        mymeta: TrackMetadata,
+        used_musicbrainz: bool,
     ) -> None:
-        """Correct artist name from API response for name-based searches"""
+        """Correct artist name from API response for name-based searches
+
+        Offered rather than applied: artist is one of the fields
+        recognition/replaceartist governs, so the caller decides whether a
+        lookup may overrule the tag.
+        """
         if used_musicbrainz or not extradata:
             return
 
@@ -229,7 +248,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     metadata["artist"],
                     corrected_artist,
                 )
-                metadata["artist"] = corrected_artist
+                mymeta["artist"] = corrected_artist
             break
 
     async def albumdatafromname_async(self, apikey: str, artist: str, album: str) -> dict | None:
