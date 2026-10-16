@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """MetadataProcessors: orchestrate all metadata sources for a track"""
 
 import asyncio
@@ -100,6 +101,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.config = nowplaying.config.ConfigFile()
 
         self.extraslist: dict[int, list[str]] = self._sortextras()
+        # Set from the file's tags in _process_plugins(), before any lookup runs.
+        self._tagged_websites: bool = False
         self._bio_session_id: str = datetime.datetime.now().isoformat()
         if self.config.cparser.value("artistextras/bio_dedup", type=bool):
             self._biohistory: nowplaying.metadata.biohistory.ArtistBioHistory | None = (
@@ -633,6 +636,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.error("Ignoring fallback failure.")
 
     async def _process_plugins(self, skipplugins: bool) -> None:
+        # Whether the file's own tags carried websites, recorded before any
+        # lookup contributes: that is what recognition/replaceartistwebsites
+        # protects, and with nothing there the lookups are used regardless.
+        self._tagged_websites = bool(self.metadata.get("artistwebsites"))
         await self._musicbrainz()
 
         for plugin in self.config.plugins["recognition"]:
@@ -778,34 +785,49 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata.pop("artistlongbio", None)
             self.metadata.pop("artistshortbio", None)
 
-    def _merge_plugin_websites(self, addmeta: TrackMetadata) -> TrackMetadata:
-        """Fold a plugin's artistwebsites into what we already have.
+    @staticmethod
+    def _take_plugin_websites(addmeta: TrackMetadata, collected: list[str]) -> TrackMetadata:
+        """Set a plugin's artistwebsites aside, to be settled after the loop.
 
-        recognition_replacement() treats artistwebsites like artist and title,
-        where one source has to win.  That is right for a scalar and wrong for
-        a set: these plugins are not competing with the file tags or with each
-        other, they each know about a different corner of the same artist, so
-        gating keeps whichever arrived first and drops the rest.
-
-        Merging here rather than in recognition_replacement() leaves
-        recognition/replaceartistwebsites meaning what it says -- whether a
-        lookup may overrule the tags -- which is a different question from
-        whether two lookups can both contribute.
+        The gate keeps one source per field, which drops every provider but the
+        first for a set.
         """
         websites = addmeta.get("artistwebsites")
         if not websites:
             return addmeta
+        collected.extend(websites)
         addmeta = dict(addmeta)
         del addmeta["artistwebsites"]
-        self.metadata["artistwebsites"] = sorted(
-            nowplaying.utils.websites.merge_websites(self.metadata.get("artistwebsites"), websites)
-        )
         return addmeta
 
-    async def _artist_extras(self) -> None:  # pylint: disable=too-many-branches,too-many-nested-blocks
+    def _settle_artistwebsites(self, collected: list[str]) -> None:
+        """Decide between the file's own links and what the lookups found.
+
+        Not the gate: that keeps one side, and this is three-way. Empty tags
+        take the lookups whatever the setting says.
+        """
+        if not collected:
+            return
+        if self._tagged_websites and not self.config.cparser.value(
+            "recognition/replaceartistwebsites", type=bool
+        ):
+            logging.debug(
+                "keeping the file's %d artistwebsites, discarding %d from lookups",
+                len(self.metadata.get("artistwebsites") or []),
+                len(collected),
+            )
+            return
+        self.metadata["artistwebsites"] = sorted(
+            nowplaying.utils.websites.merge_websites(
+                self.metadata.get("artistwebsites"), collected
+            )
+        )
+
+    async def _artist_extras(self) -> None:  # pylint: disable=too-many-branches,too-many-nested-blocks,too-many-locals
         """Efficiently process artist extras plugins using native async calls"""
         bio_state = await self._bio_dedup_setup()
         tasks: list[tuple[str, asyncio.Task]] = []
+        collected_websites: list[str] = []
         try:
             # Calculate dynamic timeout based on delay setting
             base_delay = self.config.cparser.value("settings/delay", type=float, defaultValue=10.0)
@@ -843,7 +865,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             logging.error("%s plugin failed: %s", plugin, error, exc_info=True)
                             continue
                         if addmeta:
-                            addmeta = self._merge_plugin_websites(addmeta)
+                            addmeta = self._take_plugin_websites(addmeta, collected_websites)
                             self.metadata = recognition_replacement(
                                 config=self.config, metadata=self.metadata, addmeta=addmeta
                             )
@@ -874,6 +896,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             cleanup_error,
                         )
         finally:
+            # Settled even when a plugin or the gather failed: the links an
+            # earlier provider did return are still good.
+            self._settle_artistwebsites(collected_websites)
             await self._bio_dedup_restore(*bio_state)
 
     def _generate_short_bio(self) -> None:

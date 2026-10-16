@@ -666,55 +666,12 @@ def test_recognition_replacement_logs_the_fields_it_governs(bootstrap, caplog, f
     assert any(f"kept existing {field}" in rec.getMessage() for rec in caplog.records)
 
 
-def test_plugin_websites_merge_instead_of_competing(bootstrap):
-    """Two plugins each know a different corner of the same artist.
-
-    recognition_replacement() gates artistwebsites like artist and title, so
-    with the default replaceartistwebsites=False the second plugin's list was
-    dropped: only whichever arrived first survived to the dedupe.
-    """
-    config = bootstrap
-    config.cparser.setValue("recognition/replaceartistwebsites", False)
-    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
-    processors.metadata = {"artist": "WNP Mock Artist"}
-
-    first = processors._merge_plugin_websites(  # pylint: disable=protected-access
-        {"artistwebsites": ["https://www.discogs.com/artist/1"]}
-    )
-    second = processors._merge_plugin_websites(  # pylint: disable=protected-access
-        {"artistwebsites": ["https://last.fm/music/x"], "artistlongbio": "bio"}
-    )
-
-    assert processors.metadata["artistwebsites"] == [
-        "https://last.fm/music/x",
-        "https://www.discogs.com/artist/1",
-    ]
-    # artistwebsites is handled here, so it must not also reach the gate.
-    assert "artistwebsites" not in first
-    assert "artistwebsites" not in second
-    # Everything else the plugin returned still goes through untouched.
-    assert second["artistlongbio"] == "bio"
-
-
-def test_plugin_websites_merge_folds_spellings(bootstrap):
-    """One resource, two spellings, one survivor -- https wins."""
-    config = bootstrap
-    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
-    processors.metadata = {"artistwebsites": ["http://www.discogs.com/artist/1/"]}
-
-    processors._merge_plugin_websites(  # pylint: disable=protected-access
-        {"artistwebsites": ["https://discogs.com/artist/1"]}
-    )
-
-    assert processors.metadata["artistwebsites"] == ["https://discogs.com/artist/1"]
-
-
 @pytest.mark.asyncio
 async def test_artist_extras_keeps_every_plugin_url(bootstrap):
     """End to end through _artist_extras: both plugins' URLs reach the metadata.
 
-    Covers the wiring as well as the merge -- calling _merge_plugin_websites()
-    directly still passes if _artist_extras() never calls it.
+    Driven through _artist_extras() rather than the helpers, because testing
+    those directly still passes when nothing calls them.
     """
     config = bootstrap
     config.cparser.setValue("recognition/replaceartistwebsites", False)
@@ -743,3 +700,52 @@ async def test_artist_extras_keeps_every_plugin_url(bootstrap):
         "https://last.fm/music/x",
         "https://www.discogs.com/artist/1",
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "tagged,replace,expected",
+    [
+        # Nothing in the file to protect, so the lookups are used either way.
+        pytest.param(None, False, ["https://a.test/x", "https://b.test/y"], id="no-tags-fills"),
+        pytest.param(None, True, ["https://a.test/x", "https://b.test/y"], id="no-tags-fills-on"),
+        # The file said something and the DJ has not allowed lookups to overrule it.
+        pytest.param(
+            ["https://mine.test/"], False, ["https://mine.test/"], id="tags-win-when-off"
+        ),
+        # Permission given, so what the lookups found is used.
+        pytest.param(
+            ["https://mine.test/"],
+            True,
+            ["https://a.test/x", "https://b.test/y", "https://mine.test/"],
+            id="tags-overruled-when-on",
+        ),
+    ],
+)
+async def test_artistwebsites_respects_the_setting(bootstrap, tagged, replace, expected):
+    """The file's own links are what recognition/replaceartistwebsites protects."""
+    config = bootstrap
+    config.cparser.setValue("recognition/replaceartistwebsites", replace)
+
+    class _FakePlugin:  # pylint: disable=too-few-public-methods
+        def __init__(self, url):
+            self.url = url
+
+        async def download_async(self, metadata, **_kwargs):  # pylint: disable=unused-argument
+            """Contribute this plugin's one URL, as the real plugins do."""
+            return {"artistwebsites": [self.url]}
+
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    config.pluginobjs["artistextras"] = {
+        "one": _FakePlugin("https://a.test/x"),
+        "two": _FakePlugin("https://b.test/y"),
+    }
+    processors.extraslist = {0: ["one", "two"]}
+    processors.metadata = {"artist": "WNP Mock Artist"}
+    if tagged:
+        processors.metadata["artistwebsites"] = list(tagged)
+    processors._tagged_websites = bool(tagged)  # pylint: disable=protected-access
+
+    await processors._artist_extras()  # pylint: disable=protected-access
+
+    assert processors.metadata.get("artistwebsites") == expected
