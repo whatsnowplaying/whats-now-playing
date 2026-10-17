@@ -664,3 +664,88 @@ def test_recognition_replacement_logs_the_fields_it_governs(bootstrap, caplog, f
         )
 
     assert any(f"kept existing {field}" in rec.getMessage() for rec in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_artist_extras_keeps_every_plugin_url(bootstrap):
+    """End to end through _artist_extras: both plugins' URLs reach the metadata.
+
+    Driven through _artist_extras() rather than the helpers, because testing
+    those directly still passes when nothing calls them.
+    """
+    config = bootstrap
+    config.cparser.setValue("recognition/replaceartistwebsites", False)
+
+    class _FakePlugin:  # pylint: disable=too-few-public-methods
+        def __init__(self, url):
+            self.url = url
+
+        async def download_async(self, metadata, **_kwargs):  # pylint: disable=unused-argument
+            """Contribute this plugin's one URL, as the real plugins do."""
+            return {"artistwebsites": [self.url]}
+
+    # Construct first: __init__ runs _sortextras(), which looks up the real
+    # plugin names in pluginobjs.
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    config.pluginobjs["artistextras"] = {
+        "one": _FakePlugin("https://www.discogs.com/artist/1"),
+        "two": _FakePlugin("https://last.fm/music/x"),
+    }
+    processors.extraslist = {0: ["one", "two"]}
+    processors.metadata = {"artist": "WNP Mock Artist"}
+
+    await processors._artist_extras()  # pylint: disable=protected-access
+
+    assert processors.metadata["artistwebsites"] == [
+        "https://last.fm/music/x",
+        "https://www.discogs.com/artist/1",
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "tagged,replace,expected",
+    [
+        # Nothing in the file to protect, so the lookups are used either way.
+        pytest.param(None, False, ["https://a.test/x", "https://b.test/y"], id="no-tags-fills"),
+        pytest.param(None, True, ["https://a.test/x", "https://b.test/y"], id="no-tags-fills-on"),
+        # The file said something and the DJ has not allowed lookups to overrule it.
+        pytest.param(
+            ["https://mine.test/"], False, ["https://mine.test/"], id="tags-win-when-off"
+        ),
+        # Permission given, so what the lookups found is used.
+        pytest.param(
+            ["https://mine.test/"],
+            True,
+            ["https://a.test/x", "https://b.test/y", "https://mine.test/"],
+            id="tags-overruled-when-on",
+        ),
+    ],
+)
+async def test_artistwebsites_respects_the_setting(bootstrap, tagged, replace, expected):
+    """The file's own links are what recognition/replaceartistwebsites protects."""
+    config = bootstrap
+    config.cparser.setValue("recognition/replaceartistwebsites", replace)
+
+    class _FakePlugin:  # pylint: disable=too-few-public-methods
+        def __init__(self, url):
+            self.url = url
+
+        async def download_async(self, metadata, **_kwargs):  # pylint: disable=unused-argument
+            """Contribute this plugin's one URL, as the real plugins do."""
+            return {"artistwebsites": [self.url]}
+
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    config.pluginobjs["artistextras"] = {
+        "one": _FakePlugin("https://a.test/x"),
+        "two": _FakePlugin("https://b.test/y"),
+    }
+    processors.extraslist = {0: ["one", "two"]}
+    processors.metadata = {"artist": "WNP Mock Artist"}
+    if tagged:
+        processors.metadata["artistwebsites"] = list(tagged)
+    processors._tagged_websites = bool(tagged)  # pylint: disable=protected-access
+
+    await processors._artist_extras()  # pylint: disable=protected-access
+
+    assert processors.metadata.get("artistwebsites") == expected

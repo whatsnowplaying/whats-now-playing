@@ -216,9 +216,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             if bio := self._clean_bio(raw_bio):
                 result["artistlongbio"] = bio
 
-        if not metadata.get("artistwebsites") and self.config.cparser.value(
-            "lastfm/websites", type=bool
-        ):
+        # Offered whatever else was found: the last.fm page is a resource no
+        # other provider supplies, and _artist_extras() merges rather than
+        # picking one list, so staying quiet here only loses it.
+        if self.config.cparser.value("lastfm/websites", type=bool):
             if url := artist_info.get("url"):
                 result["artistwebsites"] = [url]
 

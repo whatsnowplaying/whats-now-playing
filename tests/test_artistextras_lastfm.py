@@ -662,3 +662,26 @@ async def test_lastfm_live_coverart(bootstrap):  # pylint: disable=redefined-out
         "nineinchnails_thedownwardspiral", "front_cover"
     )
     assert keys, "Cover art should be downloaded and stored"
+
+
+@pytest.mark.asyncio
+async def test_lastfm_contributes_alongside_other_websites(bootstrap):
+    """Another provider's websites must not silence last.fm.
+
+    The last.fm page is a resource nothing else supplies, and _artist_extras()
+    merges the lists rather than keeping one, so declining here only lost it.
+    """
+    plugin = _setup_plugin(bootstrap)
+
+    with respx.mock(using="httpcore2", assert_all_called=False) as mock_http:
+        mock_http.get(WNP_MOCK_URL).mock(return_value=httpx.Response(200, json=WNP_MOCK_RESPONSE))
+        result = await plugin.download_async(
+            {
+                "artist": "WNP Mock Artist",
+                "imagecacheartist": "wnpmockartist",
+                "artistwebsites": ["https://www.discogs.com/artist/1"],
+            },
+        )
+
+    assert result is not None
+    assert result["artistwebsites"] == ["https://www.last.fm/music/WNP+Mock+Artist"]

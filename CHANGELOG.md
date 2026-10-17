@@ -58,6 +58,16 @@
 
 ### Bug Fixes
 
+* The Artist checkbox under Recognition and Replacement now applies to
+    TheAudioDB. When TheAudioDB had to look your artist up by name rather than
+    by ID and spelled it differently, it rewrote the artist whatever that
+    checkbox said. If you have it switched off and have been seeing spellings
+    tidied up, accents added or capitalisation changed, your own tag is used
+    from now on. Switch the checkbox on to keep the tidied spellings
+* Artist website links are now gathered from every source instead of only the
+    first one to find any, so a last.fm page no longer disappears because
+    MusicBrainz got there first. A link written two ways, such as with and
+    without www, is listed once
 * Twitch no longer throws away your saved login while it is trying to connect.
     A connection attempt that failed for any reason, including the network being
     down or no sign-in having happened yet, was treated as proof the stored
