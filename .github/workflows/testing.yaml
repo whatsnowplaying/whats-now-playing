@@ -82,7 +82,7 @@ jobs:
           ls -al .coverage*
           coverage xml
       - name: artifact mac test
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         if: always()
         with:
           name: macos-coverage
@@ -154,7 +154,7 @@ jobs:
           pytest --durations=40 --junit-xml=junit-windows.xml -s tests
           coverage xml
       - name: artifact windows test
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         if: always()
         with:
           name: win-coverage
@@ -259,7 +259,7 @@ jobs:
           pytest --durations=40 --junit-xml=junit-linux-${{ matrix.python }}.xml -s
           coverage xml
       - name: artifact linux test
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         if: always()
         with:
           name: linux-coverage-${{ matrix.python }}
@@ -323,7 +323,7 @@ jobs:
           coverage html
           coverage xml
       - name: artifact full tests
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         if: always()
         with:
           name: full-coverage
