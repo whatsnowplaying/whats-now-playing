@@ -16,7 +16,9 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QSystemTrayIcon,
 )
 
+import nowplaying.feedback
 import nowplaying.systemtray  # pylint: disable=import-error
+import nowplaying.upgrades.background
 
 
 class MockConfig:
@@ -461,6 +463,33 @@ def test_menu_structure_and_separators(qtbot, mock_dependencies):
     # Count separators (should have some for proper menu organization)
     separators = [action for action in actions if action.isSeparator()]
     assert len(separators) >= 2  # Should have at least a few separators for organization
+
+
+def test_feedback_action_opens_one_dialog(qtbot, mock_dependencies):
+    """Send Feedback sits after Documentation and reuses its dialog."""
+    tray = nowplaying.systemtray.Tray()
+    actions = tray.menu.actions()
+    assert actions[actions.index(tray.docs_action) + 1] is tray.feedback_action
+    assert tray.feedback_action.text() == "Send Feedback..."
+
+    tray.feedback_action.trigger()
+    first = tray._feedback_dialog
+    qtbot.addWidget(first)
+    assert isinstance(first, nowplaying.feedback.FeedbackDialog)
+    assert first.isVisible()
+
+    tray.feedback_action.trigger()
+    assert tray._feedback_dialog is first
+
+
+def test_exit_everything_stops_feedback_send(qtbot, mock_dependencies):
+    """Shutdown waits on an in-flight feedback send like the other worker threads."""
+    tray = nowplaying.systemtray.Tray()
+    tray._feedback_dialog = MagicMock(spec=nowplaying.feedback.FeedbackDialog)
+    tray.exit_everything()
+    tray._feedback_dialog.stop_sending.assert_called_once_with(
+        nowplaying.upgrades.background._SHUTDOWN_TIMEOUT_MS
+    )
 
 
 def test_action_connections(qtbot, mock_dependencies):

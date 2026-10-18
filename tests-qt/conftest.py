@@ -6,6 +6,7 @@ import threading
 import time
 
 import pytest
+import shiboken6
 from PySide6.QtCore import QThread  # pylint: disable=no-name-in-module
 
 
@@ -41,7 +42,11 @@ def detect_stray_threads(request):
     stray_qt = [
         obj
         for obj in gc.get_objects()
-        if isinstance(obj, QThread) and obj.isRunning() and id(obj) not in qt_before
+        # A logged traceback can keep the wrapper of an already-deleted QThread alive.
+        if isinstance(obj, QThread)
+        and shiboken6.isValid(obj)  # pylint: disable=no-member
+        and obj.isRunning()
+        and id(obj) not in qt_before
     ]
 
     messages = []
