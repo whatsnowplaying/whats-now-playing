@@ -58,6 +58,9 @@
 * A new "Send Feedback..." tray menu item sends an anonymous message to the
     developers. Only the message, the WNP version, and the operating system
     and CPU type are sent; it is not tied to your charts account
+* Kick authorization now copies the auth URL to the clipboard instead of
+    opening the default browser, the same way Twitch does, so it can be
+    pasted into whichever browser is logged in to the right Kick account
 
 ### Bug Fixes
 
