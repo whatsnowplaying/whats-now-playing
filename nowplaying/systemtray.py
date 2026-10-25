@@ -32,6 +32,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.datacache
 import nowplaying.db
+import nowplaying.feedback
 import nowplaying.firstinstall
 import nowplaying.guessgame
 import nowplaying.inputs
@@ -115,6 +116,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._prefetch_worker = None  # QThread for background update pre-fetch
         self._oauth_poller: _WebserverPollThread | None = None
         self._obs_export_dialog = None
+        self._feedback_dialog: nowplaying.feedback.FeedbackDialog | None = None
 
         # Core initialization
         self._initialize_core_components(config=config)
@@ -241,6 +243,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         QAction.triggered would otherwise pass its checked flag as from_setup."""
         self._show_obs_export(from_setup=False)
 
+    def _show_feedback(self) -> None:
+        """Open the anonymous feedback dialog (non-modal)."""
+        if self._feedback_dialog is None:
+            self._feedback_dialog = nowplaying.feedback.FeedbackDialog(config=self.config)
+        nowplaying.utils.qt.focus_window(self._feedback_dialog)
+
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         if not self.settingswindow:
@@ -262,6 +270,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.docs_action = QAction("Documentation")
         self.docs_action.triggered.connect(self._open_documentation)
         self.menu.addAction(self.docs_action)
+        self.feedback_action = QAction("Send Feedback...")
+        self.feedback_action.triggered.connect(self._show_feedback)
+        self.menu.addAction(self.feedback_action)
         self.menu.addSeparator()
 
         # Settings and Requests actions
@@ -859,6 +870,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             if not self._prefetch_worker.wait(nowplaying.upgrades.background._SHUTDOWN_TIMEOUT_MS):  # pylint: disable=protected-access
                 self._prefetch_worker.terminate()
                 self._prefetch_worker.wait()
+        if self._feedback_dialog is not None:
+            self._feedback_dialog.stop_sending(nowplaying.upgrades.background._SHUTDOWN_TIMEOUT_MS)  # pylint: disable=protected-access
 
         # Clean up any stray temporary OAuth2 credentials before shutdown
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)

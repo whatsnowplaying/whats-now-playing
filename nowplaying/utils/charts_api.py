@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Shared utilities for Charts API communication"""
 
+import http.client
 import json
 import logging
 import urllib.error
 import urllib.request
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
+
+import nowplaying.upgrades.platform
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -13,6 +17,9 @@ if TYPE_CHECKING:
 # Base URLs for charts service
 LOCAL_BASE_URL = "http://localhost:8000"
 PROD_BASE_URL = "https://whatsnowplaying.com"
+
+FEEDBACK_MAX_LENGTH = 4000
+FEEDBACK_ERROR_BODY_LIMIT = 64 * 1024
 
 # HTTP status code handling for charts submissions
 HTTP_STATUS_ACTIONS = {
@@ -221,4 +228,96 @@ def link_platform_account(  # pylint: disable=too-many-locals,too-many-return-st
         logging.error(
             "Unexpected error linking %s account to charts: %s", platform, exc, exc_info=True
         )
+        return ("server_error", None)
+
+
+def build_feedback_payload(text: str) -> dict[str, str | None]:
+    """Body for /api/v1/feedback. Anonymous by contract: no charts key or
+    other identifying data may be added here."""
+    info = nowplaying.upgrades.platform.PlatformDetector.get_platform_info()
+    return {
+        "text": text.strip(),
+        "version": nowplaying.version.__VERSION__,  # pylint: disable=no-member
+        "os": info.get("os"),
+        "chipset": info.get("chipset"),
+    }
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects so the 3xx surfaces as an HTTPError. urllib would
+    otherwise resend the POST as a bodyless GET and report the target's 200
+    as accepted feedback."""
+
+    def redirect_request(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: http.client.HTTPMessage,
+        newurl: str,
+    ) -> None:
+        return None
+
+
+def _feedback_error_detail(exc: urllib.error.HTTPError) -> str | None:
+    try:
+        error = json.loads(exc.read(FEEDBACK_ERROR_BODY_LIMIT)).get("error")
+    except (ValueError, AttributeError, OSError, http.client.HTTPException, RecursionError):
+        logging.debug("Feedback error response was not usable JSON")
+        return None
+    return error if isinstance(error, str) else None
+
+
+def submit_feedback(  # pylint: disable=too-many-return-statements
+    base_url: str, text: str
+) -> tuple[str, str | None]:
+    """
+    Send anonymous feedback to the charts server at base_url (from
+    get_charts_base_url, resolved by the caller so this can run off the UI thread).
+    Never raises.
+
+    Returns:
+        Tuple of (status, detail). detail is the server's error message, if any.
+
+        Status values:
+        - "success": accepted (200)
+        - "invalid": text empty or over FEEDBACK_MAX_LENGTH; nothing was sent
+        - "rejected": server refused the feedback (400)
+        - "rate_limited": too many submissions (429)
+        - "server_error": any other HTTP status, including redirects
+        - "network_error": server could not be reached
+    """
+    payload = build_feedback_payload(text)
+    if not payload["text"] or len(payload["text"]) > FEEDBACK_MAX_LENGTH:
+        return ("invalid", None)
+
+    url = f"{base_url}/api/v1/feedback"
+    request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
+    request.add_header("Content-Type", "application/json")
+    request.add_header(
+        "User-Agent",
+        f"whats-now-playing/{nowplaying.version.__VERSION__}",  # pylint: disable=no-member
+    )
+    opener = urllib.request.build_opener(_NoRedirectHandler)
+
+    try:
+        with opener.open(request, timeout=10) as response:
+            if response.status == 200:
+                return ("success", None)
+            logging.error("Unexpected feedback response status %d", response.status)
+            return ("server_error", None)
+    except urllib.error.HTTPError as exc:
+        detail = _feedback_error_detail(exc)
+        logging.error("Feedback submission failed (%d): %s", exc.code, detail)
+        if exc.code == 400:
+            return ("rejected", detail)
+        if exc.code == 429:
+            return ("rate_limited", detail)
+        return ("server_error", detail)
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
+        logging.exception("Network error submitting feedback")
+        return ("network_error", None)
+    except Exception:  # pylint: disable=broad-except
+        logging.exception("Unexpected error submitting feedback")
         return ("server_error", None)
