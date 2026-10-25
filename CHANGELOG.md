@@ -55,6 +55,9 @@
     explain why. General settings has a Certificate Trust control to force
     either behaviour, which matters on networks that inspect traffic with
     their own certificate
+* A new "Send Feedback..." tray menu item sends an anonymous message to the
+    developers. Only the message, the WNP version, and the operating system
+    and CPU type are sent; it is not tied to your charts account
 
 ### Bug Fixes
 

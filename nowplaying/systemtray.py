@@ -28,6 +28,7 @@ import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.feedback
 import nowplaying.firstinstall
 import nowplaying.guessgame
 import nowplaying.notifications.charts
@@ -77,6 +78,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.link_thread = None  # QThread for Twitch account linking
         self.vacuum_thread = None  # QThread for background database vacuum
         self._obs_export_dialog = None
+        self._feedback_dialog: nowplaying.feedback.FeedbackDialog | None = None
 
         # Core initialization
         self._initialize_core_components(config=config)
@@ -197,6 +199,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             )
         nowplaying.utils.qt.focus_window(self._obs_export_dialog)
 
+    def _show_feedback(self) -> None:
+        """Open the anonymous feedback dialog (non-modal)."""
+        if self._feedback_dialog is None:
+            self._feedback_dialog = nowplaying.feedback.FeedbackDialog(config=self.config)
+        nowplaying.utils.qt.focus_window(self._feedback_dialog)
+
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         if not self.settingswindow:
@@ -218,6 +226,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.docs_action = QAction("Documentation")
         self.docs_action.triggered.connect(self._open_documentation)
         self.menu.addAction(self.docs_action)
+        self.feedback_action = QAction("Send Feedback...")
+        self.feedback_action.triggered.connect(self._show_feedback)
+        self.menu.addAction(self.feedback_action)
         self.menu.addSeparator()
 
         # Settings and Requests actions
@@ -667,6 +678,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Wait for background vacuum thread to finish before cleanup
         if self.vacuum_thread and self.vacuum_thread.isRunning():
             self.vacuum_thread.wait()
+        if self._feedback_dialog is not None:
+            self._feedback_dialog.stop_sending(5_000)
 
         # Clean up any stray temporary OAuth2 credentials before shutdown
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
