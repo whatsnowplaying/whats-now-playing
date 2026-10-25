@@ -7,6 +7,7 @@ the webserver process, so the PKCE verifier and state must land in config.
 """
 
 import base64
+import hashlib
 import unittest.mock
 import urllib.parse
 import webbrowser
@@ -60,7 +61,10 @@ def test_copies_auth_url_and_stores_pkce(bootstrap, qtbot, clipboard):
 
     bootstrap.get()
     assert bootstrap.cparser.value(f"kick/temp_state_{session_id}") == state
-    assert bootstrap.cparser.value(f"kick/temp_code_verifier_{session_id}")
+    verifier = bootstrap.cparser.value(f"kick/temp_code_verifier_{session_id}")
+    # A verifier regenerated after the URL was built would fail the token exchange.
+    digest = hashlib.sha256(verifier.encode("utf-8")).digest()
+    assert params["code_challenge"] == [base64.urlsafe_b64encode(digest).decode().rstrip("=")]
     assert page.status.text().startswith("URL copied to clipboard.")
     # Re-copying has to stay possible until a token actually arrives.
     assert page.action_button.isEnabled()
