@@ -52,7 +52,8 @@ with your Kick account.
 2. Set your Kick channel name
 3. Click "Save" to store the configuration
 4. **Important**: You must save the settings before proceeding to authentication
-5. Click "Authenticate with Kick" to complete OAuth2 setup
+5. Click "Copy Kick Auth URL" and paste the URL into the browser where your
+   Kick account is logged in
 
 ## Template Features
 
@@ -86,7 +87,7 @@ Example announcement template:
 2. Configure your OAuth2 credentials
 3. Set up your announcement template
 4. Configure announcement delay if needed
-5. Test the connection with the "Authenticate with Kick" button
+5. Authorize with the "Copy Kick Auth URL" button
 
 ## Template Preview
 

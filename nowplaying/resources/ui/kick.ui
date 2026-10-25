@@ -133,7 +133,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Authenticate with Kick</string>
+         <string>Copy Kick Auth URL</string>
         </property>
        </widget>
       </item>
@@ -161,7 +161,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;2. Copy the &lt;span style=&quot;font-weight: 700&quot;&gt;Client ID&lt;/span&gt; and &lt;span style=&quot;font-weight: 700&quot;&gt;Client Secret&lt;/span&gt; from your application&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;3. Set the redirect URI in your Kick application to match the one shown above&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;4. Enter your channel name (username where you want to monitor/send messages)&lt;/p&gt;
-&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;5. Click &lt;span style=&quot;font-weight: 700&quot;&gt;Authenticate with Kick&lt;/span&gt; to complete OAuth2 setup&lt;/p&gt;
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;5. Click &lt;span style=&quot;font-weight: 700&quot;&gt;Copy Kick Auth URL&lt;/span&gt; and paste the URL into the browser where your Kick account is logged in&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;The webserver must be enabled for OAuth2 authentication to work.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
