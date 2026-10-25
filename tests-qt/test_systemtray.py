@@ -465,7 +465,7 @@ def test_menu_structure_and_separators(qtbot, mock_dependencies):
     assert len(separators) >= 2  # Should have at least a few separators for organization
 
 
-def test_feedback_action_opens_one_dialog(qtbot, mock_dependencies):
+def test_feedback_action_opens_one_dialog(qtbot, bootstrap, mock_dependencies):
     """Send Feedback sits after Documentation and reuses its dialog."""
     tray = nowplaying.systemtray.Tray()
     actions = tray.menu.actions()
@@ -482,7 +482,7 @@ def test_feedback_action_opens_one_dialog(qtbot, mock_dependencies):
     assert tray._feedback_dialog is first
 
 
-def test_exit_everything_stops_feedback_send(qtbot, mock_dependencies):
+def test_exit_everything_stops_feedback_send(qtbot, bootstrap, mock_dependencies):
     """Shutdown waits on an in-flight feedback send like the other worker threads."""
     tray = nowplaying.systemtray.Tray()
     tray._feedback_dialog = MagicMock(spec=nowplaying.feedback.FeedbackDialog)
