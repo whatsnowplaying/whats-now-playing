@@ -16,6 +16,7 @@ import pytest
 
 import nowplaying.kick.settings
 import nowplaying.settingsui
+from nowplaying.kick.constants import ACCESS_TOKEN_KEY, OAUTH_STATUS_KEY
 
 
 @pytest.fixture(name="clipboard")
@@ -99,3 +100,42 @@ def test_missing_credentials_copy_nothing(kick_settings, clipboard, clientid, se
 
     clipboard.setText.assert_not_called()
     assert widget.oauth_status_label.text() == expected
+
+
+def _session_id(url: str) -> str:
+    state = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)["state"][0]
+    return base64.urlsafe_b64decode(f"{state}==").decode("utf-8").split(":", 1)[0]
+
+
+@pytest.mark.usefixtures("no_browser")
+def test_recopy_keeps_earlier_url_valid(bootstrap, kick_settings, clipboard):
+    """Copying again must not invalidate a URL already pasted into a browser."""
+    widget = kick_settings.widget
+    widget.clientid_lineedit.setText("wnptestclientid")
+    widget.secret_lineedit.setText("wnptestsecret")
+
+    widget.authenticate_button.click()
+    widget.authenticate_button.click()
+
+    first, second = (call.args[0] for call in clipboard.setText.call_args_list)
+    first_session, second_session = _session_id(first), _session_id(second)
+    assert first_session != second_session
+    bootstrap.get()
+    for url, session_id in ((first, first_session), (second, second_session)):
+        state = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)["state"][0]
+        assert bootstrap.cparser.value(f"kick/temp_state_{session_id}") == state
+
+
+def test_token_without_status_leaves_copy_enabled(bootstrap, kick_settings):
+    """A saved token with no status from Kick chat must not lock out recopying."""
+    widget = kick_settings.widget
+    widget.clientid_lineedit.setText("wnptestclientid")
+    widget.secret_lineedit.setText("wnptestsecret")
+    bootstrap.cparser.setValue(ACCESS_TOKEN_KEY, "wnptesttoken")
+    bootstrap.cparser.remove(OAUTH_STATUS_KEY)
+
+    kick_settings.update_oauth_status()
+
+    assert widget.oauth_status_label.text() == "Connecting..."
+    assert widget.authenticate_button.isEnabled()
+    assert widget.authenticate_button.text() == "Copy Kick Auth URL"

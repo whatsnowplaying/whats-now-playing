@@ -119,6 +119,10 @@ class KickSettings:
             logging.error("OAuth2 handler not initialized")
             return
 
+        # A fresh handler gets its own session ID, so recopying does not overwrite
+        # the state of a URL that is already open in a browser.
+        self.oauth = nowplaying.kick.oauth2.KickOAuth2(self.oauth.config)
+
         # Update config with current form values
         if self.widget:
             self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
@@ -189,9 +193,10 @@ class KickSettings:
             self.widget.authenticate_button.setText(AUTH_BUTTON_TEXT)
             self.widget.authenticate_button.setEnabled(True)
         elif has_token:
+            # Only a running Kick chat sets the status, so this can last indefinitely
             self.widget.oauth_status_label.setText("Connecting...")
-            self.widget.authenticate_button.setText("Connecting...")
-            self.widget.authenticate_button.setEnabled(False)
+            self.widget.authenticate_button.setText(AUTH_BUTTON_TEXT)
+            self.widget.authenticate_button.setEnabled(True)
         else:
             self.widget.oauth_status_label.setText("Not authenticated")
             self.widget.authenticate_button.setText(AUTH_BUTTON_TEXT)
