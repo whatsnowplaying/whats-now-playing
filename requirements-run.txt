@@ -3,7 +3,7 @@ aiofiles==25.1.0
 aiohttp==3.14.5
 httpx2[http2]==2.16.0
 aiosqlite==0.22.1
-certifi==2026.10.19
+certifi==2026.10.23
 chardet<8 # required by requests
 charset-normalizer==3.4.7
 defusedxml==0.7.1
