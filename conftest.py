@@ -32,6 +32,16 @@ import nowplaying.config
 # Enable tracemalloc to track resource allocations
 tracemalloc.start()
 
+
+def pytest_collection_modifyitems(config, items):
+    """Run tests-qt first, as testpaths does, whatever order paths were given in.
+
+    Qt tests that start after the asyncio/threading tests abort the process.
+    """
+    qt_dir = config.rootpath / "tests-qt"
+    items.sort(key=lambda item: not item.path.is_relative_to(qt_dir))
+
+
 # setuplogging() is not called during tests, so borrow its list rather than
 # keeping a second copy: the copies drifted, and aiosqlite statement tracing
 # ended up burying everything else in CI.
