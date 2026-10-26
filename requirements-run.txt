@@ -50,7 +50,7 @@ zeroconf==0.151.5
 # packaging system.  I'd love to use pyicu-wheels here but it can't
 # alias itself as pyicu generically :(
 
-pyicu==2.16.2 ; sys_platform != 'win32' # requires Homebrew icu4c on macOS
+pyicu==2.17 ; sys_platform != 'win32' # requires Homebrew icu4c on macOS
 
 # --- WINDOWS (Pre-compiled Binaries) ---
 # Each line checks your Python version and architecture to pull the right wheel.
