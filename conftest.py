@@ -36,6 +36,15 @@ tracemalloc.start()
 _PYTEST_LOCKFILE = pathlib.Path(tempfile.gettempdir()) / "pytest-wnp.lock"
 
 
+def pytest_collection_modifyitems(config, items):
+    """Run tests-qt first, as testpaths does, whatever order paths were given in.
+
+    Qt tests that start after the asyncio/threading tests abort the process.
+    """
+    qt_dir = config.rootpath / "tests-qt"
+    items.sort(key=lambda item: not item.path.is_relative_to(qt_dir))
+
+
 @pytest.fixture(scope="session", autouse=True)
 def enforce_single_pytest_instance():
     """Fail immediately if another pytest session is already running."""
