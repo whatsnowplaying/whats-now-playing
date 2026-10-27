@@ -10,7 +10,9 @@ import aiohttp
 import pytest
 import websockets
 
+import nowplaying.db
 import nowplaying.metadata.processors
+import nowplaying.trackrequests
 import nowplaying.webserver.auth
 from tests.utils_images import jpeg_bytes
 from tests.webserver.conftest import wait_for_webserver_content_update, wait_for_webserver_ready
@@ -507,6 +509,346 @@ async def test_cover_by_cachekey_unknown_key_is_404(getwebserver):
         ) as req,
     ):
         assert req.status == 404
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_connect_sends_connected_frame_first(getwebserver):
+    """the very first frame is a server-minted, per-connection-unique session id
+
+    Never a query param -- there is no preceding .htm render for /v1/events to
+    relay one from, unlike /wsstream et al., so the id has to be minted here.
+    """
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws1:
+        first1 = json.loads(await asyncio.wait_for(ws1.recv(), timeout=10))
+        async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws2:
+            first2 = json.loads(await asyncio.wait_for(ws2.recv(), timeout=10))
+
+    assert first1["type"] == "connected"
+    assert first2["type"] == "connected"
+    session_id1 = first1["payload"]["session_id"]
+    session_id2 = first2["payload"]["session_id"]
+    assert session_id1
+    assert session_id2
+    assert session_id1 != session_id2
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_connect_honors_client_session_header(getwebserver):
+    """a well-formed X-WNP-Client-Session is echoed back verbatim"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with websockets.connect(
+        f"ws://localhost:{port}/v1/events",
+        additional_headers={"X-WNP-Client-Session": "my-lumia-session-42"},
+    ) as ws:
+        first = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+
+    assert first == {
+        "type": "connected",
+        "timestamp": first["timestamp"],
+        "payload": {"session_id": "my-lumia-session-42"},
+    }
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_connect_sends_snapshot(getwebserver):
+    """after connected: current track, one request-added per row, then snapshot-complete
+
+    snapshot-complete is the deterministic alternative to a client-side debounce
+    timer for "is the initial request-added burst finished yet".
+    """
+    config, metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+
+    await metadb.write_to_metadb(
+        metadata={
+            "artist": "WNP Mock Artist",
+            "title": "WNP Mock Song",
+            "coverimageraw": jpeg_bytes(),
+        }
+    )
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}/v1/requests", timeout=aiohttp.ClientTimeout(total=5)
+        ) as req:
+            assert req.status == 200
+        async with session.post(
+            f"http://localhost:{port}/v1/requests",
+            json={"requester": "viewer1", "artist": "Radiohead", "title": "Creep"},
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as req:
+            assert req.status == 200
+
+    async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws:
+        connected = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+        track_update = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+        request_added = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+        snapshot_complete = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+
+    assert connected["type"] == "connected"
+    assert track_update["type"] == "track-update"
+    assert track_update["payload"]["artist"] == "WNP Mock Artist"
+    for key in nowplaying.db.METADATABLOBLIST:
+        assert key not in track_update["payload"]
+    assert "dbid" not in track_update["payload"]
+    assert request_added["type"] == "request-added"
+    assert request_added["payload"]["artist"] == "Radiohead"
+    assert request_added["payload"]["title"] == "Creep"
+    assert snapshot_complete["type"] == "snapshot-complete"
+    assert snapshot_complete["payload"]["request_count"] == 1
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_broadcasts_track_update_on_change(getwebserver):
+    """a live write_to_metadb after connecting produces a fresh track-update frame"""
+    config, metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws:
+        await asyncio.wait_for(ws.recv(), timeout=10)  # connected
+        # No snapshot frame necessarily follows: getwebserver's metadb and request
+        # queue both start empty, so there is nothing to send until something
+        # actually changes -- scan by type/content rather than assume a fixed count.
+
+        await metadb.write_to_metadb(metadata={"artist": "Depeche Mode", "title": "Strangelove"})
+
+        frame = None
+        for _ in range(5):
+            frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+            if (
+                frame["type"] == "track-update"
+                and frame["payload"].get("artist") == "Depeche Mode"
+            ):
+                break
+        assert frame is not None
+        assert frame["type"] == "track-update"
+        assert frame["payload"]["artist"] == "Depeche Mode"
+        assert frame["payload"]["title"] == "Strangelove"
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_broadcasts_request_added_and_removed(getwebserver):
+    """POST /v1/requests -> request-added; DELETE that id -> request-removed with the full row"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}/v1/requests", timeout=aiohttp.ClientTimeout(total=5)
+        ) as req:
+            assert req.status == 200
+
+        async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws:
+            await asyncio.wait_for(ws.recv(), timeout=10)  # connected
+            # Queue is empty after the clear above, so the snapshot phase is just
+            # "connected" then "snapshot-complete" (request_count=0) -- no need to
+            # drain it explicitly, the scan-by-type loop below skips past it.
+
+            async with session.post(
+                f"http://localhost:{port}/v1/requests",
+                json={"requester": "viewer1", "artist": "Pet Shop Boys", "title": "Heart"},
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as req:
+                assert req.status == 200
+
+            added = None
+            for _ in range(5):
+                frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+                if frame["type"] == "request-added":
+                    added = frame
+                    break
+            assert added is not None
+            assert added["payload"]["artist"] == "Pet Shop Boys"
+            reqid = added["payload"]["request_id"]
+
+            async with session.delete(
+                f"http://localhost:{port}/v1/requests/{reqid}",
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as req:
+                assert req.status == 200
+
+            removed = None
+            for _ in range(5):
+                frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+                if frame["type"] == "request-removed":
+                    removed = frame
+                    break
+            assert removed is not None
+            assert removed["payload"]["request_id"] == reqid
+            assert removed["payload"]["artist"] == "Pet Shop Boys"
+            assert removed["payload"]["title"] == "Heart"
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_broadcasts_request_updated_on_respin(getwebserver):
+    """An in-place UPDATE to an existing reqid (what respin does) -> request-updated,
+    never a request-removed/request-added pair -- a consumer should never see a
+    transient empty slot for a row that never actually left the queue."""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.delete(
+            f"http://localhost:{port}/v1/requests", timeout=aiohttp.ClientTimeout(total=5)
+        ) as req:
+            assert req.status == 200
+
+        async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws:
+            await asyncio.wait_for(ws.recv(), timeout=10)  # connected
+
+            async with session.post(
+                f"http://localhost:{port}/v1/requests",
+                json={"requester": "viewer1", "artist": "Pet Shop Boys", "title": "Heart"},
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as req:
+                assert req.status == 200
+
+            added = None
+            for _ in range(5):
+                frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+                if frame["type"] == "request-added":
+                    added = frame
+                    break
+            assert added is not None
+            reqid = added["payload"]["request_id"]
+
+            # Respin's own UPDATE (trackrequests.py: user_roulette_request -> add_to_db
+            # with reqid set) rewrites artist/title/etc. in place on the same row rather
+            # than deleting and re-inserting. Drive that exact code path directly --
+            # there is no REST endpoint for it, respin is only reachable from the
+            # roulette poller -- against the same request.db the webserver subprocess
+            # is watching, so this is a real UPDATE, not a simulated one.
+            reqs = nowplaying.trackrequests.Requests(config)
+            await reqs.add_to_db(
+                {
+                    "reqid": reqid,
+                    "username": "viewer1",
+                    "playlist": "",
+                    "type": "Roulette",
+                    "displayname": "",
+                    "artist": "Pet Shop Boys",
+                    "title": "West End Girls",
+                }
+            )
+
+            updated = None
+            saw_added_or_removed = False
+            for _ in range(5):
+                frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+                if frame["type"] == "request-updated":
+                    updated = frame
+                    break
+                if frame["type"] in ("request-added", "request-removed"):
+                    saw_added_or_removed = True
+            assert not saw_added_or_removed
+            assert updated is not None
+            assert updated["payload"]["request_id"] == reqid
+            assert updated["payload"]["artist"] == "Pet Shop Boys"
+            assert updated["payload"]["title"] == "West End Girls"
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "secret_config,client_header,query_secret,expected_status",
+    [
+        (None, None, None, 200),
+        ("test_secret", "test_secret", None, 200),
+        ("test_secret", "wrong_secret", None, 403),
+        ("test_secret", None, None, 401),
+        # Header-preferred, ?secret= as the legacy fallback -- same contract as
+        # every REST endpoint.  Not optional: the browser WebSocket() constructor
+        # cannot set custom headers at all, so this is the only path a
+        # browser-rendered consumer of this stream would ever have.
+        ("test_secret", None, "test_secret", 200),
+        ("test_secret", None, "wrong_secret", 403),
+    ],
+)
+async def test_events_auth(
+    getwebserver, secret_config, client_header, query_secret, expected_status
+):
+    """header preferred, ?secret= query param as the browser-compatible fallback"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    if secret_config:
+        config.cparser.setValue("remote/remote_key", secret_config)
+    config.cparser.sync()
+
+    headers = {}
+    if client_header:
+        headers[nowplaying.webserver.auth.CLIENT_AUTH_HEADER] = client_header
+    url = f"ws://localhost:{port}/v1/events"
+    if query_secret:
+        url += f"?secret={query_secret}"
+
+    if expected_status == 200:
+        async with websockets.connect(url, additional_headers=headers) as ws:
+            frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+            assert frame["type"] == "connected"
+    else:
+        with pytest.raises(websockets.exceptions.InvalidStatus) as excinfo:
+            async with websockets.connect(url, additional_headers=headers):
+                pass
+        assert excinfo.value.response.status_code == expected_status
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_events_ignores_client_messages(getwebserver):
+    """publish-only: sending text from the client doesn't close the connection or do anything"""
+    config, metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    if not await wait_for_webserver_ready(port, timeout=10.0):
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with websockets.connect(f"ws://localhost:{port}/v1/events") as ws:
+        await asyncio.wait_for(ws.recv(), timeout=10)  # connected
+
+        await ws.send("some arbitrary client text, not a command")
+
+        await metadb.write_to_metadb(metadata={"artist": "Yazoo", "title": "Situation"})
+
+        frame = None
+        for _ in range(5):
+            frame = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+            if frame["type"] == "track-update" and frame["payload"].get("artist") == "Yazoo":
+                break
+        assert frame is not None
+        assert ws.close_code is None  # still open
 
 
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
