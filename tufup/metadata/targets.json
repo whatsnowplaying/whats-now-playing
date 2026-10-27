@@ -2,12 +2,12 @@
  "signatures": [
   {
    "keyid": "3009823a498e7d7dd5b244f5f7c3fab05d5a7f0923e141de96d0f1eaa8d2fe9e",
-   "sig": "5962b72426d9d72679c5cb6d227b70aaa3a6fb97231dbd1caf99f1229617528821b651a9bca77ede19adf479654661815a1bf3dc5bc9dfaee9a9bad3c739a70d"
+   "sig": "a4f798206b66cf29d8953fe1d6b6da49092dac015e784677ebdb212fb95bee40d64941cafff0abf3f6aab9cd736b964af5dc41dc8df867b0fb13179ad4550708"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2026-11-25T12:08:10Z",
+  "expires": "2026-11-26T11:29:57Z",
   "spec_version": "1.0.31",
   "targets": {
    "WhatsNowPlaying_linux_x86_64-5.2.1.tar.gz": {
@@ -251,6 +251,6 @@
     "length": 308793419
    }
   },
-  "version": 163
+  "version": 164
  }
 }
