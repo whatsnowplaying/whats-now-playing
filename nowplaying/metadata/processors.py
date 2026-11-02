@@ -547,10 +547,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
                 config=self.config, test_mode=self.test_mode
             )
-            addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
-            self.metadata = recognition_replacement(
-                config=self.config, metadata=self.metadata, addmeta=addmeta
-            )
+            self._apply_lookup(await musicbrainz.recognize(copy.copy(self.metadata)))
 
         except Exception as error:  # pylint: disable=broad-except
             logging.error("MusicBrainz recognition failed: %s", error)
@@ -583,9 +580,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             config=self.config, test_mode=self.test_mode
         )
         addmeta = await musicbrainz.lastditcheffort(copy.copy(self.metadata))
-        self.metadata = recognition_replacement(
-            config=self.config, metadata=self.metadata, addmeta=addmeta
-        )
+        self._apply_lookup(addmeta)
 
         # handle the youtube download case special
         if not addmeta or not addmeta.get("album"):
@@ -629,9 +624,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if addmeta := await musicbrainz.lastditcheffort(addmeta2):
                 self.metadata["artist"] = artist
                 self.metadata["title"] = clean_title  # Use the cleaned title
-                self.metadata = recognition_replacement(
-                    config=self.config, metadata=self.metadata, addmeta=addmeta
-                )
+                self._apply_lookup(addmeta)
         except Exception:  # pylint: disable=broad-except
             logging.error("Ignoring fallback failure.")
 
@@ -647,12 +640,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             provider = any(meta not in self.metadata for meta in metalist)
             if provider:
                 try:
-                    if addmeta := await self.config.pluginobjs["recognition"][plugin].recognize(
-                        metadata=self.metadata
-                    ):
-                        self.metadata = recognition_replacement(
-                            config=self.config, metadata=self.metadata, addmeta=addmeta
+                    self._apply_lookup(
+                        await self.config.pluginobjs["recognition"][plugin].recognize(
+                            metadata=self.metadata
                         )
+                    )
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error("%s threw exception %s", plugin, error, exc_info=True)
 
@@ -799,6 +791,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         addmeta = dict(addmeta)
         del addmeta["artistwebsites"]
         return addmeta
+
+    def _apply_lookup(self, addmeta: TrackMetadata | None) -> None:
+        """recognition_replacement, with artistwebsites settled rather than gated.
+
+        Settled now, not after the loop as _artist_extras does: wikimedia and
+        discogs route on these links, so they must be in place before those run.
+        """
+        if not addmeta:
+            return
+        websites: list[str] = []
+        addmeta = self._take_plugin_websites(addmeta, websites)
+        self._settle_artistwebsites(websites)
+        self.metadata = recognition_replacement(
+            config=self.config, metadata=self.metadata, addmeta=addmeta
+        )
 
     def _settle_artistwebsites(self, collected: list[str]) -> None:
         """Decide between the file's own links and what the lookups found.
