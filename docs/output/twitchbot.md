@@ -260,6 +260,7 @@ necessary:
 {% elif 'twitter' in website %} | Twitter: {{ website }}
 {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
 {% elif 'youtube' in website %} | YouTube: {{ website }}
+{% elif 'wikidata' in website %}
 {% else %} | Official homepage: {{ website }}
 {% endif %}
 {% endfor %}

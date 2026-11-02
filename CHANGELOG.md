@@ -70,7 +70,9 @@
 * Artist website links are now gathered from every source instead of only the
     first one to find any, so a last.fm page no longer disappears because
     MusicBrainz got there first. A link written two ways, such as with and
-    without www, is listed once
+    without www, is listed once. The artist's Wikidata page is now included as
+    well, so a template that prints every link will show it. The Template
+    Variables page shows how to pick which sites appear
 * Twitch no longer throws away your saved login while it is trying to connect.
     A connection attempt that failed for any reason, including the network being
     down or no sign-in having happened yet, was treated as proof the stored
