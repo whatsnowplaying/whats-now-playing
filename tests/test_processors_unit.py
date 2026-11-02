@@ -749,3 +749,45 @@ async def test_artistwebsites_respects_the_setting(bootstrap, tagged, replace, e
     await processors._artist_extras()  # pylint: disable=protected-access
 
     assert processors.metadata.get("artistwebsites") == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "tagged,replace,expected",
+    [
+        pytest.param(None, False, ["https://mb.test/x"], id="no-tags-fills"),
+        pytest.param(None, True, ["https://mb.test/x"], id="no-tags-fills-on"),
+        pytest.param(
+            ["https://mine.test/"], False, ["https://mine.test/"], id="tags-win-when-off"
+        ),
+        # The gate alone replaced here, losing the file's link.
+        pytest.param(
+            ["https://mine.test/"],
+            True,
+            ["https://mb.test/x", "https://mine.test/"],
+            id="tags-kept-when-on",
+        ),
+    ],
+)
+async def test_musicbrainz_artistwebsites_respects_the_setting(
+    bootstrap, tagged, replace, expected
+):
+    """MusicBrainz links are settled like the artist extras ones, not gated."""
+    config = bootstrap
+    config.cparser.setValue("musicbrainz/enabled", True)
+    config.cparser.setValue("musicbrainz/fallback", False)
+    config.cparser.setValue("recognition/replaceartistwebsites", replace)
+    config.plugins["recognition"] = []
+
+    processors = nowplaying.metadata.processors.MetadataProcessors(config=config)
+    processors.metadata = {"artist": "WNP Mock Artist", "title": "WNP Mock Title"}
+    if tagged:
+        processors.metadata["artistwebsites"] = list(tagged)
+
+    with unittest.mock.patch("nowplaying.musicbrainz.MusicBrainzHelper") as helper:
+        helper.return_value.recognize = unittest.mock.AsyncMock(
+            return_value={"artistwebsites": ["https://mb.test/x"]}
+        )
+        await processors._process_plugins(skipplugins=True)  # pylint: disable=protected-access
+
+    assert processors.metadata.get("artistwebsites") == expected
