@@ -124,10 +124,14 @@ a list.
 
 ### Artist Websites
 
-`artistwebsites` is a list built from your file's tags and from every
-metadata service that is enabled, so which links it holds changes from
-track to track. To show only the sites you want, test each link and leave
-out a final `else`, so anything you did not ask for is skipped:
+`artistwebsites` is a list of links for the artist. If the file has no
+website tags, it holds what the enabled metadata services found. If it
+does, those tags are used as they are, unless the **Artist Websites**
+checkbox under **Recognition & Replacement** is on, in which case the
+services' links are added to them. Either way, which
+links it holds changes from track to track. To show only the sites you
+want, test each link and leave out a final `else`, so anything you did
+not ask for is skipped:
 
 ``` jinja
 {% raw %}
