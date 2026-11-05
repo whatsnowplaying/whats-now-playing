@@ -135,17 +135,18 @@ not ask for is skipped:
 
 ``` jinja
 {% raw %}
-{% for website in artistwebsites %}
-{% if 'bandcamp' in website %} | Bandcamp: {{ website }}
-{% elif 'discogs' in website %} | Discogs: {{ website }}
-{% elif 'last.fm' in website %} | last.fm: {{ website }}
-{% endif %}
-{% endfor %}
+{%- for website in artistwebsites -%}
+{%- if 'bandcamp' in website %} | Bandcamp: {{ website }}
+{%- elif 'discogs' in website %} | Discogs: {{ website }}
+{%- elif 'last.fm' in website %} | last.fm: {{ website }}
+{%- endif -%}
+{%- endfor %}
 {% endraw %}
 ```
 
 Add an `elif` for each site you want to include, such as `musicbrainz`,
-`wikidata` or `youtube`.
+`wikidata` or `youtube`. Keep the `-` in each tag: it strips the line
+breaks around the tags, so the links come out on one line.
 
 ### Undefined
 
