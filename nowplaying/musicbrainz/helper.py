@@ -98,7 +98,6 @@ class MusicBrainzHelper:
             self.config = nowplaying.config.ConfigFile()
 
         self.test_mode = test_mode
-        self.emailaddressset = False
         # timeout_wait is set rather than inherited: wnpmb defaults it to 2.0,
         # which is most of the budget a track has before the next one starts.
         self.mb_client = MusicBrainzClient(
@@ -120,6 +119,14 @@ class MusicBrainzHelper:
             ),
             ca_bundle=nowplaying.tlstrust.ca_bundle(),
         )
+        # Here rather than before each request: a cached recording skips the
+        # request, and the artist lookups after it still need both.
+        emailaddress = (
+            self.config.cparser.value("musicbrainz/emailaddress") or "wnp@effectivemachines.com"
+        )
+        for client in (self.mb_client, self.caa_client):
+            client.set_useragent(emailaddress)
+            client.cache_service = _WNPDatacacheAdapter()
 
     async def _mb_op_with_retry(self, operation, error_msg: str, default: Any) -> Any:
         """Run an async MB operation, retrying on RateLimitError only in test_mode.
@@ -155,19 +162,6 @@ class MusicBrainzHelper:
                 return default
         return default
 
-    def _setemail(self):
-        """make sure the musicbrainz fetch has an email address set
-        according to their requirements"""
-        if not self.emailaddressset:
-            emailaddress = (
-                self.config.cparser.value("musicbrainz/emailaddress")
-                or "wnp@effectivemachines.com"
-            )
-            for client in (self.mb_client, self.caa_client):
-                client.set_useragent(emailaddress)
-                client.cache_service = _WNPDatacacheAdapter()
-            self.emailaddressset = True
-
     async def _lastditchrid(self, metadata) -> _RecordingLookup:
         """extract fields and run search
 
@@ -186,7 +180,6 @@ class MusicBrainzHelper:
         if not artist or not title:
             return _RecordingLookup(data=None, is_fallback=False)
 
-        self._setemail()
         year = nowplaying.utils.metadata.get_best_year(metadata)
 
         async def _find():
@@ -217,8 +210,6 @@ class MusicBrainzHelper:
 
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
-
-        self._setemail()
 
         lookup = await self._lastditchrid(metadata)
         riddata = lookup.data
@@ -304,8 +295,6 @@ class MusicBrainzHelper:
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
 
-        self._setemail()
-
         async def _resolve():
             async with self.mb_client:
                 return await self.mb_client.resolve_recording_by_isrc(isrclist)
@@ -348,7 +337,9 @@ class MusicBrainzHelper:
         # failures (timeout, 404, network error) do not poison the 7-day
         # recording cache entry.  Cover art is cached in its own entry;
         # failures are not cached so they are retried on the next play.
-        if data and not data.get("coverimageraw"):
+        # The track's own art wins in recognition_replacement, so do not fetch
+        # a cover only to discard it.
+        if data and not data.get("coverimageraw") and not (track_data or {}).get("coverimageraw"):
             if self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True):
                 release_id = data.get("musicbrainzalbumid")
                 rg_id = data.get("musicbrainzreleasegroupid")
@@ -366,7 +357,6 @@ class MusicBrainzHelper:
         a successful fetch is reused on subsequent plays without re-hitting
         CAA.  Failed fetches are NOT cached so they are retried next time.
         """
-        self._setemail()
 
         async def _try(entity_id: str, entity_type: str) -> bytes | None:
             async def _do_fetch() -> dict | None:
@@ -431,7 +421,6 @@ class MusicBrainzHelper:
         lookup succeeded but MusicBrainz genuinely has no recording — caching
         that negative result is desirable.
         """
-        self._setemail()
 
         async def _fetch() -> dict:
             async with self.mb_client:
@@ -466,8 +455,6 @@ class MusicBrainzHelper:
 
     async def artistids(self, idlist):
         """add data available via musicbrainz artist ids"""
-
-        self._setemail()
 
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None

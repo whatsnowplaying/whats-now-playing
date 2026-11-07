@@ -1,26 +1,26 @@
 aiocache==0.12.3
 aiofiles==25.1.0
-aiohttp==3.14.4
+aiohttp==3.14.5
 httpx2[http2]==2.16.0
 aiosqlite==0.22.1
-certifi==2026.10.19
+certifi==2026.10.23
 chardet<8 # required by requests
-charset-normalizer==3.4.7
+charset-normalizer==3.5.2
 defusedxml==0.7.1
 discord.py==2.7.1
 diskcache==5.6.3
 jinja2==3.1.6
 lxml==6.1.3
 netifaces-plus==0.12.5
-nltk==3.10.3
-orjson==3.12.0
+nltk==3.10.4
+orjson==3.13.0
 pillow==13.0.0
 pillow_avif_plugin==1.6.0
 psutil==7.2.2
 puremagic<2; python_version < "3.12"
 puremagic==2.2.0; python_version >= "3.12"
 pyacoustid==1.3.1
-pycryptodome==3.23.0
+pycryptodome==4.2.0
 pypresence==4.6.2
 # 6.5.0-6.5.3's rcc is broken on macOS; 6.5+ required for Qt.ColorScheme / colorSchemeChanged
 # 6.11.1 ships unsigned .cpp.o build artifacts in qml/Qt/labs/assetdownloader/ that break
@@ -31,10 +31,10 @@ requests-cache==1.3.3
 requests==2.34.2
 simpleobsws==1.4.3
 sqlcipher3-wheels==0.5.7
-truststore==0.10.4
+truststore==0.10.5
 tufup==0.10.0
 twitchAPI==4.5.0
-url_normalize==3.0.0
+url_normalize==3.0.1
 watchdog==6.0.0
 wnpmb @ https://github.com/whatsnowplaying/wnpmb/releases/download/0.6.0/wnpmb-0.6.0-py3-none-any.whl
 wnp-templates @ https://github.com/whatsnowplaying/wnp-templates/releases/download/0.1.4/wnp_templates-0.1.4-py3-none-any.whl
@@ -50,7 +50,7 @@ zeroconf==0.151.5
 # packaging system.  I'd love to use pyicu-wheels here but it can't
 # alias itself as pyicu generically :(
 
-pyicu==2.16.2 ; sys_platform != 'win32' # requires Homebrew icu4c on macOS
+pyicu==2.17 ; sys_platform != 'win32' # requires Homebrew icu4c on macOS
 
 # --- WINDOWS (Pre-compiled Binaries) ---
 # Each line checks your Python version and architecture to pull the right wheel.
