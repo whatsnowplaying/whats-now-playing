@@ -2,11 +2,15 @@
 """test musicbrainz"""
 
 import logging
-from unittest.mock import patch
+import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
+import nowplaying.config
+import nowplaying.datacache
 import nowplaying.musicbrainz  # pylint: disable=import-error
+import nowplaying.musicbrainz.helper
 
 # either one of these is valid for Computer Blue
 COMPBLUERID = [
@@ -125,6 +129,48 @@ async def test_recordingid_api_cache_call_count(
         assert result1 == result2 == result3
     finally:
         mbhelper._recordingid_uncached = original  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_recordingid_cache_hit_reads_artist_from_cache(
+    getmusicbrainz: nowplaying.musicbrainz.MusicBrainzHelper,  # pylint: disable=redefined-outer-name
+) -> None:
+    """A fresh helper whose recording is cached gets the artist's websites from cache too."""
+    mbhelper = getmusicbrainz
+    mbhelper.config.cparser.setValue("musicbrainz/musicbrainz", True)
+    recordingid = str(uuid.uuid4())
+    artistid = str(uuid.uuid4())
+    wikidata = "https://www.wikidata.org/wiki/Q0"
+
+    async def recording() -> dict:
+        return {"title": "WNP Mock Title", "musicbrainzartistid": [artistid]}
+
+    await nowplaying.datacache.cached_fetch(
+        provider="musicbrainz",
+        artist_name="recording",
+        endpoint=f"recording/{recordingid}",
+        fetch_func=recording,
+        ttl_seconds=60,
+    )
+    await nowplaying.musicbrainz.helper._WNPDatacacheAdapter().set(  # pylint: disable=protected-access
+        "musicbrainz",
+        f"get_artist:{artistid}:url-rels",
+        {
+            "artist": {
+                "relations": [
+                    {"target-type": "url", "type": "wikidata", "url": {"resource": wikidata}}
+                ]
+            }
+        },
+        60,
+    )
+
+    network = AsyncMock(side_effect=AssertionError("went to the network"))
+    with patch.object(mbhelper.mb_client, "_get", network):
+        result = await mbhelper.recordingid(recordingid)
+
+    assert network.await_count == 0
+    assert result["artistwebsites"] == [f"https://musicbrainz.org/artist/{artistid}", wikidata]
 
 
 @pytest.mark.live("musicbrainz")
@@ -488,3 +534,31 @@ async def test_musicbrainz_coverart_config_gate(bootstrap, coverart_enabled, exp
     else:
         assert "coverimageraw" not in result
         mock_fetch_cover.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_musicbrainz_coverart_skipped_when_track_has_art(
+    bootstrap: nowplaying.config.ConfigFile,
+) -> None:
+    """A track that already carries art does not fetch a cover it would discard."""
+    config = bootstrap
+    config.cparser.setValue("musicbrainz/enabled", True)
+    config.cparser.setValue("musicbrainz/coverart", True)
+    helper = nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
+    cached_recording = {
+        "musicbrainzrecordingid": "test-id",
+        "musicbrainzartistid": ["test-artist-id"],
+        "musicbrainzalbumid": "test-release-id",
+    }
+
+    with (
+        patch("nowplaying.datacache.cached_fetch", return_value=cached_recording),
+        patch.object(helper, "_websites", return_value=[]),
+        patch.object(helper, "_fetch_cover_art", return_value=b"fake") as mock_fetch_cover,
+    ):
+        result = await helper.recordingid(
+            "test-recording-id", track_data={"coverimageraw": b"embedded"}
+        )
+
+    assert "coverimageraw" not in result
+    mock_fetch_cover.assert_not_called()
