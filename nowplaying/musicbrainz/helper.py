@@ -275,6 +275,10 @@ class MusicBrainzHelper:
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
 
+        # Not left to _recordingid_uncached: on a cache hit it never runs, and
+        # the artist lookups below still need the cache and User-Agent.
+        self._setemail()
+
         async def fetch_func():
             return await self._recordingid_uncached(recordingid, track_data=track_data)
 
@@ -296,7 +300,9 @@ class MusicBrainzHelper:
         # failures (timeout, 404, network error) do not poison the 7-day
         # recording cache entry.  Cover art is cached in its own entry;
         # failures are not cached so they are retried on the next play.
-        if data and not data.get("coverimageraw"):
+        # The track's own art wins in recognition_replacement, so do not fetch
+        # a cover only to discard it.
+        if data and not data.get("coverimageraw") and not (track_data or {}).get("coverimageraw"):
             if self.config.cparser.value("musicbrainz/coverart", type=bool, defaultValue=True):
                 release_id = data.get("musicbrainzalbumid")
                 rg_id = data.get("musicbrainzreleasegroupid")

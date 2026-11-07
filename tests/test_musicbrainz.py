@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 import nowplaying.apicache  # pylint: disable=import-error
+import nowplaying.config
 import nowplaying.musicbrainz  # pylint: disable=import-error
 
 # either one of these is valid for Computer Blue
@@ -153,6 +154,28 @@ async def test_recordingid_api_cache_call_count(
 
     finally:
         nowplaying.apicache.set_cache_instance(shared_api_cache)
+
+
+@pytest.mark.asyncio
+async def test_recordingid_cache_hit_attaches_artist_cache(
+    getmusicbrainz: nowplaying.musicbrainz.MusicBrainzHelper,  # pylint: disable=redefined-outer-name
+) -> None:
+    """A fresh helper whose recording is cached still looks the artist up through the cache."""
+    mbhelper = getmusicbrainz
+    seen: list[object] = []
+
+    async def get_artist_by_id(artist_id: str, includes: list[str] | None = None) -> None:  # pylint: disable=unused-argument
+        seen.append(mbhelper.mb_client.cache_service)
+
+    cached_recording = {"title": "WNP Mock Title", "musicbrainzartistid": ["wnpmock-artist"]}
+    with (
+        patch("nowplaying.apicache.cached_fetch", return_value=cached_recording),
+        patch.object(mbhelper.mb_client, "get_artist_by_id", get_artist_by_id),
+    ):
+        await mbhelper.recordingid("wnpmock-recording")
+
+    assert seen
+    assert all(cache is not None for cache in seen)
 
 
 @pytest.mark.xfail(reason="Returns wrong data")
@@ -499,3 +522,31 @@ async def test_musicbrainz_coverart_config_gate(bootstrap, coverart_enabled, exp
     else:
         assert "coverimageraw" not in result
         mock_fetch_cover.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_musicbrainz_coverart_skipped_when_track_has_art(
+    bootstrap: nowplaying.config.ConfigFile,
+) -> None:
+    """A track that already carries art does not fetch a cover it would discard."""
+    config = bootstrap
+    config.cparser.setValue("musicbrainz/enabled", True)
+    config.cparser.setValue("musicbrainz/coverart", True)
+    helper = nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
+    cached_recording = {
+        "musicbrainzrecordingid": "test-id",
+        "musicbrainzartistid": ["test-artist-id"],
+        "musicbrainzalbumid": "test-release-id",
+    }
+
+    with (
+        patch("nowplaying.apicache.cached_fetch", return_value=cached_recording),
+        patch.object(helper, "_websites", return_value=[]),
+        patch.object(helper, "_fetch_cover_art", return_value=b"fake") as mock_fetch_cover,
+    ):
+        result = await helper.recordingid(
+            "test-recording-id", track_data={"coverimageraw": b"embedded"}
+        )
+
+    assert "coverimageraw" not in result
+    mock_fetch_cover.assert_not_called()

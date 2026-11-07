@@ -327,15 +327,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug("Skipping MusicBrainz lookup - disabled")
             return
 
-        # Check if we already have key MusicBrainz data to avoid unnecessary lookups
-        if (
-            self.metadata.get("musicbrainzartistid")
-            and self.metadata.get("musicbrainzrecordingid")
-            and self.metadata.get("isrc")
-        ):
-            logging.debug("Skipping MusicBrainz lookup - already have key identifiers")
-            return
-
         try:
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
                 config=self.config, test_mode=self.test_mode
