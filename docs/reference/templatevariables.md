@@ -122,6 +122,32 @@ Some fields that might be multi-valued (e.g., genre) will be merged into
 one. If they are not merged, the description will specifically say it is
 a list.
 
+### Artist Websites
+
+`artistwebsites` is a list of links for the artist. If the file has no
+website tags, it holds what the enabled metadata services found. If it
+does, those tags are used as they are, unless the **Artist Websites**
+checkbox under **Recognition & Replacement** is on, in which case the
+services' links are added to them. Either way, which
+links it holds changes from track to track. To show only the sites you
+want, test each link and leave out a final `else`, so anything you did
+not ask for is skipped:
+
+``` jinja
+{% raw %}
+{%- for website in artistwebsites -%}
+{%- if 'bandcamp' in website %} | Bandcamp: {{ website }}
+{%- elif 'discogs' in website %} | Discogs: {{ website }}
+{%- elif 'last.fm' in website %} | last.fm: {{ website }}
+{%- endif -%}
+{%- endfor %}
+{% endraw %}
+```
+
+Add an `elif` for each site you want to include, such as `musicbrainz`,
+`wikidata` or `youtube`. Keep the `-` in each tag: it strips the line
+breaks around the tags, so the links come out on one line.
+
 ### Undefined
 
 When rendering templates, **What's Now Playing** will set any undefined
