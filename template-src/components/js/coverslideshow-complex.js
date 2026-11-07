@@ -67,7 +67,9 @@ class CoverSlideshow {
     }
 
     async startImagesWebSocket() {
-        const wsUrl = "ws://{{hostip}}:{{httpport}}/v1/images/ws";
+        // The page's own host, so a page opened as localhost or 127.0.0.1 can reach it.
+        const host = location.protocol.startsWith('http') ? location.host : '{{hostip}}:{{httpport}}';
+        const wsUrl = `ws://${host}/v1/images/ws`;
         this.log(`Connecting to Images WebSocket: ${wsUrl}`);
 
         this.imagesWs = new WebSocket(wsUrl);

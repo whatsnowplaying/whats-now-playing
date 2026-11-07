@@ -20,7 +20,9 @@
     let imagesWs = null;
 
     function connectImagesWs() {
-        const url = 'ws://{{hostip}}:{{httpport}}/v1/images/ws';
+        // The page's own host, so a page opened as localhost or 127.0.0.1 can reach it.
+        const host = location.protocol.startsWith('http') ? location.host : '{{hostip}}:{{httpport}}';
+        const url = `ws://${host}/v1/images/ws`;
         imagesWs = new WebSocket(url);
 
         imagesWs.onopen = () => {
