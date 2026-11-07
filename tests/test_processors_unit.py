@@ -6,8 +6,10 @@ import unittest.mock
 
 import pytest
 
+import nowplaying.config
 import nowplaying.metadata
 import nowplaying.metadata.processors
+import nowplaying.musicbrainz
 from tests.utils_images import jpeg_bytes, png_bytes, unparseable_image_bytes
 
 
@@ -749,3 +751,31 @@ async def test_artistwebsites_respects_the_setting(bootstrap, tagged, replace, e
     await processors._artist_extras()  # pylint: disable=protected-access
 
     assert processors.metadata.get("artistwebsites") == expected
+
+
+@pytest.mark.asyncio
+async def test_musicbrainz_runs_when_track_has_every_id(
+    bootstrap: nowplaying.config.ConfigFile,
+) -> None:
+    """IDs in the tags are the cheap lookup, not a reason to skip it."""
+    config = bootstrap
+    config.cparser.setValue("musicbrainz/enabled", True)
+    helper = unittest.mock.MagicMock()
+    helper.recognize = unittest.mock.AsyncMock(
+        return_value={"artistwebsites": ["https://musicbrainz.org/artist/wnpmock"]}
+    )
+
+    mdp = nowplaying.metadata.MetadataProcessors(config=config)
+    mdp.metadata = {
+        "artist": "WNP Mock Artist",
+        "title": "WNP Mock Title",
+        "isrc": ["USXXX0000000"],
+        "musicbrainzartistid": ["wnpmock-artist"],
+        "musicbrainzrecordingid": "wnpmock-recording",
+    }
+    with unittest.mock.patch.object(
+        nowplaying.musicbrainz, "MusicBrainzHelper", return_value=helper
+    ):
+        await mdp._musicbrainz()  # pylint: disable=protected-access
+
+    assert mdp.metadata["artistwebsites"] == ["https://musicbrainz.org/artist/wnpmock"]

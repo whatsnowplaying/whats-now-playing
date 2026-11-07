@@ -103,6 +103,10 @@
     tagged the other
 * A momentary MusicBrainz outage no longer leaves a track missing its album,
     label, and date for up to a week afterward
+* Files tagged with MusicBrainz IDs, such as by MusicBrainz Picard, now get
+    MusicBrainz's artist links and anything else missing from their tags.
+    Having every ID used to skip the lookup altogether. Replaying a known track
+    also no longer asks MusicBrainz for the artist again each time
 * The settings window fits a 1200x600 screen again, and no longer opens larger
     than it needs to be
 * WNP now opens DJ software libraries read-only. It never wrote to them, but
