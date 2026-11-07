@@ -2452,6 +2452,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#artist-websites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artist Websites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#undefined" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3152,6 +3163,25 @@ For example, fall back to a default color scheme when a cover is monochrome.</p>
 <p>Some fields that might be multi-valued (e.g., genre) will be merged into
 one. If they are not merged, the description will specifically say it is
 a list.</p>
+<h3 id="artist-websites">Artist Websites<a class="headerlink" href="#artist-websites" title="Permanent link">&para;</a></h3>
+<p><code>artistwebsites</code> is a list of links for the artist. If the file has no
+website tags, it holds what the enabled metadata services found. If it
+does, those tags are used as they are, unless the <strong>Artist Websites</strong>
+checkbox under <strong>Recognition &amp; Replacement</strong> is on, in which case the
+services' links are added to them. Either way, which
+links it holds changes from track to track. To show only the sites you
+want, test each link and leave out a final <code>else</code>, so anything you did
+not ask for is skipped:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">{%</span>- <span class="k">for</span> <span class="nv">website</span> <span class="k">in</span> <span class="nv">artistwebsites</span> -<span class="cp">%}</span>
+<span class="cp">{%</span>- <span class="k">if</span> <span class="s1">'bandcamp'</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Bandcamp: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="s1">'discogs'</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Discogs: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="s1">'last.fm'</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | last.fm: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">endif</span> -<span class="cp">%}</span>
+<span class="cp">{%</span>- <span class="k">endfor</span> <span class="cp">%}</span>
+</code></pre></div>
+<p>Add an <code>elif</code> for each site you want to include, such as <code>musicbrainz</code>,
+<code>wikidata</code> or <code>youtube</code>. Keep the <code>-</code> in each tag: it strips the line
+breaks around the tags, so the links come out on one line.</p>
 <h3 id="undefined">Undefined<a class="headerlink" href="#undefined" title="Permanent link">&para;</a></h3>
 <p>When rendering templates, <strong>What's Now Playing</strong> will set any undefined
 variables to the empty string. Instead of having to render a template
