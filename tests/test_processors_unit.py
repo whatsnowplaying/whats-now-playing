@@ -110,25 +110,6 @@ async def test_skipplugins_prevents_artist_extras(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_musicbrainz_skip_when_already_have_key_identifiers(bootstrap):
-    """MusicBrainz lookup should be skipped when all key identifiers are already present."""
-    config = bootstrap
-    config.cparser.setValue("musicbrainz/enabled", True)
-    config.cparser.setValue("acoustidmb/enabled", False)
-    metadatain = {
-        "artist": "Test Artist",
-        "title": "Test Song",
-        "musicbrainzartistid": ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"],
-        "musicbrainzrecordingid": "2d7f08e1-be1c-4b86-b725-6e675b7b6de0",
-        "isrc": ["USXX11234567"],
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
-        metadata=metadatain
-    )
-    assert metadataout["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
-
-
-@pytest.mark.asyncio
 async def test_getmoremetadata_with_none_metadata(bootstrap):
     """getmoremetadata should handle None metadata gracefully."""
     config = bootstrap

@@ -140,6 +140,7 @@ async def test_recordingid_cache_hit_reads_artist_from_cache(
     mbhelper.config.cparser.setValue("musicbrainz/musicbrainz", True)
     recordingid = str(uuid.uuid4())
     artistid = str(uuid.uuid4())
+    wikidata = "https://www.wikidata.org/wiki/Q0"
 
     async def recording() -> dict:
         return {"title": "WNP Mock Title", "musicbrainzartistid": [artistid]}
@@ -152,7 +153,16 @@ async def test_recordingid_cache_hit_reads_artist_from_cache(
         ttl_seconds=60,
     )
     await nowplaying.musicbrainz.helper._WNPDatacacheAdapter().set(  # pylint: disable=protected-access
-        "musicbrainz", f"get_artist:{artistid}:url-rels", {"artist": {"relations": []}}, 60
+        "musicbrainz",
+        f"get_artist:{artistid}:url-rels",
+        {
+            "artist": {
+                "relations": [
+                    {"target-type": "url", "type": "wikidata", "url": {"resource": wikidata}}
+                ]
+            }
+        },
+        60,
     )
 
     network = AsyncMock(side_effect=AssertionError("went to the network"))
@@ -160,7 +170,7 @@ async def test_recordingid_cache_hit_reads_artist_from_cache(
         result = await mbhelper.recordingid(recordingid)
 
     assert network.await_count == 0
-    assert result["artistwebsites"] == [f"https://musicbrainz.org/artist/{artistid}"]
+    assert result["artistwebsites"] == [f"https://musicbrainz.org/artist/{artistid}", wikidata]
 
 
 @pytest.mark.live("musicbrainz")
