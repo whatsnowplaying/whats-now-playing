@@ -15,8 +15,10 @@
       "addLabels": ["github-actions"]
     },
     {
+      "description": "6.12 blocks reading pickled QSettings values (PYSIDE-3331) and crashes Python 3.11 (PYSIDE-3474)",
       "matchPackageNames": ["pyside6"],
-      "rangeStrategy": "widen"
+      "rangeStrategy": "widen",
+      "allowedVersions": "<6.12"
     },
     {
       "matchFileNames": ["requirements-test.txt"],
