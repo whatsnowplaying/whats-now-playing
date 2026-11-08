@@ -101,6 +101,8 @@
 * Web templates opened as localhost or 127.0.0.1 no longer stay blank. They
     connected back to the computer's network address instead of the one the
     page was opened from, which some browsers refuse
+* The Template Variables page now shows how to pick which of the artist's
+    website links a template displays
 * The settings window fits a 1200x600 screen again, and no longer opens larger
     than it needs to be
 * WNP now opens DJ software libraries read-only. It never wrote to them, but
