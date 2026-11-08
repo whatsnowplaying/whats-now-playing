@@ -15,6 +15,10 @@
       "addLabels": ["github-actions"]
     },
     {
+      "matchPackageNames": ["pyside6"],
+      "rangeStrategy": "widen"
+    },
+    {
       "matchFileNames": ["requirements-test.txt"],
       "groupName": "test dependencies"
     },
