@@ -123,14 +123,15 @@
     encrypted connection. The request previously went out unencrypted with
     the fanart.tv API key attached, exposing the key to anything between
     this computer and fanart.tv
-* Updated aiohttp to 3.14.3, nltk to 3.10.3, and pillow to 12.3.0, each of
-    which closes published security advisories. The aiohttp ones include the
-    web server WNP runs for overlays, and the pillow ones cover image decoding,
-    which handles artwork downloaded from outside
-* Updated certifi to 2026.7.22, lxml to 6.1.2, pillow-avif-plugin to 1.6.0,
-    pyinstaller to 6.22.2, pypresence to 4.6.2, rapidfuzz to 3.14.6,
-    requests-cache to 1.3.3, setuptools to 83.0.0, wnpmb to 0.6.0, and
-    zeroconf to 0.151.3
+* Updated aiohttp to 3.14.5, certifi to 2026.10.23, nltk to 3.10.4, and
+    pillow to 13.0.0, each of which closes published security advisories. The
+    aiohttp ones include the web server WNP runs for overlays, and the pillow
+    ones cover image decoding, which handles artwork downloaded from outside
+* Updated charset-normalizer to 3.5.2, dbus-fast to 5.2.0 (Linux),
+    lxml to 6.1.3, pillow-avif-plugin to 1.6.0, pyicu to 2.17 (macOS and
+    Linux), pyinstaller to 6.22.3, pypresence to 4.6.2, rapidfuzz to 3.14.6,
+    requests-cache to 1.3.3, setuptools to 83.0.0, truststore to 0.10.5,
+    url_normalize to 3.1.0, wnpmb to 0.6.0, and zeroconf to 0.154.0
 
 ## Version 5.2.2 - 2026-06-20
 
