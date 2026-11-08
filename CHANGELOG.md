@@ -98,6 +98,9 @@
 * Files tagged with MusicBrainz IDs, such as by MusicBrainz Picard, now get
     MusicBrainz's artist links and anything else missing from their tags.
     Having every ID used to skip the lookup altogether
+* Web templates opened as localhost or 127.0.0.1 no longer stay blank. They
+    connected back to the computer's network address instead of the one the
+    page was opened from, which some browsers refuse
 * The Template Variables page now shows how to pick which of the artist's
     website links a template displays
 * The settings window fits a 1200x600 screen again, and no longer opens larger
