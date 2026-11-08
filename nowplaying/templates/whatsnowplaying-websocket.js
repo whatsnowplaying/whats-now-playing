@@ -57,7 +57,7 @@ class WhatsNowPlayingWebSocket {
         const previewParam = new URLSearchParams(window.location.search).has('preview') ? '&preview=1' : '';
         // The page's own host, so a page opened as localhost or 127.0.0.1 can reach it.
         const host = location.protocol.startsWith('http') ? location.host : `${this.hostIp}:${this.httpPort}`;
-        const wsUrl = `ws://${host}${this.endpoint}?session_id=${this.sessionId}${previewParam}`;
+        const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${host}${this.endpoint}?session_id=${this.sessionId}${previewParam}`;
         this.log(`Connecting to ${wsUrl} from scene: ${this.sceneName}`);
 
         try {
