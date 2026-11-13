@@ -6,27 +6,25 @@
 # binaries for tufup_publish.py to archive.
 #
 # Usage:
-#   extract_release_zips.sh <zip_source_dir> <dest_dir> [<channel_suffix>]
+#   extract_release_zips.sh <zip_source_dir> <dest_dir>
 #
 # Each zip contains a single top-level wrapper dir; this script
 # flattens that so the per-channel dest dirs contain the bundle
 # contents directly (matching what tufup's make_gztar_archive
 # expects).
 #
-# Channel naming follows the spec in docs/dev/charts-server-spec.md:
-#   WhatsNowPlaying_<os><version>_<arch>[_<channel_suffix>]
-# The optional suffix is "_prerelease" for prerelease channels.
+# Channel naming: WhatsNowPlaying_<os><version>_<arch>, one channel per
+# platform for both previews and finals.
 
 set -euo pipefail
 
-if [[ $# -lt 2 || $# -gt 3 ]]; then
-    echo "usage: $0 <zip_source_dir> <dest_dir> [<channel_suffix>]" >&2
+if [[ $# -ne 2 ]]; then
+    echo "usage: $0 <zip_source_dir> <dest_dir>" >&2
     exit 64  # EX_USAGE
 fi
 
 ZIP_SRC="$1"
 DEST="$2"
-SUFFIX="${3:-}"
 
 if [[ ! -d "$ZIP_SRC" ]]; then
     echo "error: zip source dir does not exist: $ZIP_SRC" >&2
@@ -38,10 +36,10 @@ mkdir -p "$DEST"
 # Filename-pattern -> channel-name mapping.  The pattern is matched
 # against the zip filename suffix (with a wildcard prefix).
 declare -A channel_for
-channel_for[Linux-x86_64]="WhatsNowPlaying_linux_x86_64${SUFFIX}"
-channel_for[macOS15-AppleSilicon]="WhatsNowPlaying_macos15_arm${SUFFIX}"
-channel_for[macOS15-Intel]="WhatsNowPlaying_macos15_intel${SUFFIX}"
-channel_for[Windows]="WhatsNowPlaying_windows_x86_64${SUFFIX}"
+channel_for[Linux-x86_64]="WhatsNowPlaying_linux_x86_64"
+channel_for[macOS15-AppleSilicon]="WhatsNowPlaying_macos15_arm"
+channel_for[macOS15-Intel]="WhatsNowPlaying_macos15_intel"
+channel_for[Windows]="WhatsNowPlaying_windows_x86_64"
 
 for key in "${!channel_for[@]}"; do
     channel="${channel_for[$key]}"
