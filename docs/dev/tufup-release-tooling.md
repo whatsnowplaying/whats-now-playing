@@ -27,6 +27,13 @@ The app-side client lives in `nowplaying/upgrades/tufup_client.py`.
   PyInstaller artifact under `nowplaying/resources/tufup/` and seeded into the
   writable state dir on first launch.
 
+## Channels
+
+There is one channel per platform (e.g. `WhatsNowPlaying_macos15_arm`), and every
+release, preview or final, is published into it. tufup skips prereleases unless
+asked, so clients on the preview track pass `pre="rc"` and stable clients don't.
+WNP's `-previewN` tags parse as `rc`.
+
 ## Hosting
 
 * **Metadata**: GitHub Pages branch (`gh-pages`), proxied through
@@ -35,6 +42,31 @@ The app-side client lives in `nowplaying/upgrades/tufup_client.py`.
   `whatsnowplaying.com/tufup/targets/` (302 redirect to GH Releases URL).
 * **Daily re-sign**: `.github/workflows/tufup-resign.yaml` re-signs
   timestamp/snapshot metadata every 24 hours so they never expire.
+
+## Required releases (upgrade floors)
+
+A target marked "required" is a stepping stone. A client below it installs it
+before anything newer in its channel, then picks up the newer release on its
+next check. Clients already at or past it ignore the flag. Use it when a
+release must run before a later one can, e.g. the last 6.x before 7.0.
+
+* A release event publishes a new release as not required, and leaves the mark
+  on one already published, so re-running it can't drop a stepping stone.
+* To mark a release required, including one already published, run the
+  `tufup publish on release` workflow by hand from `main` with its tag and
+  `required` set to `required`; `not required` clears the mark. Tarballs already
+  on the release are reused, so their hashes don't change; only the metadata
+  entries are replaced.
+* Use a final release as the stepping stone. A required preview would only reach
+  preview-track clients.
+* Every platform channel needs the required release published in it. A channel
+  added later won't have it.
+* The daily re-sign keeps the flag.
+
+Tufup doesn't consult `/api/v1/check-version`, but the app labels whatever tufup
+installs with the version that endpoint reported. Make sure the server offers
+the required release to the same clients, so the update dialog names the
+release that actually gets installed.
 
 ## Known limitations / accepted risks
 

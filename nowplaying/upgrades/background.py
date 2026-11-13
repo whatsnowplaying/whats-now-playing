@@ -110,7 +110,8 @@ class PrefetchWorker(QThread):  # pylint: disable=too-few-public-methods
             client = nowplaying.upgrades.tufup_client.build_client(
                 self.install_dir, state_dir=state_dir, channel=channel
             )
-            if not client.check_for_updates():
+            prerelease = nowplaying.upgrades.wants_prerelease(self.prefer_prerelease)
+            if not nowplaying.upgrades.tufup_client.find_update(client, prerelease=prerelease):
                 # Possible TUF/charts API propagation race — not an error.
                 logging.debug("prefetch: tufup reports no update on channel %s", channel)
                 self.prefetch_skipped.emit("No update available via tufup.")

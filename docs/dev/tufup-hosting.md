@@ -155,7 +155,7 @@ Notes:
   natively.  Switch to a streaming proxy only if you want to hide
   the GH origin.
 * The `_TARGET_RE` segment regex `[A-Za-z0-9_]+` allows underscores
-  inside the channel name (e.g. `WhatsNowPlaying_macos15_arm_prerelease`)
+  inside the channel name (e.g. `WhatsNowPlaying_macos15_arm`)
   but no dashes — which keeps the channel/version split unambiguous,
   since `-` is the channel/version separator.
 * Both routes return `404` rather than `5xx` on bad input so probes and
