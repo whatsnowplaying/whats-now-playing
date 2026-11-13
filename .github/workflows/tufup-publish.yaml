@@ -24,10 +24,14 @@ on:  # yamllint disable-line rule:truthy
         required: true
         type: string
       required:
-        description: 'Mark as required: older clients update to this first'
+        description: 'Required: older clients update to this first'
         required: false
-        type: boolean
-        default: false
+        type: choice
+        options:
+          - unchanged
+          - required
+          - not required
+        default: unchanged
 
 # Serialize with the daily re-sign cron so we don't race on
 # gh-pages pushes.
@@ -213,7 +217,8 @@ jobs:
       - name: Run tufup_publish.py
         env:
           VERSION: ${{ steps.meta.outputs.version }}
-          # Empty on release events, so releases publish as not required.
+          # Empty on release events: new targets publish as not required
+          # and existing ones keep their mark.
           REQUIRED: ${{ github.event.inputs.required }}
         run: |
           # Build --bundle args from the channel list so each line stays
@@ -226,9 +231,10 @@ jobs:
                     WhatsNowPlaying_linux_x86_64; do
             bundle_args+=(--bundle "${ch}:${RUNNER_TEMP}/extracted/${ch}")
           done
-          if [[ "$REQUIRED" == "true" ]]; then
-            bundle_args+=(--required)
-          fi
+          case "$REQUIRED" in
+            required) bundle_args+=(--required) ;;
+            "not required") bundle_args+=(--not-required) ;;
+          esac
           python tools/tufup_publish.py \
               --version "$VERSION" \
               --keystore "${RUNNER_TEMP}/keystore" \

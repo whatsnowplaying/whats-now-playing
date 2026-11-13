@@ -32,6 +32,9 @@ def _load_tool(path: pathlib.Path = TOOL) -> types.ModuleType:
     return module
 
 
+VERIFIER = _load_tool(TOOL.with_name("tufup_verify_target.py"))
+
+
 @pytest.fixture(name="tufup_env")
 def fixture_tufup_env(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> TufupEnv:
     """an initialized throwaway tufup repo, its keystore, and a bundle dir"""
@@ -86,37 +89,50 @@ def test_publish_sets_required(tufup_env: TufupEnv, required: bool) -> None:
 
 
 def test_publish_marks_existing_release_required(tufup_env: TufupEnv) -> None:
-    """re-publishing a version with --required flips only that version"""
+    """--required marks one version, no flag keeps the mark, --not-required clears it"""
     tool, repo_dir, keys_dir, bundle = tufup_env
     common = ["--keystore", str(keys_dir), "--repo-dir", str(repo_dir)]
     for version in ("6.0.0", "6.1.0"):
         assert tool.main(["--version", version, *common, "--bundle", f"{CHANNEL}:{bundle}"]) == 0
     assert _required_flags(repo_dir) == {"6.0.0": False, "6.1.0": False}
 
-    assert (
-        tool.main(["--version", "6.1.0", *common, "--bundle", f"{CHANNEL}:{bundle}", "--required"])
-        == 0
-    )
+    def publish_610(*flag: str) -> None:
+        assert (
+            tool.main(["--version", "6.1.0", *common, "--bundle", f"{CHANNEL}:{bundle}", *flag])
+            == 0
+        )
+
+    publish_610("--required")
     assert _required_flags(repo_dir) == {"6.0.0": False, "6.1.0": True}
+    # a re-run with neither flag, as a release event does, keeps the mark
+    publish_610()
+    assert _required_flags(repo_dir) == {"6.0.0": False, "6.1.0": True}
+    publish_610("--not-required")
+    assert _required_flags(repo_dir) == {"6.0.0": False, "6.1.0": False}
 
 
-def test_verify_target(tufup_env: TufupEnv) -> None:
+@pytest.mark.parametrize(
+    "case,expected",
+    [
+        ("match", VERIFIER.EXIT_MATCH),
+        ("tampered", VERIFIER.EXIT_MISMATCH),
+        ("unknown", VERIFIER.EXIT_NO_ENTRY),
+    ],
+)
+def test_verify_target(tufup_env: TufupEnv, case: str, expected: int) -> None:
     """tufup_verify_target.py: match, tampered bytes, and no metadata entry"""
     tool, repo_dir, keys_dir, bundle = tufup_env
     argv = ["--version", "6.0.0", "--keystore", str(keys_dir), "--repo-dir", str(repo_dir)]
     assert tool.main([*argv, "--bundle", f"{CHANNEL}:{bundle}"]) == 0
-    verifier = _load_tool(TOOL.with_name("tufup_verify_target.py"))
     targets_json = repo_dir / "metadata" / "targets.json"
     archive = repo_dir / "targets" / f"{CHANNEL}-6.0.0.tar.gz"
+    if case == "tampered":
+        archive.write_bytes(archive.read_bytes() + b"x")
+    elif case == "unknown":
+        archive = archive.with_name(f"{CHANNEL}-9.9.9.tar.gz")
+        archive.write_bytes(b"x")
 
-    assert verifier.main([str(targets_json), str(archive)]) == verifier.EXIT_MATCH
-
-    archive.write_bytes(archive.read_bytes() + b"x")
-    assert verifier.main([str(targets_json), str(archive)]) == verifier.EXIT_MISMATCH
-
-    unknown = archive.with_name(f"{CHANNEL}-9.9.9.tar.gz")
-    unknown.write_bytes(b"x")
-    assert verifier.main([str(targets_json), str(unknown)]) == verifier.EXIT_NO_ENTRY
+    assert VERIFIER.main([str(targets_json), str(archive)]) == expected
 
 
 @pytest.fixture(name="tufup_server")

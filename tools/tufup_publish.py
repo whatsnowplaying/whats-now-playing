@@ -22,7 +22,7 @@ Usage:
         --bundle WhatsNowPlaying_macos15_intel:/tmp/extracted/mac-intel \\
         --bundle WhatsNowPlaying_windows_x86_64:/tmp/extracted/win \\
         --bundle WhatsNowPlaying_linux_x86_64:/tmp/extracted/linux \\
-        [--required]
+        [--required | --not-required]
 
 Inputs:
     --repo-dir: must contain a metadata/ subdir seeded from the current
@@ -40,6 +40,8 @@ Inputs:
                 Re-running for an already-published version replaces its
                 targets' metadata entries, so a release can be marked
                 required after the fact.
+    --not-required: clear that mark.  With neither flag, a new target is
+                not required and an existing one keeps its mark.
 """
 
 import argparse
@@ -94,6 +96,17 @@ def _write_config(repo_dir: pathlib.Path, keys_dir: pathlib.Path) -> pathlib.Pat
     return config_cwd
 
 
+def _resolve_required(repo: Repository, archive_filename: str, requested: bool | None) -> bool:
+    """The flag to publish; with neither flag given, keep an existing target's mark
+    so re-running a release event can't drop a stepping stone."""
+    if requested is not None:
+        return requested
+    assert repo.roles is not None
+    existing = repo.roles.targets.signed.targets.get(archive_filename)
+    custom = (existing.unrecognized_fields.get("custom") or {}) if existing else {}
+    return bool(custom.get("tufup", {}).get("required", False))
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse args, archive each bundle, register targets, and re-sign."""
     parser = argparse.ArgumentParser(
@@ -126,10 +139,20 @@ def main(argv: list[str] | None = None) -> int:
         "WhatsNowPlaying_macos15_arm:/tmp/extracted/mac-arm. "
         "Repeat once per channel.",
     )
-    parser.add_argument(
+    flag = parser.add_mutually_exclusive_group()
+    flag.add_argument(
         "--required",
-        action="store_true",
+        dest="required",
+        action="store_const",
+        const=True,
         help="Mark these targets required: older clients stop here before newer releases",
+    )
+    flag.add_argument(
+        "--not-required",
+        dest="required",
+        action="store_const",
+        const=False,
+        help="Clear the required mark",
     )
     args = parser.parse_args(argv)
 
@@ -173,7 +196,10 @@ def main(argv: list[str] | None = None) -> int:
         # custom typing in tufup is JsonDict-recursive; pyright is too
         # strict about the nested {"required": bool} shape, but the
         # runtime accepts it (same pattern as backfill scripts).
-        custom = {"user": None, "tufup": {"required": args.required}}
+        custom = {
+            "user": None,
+            "tufup": {"required": _resolve_required(repo, archive_filename, args.required)},
+        }
         repo.roles.add_or_update_target(
             local_path=archive_path,
             custom=custom,  # type: ignore[arg-type]
