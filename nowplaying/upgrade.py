@@ -310,7 +310,9 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
 
             if dialog.action == _UpgradeAction.INSTALL_NOW and channel and install_dir:
                 if not nowplaying.upgrades.autoinstall.run_auto_install(
-                    install_dir, channel=channel
+                    install_dir,
+                    channel=channel,
+                    prerelease=nowplaying.upgrades.wants_prerelease(prefer_prerelease),
                 ):
                     # Fallback to the manual download page if tufup failed.
                     logging.info("Auto-install failed, opening download page")

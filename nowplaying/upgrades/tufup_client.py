@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 import tufup.client
+import tufup.common
 
 import nowplaying.frozen
 import nowplaying.version  # pylint: disable=no-name-in-module, import-error
@@ -246,10 +247,22 @@ def build_client(
     )
 
 
+def find_update(
+    client: tufup.client.Client, *, prerelease: bool
+) -> tufup.common.TargetMeta | None:
+    """Ask tufup for the update to install, if any.
+
+    Previews and finals share a channel; tufup skips previews unless `pre=`
+    asks for them.  WNP's -previewN tags parse as rc.
+    """
+    return client.check_for_updates(pre="rc" if prerelease else None)
+
+
 def check_for_update(
     install_dir: pathlib.Path,
     *,
     channel: str,
+    prerelease: bool,
 ) -> "tufup.client.Client | None":
     """Return a tufup Client if an update is available, else None.
 
@@ -257,13 +270,12 @@ def check_for_update(
     download_and_apply() on it (or client.download_and_apply_update()
     with the args your UI needs) to actually fetch and install.
 
-    channel: required.  The charts API's `tufup_channel` field already
-    encodes track (stable vs prerelease) via the channel name itself,
-    so we don't pass tufup's `pre=` filter.
+    channel: the charts API's `tufup_channel` field.
+    prerelease: whether this install is on the preview track.
     """
     try:
         client = build_client(install_dir, channel=channel)
-        if client.check_for_updates():
+        if find_update(client, prerelease=prerelease):
             logging.info("tufup: update available on channel %s", channel)
             return client
         logging.debug("tufup: no update available on channel %s", channel)

@@ -229,7 +229,9 @@ def test_check_for_update_returns_none_on_exception(tmp_path):
         "nowplaying.upgrades.tufup_client.build_client",
         side_effect=Exception("network error"),
     ):
-        result = tufup_client.check_for_update(tmp_path, channel="WhatsNowPlaying_test")
+        result = tufup_client.check_for_update(
+            tmp_path, channel="WhatsNowPlaying_test", prerelease=False
+        )
     assert result is None
 
 
@@ -241,7 +243,9 @@ def test_check_for_update_returns_none_when_no_update(tmp_path):
         "nowplaying.upgrades.tufup_client.build_client",
         return_value=fake_client,
     ):
-        result = tufup_client.check_for_update(tmp_path, channel="WhatsNowPlaying_test")
+        result = tufup_client.check_for_update(
+            tmp_path, channel="WhatsNowPlaying_test", prerelease=False
+        )
     assert result is None
 
 
@@ -253,5 +257,7 @@ def test_check_for_update_returns_client_when_update_available(tmp_path):
         "nowplaying.upgrades.tufup_client.build_client",
         return_value=fake_client,
     ):
-        result = tufup_client.check_for_update(tmp_path, channel="WhatsNowPlaying_test")
+        result = tufup_client.check_for_update(
+            tmp_path, channel="WhatsNowPlaying_test", prerelease=False
+        )
     assert result is fake_client

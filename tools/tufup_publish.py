@@ -21,7 +21,8 @@ Usage:
         --bundle WhatsNowPlaying_macos15_arm:/tmp/extracted/mac-arm \\
         --bundle WhatsNowPlaying_macos15_intel:/tmp/extracted/mac-intel \\
         --bundle WhatsNowPlaying_windows_x86_64:/tmp/extracted/win \\
-        --bundle WhatsNowPlaying_linux_x86_64:/tmp/extracted/linux
+        --bundle WhatsNowPlaying_linux_x86_64:/tmp/extracted/linux \\
+        [--required]
 
 Inputs:
     --repo-dir: must contain a metadata/ subdir seeded from the current
@@ -33,6 +34,12 @@ Inputs:
                 application bundle (PyInstaller output, already
                 notarized + stapled on macOS, Authenticode-signed on
                 Windows).
+    --required: mark these targets "required".  A client below this
+                version updates to it before anything newer, which is how
+                an upgrade floor is enforced (e.g. last 6.x before 7.0).
+                Re-running for an already-published version replaces its
+                targets' metadata entries, so a release can be marked
+                required after the fact.
 """
 
 import argparse
@@ -119,6 +126,11 @@ def main(argv: list[str] | None = None) -> int:
         "WhatsNowPlaying_macos15_arm:/tmp/extracted/mac-arm. "
         "Repeat once per channel.",
     )
+    parser.add_argument(
+        "--required",
+        action="store_true",
+        help="Mark these targets required: older clients stop here before newer releases",
+    )
     args = parser.parse_args(argv)
 
     repo_dir: pathlib.Path = args.repo_dir.resolve()
@@ -159,9 +171,9 @@ def main(argv: list[str] | None = None) -> int:
             )
         print(f"registering target: {archive_filename}")
         # custom typing in tufup is JsonDict-recursive; pyright is too
-        # strict about the nested {"required": False} shape, but the
+        # strict about the nested {"required": bool} shape, but the
         # runtime accepts it (same pattern as backfill scripts).
-        custom = {"user": None, "tufup": {"required": False}}
+        custom = {"user": None, "tufup": {"required": args.required}}
         repo.roles.add_or_update_target(
             local_path=archive_path,
             custom=custom,  # type: ignore[arg-type]

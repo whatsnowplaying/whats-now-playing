@@ -32,15 +32,17 @@ class UpdateWorker(QThread):  # pylint: disable=too-few-public-methods
         parent: QWidget | None = None,
         *,
         channel: str,
+        prerelease: bool,
     ):
         super().__init__(parent)
         self.install_dir = install_dir
         self.channel = channel
+        self.prerelease = prerelease
 
     def run(self) -> None:  # pylint: disable=missing-function-docstring
         try:
             client = nowplaying.upgrades.tufup_client.check_for_update(
-                self.install_dir, channel=self.channel
+                self.install_dir, channel=self.channel, prerelease=self.prerelease
             )
             if not client:
                 self.failed.emit("No update available from auto-update service.")
@@ -68,6 +70,7 @@ def run_auto_install(
     parent: QWidget | None = None,
     *,
     channel: str,
+    prerelease: bool,
 ) -> bool:
     """Show a modal progress dialog and run UpdateWorker.
 
@@ -75,6 +78,7 @@ def run_auto_install(
     server in the /api/v1/check-version response (the `tufup_channel`
     field).  Callers should skip this whole path entirely if the API
     returned a null channel.
+    prerelease: whether this install is on the preview track.
 
     Returns True on success.  On success tufup itself relaunches the
     process, so this typically does not actually return in the success
@@ -90,7 +94,7 @@ def run_auto_install(
     progress.setAutoReset(False)
     progress.setCancelButton(None)
 
-    worker = UpdateWorker(install_dir, channel=channel)
+    worker = UpdateWorker(install_dir, channel=channel, prerelease=prerelease)
     failure_message: list[str] = []
 
     def on_progress(downloaded: int, expected: int) -> None:
