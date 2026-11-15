@@ -20,16 +20,24 @@ class RequestsHandler:
         self.config_key = config_key
         self._requests_instance: "nowplaying.trackrequests.Requests | None" = None
 
-    def _requests(self, request: web.Request) -> "nowplaying.trackrequests.Requests":
-        # Requests() runs a synchronous _migrate_db() (sqlite connect + PRAGMA, possibly
-        # ALTER) in its constructor, so build it once and reuse it rather than paying that
-        # cost on the event loop on every API hit. request.app[config_key] is a single
-        # stable object and Requests reads config live via cparser, so caching is safe.
+    def get_requests(self, app: web.Application) -> "nowplaying.trackrequests.Requests":
+        """App-keyed accessor for the cached Requests() instance.
+
+        Requests() runs a synchronous _migrate_db() (sqlite connect + PRAGMA, possibly
+        ALTER) in its constructor, so build it once and reuse it rather than paying that
+        cost on the event loop on every API hit. app[config_key] is a single stable
+        object and Requests reads config live via cparser, so caching is safe.
+
+        Takes app rather than request so callers that only have the former -- the
+        events-websocket background broadcast task, in particular -- can reuse the
+        same cached instance instead of constructing a second one.
+        """
         if self._requests_instance is None:
-            self._requests_instance = nowplaying.trackrequests.Requests(
-                request.app[self.config_key]
-            )
+            self._requests_instance = nowplaying.trackrequests.Requests(app[self.config_key])
         return self._requests_instance
+
+    def _requests(self, request: web.Request) -> "nowplaying.trackrequests.Requests":
+        return self.get_requests(request.app)
 
     def _authorized(self, request: web.Request, provided_secret: str) -> bool:
         """reuse the webserver's shared secret (empty key disables auth)
@@ -76,6 +84,23 @@ class RequestsHandler:
             return web.json_response(result, status=400)
         return web.json_response(result)
 
+    @staticmethod
+    def serialize_request_row(row: "nowplaying.trackrequests.UserTrackRequest") -> dict:
+        """wire shape for one queue row — shared by GET /v1/requests and /v1/events"""
+        return {
+            "request_id": row.get("reqid"),
+            "track_id": nowplaying.trackrequests.Requests.track_id(
+                row.get("artist"), row.get("title")
+            ),
+            "external_id": row.get("external_id"),
+            "artist": row.get("artist"),
+            "title": row.get("title"),
+            "requester": row.get("username"),
+            "user_platform": row.get("user_platform"),
+            "request_origin": row.get("request_origin"),
+            "timestamp": row.get("timestamp"),
+        }
+
     async def get_requests_handler(self, request: web.Request) -> web.Response:
         """GET /v1/requests — the current queue snapshot for Lumia to mirror"""
         if not self._authorized(request, request.query.get("secret", "")):
@@ -83,23 +108,7 @@ class RequestsHandler:
         if not self._requests_enabled(request):
             return web.json_response({"requests": []})
         reqs = self._requests(request)
-        items = []
-        async for row in reqs.get_all_generator():
-            items.append(
-                {
-                    "request_id": row.get("reqid"),
-                    "track_id": nowplaying.trackrequests.Requests.track_id(
-                        row.get("artist"), row.get("title")
-                    ),
-                    "external_id": row.get("external_id"),
-                    "artist": row.get("artist"),
-                    "title": row.get("title"),
-                    "requester": row.get("username"),
-                    "user_platform": row.get("user_platform"),
-                    "request_origin": row.get("request_origin"),
-                    "timestamp": row.get("timestamp"),
-                }
-            )
+        items = [self.serialize_request_row(row) async for row in reqs.get_all_generator()]
         return web.json_response({"requests": items})
 
     async def delete_request_handler(self, request: web.Request) -> web.Response:
