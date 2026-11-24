@@ -16,7 +16,9 @@ This migration runs once:
   twitch/track.txt, twitchbot_track_help.txt -> twitch/help/track.txt,
   kickbot_* -> kick/, *.htm -> web/, other *.txt -> plain/);
   subdirectory content keeps its relative location
-* ``.new`` conflict files and vendor/ are not carried
+* vendor/ files are carried only when the bundle does not ship that name,
+  without triggering the "customized" notice
+* ``.new`` conflict files are not carried
 * the original directory is preserved as ``templates_pre6``
 
 A ``.wnp_layout`` marker file records the layout version so the
@@ -50,8 +52,8 @@ ARCHIVE_NAME = "templates_pre6"
 # user-owned function subdirectories created in the new layout
 SUBDIRS = nowplaying.utils.templatepaths.USER_LAYOUT_SUBDIRS
 
-# directories never carried forward (bundle-only content)
-_SKIP_DIRS = {"vendor"}
+# pre-6.0 vendor dir; only files the bundle lacks are carried
+_VENDOR_DIR = "vendor"
 
 # junk suffixes never carried forward (.new conflict files from the old
 # upgrade system, editor swap/backup files)
@@ -76,10 +78,7 @@ RETIRED_TEMPLATES = {
     "ws-anime-bounce.htm": "ws-basic-text-anime-bounce.htm",
     "ws-anime-elastic.htm": "ws-basic-text-anime-elastic.htm",
     "ws-anime-stagger.htm": "ws-basic-text-anime-stagger.htm",
-    "ws-mtv-nofade.htm": "ws-mtv.htm",
-    "ws-mtv-cover-nofade.htm": "ws-mtv.htm",
-    "ws-mtv-cover-fade.htm": "ws-mtv-fade.htm",
-    "ws-cover-title-artist.htm": "ws-mtv.htm",
+    "ws-cover-title-artist.htm": "ws-generic-dj.htm",
     "ws-cookie-cutter-dj.htm": "ws-generic-dj.htm",
     "ws-unoriginal-dj-clone.htm": "ws-generic-dj.htm",
     "ws-basic-bro-vibes.htm": "ws-generic-dj.htm",
@@ -125,6 +124,8 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             ).joinpath("templates")
         self.oldshas: dict[str, dict[str, str]] = {}
         self.carried: list[str] = []
+        # vendor files the bundle lacks; carried without the notice
+        self.kept: list[str] = []
         self.dropped: list[str] = []
 
         self.run()
@@ -168,9 +169,10 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             return
 
         logging.info(
-            "Template migration: carried %d user file(s), dropped %d stock copy/copies; "
-            "originals archived in %s",
+            "Template migration: carried %d user file(s), kept %d vendor file(s), "
+            "dropped %d stock copy/copies; originals archived in %s",
             len(self.carried),
+            len(self.kept),
             len(self.dropped),
             archive,
         )
@@ -304,6 +306,10 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             return True
         return bool(self.bundledir and self.bundledir.joinpath("templates", name).exists())
 
+    def _vendor_in_bundle(self, relpath: pathlib.Path) -> bool:
+        """True when the bundle ships this vendor file name."""
+        return bool(self.bundledir and self.bundledir.joinpath("templates", relpath).exists())
+
     def _carry_user_content(self, archive: pathlib.Path) -> None:
         """Copy the user's own files from the archive into the new layout."""
         for oldpath in sorted(archive.rglob("*")):
@@ -314,11 +320,15 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
                 continue
             if oldpath.name.endswith(_SKIP_SUFFIXES):
                 continue
-            if relpath.parts[0] in _SKIP_DIRS:
-                continue
-            if self._is_stock(relpath, checksum(oldpath)):
+            if relpath.parts[0] == _VENDOR_DIR:
+                if self._vendor_in_bundle(relpath):
+                    continue
+                vendor = True
+            elif self._is_stock(relpath, checksum(oldpath)):
                 self.dropped.append(str(relpath))
                 continue
+            else:
+                vendor = False
             dest = self.usertemplatedir / self._classify(relpath)
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -326,5 +336,5 @@ class TemplateDirMigration:  # pylint: disable=too-few-public-methods
             except OSError:
                 logging.exception("Template migration: could not carry %s", relpath)
                 continue
-            self.carried.append(str(relpath))
+            (self.kept if vendor else self.carried).append(str(relpath))
             logging.info("Template migration: carried %s -> %s", relpath, dest)

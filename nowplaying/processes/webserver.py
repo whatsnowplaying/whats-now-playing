@@ -873,9 +873,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             path=staticdir,
         )
 
-        # Add static file serving for vendor files and guessgame templates
+        # /vendor/ falls back to the user's vendor/; the editor only needs the bundle
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
-        app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
+        app.router.add_get(
+            "/vendor/{vendor_file}", self.static_handler.vendor_handler, name="vendor"
+        )
         app.router.add_static(
             "/editor/vendor/", path=template_dir / "vendor", name="editor_vendor"
         )

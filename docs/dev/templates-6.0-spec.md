@@ -90,8 +90,9 @@ Implementation notes:
   change, not a resolution framework
 * `webserver.py` guessgame handling (prefer user dir, fall back to bundle)
   already implements this pattern; 6.0 makes it universal
-* Vendor files (`/vendor/` route) are bundle-only. Fonts and JS libraries
-  do not change between template updates; there is no user-override case.
+* Vendor files (`/vendor/` route) come from the bundle; the user's
+  `templates/vendor/` only supplies names the bundle does not ship (fonts
+  carried by the migration), so it cannot override stock.
 * Absolute paths stored in config are still honored when the file exists,
   so templates kept entirely outside the chain keep working
 
@@ -103,7 +104,7 @@ Implementation notes:
 | Chat/text templates | `twitchbot_*.txt`, `kickbot_*.txt`, `setlist-*.txt` | bundle | hand-edit via copy-to-customize |
 | Command registries | `twitch/{cmd}.txt`, `kick/{cmd}.txt` | bundle + user union | file presence registers command (see below) |
 | Charts named templates | `synced/*.htm` | charts server | template editor on charts |
-| Infrastructure | `oauth/*.htm`, `whatsnowplaying-websocket.js`, `vendor/` | bundle | none (bundle-only) |
+| Infrastructure | `oauth/*.htm`, `whatsnowplaying-websocket.js`, `vendor/` | bundle | none (user `vendor/` only adds names) |
 | Guessgame | `guessgame/*` | bundle | existing override pattern |
 
 ## Copy-to-Customize
@@ -145,7 +146,7 @@ first-class toggle in the settings UI, backed by the existing
   this sync wrote; entries are removed once a newer app bundle serves the
   same content. Sync never writes outside `synced/` — everything else in
   the user tree is user-owned.
-* Vendor assets (fonts, JS) are bundle-only for 6.0. Syncing them at
+* Vendor assets (fonts, JS) are not synced in 6.0. Syncing them at
   runtime is a possible future project (would need webserver vendor-route
   changes to serve from a synced location).
 
@@ -181,7 +182,8 @@ One-time pass, using `updateshas.json` as the classifier:
 
 1. Walk the existing flat `templates/` tree; hash every file
 2. Hash matches any known stock version in the ledger -> untouched stock
-   copy -> do not carry forward (bundle serves it)
+   copy -> do not carry forward (bundle serves it). `vendor/` files are
+   carried only when the bundle does not ship that name
 3. Hash matches nothing -> user's work -> move into the new structure
    (classified by filename pattern: `twitchbot_*` -> `twitch/`, etc.) and
    rewrite any config keys pointing at the old absolute path
@@ -190,10 +192,10 @@ One-time pass, using `updateshas.json` as the classifier:
 6. Files that cannot be classified by pattern go to the top level of the
    new tree (still resolvable, still archived in `templates_pre6`)
 
-Retired pre-6.0 stock templates (the 22 superseded ws-* designs, e.g.
-`ws-basicblack.htm`, `ws-mtv-cover-fade.htm`) get one-time handling during
-migration: an unmodified copy is dropped and any config key referencing it
-is repointed to the nearest 6.0 equivalent (`RETIRED_TEMPLATES` in
+Retired pre-6.0 stock templates (the superseded ws-* designs, e.g.
+`ws-basicblack.htm`) get one-time handling during migration: an unmodified
+copy is dropped and any config key referencing it is repointed to the
+nearest 6.0 equivalent (`RETIRED_TEMPLATES` in
 `nowplaying/upgrades/templates.py`); a customized copy is carried like any
 user file and keeps its references. Post-migration the retired names do
 not exist anywhere — no runtime aliases, no list entries. Users wanting an

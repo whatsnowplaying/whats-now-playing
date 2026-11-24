@@ -8,7 +8,7 @@ sync_base_templates(config)
     .htm files newer than what the template chain currently serves into
     templatedir/synced/.  User-owned overrides are never touched; entries
     are removed again once a newer app bundle catches up.  Vendor assets
-    (fonts, JS) are bundle-only and never synced at runtime.
+    (fonts, JS) are never synced at runtime.
 
 sync_from_charts(config, client)
     Fetches /api/v1/editor/sync (requires API key), downloads base files
@@ -233,8 +233,8 @@ async def sync_base_templates(config: "nowplaying.config.ConfigFile") -> None:
 
     Runs as a fire-and-forget background task on startup.  Safe to call even
     when charts is unreachable — all errors are logged and swallowed.
-    Vendor assets are intentionally not synced: the webserver serves them
-    from the bundle only, so runtime downloads would never be used.
+    Vendor assets are not synced: /vendor/ never reads synced/, so a
+    downloaded copy would never be served.
 
     Sync only ever writes inside synced/ — everything else in the user's
     templates tree is user-owned and never touched.  A template is

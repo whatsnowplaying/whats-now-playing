@@ -10,6 +10,8 @@ import aiohttp
 import pytest
 import websockets
 
+import nowplaying.config
+import nowplaying.db
 import nowplaying.metadata.processors
 import nowplaying.webserver.auth
 from tests.utils_images import jpeg_bytes
@@ -96,6 +98,22 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
         ) as req:
             # Most endpoints return 200 or 202, we just want to make sure they don't error
             assert req.status in (200, 202)
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_webserver_vendor_route_uses_handler(
+    getwebserver: tuple[nowplaying.config.ConfigFile, nowplaying.db.MetadataDB],
+) -> None:
+    """/vendor/ goes through vendor_handler (403 on a traversal name, not a static 404)"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"http://localhost:{port}/vendor/..userfont.woff2",
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as req:
+            assert req.status == 403
 
 
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
