@@ -226,8 +226,11 @@ album, artwork, biographies, MusicBrainz IDs, timestamps, and more.
 Built-in templates ship inside the application and are always current with
 the release — nothing needs to be copied into your Documents folder. Your
 templates directory holds only files you create or customize, organized
-into `twitch/`, `kick/`, `plain/`, and `web/` subfolders; a file there
-overrides the built-in template of the same name. The template chooser in
+into `twitch/`, `kick/`, `plain/`, and `web/` subfolders; a template there
+overrides the built-in template of the same name. A `vendor/` subfolder
+serves files directly inside it named `*.js`, `*.woff`, `*.woff2`, `*.ttf`,
+or `*.eot` at `/vendor/<name>`, but only when the application does not ship
+a file of that name; it cannot replace built-in ones. The template chooser in
 every settings page lists built-in and customized templates together, with
 a "Customize a Copy" button that places an editable copy in the right
 folder. Template updates and designs saved in the online template editor

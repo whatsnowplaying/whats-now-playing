@@ -14,6 +14,8 @@ from nowplaying.processes import template_sync
 
 SERVER_CONTENT = b"<html>server-newer</html>"
 SERVER_HASH = hashlib.sha256(SERVER_CONTENT).hexdigest()
+# any base the bundled wheel ships
+STEM = "ws-frosted-glass"
 
 
 class _StubResponse:  # pylint: disable=too-few-public-methods
@@ -60,9 +62,7 @@ async def _run_sync(config, synced, manifest, allow_downloads=True):
 async def test_basesync_bundle_current_no_download(syncdirs):
     """manifest matching the bundled wheel downloads nothing"""
     config, synced = syncdirs
-    calls = await _run_sync(
-        config, synced, {"ws-mtv": {"url": "u", "checksum": _wheel_hash("ws-mtv")}}
-    )
+    calls = await _run_sync(config, synced, {STEM: {"url": "u", "checksum": _wheel_hash(STEM)}})
     assert not calls
     assert not list(synced.glob("*.htm"))
 
@@ -71,54 +71,54 @@ async def test_basesync_bundle_current_no_download(syncdirs):
 async def test_basesync_server_newer_downloads_to_synced(syncdirs):
     """a newer server version lands in synced/ and is tracked"""
     config, synced = syncdirs
-    calls = await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
+    calls = await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
     assert calls == ["u"]
-    assert (synced / "ws-mtv.htm").read_bytes() == SERVER_CONTENT
+    assert (synced / f"{STEM}.htm").read_bytes() == SERVER_CONTENT
     manifest = json.loads((synced / ".wnp_base_sync.json").read_text())
-    assert manifest == {"ws-mtv": SERVER_HASH}
+    assert manifest == {STEM: SERVER_HASH}
 
 
 @pytest.mark.asyncio
 async def test_basesync_idempotent(syncdirs):
     """second run with the same manifest downloads nothing"""
     config, synced = syncdirs
-    await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
-    calls = await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
+    await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
+    calls = await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
     assert not calls
-    assert (synced / "ws-mtv.htm").exists()
+    assert (synced / f"{STEM}.htm").exists()
 
 
 @pytest.mark.asyncio
 async def test_basesync_no_downloads_keeps_synced_copy(syncdirs):
     """downloads disabled (no server version) must never delete synced content"""
     config, synced = syncdirs
-    await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
+    await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
     calls = await _run_sync(
-        config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}}, allow_downloads=False
+        config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}}, allow_downloads=False
     )
     assert not calls
-    assert (synced / "ws-mtv.htm").exists(), "cleanup must not regress users to older bundle"
+    assert (synced / f"{STEM}.htm").exists(), "cleanup must not regress users to older bundle"
 
 
 @pytest.mark.asyncio
 async def test_basesync_server_rollback_keeps_newer_copy(syncdirs):
     """server rolling back must not delete a synced copy the bundle lacks"""
     config, synced = syncdirs
-    await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
-    await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": _wheel_hash("ws-mtv")}})
-    assert (synced / "ws-mtv.htm").exists()
+    await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
+    await _run_sync(config, synced, {STEM: {"url": "u", "checksum": _wheel_hash(STEM)}})
+    assert (synced / f"{STEM}.htm").exists()
 
 
 @pytest.mark.asyncio
 async def test_basesync_user_override_never_touched(syncdirs):
     """a user-owned override blocks download and overwrite"""
     config, synced = syncdirs
-    override = config.templatedir / "web" / "ws-mtv.htm"
+    override = config.templatedir / "web" / f"{STEM}.htm"
     override.write_text("MY CUSTOM")
-    calls = await _run_sync(config, synced, {"ws-mtv": {"url": "u", "checksum": SERVER_HASH}})
+    calls = await _run_sync(config, synced, {STEM: {"url": "u", "checksum": SERVER_HASH}})
     assert not calls
     assert override.read_text() == "MY CUSTOM"
-    assert not (synced / "ws-mtv.htm").exists()
+    assert not (synced / f"{STEM}.htm").exists()
 
 
 @pytest.mark.asyncio
@@ -177,11 +177,11 @@ async def test_namedsync_transient_failure_keeps_previous(syncdirs, monkeypatch)
 
     manifest = {
         "configs": [
-            {"name": "good", "base_stem": "ws-mtv", "css_vars": {}},
+            {"name": "good", "base_stem": STEM, "css_vars": {}},
             {"name": "flaky", "base_stem": "ws-broken", "css_vars": {}},
         ],
         "bases": {
-            "ws-mtv": {"url": "http://x/a", "checksum": None},
+            STEM: {"url": "http://x/a", "checksum": None},
             "ws-broken": {"url": "http://x/b", "checksum": None},
         },
         "missing": [],

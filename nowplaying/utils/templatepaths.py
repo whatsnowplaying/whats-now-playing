@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Template name resolution through the 6.0 search chain.
 
-Templates are addressed by relative name (e.g. ``ws-mtv.htm`` or
+Templates are addressed by relative name (e.g. ``ws-frosted-glass.htm`` or
 ``guessgame/guessgame.htm``) and resolved through an ordered chain:
 
 1. ``templatedir/`` — the user's own files and overrides (top level)
@@ -112,7 +112,7 @@ def resolve_configured(
 ) -> pathlib.Path | None:
     """Resolve a template config value to an existing file.
 
-    Values may be bare names (``ws-mtv.htm``, resolved through the chain)
+    Values may be bare names (``ws-frosted-glass.htm``, resolved through the chain)
     or absolute paths (honored as-is when the file exists — templates kept
     outside the chain keep working).  An absolute path whose file is gone
     falls back to name resolution, so configs written before 6.0 that
