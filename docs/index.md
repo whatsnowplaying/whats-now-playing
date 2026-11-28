@@ -41,7 +41,7 @@ See the full [Feature Overview](features.md) for everything WNP can do.
 
 ## See It In Action
 
-![Example MTV-style with cover Image](gallery/images/ws-mtv-cover-nofade.png)
+![Example cover with title and artist](gallery/images/ws-cover-title-artist.png)
 
 Check out the [gallery](gallery/index.md) to see more examples and get
 inspiration for your setup.

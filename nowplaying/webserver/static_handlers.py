@@ -6,6 +6,7 @@ import base64
 import ipaddress
 import logging
 import os
+import pathlib
 import secrets
 import socket
 import urllib.parse
@@ -75,6 +76,25 @@ def validate_field_lengths(
             )
 
     return validated_metadata, warnings
+
+
+_VENDOR_CONTENT_TYPES = {
+    ".js": "application/javascript",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".eot": "application/vnd.ms-fontobject",
+}
+
+
+def _resolve_vendor_file(root: pathlib.Path, name: str) -> pathlib.Path | None:
+    """Return root/name if it is a file whose resolved path stays inside root."""
+    try:
+        resolved = root.joinpath(name).resolve()
+        resolved.relative_to(root.resolve())
+    except (ValueError, OSError):
+        return None
+    return resolved if resolved.is_file() else None
 
 
 class StaticContentHandler:  # pylint: disable=too-many-public-methods
@@ -304,56 +324,34 @@ class StaticContentHandler:  # pylint: disable=too-many-public-methods
 
         return web.Response(status=404, text="Library not found")
 
-    async def vendor_handler(self, request: web.Request):
-        """serve vendor files (JavaScript and fonts)"""
+    async def vendor_handler(self, request: web.Request) -> web.StreamResponse:
+        """serve vendor files (JavaScript and fonts)
+
+        The bundle wins; the user's templates/vendor/ only supplies names the
+        bundle lacks (upgrades copied vendor/ there, so custom templates keep
+        files the bundle no longer ships).
+        """
         vendor_file = request.match_info.get("vendor_file")
         if not vendor_file:
             return web.Response(status=404, text="Vendor file not found")
 
-        # Allow specific file extensions (case-insensitive)
-        allowed_extensions = (".js", ".woff", ".woff2", ".ttf", ".eot")
-        if not vendor_file.lower().endswith(allowed_extensions):
+        content_type = _VENDOR_CONTENT_TYPES.get(pathlib.PurePath(vendor_file).suffix.lower())
+        if not content_type:
             return web.Response(status=404, text="Vendor file type not supported")
 
         # Security: prevent directory traversal
-        if "/" in vendor_file or "\\" in vendor_file or ".." in vendor_file:
+        # ":" covers Windows drive-relative names (C:x.woff2) and alternate streams
+        if any(bad in vendor_file for bad in ("/", "\\", "..", ":")):
             return web.Response(status=403, text="Invalid vendor file name")
 
         config = request.app[self.config_key]
-        vendor_path = config.getbundledir().joinpath("templates", "vendor", vendor_file)
-
-        if not vendor_path.exists():
-            return web.Response(status=404, text="Vendor file not found")
-
-        content_type: str | None = None
-        content: str | bytes | None = None
-        # Determine content type based on file extension
-        if vendor_file.endswith(".js"):
-            content_type = "application/javascript"
-            with open(vendor_path, encoding="utf-8") as fhin:
-                content = fhin.read()
-
-        if vendor_file.endswith(".woff"):
-            content_type = "font/woff"
-            with open(vendor_path, "rb") as fhin:
-                content = fhin.read()
-
-        if vendor_file.endswith(".woff2"):
-            content_type = "font/woff2"
-            with open(vendor_path, "rb") as fhin:
-                content = fhin.read()
-
-        if vendor_file.endswith(".ttf"):
-            content_type = "font/ttf"
-            with open(vendor_path, "rb") as fhin:
-                content = fhin.read()
-
-        if vendor_file.endswith(".eot"):
-            content_type = "application/vnd.ms-fontobject"
-            with open(vendor_path, "rb") as fhin:
-                content = fhin.read()
-
-        return web.Response(body=content, content_type=content_type)
+        for root in (
+            config.getbundledir().joinpath("templates", "vendor"),
+            pathlib.Path(config.templatedir).joinpath("vendor"),
+        ):
+            if vendor_path := _resolve_vendor_file(root, vendor_file):
+                return web.FileResponse(vendor_path, headers={"Content-Type": content_type})
+        return web.Response(status=404, text="Vendor file not found")
 
     async def favicon_handler(self, request: web.Request):
         """handle favicon.ico"""
