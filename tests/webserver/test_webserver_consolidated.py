@@ -93,6 +93,28 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
 
 @pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
+async def test_webserver_vendor_route(getwebserver) -> None:  # pylint: disable=redefined-outer-name
+    """the running server routes /vendor/ through the vendor handler"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"http://localhost:{port}/vendor/jquery.min.js",
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as req:
+            assert req.status == 200
+            assert req.content_type == "application/javascript"
+        # only the handler answers 403; a static route would 404
+        async with session.get(
+            f"http://localhost:{port}/vendor/..userfont.woff2",
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as req:
+            assert req.status == 403
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "secret_config,request_secret,expected_status",
     [

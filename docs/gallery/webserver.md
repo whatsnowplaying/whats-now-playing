@@ -16,22 +16,6 @@ For a complete list of templates, see the [Template Reference](../reference/temp
 
 `ws-basicwhite`, `ws-basicblue`, and `ws-basicyellow` use the same layout with different color schemes.
 
-### ws-mtv-nofade
-
-[![MTV-style overlay](images/ws-mtv-nofade.png)](images/ws-mtv-nofade.png)
-
-### ws-mtv-fade
-
-[![MTV-style overlay with fade](images/mtvfade.webp)](images/mtvfade.webp)
-
-### ws-mtv-cover-nofade
-
-[![MTV-style overlay with cover art](images/ws-mtv-cover-nofade.png)](images/ws-mtv-cover-nofade.png)
-
-### ws-mtv-cover-fade
-
-[![MTV-style overlay with cover art and fade](images/ws-mtv-cover-fade.webp)](images/ws-mtv-cover-fade.webp)
-
 ### ws-cover-title-artist
 
 [![Cover with title and artist on solid background](images/ws-cover-title-artist.png)](images/ws-cover-title-artist.png)

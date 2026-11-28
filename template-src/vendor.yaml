@@ -11,16 +11,6 @@ vendor_dependencies:
     version: "4.1.1"
     description: "Anime.js animation library (IIFE version)"
 
-  kabel.woff:
-    url: "https://db.onlinewebfonts.com/t/de58fdcb98299a76fccd3c0cb4e5a6c0.woff"
-    version: "1.0"
-    description: "Kabel font (WOFF format) for MTV-style templates"
-
-  kabel.woff2:
-    url: "https://db.onlinewebfonts.com/t/de58fdcb98299a76fccd3c0cb4e5a6c0.woff2"
-    version: "1.0"
-    description: "Kabel font (WOFF2 format) for MTV-style templates"
-
   typed.min.js:
     url: "https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js"
     version: "2.1.0"

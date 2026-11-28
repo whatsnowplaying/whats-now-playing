@@ -652,6 +652,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get(
                     "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
                 ),
+                web.get("/vendor/{vendor_file}", self.static_handler.vendor_handler),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
             ]
@@ -702,9 +703,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             path=staticdir,
         )
 
-        # Add static file serving for vendor files and guessgame templates
+        # Add static file serving for guessgame templates
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
-        app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
         app.router.add_static("/guessgame/", path=template_dir / "guessgame", name="guessgame")
         metadb_path: str | None = None
         if self.testmode:

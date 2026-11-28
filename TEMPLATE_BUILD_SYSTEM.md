@@ -19,24 +19,20 @@ template-src/
 ├── components/                     # Reusable components
 │   ├── css/                        # CSS components
 │   │   ├── obs-compatibility.css   # OBS browser source compatibility
-│   │   ├── mtv-layout.css          # MTV-style layout
 │   │   ├── basic-text.css          # Basic text styling
 │   │   └── ...
 │   ├── js/                         # JavaScript components
 │   │   ├── single-image-display.js # Single image display logic
-│   │   ├── mtv-display.js          # MTV-style display logic
 │   │   ├── fade-effects.js         # Fade in/out effects
 │   │   └── ...
 │   ├── html/                       # HTML layout components
 │   │   ├── basic-text-layout.html  # Basic text container
-│   │   ├── mtv-layout.html         # MTV-style layout
 │   │   └── ...
 │   └── websocket/                  # WebSocket-specific components
 │       ├── metadata-streaming.js   # WebSocket metadata streaming
 │       └── ...
 ├── configs/                        # YAML configuration files
 │   ├── basic-templates.yaml        # Basic text templates
-│   ├── mtv-templates.yaml          # MTV-style templates
 │   ├── artist-templates.yaml       # Artist image templates
 │   └── ...
 └── vendor/                         # Vendor libraries (optional)
@@ -63,12 +59,10 @@ python build_templates.py  # Automatically copies vendor files
 ### Available Families
 
 - `basic_text` - Simple colored text templates
-- `mtv_style` - MTV-style layouts with/without covers
 - `artist_images` - Artist logos, banners, thumbs, covers
 - `artist_fanart` - Artist fanart images
 - `complex_websocket` - Complex templates like coverslideshow
 - `static_web` - Basic static web templates
-- `static_mtv` - Non-WebSocket MTV templates
 - `explode_effects` - Templates with explode animations
 - `slide_effects` - Templates with slide animations
 - `gifwords` - GIF word templates
@@ -204,7 +198,6 @@ Reusable CSS files that can be mixed and matched:
 
 - `obs-compatibility.css` - Ensures templates work in OBS browser sources
 - `basic-text.css` - Basic text styling
-- `mtv-layout.css` - MTV-style layout with cover images
 - Template-specific CSS files for unique styling
 
 ### JavaScript Components
@@ -212,7 +205,6 @@ Reusable CSS files that can be mixed and matched:
 Modular JavaScript functionality:
 
 - `single-image-display.js` - Display single images (covers, logos, etc.)
-- `mtv-display.js` - MTV-style display with text and cover
 - `fade-effects.js` - Fade in/out animations
 - `explode-effects.js` - jQuery UI explode effects
 - `slide-effects.js` - Slide up/down animations
@@ -222,7 +214,6 @@ Modular JavaScript functionality:
 Reusable HTML layout structures:
 
 - `basic-text-layout.html` - Simple title/artist text container
-- `mtv-layout.html` - MTV-style layout with image and text sections
 - `coverslideshow-layout.html` - Complex slideshow container
 
 ### WebSocket Components
